@@ -996,16 +996,9 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
 <script>
 // ── PROXY ─────────────────────────────────────────────────────────────────────
 async function pfetch(url) {
-  // We use your specific Cloudflare Worker URL
-  const proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?symbol=${encodeURIComponent(url)}`;
-  
-  const r = await fetch(proxyUrl, {
-    method: 'GET',
-    headers: { 'Accept': 'application/json' },
-    signal: AbortSignal.timeout(15000)
-  });
-
-  if (!r.ok) throw new Error(`Proxy Error: ${r.status}`);
+  const proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(url)}`;
+  const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw new Error(`Proxy ${r.status}`);
   return r;
 }
 
