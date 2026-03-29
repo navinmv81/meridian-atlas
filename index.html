@@ -997,9 +997,23 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
 <script>
 // ── PROXY ─────────────────────────────────────────────────────────────────────
 async function pfetch(url) {
-  const proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(url)}`;
-  const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
-  if (!r.ok) throw new Error(`Proxy ${r.status}`);
+  if (!url) {
+    console.error("pfetch received an empty URL!");
+    return;
+  }
+
+  // We are going to build the URL manually to ensure it's perfect
+  const workerUrl = "https://meridian-proxy.navinmv1981.workers.dev/";
+  const finalRequestUrl = workerUrl + "?url=" + encodeURIComponent(url);
+  
+  console.log("SENDING TO WORKER:", finalRequestUrl);
+
+  const r = await fetch(finalRequestUrl, { 
+    method: 'GET',
+    signal: AbortSignal.timeout(15000) 
+  });
+
+  if (!r.ok) throw new Error(`Proxy Error: ${r.status}`);
   return r;
 }
 
