@@ -2370,33 +2370,75 @@ function setRdMode(mode) {
     if (descEl2) { descEl2.textContent=''; descEl2.classList.remove('show'); }
   }
 }
-
 async function fetchScrFund(sym) {
   const now = Date.now();
-  // Check screener cache first
-  if (scrFundCache[sym] && (now - scrFundCache[sym].ts) < SCR_TTL) return scrFundCache[sym].data;
-  // Check rdCache (research panel cache — same data shape)
-  if (typeof rdCache !== 'undefined' && rdCache[sym] && (now - rdCache[sym].ts) < RD_TTL) return rdCache[sym].data;
+  const SCR_TTL = 3600000; // 1 hour cache, adjust as needed
 
+  // 1. Check Cache first to save API bandwidth
+  if (typeof scrFundCache !== 'undefined' && scrFundCache[sym] && (now - scrFundCache[sym].ts) < SCR_TTL) {
+    return scrFundCache[sym].data;
+  }
+
+  // 2. Build the URL with the "Big 5" Fundamental Modules
   const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=price,summaryDetail,defaultKeyStatistics,financialData,recommendationTrend`;
+  
   try {
-    const r = await pfetch(url);
+    const r = await pfetch(url); // Using your Cloudflare Worker Proxy
     const j = await r.json();
+    
+    // --- DIAGNOSTIC LOG: Press F12 in browser to see this! ---
+    console.log(`Diagnostic for ${sym}:`, j); 
+
     const res = j?.quoteSummary?.result?.[0];
-    if (!res) return null;
+    if (!res) {
+      console.warn(`No result returned for ${sym}`);
+      return null;
+    }
+
+    // 3. Extract Modules safely (default to empty object if missing)
     const pr = res.price || {};
     const sd = res.summaryDetail || {};
     const ks = res.defaultKeyStatistics || {};
     const fd = res.financialData || {};
     const rt = res.recommendationTrend?.trend?.[0] || {};
+
+    // 4. Calculate Analyst Recommendation Score
     const { strongBuy=0, buy=0, hold=0, sell=0, strongSell=0 } = rt;
-    const total = strongBuy+buy+hold+sell+strongSell;
+    const total = strongBuy + buy + hold + sell + strongSell;
+
     let rec = '—';
     if (total > 0) {
-      const sc = (strongBuy*1+buy*2+hold*3+sell*4+strongSell*5)/total;
-      rec = sc < 1.5 ? 'STRONG BUY' : sc < 2.5 ? 'BUY' : sc < 3.5 ? 'HOLD' : sc < 4.5 ? 'SELL' : 'STRONG SELL';
+      const sc = (strongBuy*1 + buy*2 + hold*3 + sell*4 + strongSell*5) / total;
+      if (sc < 1.5) rec = 'STRONG BUY';
+      else if (sc < 2.5) rec = 'BUY';
+      else if (sc < 3.5) rec = 'HOLD';
+      else if (sc < 4.5) rec = 'SELL';
+      else rec = 'STRONG SELL';
     }
-    const isBullish = rec === 'BUY' || rec === 'STRONG BUY';
+
+    // 5. Package the "Final Data" for the UI
+    const finalData = {
+      price: pr,
+      summary: sd,
+      stats: ks,
+      finance: fd,
+      recommendation: rec,
+      isBullish: (rec === 'BUY' || rec === 'STRONG BUY'),
+      ts: Date.now()
+    };
+
+    // 6. Save to Cache and Return
+    if (typeof scrFundCache !== 'undefined') {
+      scrFundCache[sym] = { ts: now, data: finalData };
+    }
+    
+    return finalData;
+
+  } catch (e) {
+    console.error(`Fund fetch error for ${sym}:`, e);
+    return null;
+  }
+}
     // v2.8.6: extended fields for new filter groups
     const data = {
       name: pr.longName || pr.shortName || sym,
