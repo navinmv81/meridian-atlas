@@ -997,28 +997,25 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
 <script>
 // ── PROXY ─────────────────────────────────────────────────────────────────────
 async function pfetch(targetUrl) {
-  if (!targetUrl) return;
+  if (!targetUrl) {
+    console.error("pfetch was called with NO URL!");
+    return;
+  }
 
-  // 1. Define your worker base
-  const workerBase = "https://meridian-proxy.navinmv1981.workers.dev/";
+  // We use the browser's native URLSearchParams to force the ?url= part
+  const params = new URLSearchParams();
+  params.append("url", targetUrl);
 
-  // 2. Use the Browser's built-in URL tool to 'stitch' them together
-  const finalUrl = new URL(workerBase);
-  finalUrl.searchParams.set("url", targetUrl);
-
-  // 3. Log it so we can see it in the F12 Console
-  console.log("PROXIED URL:", finalUrl.toString());
+  const finalProxyUrl = "https://meridian-proxy.navinmv1981.workers.dev/?" + params.toString();
+  
+  console.log("FINAL ATTEMPT URL:", finalProxyUrl);
 
   try {
-    const response = await fetch(finalUrl.toString(), {
-      method: 'GET',
-      signal: AbortSignal.timeout(15000)
-    });
-
-    if (!response.ok) throw new Error("Worker Status: " + response.status);
-    return response;
+    const r = await fetch(finalProxyUrl);
+    if (!r.ok) throw new Error("Proxy Status: " + r.status);
+    return r;
   } catch (e) {
-    console.error("Network Error:", e);
+    console.error("Fetch failed:", e);
     throw e;
   }
 }
