@@ -1848,9 +1848,11 @@ function renderModal(sym, name, d, data) {
       </div>
     </div>
     <div class="mtabs">
-      <div class="mtab active" onclick="setTab(this,'fundamentals')">Fundamentals</div>
+      <div class="mtab active" data-tab="fundamentals" onclick="switchTab('fundamentals')">Fundamentals</div>
     </div>
-    ${fundPanel}
+    <div id="modal-content">
+       ${fundPanel.replace('class="mtab-panel"', 'class="mtab-panel active"')}
+    </div>
   `);
 }
 
