@@ -2388,63 +2388,42 @@ function setRdMode(mode) {
   }
 }
 async function fetchScrFund(sym) {
+  if (!sym) return null; // Safety: Don't even try if no symbol
+  
   const now = Date.now();
-  const SCR_TTL = 3600000; // 1 hour cache, adjust as needed
+  const SCR_TTL = 3600000; 
 
-  // 1. Check Cache first to save API bandwidth
   if (typeof scrFundCache !== 'undefined' && scrFundCache[sym] && (now - scrFundCache[sym].ts) < SCR_TTL) {
     return scrFundCache[sym].data;
   }
 
-  // 2. Build the URL with the "Big 5" Fundamental Modules
-  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=price,summaryDetail,defaultKeyStatistics,financialData,recommendationTrend`;
+  // Ensure the URL is a string and the symbol is encoded
+  const yahooUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=price,summaryDetail,defaultKeyStatistics,financialData,recommendationTrend`;
   
   try {
-    const r = await pfetch(url); // Using your Cloudflare Worker Proxy
+    // CRITICAL: Ensure pfetch is receiving the full URL string
+    const r = await pfetch(yahooUrl); 
     const j = await r.json();
     
-    // --- DIAGNOSTIC LOG: Press F12 in browser to see this! ---
-    console.log(`Diagnostic for ${sym}:`, j); 
+    // If the worker returned an error, log it
+    if (j.error) {
+        console.error("Worker Error:", j.error);
+        return null;
+    }
 
     const res = j?.quoteSummary?.result?.[0];
-    if (!res) {
-      console.warn(`No result returned for ${sym}`);
-      return null;
-    }
+    if (!res) return null;
 
-    // 3. Extract Modules safely (default to empty object if missing)
-    const pr = res.price || {};
-    const sd = res.summaryDetail || {};
-    const ks = res.defaultKeyStatistics || {};
-    const fd = res.financialData || {};
-    const rt = res.recommendationTrend?.trend?.[0] || {};
-
-    // 4. Calculate Analyst Recommendation Score
-    const { strongBuy=0, buy=0, hold=0, sell=0, strongSell=0 } = rt;
-    const total = strongBuy + buy + hold + sell + strongSell;
-
-    let rec = '—';
-    if (total > 0) {
-      const sc = (strongBuy*1 + buy*2 + hold*3 + sell*4 + strongSell*5) / total;
-      if (sc < 1.5) rec = 'STRONG BUY';
-      else if (sc < 2.5) rec = 'BUY';
-      else if (sc < 3.5) rec = 'HOLD';
-      else if (sc < 4.5) rec = 'SELL';
-      else rec = 'STRONG SELL';
-    }
-
-    // 5. Package the "Final Data" for the UI
+    // Package the data folders
     const finalData = {
-      price: pr,
-      summary: sd,
-      stats: ks,
-      finance: fd,
-      recommendation: rec,
-      isBullish: (rec === 'BUY' || rec === 'STRONG BUY'),
+      price: res.price || {},
+      summary: res.summaryDetail || {},
+      stats: res.defaultKeyStatistics || {},
+      finance: res.financialData || {},
+      recommendation: res.recommendationTrend?.trend?.[0] || {},
       ts: Date.now()
     };
 
-    // 6. Save to Cache and Return
     if (typeof scrFundCache !== 'undefined') {
       scrFundCache[sym] = { ts: now, data: finalData };
     }
@@ -2452,40 +2431,10 @@ async function fetchScrFund(sym) {
     return finalData;
 
   } catch (e) {
-    console.error(`Fund fetch error for ${sym}:`, e);
+    console.error(`Fetch failed for ${sym}:`, e);
     return null;
   }
 }
-    // v2.8.6: extended fields for new filter groups
-    const data = {
-      name: pr.longName || pr.shortName || sym,
-      price: pr.regularMarketPrice?.raw,
-      pct:   pr.regularMarketChangePercent?.raw,
-      // Valuation
-      peTrailing:    sd.trailingPE?.raw,
-      peForward:     sd.forwardPE?.raw,
-      evToEbitda:    ks.enterpriseToEbitda?.raw,
-      // Growth
-      revenueGrowth: fd.revenueGrowth?.raw,
-      earningsGrowth:fd.earningsGrowth?.raw,
-      // Profitability
-      roe:            fd.returnOnEquity?.raw,
-      operatingMargins: fd.operatingMargins?.raw,
-      profitMargin:   fd.profitMargins?.raw,
-      // Financial health
-      debtToEquity:   fd.debtToEquity?.raw,
-      // Cash flow
-      freeCashflow:   fd.freeCashflow?.raw,
-      // Income
-      dividend:       sd.dividendYield?.raw,
-      recommendation: rec,
-      isBullish,
-    };
-    scrFundCache[sym] = { ts: now, data };
-    return data;
-  } catch { return null; }
-}
-
 async function runScreener() {
   const btn = document.getElementById('scr-run-btn');
   const body = document.getElementById('rd-body');
