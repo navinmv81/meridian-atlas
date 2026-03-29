@@ -1713,13 +1713,15 @@ async function fetchFund(sym){
 }
 function showModal(html){document.getElementById('mc').innerHTML=html;document.getElementById('ov').classList.add('show');}
 async function openModal(rowEl){
-  const sym=rowEl.dataset.sym,name=rowEl.dataset.name;
+  const sym=rowEl.dataset.sym, name=rowEl.dataset.name;
   showModal(`<div class="mload"><div class="mspinner"></div><br>Loading ${name}…</div>`);
-  renderModal(sym,name,window._mdata?.[sym],await fetchFund(sym));
+  // CHANGE THIS LINE:
+  renderModal(sym, name, window._mdata?.[sym], await fetchScrFund(sym));
 }
-async function openBySymbol(sym,name){
+async function openBySymbol(sym, name){
   showModal(`<div class="mload"><div class="mspinner"></div><br>Loading ${name}…</div>`);
-  renderModal(sym,name,window._mdata?.[sym],await fetchFund(sym));
+  // CHANGE THIS LINE:
+  renderModal(sym, name, window._mdata?.[sym], await fetchScrFund(sym));
 }
 // v2.2: Tabbed Modal (Overview + Fundamentals)
 function switchTab(tabName){
@@ -1727,16 +1729,132 @@ function switchTab(tabName){
   document.querySelectorAll('#modal .mtab-panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===tabName));
 }
 function renderModal(sym, name, d, data) {
-  // data is the big "Package" we got from fetchScrFund
-  // We map the folders so the rest of your HTML code doesn't break
+  // 1. DATA MAPPING (The Folders)
   const f = data?.finance || {}; 
   const s = data?.summary || {}; 
   const k = data?.stats || {};
   const pr = d || {}; 
 
+  // 2. THE BRIDGE (Maps new Yahoo data back to your old 'f' variable)
+  const bridge = {
+    marketCap: s.marketCap?.raw,
+    peTrailing: s.trailingPE?.raw,
+    peForward: s.forwardPE?.raw,
+    eps: k.trailingEps?.raw,
+    epsForward: k.forwardEps?.raw,
+    targetPrice: s.targetMeanPrice?.raw,
+    dividend: s.dividendYield?.raw,
+    week52High: s.fiftyTwoWeekHigh?.raw,
+    week52Low: s.fiftyTwoWeekLow?.raw,
+    beta: s.beta?.raw,
+    sector: k.sector || s.sector,
+    industry: k.industry || s.industry,
+    employees: k.fullTimeEmployees,
+    shortFloat: k.shortPercentOfFloat?.raw,
+    revenueGrowth: f.revenueGrowth?.raw,
+    profitMargin: f.profitMargins?.raw,
+    roe: f.returnOnEquity?.raw,
+    totalRevenue: f.totalRevenue?.raw,
+    ebitda: f.ebitda?.raw,
+    grossMargins: f.grossMargins?.raw,
+    debtToEquity: f.debtToEquity?.raw,
+    currentRatio: f.currentRatio?.raw,
+    quickRatio: f.quickRatio?.raw,
+    totalCash: f.totalCash?.raw,
+    totalDebt: f.totalDebt?.raw
+  };
+  
+  // Apply bridge to 'f' so your HTML works without changes
+  Object.assign(f, bridge);
+
+  // 3. MASTER SWITCH & LOGIC
   const price = pr.price || s.regularMarketPrice?.raw || 0;
   const pct = pr.pct || 0;
   const chgCls = pct >= 0 ? 'up' : 'dn';
+  const hasFund = !!(s.marketCap && s.marketCap.raw > 0);
+  
+  const w52lo = f.week52Low || price * 0.85;
+  const w52hi = f.week52High || price * 1.15;
+  const barPct = w52hi > w52lo ? Math.min(100, Math.max(0, ((price - w52lo) / (w52hi - w52lo)) * 100)) : 50;
+  const upside = (f.targetPrice && price) ? ((f.targetPrice - price) / price * 100) : null;
+
+  // 4. ANALYST RECOMMENDATION
+  const rec = data?.recommendation || '—';
+  const recKey = rec.replace(/ /g, '_');
+
+  // 5. QUICK INSIGHTS (v2.7)
+  const qiValLabel = (f.peTrailing > 25) ? 'EXPENSIVE' : (f.peTrailing < 15 && f.peTrailing > 0) ? 'CHEAP' : 'FAIR';
+  const qiValCls = qiValLabel === 'EXPENSIVE' ? 'qi-expensive' : qiValLabel === 'CHEAP' ? 'qi-cheap' : 'qi-fair';
+  const qiProfLabel = (f.profitMargin > 0.2) ? 'STRONG' : (f.profitMargin < 0.05) ? 'WEAK' : 'AVERAGE';
+  const qiProfCls = qiProfLabel === 'STRONG' ? 'qi-strong' : qiProfLabel === 'WEAK' ? 'qi-weak' : 'qi-avg';
+  const qiGrowLabel = (f.revenueGrowth > 0.15) ? 'STRONG' : (f.revenueGrowth < 0) ? 'STAGNANT' : 'MODERATE';
+  const qiGrowCls = qiGrowLabel === 'STRONG' ? 'qi-strong' : qiGrowLabel === 'STAGNANT' ? 'qi-weak' : 'qi-avg';
+
+  // 6. BUILD THE HTML PANELS
+  const fundPanel = hasFund ? `
+    <div class="mtab-panel" data-panel="fundamentals">
+      <div class="qi-row">
+        <div class="qi-item"><div class="qi-label">Valuation</div><div class="qi-val ${qiValCls}">${qiValLabel}</div></div>
+        <div class="qi-item"><div class="qi-label">Profitability</div><div class="qi-val ${qiProfCls}">${qiProfLabel}</div></div>
+        <div class="qi-item"><div class="qi-label">Growth</div><div class="qi-val ${qiGrowCls}">${qiGrowLabel}</div></div>
+        <div class="qi-item" style="flex:2;min-width:140px">
+          <div class="qi-label">Quick Read</div>
+          <div style="font-size:10px;color:var(--text2);padding-top:3px">${
+            qiValCls==='qi-expensive'&&qiGrowCls==='qi-strong'?'Growth stock trading at a premium — justified if growth sustains.':
+            qiValCls==='qi-cheap'&&qiProfCls==='qi-strong'?'Looks attractively valued with solid profitability.':
+            'Mixed signals — review individual metrics below.'
+          }</div>
+        </div>
+      </div>
+      <div class="fund-grid">
+        <div class="fund-block">
+          <div class="fund-title">Company</div>
+          <div class="fund-row"><span class="fund-lbl">Market Cap</span><span class="fund-val">${fmc(f.marketCap)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Sector</span><span class="fund-val">${f.sector||'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Industry</span><span class="fund-val">${f.industry||'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">52W High</span><span class="fund-val up">${fn2(f.week52High)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">52W Low</span><span class="fund-val dn">${fn2(f.week52Low)}</span></div>
+        </div>
+        <div class="fund-block">
+          <div class="fund-title">Valuation</div>
+          <div class="fund-row"><span class="fund-lbl">P/E (TTM)</span><span class="fund-val">${fn2(f.peTrailing)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">EPS (TTM)</span><span class="fund-val">${f.eps?'$'+fn2(f.eps):'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Price Target</span><span class="fund-val">${f.targetPrice?'$'+fn2(f.targetPrice):'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Upside</span><span class="fund-val ${(upside??0)>=0?'up':'dn'}">${upside!=null?upside.toFixed(1)+'%':'—'}</span></div>
+        </div>
+        <div class="fund-block">
+          <div class="fund-title">Income</div>
+          <div class="fund-row"><span class="fund-lbl">Rev Growth</span><span class="fund-val">${fp2(f.revenueGrowth)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Profit Margin</span><span class="fund-val">${fp2(f.profitMargin)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">ROE</span><span class="fund-val">${fp2(f.roe)}</span></div>
+        </div>
+        <div class="fund-block">
+          <div class="fund-title">Balance Sheet</div>
+          <div class="fund-row"><span class="fund-lbl">Debt/Equity</span><span class="fund-val">${fn2(f.debtToEquity)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Total Cash</span><span class="fund-val">${fmc(f.totalCash)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Total Debt</span><span class="fund-val">${fmc(f.totalDebt)}</span></div>
+        </div>
+      </div>
+    </div>` 
+    : `<div class="mtab-panel" data-panel="fundamentals"><div style="padding:24px;text-align:center;color:var(--muted)">Fundamental data not available for this instrument.</div></div>`;
+
+  // 7. SHOW THE MODAL (Finally!)
+  showModal(`
+    <div class="mheader">
+      <div><div class="msym">${sym}</div><div class="mname">${name}</div></div>
+      <div style="text-align:right">
+        <div class="mprice">${fn2(price)}</div>
+        <div class="mpct ${chgCls}">${pct.toFixed(2)}%</div>
+      </div>
+    </div>
+    <div class="mtabs">
+      <div class="mtab active" onclick="setTab(this,'fundamentals')">Fundamentals</div>
+    </div>
+    ${fundPanel}
+  `);
+}
+
+  // --- NOW YOUR HTML DEFINITIONS START BELOW ---
 
   // FIXING THE BAR & UPSIDE
   const w52lo = s.fiftyTwoWeekLow?.raw || price * 0.85;
