@@ -149,25 +149,29 @@
             try { const res = await fetch(url.toString()); return await res.json(); } catch(e) { return null; }
         }
 
-        async function refreshMarkets() {
-            updateClock();
-            const data = await fetchSource('yahoo', { symbols: [...SYMBOLS.dev, ...SYMBOLS.us_stocks, ...SYMBOLS.eu_stocks, ...SYMBOLS.fx, ...SYMBOLS.comm].join(',') });
-            if (data) renderYahoo(data);
+       async function fetchSource(source, params = {}) {
+    // 1. Ensure the PROXY URL ends with a forward slash
+    let baseUrl = PROXY;
+    if (!baseUrl.endsWith('/')) baseUrl += '/';
 
-            const fred = {
-                gdp: await fetchSource('fred', { series: 'A191RL1Q225SBEA' }),
-                cpi: await fetchSource('fred', { series: 'CPIAUCSL' }),
-                unrate: await fetchSource('fred', { series: 'UNRATE' }),
-                fed: await fetchSource('fred', { series: 'FEDFUNDS' })
-            };
-            renderMacro(fred);
+    // 2. Build the URL manually to ensure it's 100% correct
+    let url = `${baseUrl}?source=${source}`;
+    
+    // 3. Append any extra parameters (symbols, series, etc.)
+    Object.entries(params).forEach(([k, v]) => {
+        url += `&${k}=${encodeURIComponent(v)}`;
+    });
 
-            const news = await fetchSource('news', { query: 'markets,fed,rates' });
-            if (news) renderNews(news);
-
-            const movers = await fetchSource('fmp', { endpoint: 'gainers' });
-            if (movers) renderMovers(movers);
-        }
+    try {
+        console.log("Fetching from:", url); // This lets you see the URL in F12 Console
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+        return await res.json();
+    } catch (e) {
+        console.error("Fetch failed for " + source, e);
+        return null;
+    }
+}
 
         function renderYahoo(data) {
             const row = (s) => {
