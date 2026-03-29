@@ -1727,14 +1727,34 @@ function switchTab(tabName){
   document.querySelectorAll('#modal .mtab-panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===tabName));
 }
 
-function renderModal(sym,name,d,f){
-  const price=d?.price??0,pct=d?.pct??0,chgCls=pct>=0?'up':'dn';
-  const w52lo=f?.week52Low||price*.85,w52hi=f?.week52High||price*1.15;
-  const barPct=w52hi>w52lo?Math.min(100,Math.max(0,((price-w52lo)/(w52hi-w52lo))*100)):50;
-  const upside=f?.targetPrice&&price?((f.targetPrice-price)/price*100):null;
-  const recKey=(f?.recommendation||'').replace(/ /g,'_');
-  const hasFund=!!f;
+ffunction renderModal(sym, name, d, data) {
+  // 1. MAP THE NEW FOLDERS
+  // 'data' is the full package we returned from fetchScrFund
+  const f = data?.finance || {}; 
+  const s = data?.summary || {}; 
+  const k = data?.stats || {};
+  const pr = d || {}; // 'd' is usually the basic price data passed in
 
+  const price = pr.price || s.regularMarketPrice?.raw || 0;
+  const pct = pr.pct || 0;
+  const chgCls = pct >= 0 ? 'up' : 'dn';
+
+  // 2. FIX THE 52-WEEK BAR & UPSIDE
+  const w52lo = s.fiftyTwoWeekLow?.raw || price * 0.85;
+  const w52hi = s.fiftyTwoWeekHigh?.raw || price * 1.15;
+  const barPct = w52hi > w52lo ? Math.min(100, Math.max(0, ((price - w52lo) / (w52hi - w52lo)) * 100)) : 50;
+  
+  // Upside calculation using new folder 's' (summary)
+  const targetPrice = s.targetMeanPrice?.raw || 0;
+  const upside = (targetPrice && price) ? ((targetPrice - price) / price * 100) : null;
+
+  // 3. THE MASTER SWITCH (The line you found!)
+  // A stock has fundamentals if it has a Market Cap in the summary folder
+  const hasFund = !!(s.marketCap && s.marketCap.raw > 0);
+
+  const recKey = (data?.recommendation || '').replace(/ /g, '_');
+  
+  // ... Now the rest of your HTML code follows ...
   // ── price header (shared across tabs)
   const priceHdr=`
     <div class="mhdr">
