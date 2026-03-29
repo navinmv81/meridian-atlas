@@ -835,7 +835,8 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
     <div class="card" style="--cc:#0f766e">
       <div class="chdr"><span class="ctitle">Watchlist</span><span id="wl-count" style="font-size:9px;color:var(--dim)"></span></div>
       <div id="wl-input-row">
-        <input id="wl-input" type="text" placeholder="Add ticker e.g. AAPL, BTC-USD…" maxlength="16">
+      <input type="text" id="wl-input" placeholder="Search Company..." oninput="handleSearch(this.value)" autocomplete="off">
+<div id="search-results" style="position: absolute; background: var(--bg2); border: 1px solid var(--blue); display: none; z-index: 1000; width: 100%;"></div>
         <button id="wl-add" onclick="wlAdd()">+ Add</button>
       </div>
       <div id="wl-list"></div>
@@ -1000,6 +1001,45 @@ async function pfetch(url) {
   const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`Proxy ${r.status}`);
   return r;
+}
+
+// PASTE STEP 3 CODE HERE:
+let searchTimer;
+async function handleSearch(query) {
+  const resBox = document.getElementById('search-results');
+  if (!resBox) return; // Safety check
+  if (query.length < 2) { resBox.style.display = 'none'; return; }
+
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    try {
+      // We use your worker's new "search" capability
+      const r = await fetch(`https://meridian-proxy.navinmv1981.workers.dev/?search=${encodeURIComponent(query)}`);
+      const data = await r.json();
+      
+      if (data.quotes && data.quotes.length > 0) {
+        resBox.innerHTML = data.quotes.map(s => `
+          <div style="padding:12px; cursor:pointer; border-bottom:1px solid var(--border); background:var(--bg2); color:var(--text); transition: background 0.2s;" 
+               onmouseover="this.style.background='var(--bg3)'" 
+               onmouseout="this.style.background='var(--bg2)'"
+               onclick="selectForWatchlist('${s.symbol}')">
+            <b style="color:var(--blue);">${s.symbol}</b> - ${s.shortname || s.longname || 'Unknown'}
+          </div>
+        `).join('');
+        resBox.style.display = 'block';
+      } else {
+        resBox.style.display = 'none';
+      }
+    } catch (e) { 
+      console.error("Search failed", e); 
+      resBox.style.display = 'none';
+    }
+  }, 300);
+}
+
+// ALSO PASTE THE CONNECTOR HERE:
+function selectForWatchlist(symbol) {
+  wlAdd(symbol);
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -1552,14 +1592,39 @@ function renderCalendar(){
 // ── WATCHLIST ─────────────────────────────────────────────────────────────────
 let wlItems=JSON.parse(localStorage.getItem('ma_wl')||'[]');
 function wlSave(){localStorage.setItem('ma_wl',JSON.stringify(wlItems));}
-async function wlAdd(){
-  const inp=document.getElementById('wl-input');
-  const sym=inp.value.trim().toUpperCase(); inp.value='';
-  if(!sym||wlItems.find(x=>x.s===sym))return;
-  wlItems.push({s:sym,n:sym}); wlSave(); renderWatchlist();
-  const d=await fetchSym(sym);
-  if(d){window._mdata=window._mdata||{};window._mdata[sym]=d;}
+async function wlAdd(overrideSym) {
+  const inp = document.getElementById('wl-input');
+  
+  // LOGIC: If we passed a symbol (from a click), use it. 
+  // Otherwise, take what the user typed.
+  const sym = (overrideSym || inp.value).trim().toUpperCase(); 
+  
+  inp.value = ''; // Clear the box for the next search
+  
+  // Close the search dropdown if it's open
+  const res = document.getElementById('search-results');
+  if(res) res.style.display = 'none';
+
+  // Standard checks: don't add if empty or already there
+  if (!sym || wlItems.find(x => x.s === sym)) return;
+  
+  wlItems.push({ s: sym, n: sym }); 
+  wlSave(); 
   renderWatchlist();
+  
+  // Go get the data from your Cloudflare Worker
+  const d = await fetchSym(sym);
+  if (d) {
+    window._mdata = window._mdata || {};
+    window._mdata[sym] = d;
+  }
+  renderWatchlist();
+}
+
+// Add this tiny function right below wlAdd
+// This is what the search results "click" triggers
+function selectForWatchlist(symbol) {
+  wlAdd(symbol);
 }
 document.getElementById('wl-input').addEventListener('keydown',e=>{if(e.key==='Enter')wlAdd();});
 function wlRemove(sym){wlItems=wlItems.filter(x=>x.s!==sym);wlSave();renderWatchlist();}
