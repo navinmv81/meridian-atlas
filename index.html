@@ -996,28 +996,11 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
 
 <script>
 // ── PROXY ─────────────────────────────────────────────────────────────────────
-async function pfetch(targetUrl) {
-  if (!targetUrl) {
-    console.error("pfetch was called with NO URL!");
-    return;
-  }
-
-  // We use the browser's native URLSearchParams to force the ?url= part
-  const params = new URLSearchParams();
-  params.append("url", targetUrl);
-
-  const finalProxyUrl = "https://meridian-proxy.navinmv1981.workers.dev/?" + params.toString();
-  
-  console.log("FINAL ATTEMPT URL:", finalProxyUrl);
-
-  try {
-    const r = await fetch(finalProxyUrl);
-    if (!r.ok) throw new Error("Proxy Status: " + r.status);
-    return r;
-  } catch (e) {
-    console.error("Fetch failed:", e);
-    throw e;
-  }
+async function pfetch(url) {
+  const proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(url)}`;
+  const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw new Error(`Proxy ${r.status}`);
+  return r;
 }
 
 // PASTE STEP 3 CODE HERE:
@@ -1730,166 +1713,28 @@ async function fetchFund(sym){
 }
 function showModal(html){document.getElementById('mc').innerHTML=html;document.getElementById('ov').classList.add('show');}
 async function openModal(rowEl){
-  const sym=rowEl.dataset.sym, name=rowEl.dataset.name;
+  const sym=rowEl.dataset.sym,name=rowEl.dataset.name;
   showModal(`<div class="mload"><div class="mspinner"></div><br>Loading ${name}…</div>`);
-  // CHANGE THIS LINE:
-  renderModal(sym, name, window._mdata?.[sym], await fetchScrFund(sym));
+  renderModal(sym,name,window._mdata?.[sym],await fetchFund(sym));
 }
-async function openBySymbol(sym, name){
+async function openBySymbol(sym,name){
   showModal(`<div class="mload"><div class="mspinner"></div><br>Loading ${name}…</div>`);
-  // CHANGE THIS LINE:
-  renderModal(sym, name, window._mdata?.[sym], await fetchScrFund(sym));
+  renderModal(sym,name,window._mdata?.[sym],await fetchFund(sym));
 }
 // v2.2: Tabbed Modal (Overview + Fundamentals)
 function switchTab(tabName){
   document.querySelectorAll('#modal .mtab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tabName));
   document.querySelectorAll('#modal .mtab-panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===tabName));
 }
-function renderModal(sym, name, d, data) {
-  // 1. DATA MAPPING (The Folders)
-  const f = data?.finance || {}; 
-  const s = data?.summary || {}; 
-  const k = data?.stats || {};
-  const pr = d || {}; 
 
-  // 2. THE BRIDGE (Maps new Yahoo data back to your old 'f' variable)
-  const bridge = {
-    marketCap: s.marketCap?.raw,
-    peTrailing: s.trailingPE?.raw,
-    peForward: s.forwardPE?.raw,
-    eps: k.trailingEps?.raw,
-    epsForward: k.forwardEps?.raw,
-    targetPrice: s.targetMeanPrice?.raw,
-    dividend: s.dividendYield?.raw,
-    week52High: s.fiftyTwoWeekHigh?.raw,
-    week52Low: s.fiftyTwoWeekLow?.raw,
-    beta: s.beta?.raw,
-    sector: k.sector || s.sector,
-    industry: k.industry || s.industry,
-    employees: k.fullTimeEmployees,
-    shortFloat: k.shortPercentOfFloat?.raw,
-    revenueGrowth: f.revenueGrowth?.raw,
-    profitMargin: f.profitMargins?.raw,
-    roe: f.returnOnEquity?.raw,
-    totalRevenue: f.totalRevenue?.raw,
-    ebitda: f.ebitda?.raw,
-    grossMargins: f.grossMargins?.raw,
-    debtToEquity: f.debtToEquity?.raw,
-    currentRatio: f.currentRatio?.raw,
-    quickRatio: f.quickRatio?.raw,
-    totalCash: f.totalCash?.raw,
-    totalDebt: f.totalDebt?.raw
-  };
-  
-  // Apply bridge to 'f' so your HTML works without changes
-  Object.assign(f, bridge);
+function renderModal(sym,name,d,f){
+  const price=d?.price??0,pct=d?.pct??0,chgCls=pct>=0?'up':'dn';
+  const w52lo=f?.week52Low||price*.85,w52hi=f?.week52High||price*1.15;
+  const barPct=w52hi>w52lo?Math.min(100,Math.max(0,((price-w52lo)/(w52hi-w52lo))*100)):50;
+  const upside=f?.targetPrice&&price?((f.targetPrice-price)/price*100):null;
+  const recKey=(f?.recommendation||'').replace(/ /g,'_');
+  const hasFund=!!f;
 
-  // 3. MASTER SWITCH & LOGIC
-  const price = pr.price || s.regularMarketPrice?.raw || 0;
-  const pct = pr.pct || 0;
-  const chgCls = pct >= 0 ? 'up' : 'dn';
-  const hasFund = !!(s.marketCap && s.marketCap.raw > 0);
-  
-  const w52lo = f.week52Low || price * 0.85;
-  const w52hi = f.week52High || price * 1.15;
-  const barPct = w52hi > w52lo ? Math.min(100, Math.max(0, ((price - w52lo) / (w52hi - w52lo)) * 100)) : 50;
-  const upside = (f.targetPrice && price) ? ((f.targetPrice - price) / price * 100) : null;
-
-  // 4. ANALYST RECOMMENDATION
-  const rec = data?.recommendation || '—';
-  const recKey = rec.replace(/ /g, '_');
-
-  // 5. QUICK INSIGHTS (v2.7)
-  const qiValLabel = (f.peTrailing > 25) ? 'EXPENSIVE' : (f.peTrailing < 15 && f.peTrailing > 0) ? 'CHEAP' : 'FAIR';
-  const qiValCls = qiValLabel === 'EXPENSIVE' ? 'qi-expensive' : qiValLabel === 'CHEAP' ? 'qi-cheap' : 'qi-fair';
-  const qiProfLabel = (f.profitMargin > 0.2) ? 'STRONG' : (f.profitMargin < 0.05) ? 'WEAK' : 'AVERAGE';
-  const qiProfCls = qiProfLabel === 'STRONG' ? 'qi-strong' : qiProfLabel === 'WEAK' ? 'qi-weak' : 'qi-avg';
-  const qiGrowLabel = (f.revenueGrowth > 0.15) ? 'STRONG' : (f.revenueGrowth < 0) ? 'STAGNANT' : 'MODERATE';
-  const qiGrowCls = qiGrowLabel === 'STRONG' ? 'qi-strong' : qiGrowLabel === 'STAGNANT' ? 'qi-weak' : 'qi-avg';
-
-  // 6. BUILD THE HTML PANELS
-  const fundPanel = hasFund ? `
-    <div class="mtab-panel" data-panel="fundamentals">
-      <div class="qi-row">
-        <div class="qi-item"><div class="qi-label">Valuation</div><div class="qi-val ${qiValCls}">${qiValLabel}</div></div>
-        <div class="qi-item"><div class="qi-label">Profitability</div><div class="qi-val ${qiProfCls}">${qiProfLabel}</div></div>
-        <div class="qi-item"><div class="qi-label">Growth</div><div class="qi-val ${qiGrowCls}">${qiGrowLabel}</div></div>
-        <div class="qi-item" style="flex:2;min-width:140px">
-          <div class="qi-label">Quick Read</div>
-          <div style="font-size:10px;color:var(--text2);padding-top:3px">${
-            qiValCls==='qi-expensive'&&qiGrowCls==='qi-strong'?'Growth stock trading at a premium — justified if growth sustains.':
-            qiValCls==='qi-cheap'&&qiProfCls==='qi-strong'?'Looks attractively valued with solid profitability.':
-            'Mixed signals — review individual metrics below.'
-          }</div>
-        </div>
-      </div>
-      <div class="fund-grid">
-        <div class="fund-block">
-          <div class="fund-title">Company</div>
-          <div class="fund-row"><span class="fund-lbl">Market Cap</span><span class="fund-val">${fmc(f.marketCap)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Sector</span><span class="fund-val">${f.sector||'—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Industry</span><span class="fund-val">${f.industry||'—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">52W High</span><span class="fund-val up">${fn2(f.week52High)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">52W Low</span><span class="fund-val dn">${fn2(f.week52Low)}</span></div>
-        </div>
-        <div class="fund-block">
-          <div class="fund-title">Valuation</div>
-          <div class="fund-row"><span class="fund-lbl">P/E (TTM)</span><span class="fund-val">${fn2(f.peTrailing)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">EPS (TTM)</span><span class="fund-val">${f.eps?'$'+fn2(f.eps):'—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Price Target</span><span class="fund-val">${f.targetPrice?'$'+fn2(f.targetPrice):'—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Upside</span><span class="fund-val ${(upside??0)>=0?'up':'dn'}">${upside!=null?upside.toFixed(1)+'%':'—'}</span></div>
-        </div>
-        <div class="fund-block">
-          <div class="fund-title">Income</div>
-          <div class="fund-row"><span class="fund-lbl">Rev Growth</span><span class="fund-val">${fp2(f.revenueGrowth)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Profit Margin</span><span class="fund-val">${fp2(f.profitMargin)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">ROE</span><span class="fund-val">${fp2(f.roe)}</span></div>
-        </div>
-        <div class="fund-block">
-          <div class="fund-title">Balance Sheet</div>
-          <div class="fund-row"><span class="fund-lbl">Debt/Equity</span><span class="fund-val">${fn2(f.debtToEquity)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Total Cash</span><span class="fund-val">${fmc(f.totalCash)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Total Debt</span><span class="fund-val">${fmc(f.totalDebt)}</span></div>
-        </div>
-      </div>
-    </div>` 
-    : `<div class="mtab-panel" data-panel="fundamentals"><div style="padding:24px;text-align:center;color:var(--muted)">Fundamental data not available for this instrument.</div></div>`;
-
-  // 7. SHOW THE MODAL (Finally!)
-  showModal(`
-    <div class="mheader">
-      <div><div class="msym">${sym}</div><div class="mname">${name}</div></div>
-      <div style="text-align:right">
-        <div class="mprice">${fn2(price)}</div>
-        <div class="mpct ${chgCls}">${pct.toFixed(2)}%</div>
-      </div>
-    </div>
-    <div class="mtabs">
-      <div class="mtab active" data-tab="fundamentals" onclick="switchTab('fundamentals')">Fundamentals</div>
-    </div>
-    <div id="modal-content">
-       ${fundPanel.replace('class="mtab-panel"', 'class="mtab-panel active"')}
-    </div>
-  `);
-}
-
-  // --- NOW YOUR HTML DEFINITIONS START BELOW ---
-
-  // FIXING THE BAR & UPSIDE
-  const w52lo = s.fiftyTwoWeekLow?.raw || price * 0.85;
-  const w52hi = s.fiftyTwoWeekHigh?.raw || price * 1.15;
-  const barPct = w52hi > w52lo ? Math.min(100, Math.max(0, ((price - w52lo) / (w52hi - w52lo)) * 100)) : 50;
-  
-  const targetPrice = s.targetMeanPrice?.raw || 0;
-  const upside = (targetPrice && price) ? ((targetPrice - price) / price * 100) : null;
-
-  // THE MASTER SWITCH (This kills the "Not Available" error)
-  // We check if Market Cap exists in the summary folder
-  const hasFund = !!(s.marketCap && s.marketCap.raw > 0);
-
-  const recKey = (data?.recommendation || '').replace(/ /g, '_');
-  
-  // ... Now the rest of your HTML code follows ...
   // ── price header (shared across tabs)
   const priceHdr=`
     <div class="mhdr">
@@ -1988,8 +1833,9 @@ function renderModal(sym, name, d, data) {
   // v2.7 INTELLIGENCE END
 
   // ── fundamentals panel (detailed company research)
-const fundPanel = hasFund ? `
+  const fundPanel=hasFund?`
     <div class="mtab-panel" data-panel="fundamentals">
+      <!-- v2.7 INTELLIGENCE START: Quick Insight -->
       <div class="qi-row">
         <div class="qi-item">
           <div class="qi-label">Valuation</div>
@@ -2015,54 +1861,54 @@ const fundPanel = hasFund ? `
           }</div>
         </div>
       </div>
+      <!-- v2.7 INTELLIGENCE END -->
       <div class="fund-grid">
         <div class="fund-block">
           <div class="fund-title">Company</div>
-          <div class="fund-row"><span class="fund-lbl">Market Cap</span><span class="fund-val">${fmc(s.marketCap?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Sector</span><span class="fund-val" style="font-size:10px">${k.sector || s.sector || '—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Industry</span><span class="fund-val" style="font-size:10px">${k.industry || s.industry || '—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Employees</span><span class="fund-val">${k.fullTimeEmployees ? k.fullTimeEmployees.toLocaleString() : '—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">52W High</span><span class="fund-val up">${fn2(s.fiftyTwoWeekHigh?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">52W Low</span><span class="fund-val dn">${fn2(s.fiftyTwoWeekLow?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Beta</span><span class="fund-val">${fn2(s.beta?.raw)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Market Cap</span><span class="fund-val">${fmc(f.marketCap)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Sector</span><span class="fund-val" style="font-size:10px">${f.sector||'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Industry</span><span class="fund-val" style="font-size:10px">${f.industry||'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Employees</span><span class="fund-val">${f.employees?f.employees.toLocaleString():'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">52W High</span><span class="fund-val up">${fn2(f.week52High)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">52W Low</span><span class="fund-val dn">${fn2(f.week52Low)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Beta</span><span class="fund-val">${fn2(f.beta)}</span></div>
         </div>
-
         <div class="fund-block">
           <div class="fund-title">Valuation Multiples</div>
-          <div class="fund-row"><span class="fund-lbl">P/E (TTM)</span><span class="fund-val">${fn2(s.trailingPE?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">P/E (Forward)</span><span class="fund-val">${fn2(s.forwardPE?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">EPS (TTM)</span><span class="fund-val">${k.trailingEps?.raw != null ? '$' + fn2(k.trailingEps.raw) : '—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">EPS (Forward)</span><span class="fund-val">${k.forwardEps?.raw != null ? '$' + fn2(k.forwardEps.raw) : '—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Price Target</span><span class="fund-val">${s.targetMeanPrice?.raw ? '$' + fn2(s.targetMeanPrice.raw) : '—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Upside to Target</span><span class="fund-val ${(upside??0)>=0?'up':'dn'}">${upside != null ? (upside >= 0 ? '+' : '') + upside.toFixed(1) + '%' : '—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Dividend Yield</span><span class="fund-val">${s.dividendYield ? fp2(s.dividendYield.raw) : '—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">P/E (TTM)</span><span class="fund-val">${fn2(f.peTrailing)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">P/E (Forward)</span><span class="fund-val">${fn2(f.peForward)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">EPS (TTM)</span><span class="fund-val">${f.eps!=null?'$'+fn2(f.eps):'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">EPS (Forward)</span><span class="fund-val">${f.epsForward!=null?'$'+fn2(f.epsForward):'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Price Target</span><span class="fund-val">${f.targetPrice?'$'+fn2(f.targetPrice):'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Upside to Target</span><span class="fund-val ${(upside??0)>=0?'up':'dn'}">${upside!=null?(upside>=0?'+':'')+upside.toFixed(1)+'%':'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Dividend Yield</span><span class="fund-val">${f.dividend!=null?fp2(f.dividend):'—'}</span></div>
         </div>
-
         <div class="fund-block">
           <div class="fund-title">Income &amp; Growth</div>
-          <div class="fund-row"><span class="fund-lbl">Revenue Growth</span><span class="fund-val ${(f.revenueGrowth?.raw??0)>=0?'up':'dn'}">${f.revenueGrowth?.raw != null ? fp2(f.revenueGrowth.raw) : '—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Profit Margin</span><span class="fund-val ${(f.profitMargins?.raw??0)>=0?'up':'dn'}">${f.profitMargins?.raw != null ? fp2(f.profitMargins.raw) : '—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Return on Equity</span><span class="fund-val">${f.returnOnEquity?.raw != null ? fp2(f.returnOnEquity.raw) : '—'}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Revenue (TTM)</span><span class="fund-val">${fmc(f.totalRevenue?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">EBITDA</span><span class="fund-val">${fmc(f.ebitda?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Gross Margins</span><span class="fund-val">${f.grossMargins?.raw != null ? fp2(f.grossMargins.raw) : '—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Revenue Growth</span><span class="fund-val ${(f.revenueGrowth??0)>=0?'up':'dn'}">${f.revenueGrowth!=null?fp2(f.revenueGrowth):'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Profit Margin</span><span class="fund-val ${(f.profitMargin??0)>=0?'up':'dn'}">${f.profitMargin!=null?fp2(f.profitMargin):'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Return on Equity</span><span class="fund-val">${f.roe!=null?fp2(f.roe):'—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Revenue (TTM)</span><span class="fund-val">${fmc(f.totalRevenue)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">EBITDA</span><span class="fund-val">${fmc(f.ebitda)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Gross Margins</span><span class="fund-val">${f.grossMargins!=null?fp2(f.grossMargins):'—'}</span></div>
         </div>
-
         <div class="fund-block">
           <div class="fund-title">Balance Sheet</div>
-          <div class="fund-row"><span class="fund-lbl">Debt / Equity</span><span class="fund-val">${fn2(f.debtToEquity?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Current Ratio</span><span class="fund-val">${fn2(f.currentRatio?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Quick Ratio</span><span class="fund-val">${fn2(f.quickRatio?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Total Cash</span><span class="fund-val">${fmc(f.totalCash?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Total Debt</span><span class="fund-val">${fmc(f.totalDebt?.raw)}</span></div>
-          <div class="fund-row"><span class="fund-lbl">Short % Float</span><span class="fund-val">${k.shortPercentOfFloat?.raw != null ? fp2(k.shortPercentOfFloat.raw) : '—'}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Debt / Equity</span><span class="fund-val">${fn2(f.debtToEquity)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Current Ratio</span><span class="fund-val">${fn2(f.currentRatio)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Quick Ratio</span><span class="fund-val">${fn2(f.quickRatio)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Total Cash</span><span class="fund-val">${fmc(f.totalCash)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Total Debt</span><span class="fund-val">${fmc(f.totalDebt)}</span></div>
+          <div class="fund-row"><span class="fund-lbl">Short % Float</span><span class="fund-val">${f.shortFloat!=null?fp2(f.shortFloat):'—'}</span></div>
         </div>
       </div>
       <div style="padding:10px 0 0;text-align:right">
         <a class="myf" href="https://finance.yahoo.com/quote/${sym}/financials" target="_blank">↗ Full financials on Yahoo Finance</a>
       </div>
     </div>`
-  : `<div class="mtab-panel" data-panel="fundamentals"><div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Fundamental data not available for this instrument type.<br><span style="font-size:10px;color:var(--dim)">Indices, bonds and FX pairs do not carry company fundamentals.</span></div></div>`;
+  :`<div class="mtab-panel" data-panel="fundamentals"><div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Fundamental data not available for this instrument type.<br><span style="font-size:10px;color:var(--dim)">Indices, bonds and FX pairs do not carry company fundamentals.</span></div></div>`;
+
+
   // v2.3: ── analyst calls panel ───────────────────────────────────────────
   let analystPanel='';
   if(!hasFund){
@@ -2524,54 +2370,63 @@ function setRdMode(mode) {
     if (descEl2) { descEl2.textContent=''; descEl2.classList.remove('show'); }
   }
 }
+
 async function fetchScrFund(sym) {
-  if (!sym) return null; // Safety: Don't even try if no symbol
-  
   const now = Date.now();
-  const SCR_TTL = 3600000; 
+  // Check screener cache first
+  if (scrFundCache[sym] && (now - scrFundCache[sym].ts) < SCR_TTL) return scrFundCache[sym].data;
+  // Check rdCache (research panel cache — same data shape)
+  if (typeof rdCache !== 'undefined' && rdCache[sym] && (now - rdCache[sym].ts) < RD_TTL) return rdCache[sym].data;
 
-  if (typeof scrFundCache !== 'undefined' && scrFundCache[sym] && (now - scrFundCache[sym].ts) < SCR_TTL) {
-    return scrFundCache[sym].data;
-  }
-
-  // Ensure the URL is a string and the symbol is encoded
-  const yahooUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=price,summaryDetail,defaultKeyStatistics,financialData,recommendationTrend`;
-  
+  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=price,summaryDetail,defaultKeyStatistics,financialData,recommendationTrend`;
   try {
-    // CRITICAL: Ensure pfetch is receiving the full URL string
-    const r = await pfetch(yahooUrl); 
+    const r = await pfetch(url);
     const j = await r.json();
-    
-    // If the worker returned an error, log it
-    if (j.error) {
-        console.error("Worker Error:", j.error);
-        return null;
-    }
-
     const res = j?.quoteSummary?.result?.[0];
     if (!res) return null;
-
-    // Package the data folders
-    const finalData = {
-      price: res.price || {},
-      summary: res.summaryDetail || {},
-      stats: res.defaultKeyStatistics || {},
-      finance: res.financialData || {},
-      recommendation: res.recommendationTrend?.trend?.[0] || {},
-      ts: Date.now()
-    };
-
-    if (typeof scrFundCache !== 'undefined') {
-      scrFundCache[sym] = { ts: now, data: finalData };
+    const pr = res.price || {};
+    const sd = res.summaryDetail || {};
+    const ks = res.defaultKeyStatistics || {};
+    const fd = res.financialData || {};
+    const rt = res.recommendationTrend?.trend?.[0] || {};
+    const { strongBuy=0, buy=0, hold=0, sell=0, strongSell=0 } = rt;
+    const total = strongBuy+buy+hold+sell+strongSell;
+    let rec = '—';
+    if (total > 0) {
+      const sc = (strongBuy*1+buy*2+hold*3+sell*4+strongSell*5)/total;
+      rec = sc < 1.5 ? 'STRONG BUY' : sc < 2.5 ? 'BUY' : sc < 3.5 ? 'HOLD' : sc < 4.5 ? 'SELL' : 'STRONG SELL';
     }
-    
-    return finalData;
-
-  } catch (e) {
-    console.error(`Fetch failed for ${sym}:`, e);
-    return null;
-  }
+    const isBullish = rec === 'BUY' || rec === 'STRONG BUY';
+    // v2.8.6: extended fields for new filter groups
+    const data = {
+      name: pr.longName || pr.shortName || sym,
+      price: pr.regularMarketPrice?.raw,
+      pct:   pr.regularMarketChangePercent?.raw,
+      // Valuation
+      peTrailing:    sd.trailingPE?.raw,
+      peForward:     sd.forwardPE?.raw,
+      evToEbitda:    ks.enterpriseToEbitda?.raw,
+      // Growth
+      revenueGrowth: fd.revenueGrowth?.raw,
+      earningsGrowth:fd.earningsGrowth?.raw,
+      // Profitability
+      roe:            fd.returnOnEquity?.raw,
+      operatingMargins: fd.operatingMargins?.raw,
+      profitMargin:   fd.profitMargins?.raw,
+      // Financial health
+      debtToEquity:   fd.debtToEquity?.raw,
+      // Cash flow
+      freeCashflow:   fd.freeCashflow?.raw,
+      // Income
+      dividend:       sd.dividendYield?.raw,
+      recommendation: rec,
+      isBullish,
+    };
+    scrFundCache[sym] = { ts: now, data };
+    return data;
+  } catch { return null; }
 }
+
 async function runScreener() {
   const btn = document.getElementById('scr-run-btn');
   const body = document.getElementById('rd-body');
