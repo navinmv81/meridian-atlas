@@ -1242,11 +1242,11 @@ function fmc(v){
 function fp2(v){if(v==null||isNaN(v))return'—';return(v*100).toFixed(2)+'%';}
 function fn2(v){if(v==null||isNaN(v))return'—';return v.toFixed(2);}
 
-// ── SPARKLINE ─────────────────────────────────────────────────────────────────
+// ── SPARKLINE (Fixed for SVG Width Error) ───────────────────────────────────
 function spark(closes, pct, W = 52, H = 18) {
   if (!closes || closes.length < 3) return '<span class="nc">—</span>';
   
-  // Force numeric values to prevent the "${W}" error
+  // Convert to numbers to ensure no strings like "${W}" are passed to SVG attributes
   const width = Number(W) || 52;
   const height = Number(H) || 18;
   const col = pct >= 0 ? '#22c55e' : '#ef4444';
@@ -1264,7 +1264,7 @@ function spark(closes, pct, W = 52, H = 18) {
 
   const pts = pointsArr.map(p => p.join(',')).join(' ');
 
-  // WE ARE BREAKING THE STRING INTO PIECES TO AVOID THE TEMPLATE BUG
+  // We use standard string concatenation (+) to avoid Template Literal bugs
   let svg = '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg">';
   svg += '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">';
   svg += '<stop offset="0%" stop-color="' + col + '" stop-opacity=".2"/>';
@@ -1275,6 +1275,9 @@ function spark(closes, pct, W = 52, H = 18) {
   
   return svg;
 }
+
+// Ensure the large spark also uses numeric values
+function sparkLg(c, p) { return spark(c, p, 600, 60); }
 
 // ── WORLD INDICES ─────────────────────────────────────────────────────────────
 function setIdxFilter(f,btn){
