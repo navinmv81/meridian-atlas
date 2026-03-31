@@ -1244,20 +1244,18 @@ function fn2(v){if(v==null||isNaN(v))return'—';return v.toFixed(2);}
 
 // ── SPARKLINE ─────────────────────────────────────────────────────────────────
 function spark(closes, pct, W = 52, H = 18) {
-  // Ensure W and H are numbers to avoid the "${W}" string error
-  const width = Number(W) || 52;
-  const height = Number(H) || 18;
-
   if (!closes || closes.length < 3) return '<span class="nc">—</span>';
   
-  const col = pct >= 0 ? '#22c55e' : '#ef4444'; // Using modern green/red
+  // Force numeric values to prevent the "${W}" error
+  const width = Number(W) || 52;
+  const height = Number(H) || 18;
+  const col = pct >= 0 ? '#22c55e' : '#ef4444';
   const gid = 'g' + Math.random().toString(36).slice(2, 8);
   
   const mn = Math.min(...closes);
   const mx = Math.max(...closes);
   const range = (mx - mn) || 1;
 
-  // Calculate points with safety checks
   const pointsArr = closes.map((v, i) => {
     const x = (i / (closes.length - 1)) * width;
     const y = height - ((v - mn) / range) * (height - 4) - 2;
@@ -1265,21 +1263,17 @@ function spark(closes, pct, W = 52, H = 18) {
   });
 
   const pts = pointsArr.map(p => p.join(',')).join(' ');
-  const firstX = pointsArr[0][0];
-  const firstY = pointsArr[0][1];
-  const lastX = pointsArr[pointsArr.length - 1][0];
-  const lastY = pointsArr[pointsArr.length - 1][1];
 
-  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="${col}" stop-opacity=".2"/>
-        <stop offset="100%" stop-color="${col}" stop-opacity="0"/>
-      </linearGradient>
-    </defs>
-    <path d="M 0 ${height} L ${firstX} ${firstY} L ${pts} L ${lastX} ${lastY} L ${width} ${height} Z" fill="url(#${gid})" stroke="none" />
-    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-  </svg>`;
+  // WE ARE BREAKING THE STRING INTO PIECES TO AVOID THE TEMPLATE BUG
+  let svg = '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg">';
+  svg += '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">';
+  svg += '<stop offset="0%" stop-color="' + col + '" stop-opacity=".2"/>';
+  svg += '<stop offset="100%" stop-color="' + col + '" stop-opacity="0"/>';
+  svg += '</linearGradient></defs>';
+  svg += '<polyline points="' + pts + '" fill="none" stroke="' + col + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>';
+  svg += '</svg>';
+  
+  return svg;
 }
 
 // ── WORLD INDICES ─────────────────────────────────────────────────────────────
