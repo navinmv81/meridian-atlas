@@ -1031,14 +1031,40 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
 </div>
 
 <script>
-// ── PROXY ─────────────────────────────────────────────────────────────────────
-async function pfetch(url) {
-  const proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(url)}`;
+// --- UPDATED PROXY GATEKEEPER ---
+async function pfetch(input) {
+  let proxyUrl = "";
+
+  // 1. Check for SEARCH (Autocomplete)
+  if (input.includes('suggest')) {
+    try {
+      const urlObj = new URL(input);
+      const query = urlObj.searchParams.get('q');
+      proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?search=${encodeURIComponent(query)}`;
+    } catch(e) { proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(input)}`; }
+  } 
+  // 2. Check for SYMBOL (Price/Chart) - More flexible matching
+  else if (input.toLowerCase().includes('/chart/')) {
+    // This looks for the text right after 'chart/' regardless of what comes before it
+    const parts = input.split(/\/chart\//i); 
+    if (parts[1]) {
+      const symbol = parts[1].split('?')[0];
+      proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?symbol=${symbol}`;
+    } else {
+      proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(input)}`;
+    }
+  } 
+  // 3. Fallback
+  else {
+    proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(input)}`;
+  }
+
+  console.log("Routing to proxy:", proxyUrl); // Log this to your browser console to see what's happening
+
   const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`Proxy ${r.status}`);
   return r;
 }
-
 // PASTE STEP 3 CODE HERE:
 let searchTimer;
 async function handleSearch(query) {
