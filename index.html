@@ -548,37 +548,9 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
 
 /* ─── WATCHLIST ───────────────────────────────────────────── */
 #wl-input-row{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border)}
-#wl-input{flex:1;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:0 12px;font-family:var(--mono);font-size:11px;color:var(--text);outline:none;text-transform: none;} /* Change uppercase to none */
+#wl-input{flex:1;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:0 12px;font-family:var(--mono);font-size:11px;color:var(--text);outline:none;text-transform:uppercase}
 #wl-input:focus{border-color:var(--blue)}
 #wl-input::placeholder{text-transform:none;font-family:var(--sans);font-size:11px;color:var(--dim)}
-/* --- ELASTIC SEARCH DROPDOWN --- */
-#wl-wrapper { position: relative; } /* Parent container for the input row */
-#wl-results {
-  position: absolute;
-  top: 40px; left: 12px; right: 12px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-  z-index: 1000;
-  max-height: 200px;
-  overflow-y: auto;
-  display: none; /* Hidden by default */
-}
-
-.search-item {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-}
-.search-item:hover { background: var(--bg3); }
-.search-item:last-child { border-bottom: none; }
-.search-item .s-name { color: var(--text2); font-size: 10px; margin-left: 8px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.search-item .s-sym { font-family: var(--mono); font-weight: 600; color: var(--blue); width: 60px; }
 #wl-add{background:var(--blue);color:#fff;border:none;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer}
 #wl-add:hover{background:#154888}
 #wl-list .wli{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
@@ -860,23 +832,15 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
     </div>
 
     <!-- Watchlist -->
-   <div class="card" style="--cc:#0f766e">
-  <div class="chdr">
-    <span class="ctitle">Watchlist</span>
-    <span id="wl-count" style="font-size:9px;color:var(--dim)"></span>
-  </div>
-
-  <div id="wl-wrapper">
-    <div id="wl-input-row">
-      <input type="text" id="wl-input" placeholder="Search Company or Ticker..." oninput="doWlSearch(this.value)" autocomplete="off">
-      <button id="wl-add" onclick="wlAdd()">+ Add</button>
+    <div class="card" style="--cc:#0f766e">
+      <div class="chdr"><span class="ctitle">Watchlist</span><span id="wl-count" style="font-size:9px;color:var(--dim)"></span></div>
+      <div id="wl-input-row">
+      <input type="text" id="wl-input" placeholder="Search Company..." oninput="handleSearch(this.value)" autocomplete="off">
+<div id="search-results" style="position: absolute; background: var(--bg2); border: 1px solid var(--blue); display: none; z-index: 1000; width: 100%;"></div>
+        <button id="wl-add" onclick="wlAdd()">+ Add</button>
+      </div>
+      <div id="wl-list"></div>
     </div>
-    
-    <div id="wl-results"></div>
-  </div>
-
-  <div id="wl-list"></div>
-</div>
 
     <!-- Corporate Actions & IPOs -->
     <div class="card" style="--cc:#7e22ce">
@@ -1031,69 +995,37 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
 </div>
 
 <script>
-async function pfetch(input) {
-  let proxyUrl = "";
-
-  if (input.includes('suggest')) {
-    try {
-      const urlObj = new URL(input);
-      const query = urlObj.searchParams.get('q');
-      proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?search=${encodeURIComponent(query)}`;
-    } catch(e) { 
-      proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(input)}`; 
-    }
-  } 
-  else if (input.toLowerCase().includes('/chart/')) {
-    const parts = input.split(/\/chart\//i); 
-    if (parts[1]) {
-      const symbol = parts[1].split('?')[0];
-      proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?symbol=${symbol}`;
-    } else {
-      proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(input)}`;
-    }
-  } 
-  else {
-    proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(input)}`;
-  }
-
+// ── PROXY ─────────────────────────────────────────────────────────────────────
+async function pfetch(url) {
+  const proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(url)}`;
   const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`Proxy ${r.status}`);
   return r;
-} // <--- THIS WAS THE MISSING BRACE
+}
 
+// PASTE STEP 3 CODE HERE:
 let searchTimer;
 async function handleSearch(query) {
-  const resBox = document.getElementById('wl-results'); 
-  if (!resBox) return;
-  
-  if (query.length < 2) { 
-    resBox.style.display = 'none'; 
-    return; 
-  }
+  const resBox = document.getElementById('search-results');
+  if (!resBox) return; // Safety check
+  if (query.length < 2) { resBox.style.display = 'none'; return; }
 
   clearTimeout(searchTimer);
   searchTimer = setTimeout(async () => {
     try {
-      const yahooUrl = `https://query1.finance.yahoo.com/v1.1/finance/ticker/suggest?q=${encodeURIComponent(query)}&lang=en-US`;
-      const r = await pfetch(yahooUrl);
+      // We use your worker's new "search" capability
+      const r = await fetch(`https://meridian-proxy.navinmv1981.workers.dev/?search=${encodeURIComponent(query)}`);
       const data = await r.json();
       
-      // Yahoo Suggestion API logic
-      const hits = (data.ResultSet && data.ResultSet.Result) || data.quotes || [];
-
-      if (hits.length > 0) {
-        resBox.innerHTML = hits.map(s => {
-          // Cleaned up the symbol check (s.symbol for suggest v1.1, s.symbol for v8)
-          const symbol = s.symbol || s.ticker || "";
-          const name = (s.name || s.shortname || s.longname || 'Unknown').replace(/'/g, "");
-          
-          return `
-            <div class="search-item" onclick="selectForWatchlist('${symbol}', '${name}')">
-              <span class="s-sym">${symbol}</span>
-              <span class="s-name">${name}</span>
-            </div>
-          `;
-        }).join('');
+      if (data.quotes && data.quotes.length > 0) {
+        resBox.innerHTML = data.quotes.map(s => `
+          <div style="padding:12px; cursor:pointer; border-bottom:1px solid var(--border); background:var(--bg2); color:var(--text); transition: background 0.2s;" 
+               onmouseover="this.style.background='var(--bg3)'" 
+               onmouseout="this.style.background='var(--bg2)'"
+               onclick="selectForWatchlist('${s.symbol}')">
+            <b style="color:var(--blue);">${s.symbol}</b> - ${s.shortname || s.longname || 'Unknown'}
+          </div>
+        `).join('');
         resBox.style.display = 'block';
       } else {
         resBox.style.display = 'none';
@@ -1104,14 +1036,12 @@ async function handleSearch(query) {
     }
   }, 300);
 }
-</script>
-// FIXED CONNECTOR: Now passes both symbol AND name
-function selectForWatchlist(symbol, name) {
-  wlAdd(symbol, name); 
-  // Hide the results after clicking
-  document.getElementById('wl-results').style.display = 'none';
-  document.getElementById('wl-input').value = '';
+
+// ALSO PASTE THE CONNECTOR HERE:
+function selectForWatchlist(symbol) {
+  wlAdd(symbol);
 }
+
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 // World indices with DM/EM classification
 const IDX_ALL=[
@@ -1242,42 +1172,25 @@ function fmc(v){
 function fp2(v){if(v==null||isNaN(v))return'—';return(v*100).toFixed(2)+'%';}
 function fn2(v){if(v==null||isNaN(v))return'—';return v.toFixed(2);}
 
-// ── SPARKLINE (Fixed for SVG Width Error) ───────────────────────────────────
-function spark(closes, pct, W = 52, H = 18) {
-  if (!closes || closes.length < 3) return '<span class="nc">—</span>';
-  
-  // Convert to numbers to ensure no strings like "${W}" are passed to SVG attributes
-  const width = Number(W) || 52;
-  const height = Number(H) || 18;
-  const col = pct >= 0 ? '#22c55e' : '#ef4444';
-  const gid = 'g' + Math.random().toString(36).slice(2, 8);
-  
-  const mn = Math.min(...closes);
-  const mx = Math.max(...closes);
-  const range = (mx - mn) || 1;
-
-  const pointsArr = closes.map((v, i) => {
-    const x = (i / (closes.length - 1)) * width;
-    const y = height - ((v - mn) / range) * (height - 4) - 2;
-    return [x.toFixed(1), y.toFixed(1)];
-  });
-
-  const pts = pointsArr.map(p => p.join(',')).join(' ');
-
-  // We use standard string concatenation (+) to avoid Template Literal bugs
-  let svg = '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg">';
-  svg += '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">';
-  svg += '<stop offset="0%" stop-color="' + col + '" stop-opacity=".2"/>';
-  svg += '<stop offset="100%" stop-color="' + col + '" stop-opacity="0"/>';
-  svg += '</linearGradient></defs>';
-  svg += '<polyline points="' + pts + '" fill="none" stroke="' + col + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>';
-  svg += '</svg>';
-  
-  return svg;
+// ── SPARKLINE ─────────────────────────────────────────────────────────────────
+function spark(closes,pct,W=52,H=18){
+  if(!closes||closes.length<3)return'<span class="nc">—</span>';
+  const col=pct>=0?'#1a7a4a':'#c0392b';
+  const gid='g'+Math.random().toString(36).slice(2,8);
+  const mn=Math.min(...closes),mx=Math.max(...closes),rng=mx-mn||1;
+  const xy=closes.map((v,i)=>[(i/(closes.length-1))*W,H-((v-mn)/rng)*(H-4)-2]);
+  const pts=xy.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const f0=`0,${xy[0][1].toFixed(1)}`,lp=`${xy[xy.length-1][0].toFixed(1)},${xy[xy.length-1][1].toFixed(1)}`;
+  return`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${col}" stop-opacity=".18"/>
+      <stop offset="100%" stop-color="${col}" stop-opacity=".01"/>
+    </linearGradient></defs>
+    <polygon points="${f0} ${pts} ${lp} ${W},${H} 0,${H}" fill="url(#${gid})"/>
+    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
 }
-
-// Ensure the large spark also uses numeric values
-function sparkLg(c, p) { return spark(c, p, 600, 60); }
+function sparkLg(c,p){return spark(c,p,600,60);}
 
 // ── WORLD INDICES ─────────────────────────────────────────────────────────────
 function setIdxFilter(f,btn){
@@ -1710,41 +1623,8 @@ async function wlAdd(overrideSym) {
 
 // Add this tiny function right below wlAdd
 // This is what the search results "click" triggers
-// This handles BOTH the "+ Add" button and the Search Results click
-function wlAdd(optionalSym, optionalName) {
-  const input = document.getElementById('wl-input');
-  
-  // 1. Determine the symbol (either from the click or the input box)
-  const sym = (optionalSym || input.value).trim().toUpperCase();
-  const name = optionalName || ""; // If we have a name from the search, use it
-
-  if (!sym) return;
-
-  // 2. Check if already in watchlist (to prevent duplicates)
-  if (myWatchlist.some(x => x.s === sym)) {
-    input.value = '';
-    document.getElementById('wl-results').style.display = 'none';
-    return;
-  }
-
-  // 3. Add to your array (using 's' and 'n' to match your data structure)
-  myWatchlist.push({ s: sym, n: name });
-  
-  // 4. Save and Refresh
-  saveWatchlist();
-  renderWatchlist();
-  
-  // 5. Cleanup UI
-  input.value = '';
-  document.getElementById('wl-results').style.display = 'none';
-  
-  // 6. Trigger a data fetch so the price loads immediately
-  if (typeof updateAll === 'function') updateAll();
-}
-
-// Update your search result "click" to pass both Symbol and Name
-function confirmWlAdd(sym, name) {
-  wlAdd(sym, name);
+function selectForWatchlist(symbol) {
+  wlAdd(symbol);
 }
 document.getElementById('wl-input').addEventListener('keydown',e=>{if(e.key==='Enter')wlAdd();});
 function wlRemove(sym){wlItems=wlItems.filter(x=>x.s!==sym);wlSave();renderWatchlist();}
@@ -1770,44 +1650,27 @@ function updateWatchlistData(data){
   if(missing.length)fetchAll(missing).then(extra=>{Object.assign(window._mdata,extra);renderWatchlist();});
 }
 
-// ── Sector View ─────────────────────────────────────────────────────────
-function renderSectorPerformance(data) {
-  const sectors = [
-    { s: 'XLK', n: 'Technology' },
-    { s: 'XLC', n: 'Communication' },
-    { s: 'XLF', n: 'Financials' },
-    { s: 'XLV', n: 'Healthcare' },
-    { s: 'XLE', n: 'Energy' },
-    { s: 'XLI', n: 'Industrials' },
-    { s: 'XLU', n: 'Utilities' },
-    { s: 'XLRE', n: 'Real Estate' }
+// ── CORPORATE ACTIONS ─────────────────────────────────────────────────────────
+function renderCorporateActions(){
+  const events=[
+    {type:'IPO', name:'CoreWeave',        detail:'NASDAQ · AI cloud · Est. raise ~$2.7B',   date:'Late Mar 2025'},
+    {type:'IPO', name:'Klarna',           detail:'NYSE · BNPL fintech · Est. raise ~$1B',    date:'Q2 2025'},
+    {type:'IPO', name:'Chime Financial',  detail:'NASDAQ · Neobank · Est. raise ~$800M',     date:'Q2 2025'},
+    {type:'IPO', name:'Cerebras Systems', detail:'NASDAQ · AI chip maker · Filed S-1',       date:'2025 TBD'},
+    {type:'EARN',name:'Nike (NKE)',        detail:'Q3 FY2025 · After market close',           date:'20 Mar 2025'},
+    {type:'EARN',name:'FedEx (FDX)',       detail:'Q3 FY2025 · After market close',           date:'20 Mar 2025'},
+    {type:'EARN',name:'General Mills',    detail:'Q3 FY2025',                                date:'26 Mar 2025'},
+    {type:'DIV', name:'Microsoft (MSFT)', detail:'Quarterly $0.83/share · Ex-date',          date:'21 Mar 2025'},
+    {type:'DIV', name:'Apple (AAPL)',      detail:'Quarterly $0.25/share · Ex-date',          date:'10 Feb 2025'},
+    {type:'SPLIT',name:'NVIDIA (NVDA)',   detail:'10-for-1 stock split completed',            date:'Jun 2024'},
   ];
-
-  const html = sectors.map(sec => {
-    const d = data[sec.s] || { price: 0, pct: 0 };
-    const cl = d.pct >= 0 ? 'up' : 'dn';
-    const sign = d.pct >= 0 ? '+' : '';
-    
-    // Simple "Heat Bar" logic: creates a tiny colored strip based on performance
-    const barWidth = Math.min(Math.abs(d.pct) * 20, 100); // Scale pct to a visual bar
-
-    return `
-      <div class="sec-item">
-        <div class="sec-main">
-          <span class="sec-name">${sec.n}</span>
-          <span class="sec-pct ${cl}">${sign}${d.pct.toFixed(2)}%</span>
-        </div>
-        <div class="sec-track">
-          <div class="sec-bar ${cl}" style="width: ${barWidth}%"></div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  document.getElementById('ca-list').innerHTML = `
-    <div class="sec-hdr">EQUITY SECTORS <span class="sec-sub">Daily %</span></div>
-    ${html}
-  `;
+  const tc={IPO:'ca-IPO',DIV:'ca-DIV',SPLIT:'ca-SPLIT',EARN:'ca-EARN'};
+  document.getElementById('ca-list').innerHTML=events.map(e=>`
+    <div class="ca-item">
+      <span class="ca-badge ${tc[e.type]}">${e.type}</span>
+      <div class="ca-body"><div class="ca-name">${e.name}</div><div class="ca-detail">${e.detail}</div></div>
+      <div class="ca-date">${e.date}</div>
+    </div>`).join('');
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
