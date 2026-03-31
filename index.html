@@ -1031,21 +1031,19 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
 </div>
 
 <script>
-// --- UPDATED PROXY GATEKEEPER ---
 async function pfetch(input) {
   let proxyUrl = "";
 
-  // 1. Check for SEARCH (Autocomplete)
   if (input.includes('suggest')) {
     try {
       const urlObj = new URL(input);
       const query = urlObj.searchParams.get('q');
       proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?search=${encodeURIComponent(query)}`;
-    } catch(e) { proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(input)}`; }
+    } catch(e) { 
+      proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(input)}`; 
+    }
   } 
-  // 2. Check for SYMBOL (Price/Chart) - More flexible matching
   else if (input.toLowerCase().includes('/chart/')) {
-    // This looks for the text right after 'chart/' regardless of what comes before it
     const parts = input.split(/\/chart\//i); 
     if (parts[1]) {
       const symbol = parts[1].split('?')[0];
@@ -1054,21 +1052,18 @@ async function pfetch(input) {
       proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(input)}`;
     }
   } 
-  // 3. Fallback
   else {
     proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(input)}`;
   }
 
-  console.log("Routing to proxy:", proxyUrl); // Log this to your browser console to see what's happening
-
   const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`Proxy ${r.status}`);
   return r;
-}
-// PASTE STEP 3 CODE HERE:
+} // <--- THIS WAS THE MISSING BRACE
+
 let searchTimer;
 async function handleSearch(query) {
-  const resBox = document.getElementById('wl-results'); // Use 'wl-results' to match your CSS
+  const resBox = document.getElementById('wl-results'); 
   if (!resBox) return;
   
   if (query.length < 2) { 
@@ -1079,19 +1074,22 @@ async function handleSearch(query) {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(async () => {
     try {
-      // Using your Cloudflare Worker for the search
-      const r = await fetch(`https://meridian-proxy.navinmv1981.workers.dev/?search=${encodeURIComponent(query)}`);
+      const yahooUrl = `https://query1.finance.yahoo.com/v1.1/finance/ticker/suggest?q=${encodeURIComponent(query)}&lang=en-US`;
+      const r = await pfetch(yahooUrl);
       const data = await r.json();
       
-      // Yahoo's search results usually come back in a 'quotes' array
-      const hits = data.quotes || [];
+      // Yahoo Suggestion API logic
+      const hits = (data.ResultSet && data.ResultSet.Result) || data.quotes || [];
 
       if (hits.length > 0) {
         resBox.innerHTML = hits.map(s => {
-          const name = (s.shortname || s.longname || s.name || 'Unknown').replace(/'/g, "");
+          // Cleaned up the symbol check (s.symbol for suggest v1.1, s.symbol for v8)
+          const symbol = s.symbol || s.ticker || "";
+          const name = (s.name || s.shortname || s.longname || 'Unknown').replace(/'/g, "");
+          
           return `
-            <div class="search-item" onclick="selectForWatchlist('${s.symbol}', '${name}')">
-              <span class="s-sym">${s.symbol}</span>
+            <div class="search-item" onclick="selectForWatchlist('${symbol}', '${name}')">
+              <span class="s-sym">${symbol}</span>
               <span class="s-name">${name}</span>
             </div>
           `;
@@ -1106,7 +1104,7 @@ async function handleSearch(query) {
     }
   }, 300);
 }
-
+</script>
 // FIXED CONNECTOR: Now passes both symbol AND name
 function selectForWatchlist(symbol, name) {
   wlAdd(symbol, name); 
