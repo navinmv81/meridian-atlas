@@ -192,16 +192,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .mv-tab{font-size:10px;font-weight:600;padding:7px 14px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);background:none;border-top:none;border-left:none;border-right:none;transition:all .15s;letter-spacing:.03em}
 .mv-tab:hover{color:var(--text)}
 .mv-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
-.mv-table{width:100%;border-collapse:collapse}
+.mv-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:10px 12px 0}
+.mv-group-title{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 6px;min-height:14px;display:flex;align-items:center}
+.mv-table{width:100%;border-collapse:collapse;table-layout:fixed}
 .mv-table th{padding:4px 10px;font-size:8px;font-weight:600;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;text-align:right;border-bottom:1px solid var(--border);background:var(--bg3)}
 .mv-table th:first-child{text-align:left}
 .mv-table td{padding:5px 10px;border-bottom:1px solid #f0efe9;vertical-align:middle;font-family:var(--mono);font-size:11px}
+.mv-subtable th{padding:4px 8px}
+.mv-subtable td{padding:4px 8px;font-size:10px;height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv-subtable th:nth-child(1),.mv-subtable td:nth-child(1){width:52%}
+.mv-subtable th:nth-child(2),.mv-subtable td:nth-child(2){width:20%}
+.mv-subtable th:nth-child(3),.mv-subtable td:nth-child(3){width:18%}
+.mv-subtable th:nth-child(4),.mv-subtable td:nth-child(4){width:10%}
 body.dark .mv-table td{border-bottom-color:var(--border)}
 .mv-table tr:last-child td{border-bottom:none}
 .mv-table tr:hover td{background:#f7f8fd;cursor:pointer}
 body.dark .mv-table tr:hover td{background:var(--bg3)}
 .mv-sym{font-weight:700;color:var(--blue);font-size:11px}
-.mv-name{font-size:9px;color:var(--dim);display:block;font-family:var(--sans)}
+.mv-name{font-size:9px;color:var(--dim);display:block;font-family:var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mv-price{text-align:right;font-weight:600;color:var(--text)}
 .mv-pct{text-align:right;font-weight:700;font-size:11px}
 .mv-vol{text-align:right;font-size:10px;color:var(--muted)}
@@ -258,6 +266,8 @@ body.dark .mv-table tr:hover td{background:var(--bg3)}
 .dt th{padding:4px 8px;font-size:8px;font-weight:600;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;text-align:right;border-bottom:1px solid var(--border);background:var(--bg3)}
 .dt th:first-child{text-align:left}
 .dt td{padding:0 8px;height:var(--row-h);border-bottom:1px solid #f0efe9;vertical-align:middle;transition:padding .2s}
+.dt th.chart-col,.dt td.sp{text-align:center;width:78px;min-width:78px;padding-left:4px;padding-right:4px}
+.dt td.sp svg{display:block;margin:0 auto}
 .dt tr:last-child td{border-bottom:none}
 .dt tr:hover td{background:#f7f8fd}
 .sn{font-size:11px;font-weight:600;color:var(--text);line-height:1.2}
@@ -564,18 +574,18 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
 .wl-del:hover{color:var(--red)}
 .wl-empty{padding:14px;text-align:center;color:var(--dim);font-size:11px}
 
-/* ─── CORPORATE ACTIONS ───────────────────────────────────── */
-.ca-item{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start}
-.ca-item:last-child{border-bottom:none}
-.ca-badge{font-size:8px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0;align-self:flex-start;margin-top:1px}
-.ca-DIV{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
-.ca-SPLIT{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
-.ca-IPO{background:#fdf4ff;color:#7e22ce;border:1px solid #e9d5ff}
-.ca-EARN{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
-.ca-body{flex:1}
-.ca-name{font-size:11px;font-weight:600;color:var(--text);line-height:1.3}
-.ca-detail{font-size:10px;color:var(--muted);margin-top:2px}
-.ca-date{font-family:var(--mono);font-size:9px;color:var(--dim);white-space:nowrap;flex-shrink:0;align-self:center}
+/* ─── EQUITY SECTORS ───────────────────────────────────── */
+.sec-row{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sec-row:last-child{border-bottom:none}
+.sec-name{font-size:10px;font-weight:600;color:var(--text);min-width:124px}
+.sec-sym{font-family:var(--mono);font-size:9px;color:var(--dim);min-width:40px}
+.sec-bar-wrap{flex:1;height:5px;border-radius:4px;background:var(--bg3);border:1px solid var(--border);overflow:hidden}
+.sec-bar{height:100%;border-radius:4px}
+.sec-pct{font-family:var(--mono);font-size:10px;font-weight:700;min-width:62px;text-align:right}
+.sec-pct.up{color:var(--green)}
+.sec-pct.dn{color:var(--red)}
+.sec-pct.nc{color:var(--dim)}
+.sec-hdr-note{font-size:9px;color:var(--dim)}
 
 /* ─── FOOTER ──────────────────────────────────────────────── */
 #footer{background:var(--bg2);border-top:1px solid var(--border);padding:10px 20px;display:flex;flex-direction:column;gap:5px}
@@ -701,7 +711,7 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
             <button class="seg-btn" onclick="setIdxFilter('em',this)">Emerging</button>
           </div>
         </div>
-        <table class="dt"><thead><tr><th>Index</th><th>Chart</th><th>Last</th><th>Chg</th><th>%Chg</th><th>H/L</th></tr></thead>
+        <table class="dt"><thead><tr><th>Index</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>H/L</th></tr></thead>
         <tbody id="tb-global"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
       </div>
 
@@ -751,12 +761,12 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
     <div class="grid2">
       <div class="card" style="--cc:#1a56a0">
         <div class="chdr"><span class="ctitle">US Equities</span><span id="b-us" class="cbadge bCL">—</span></div>
-        <table class="dt"><thead><tr><th>Stock</th><th>Chart</th><th>Last</th><th>Chg</th><th>%Chg</th><th>Vol</th></tr></thead>
+        <table class="dt"><thead><tr><th>Stock</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>Vol</th></tr></thead>
         <tbody id="tb-us"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
       </div>
       <div class="card" style="--cc:#1a7a4a">
         <div class="chdr"><span class="ctitle">European Equities</span><span id="b-eu" class="cbadge bCL">—</span></div>
-        <table class="dt"><thead><tr><th>Stock</th><th>Chart</th><th>Last</th><th>Chg</th><th>%Chg</th><th>Vol</th></tr></thead>
+        <table class="dt"><thead><tr><th>Stock</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>Vol</th></tr></thead>
         <tbody id="tb-eu"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
       </div>
     </div>
@@ -767,16 +777,8 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
         <span class="ctitle">Market Movers</span>
         <span style="font-size:9px;color:var(--dim)" id="mv-updated"></span>
       </div>
-      <div class="mv-tab-bar">
-        <button class="mv-tab active" onclick="setMvTab('gainers',this)">▲ Gainers</button>
-        <button class="mv-tab" onclick="setMvTab('losers',this)">▼ Losers</button>
-        <button class="mv-tab" onclick="setMvTab('active',this)">⚡ Most Active</button>
-      </div>
-      <div id="mv-body">
-        <table class="mv-table">
-          <thead><tr><th>Ticker</th><th style="text-align:right">Price</th><th style="text-align:right">% Chg</th><th style="text-align:right">Volume</th></tr></thead>
-          <tbody id="mv-rows"><tr><td colspan="4" class="mv-none">Loading…</td></tr></tbody>
-        </table>
+      <div id="mv-grid" class="mv-grid">
+        <div class="mv-none" style="padding:20px 0;grid-column:1/-1">Loading…</div>
       </div>
     </div>
     <!-- v2.8 END — Market Movers -->
@@ -785,12 +787,12 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
     <div class="grid2">
       <div class="card" style="--cc:#b45309">
         <div class="chdr"><span class="ctitle">Commodities</span><span class="cbadge b24">24H</span></div>
-        <table class="dt"><thead><tr><th>Name</th><th>Chart</th><th>Last</th><th>Chg</th><th>%Chg</th><th>H/L</th></tr></thead>
+        <table class="dt"><thead><tr><th>Name</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>H/L</th></tr></thead>
         <tbody id="tb-commodities"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
       </div>
       <div class="card" style="--cc:#0e7490">
         <div class="chdr"><span class="ctitle">G10 Currencies</span><span class="cbadge b24">24/5</span></div>
-        <table class="dt"><thead><tr><th>Pair</th><th>Chart</th><th>Rate</th><th>Chg</th><th>%Chg</th><th>H/L</th></tr></thead>
+        <table class="dt"><thead><tr><th>Pair</th><th class="chart-col">Chart (1M)</th><th>Rate</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>H/L</th></tr></thead>
         <tbody id="tb-fx"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
       </div>
     </div>
@@ -798,7 +800,7 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
     <!-- ROW 4: Futures full width -->
     <div class="card" style="--cc:#475569">
       <div class="chdr"><span class="ctitle">Futures</span><span id="b-fut" class="cbadge bCL">—</span></div>
-      <table class="dt"><thead><tr><th>Contract</th><th>Chart</th><th>Last</th><th>Chg</th><th>%Chg</th><th>Session H/L</th><th>Vol</th></tr></thead>
+      <table class="dt"><thead><tr><th>Contract</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>Session H/L</th><th>Vol</th></tr></thead>
       <tbody id="tb-futures"><tr class="lrow"><td colspan="7">Loading…</td></tr></tbody></table>
     </div>
 
@@ -842,10 +844,10 @@ body.dark .scr-table td{border-bottom-color:var(--border)}
       <div id="wl-list"></div>
     </div>
 
-    <!-- Corporate Actions & IPOs -->
+    <!-- Equity Sectors -->
     <div class="card" style="--cc:#7e22ce">
-      <div class="chdr"><span class="ctitle">Corporate Actions &amp; IPOs</span><span style="font-size:9px;color:var(--dim)">Upcoming</span></div>
-      <div id="ca-list"></div>
+      <div class="chdr"><span class="ctitle">Equity Sectors</span><span class="sec-hdr-note">Live ETF view</span></div>
+      <div id="sector-list"></div>
     </div>
 
     <!-- v2.8.6 START: Earnings Snapshot -->
@@ -1005,25 +1007,66 @@ async function pfetch(url) {
 
 // PASTE STEP 3 CODE HERE:
 let searchTimer;
+function wlSearchScore(entry, query){
+  const sym=(entry.s||'').toLowerCase();
+  const name=(entry.n||'').toLowerCase();
+  if(!sym && !name) return -1;
+  if(sym===query) return 1000;
+  if(sym.startsWith(query)) return 900-query.length;
+  if(name.startsWith(query)) return 820-query.length;
+  if(sym.includes(query)) return 740-sym.indexOf(query);
+  if(name.includes(query)) return 680-name.indexOf(query);
+  // Lightweight fuzzy matcher: all chars in order with a gap penalty.
+  let qi=0,last=-1,score=0;
+  for(let i=0;i<sym.length&&qi<query.length;i++){
+    if(sym[i]===query[qi]){
+      score += (last===i-1)?20:8;
+      last=i; qi++;
+    }
+  }
+  if(qi===query.length) return 500+score;
+  qi=0; last=-1; score=0;
+  for(let i=0;i<name.length&&qi<query.length;i++){
+    if(name[i]===query[qi]){
+      score += (last===i-1)?14:6;
+      last=i; qi++;
+    }
+  }
+  return qi===query.length ? 420+score : -1;
+}
+
+function getWatchlistSearchPool(){
+  if(typeof ALL_SEARCH!=='undefined'&&Array.isArray(ALL_SEARCH)&&ALL_SEARCH.length){
+    return ALL_SEARCH;
+  }
+  return [];
+}
+
 async function handleSearch(query) {
   const resBox = document.getElementById('search-results');
   if (!resBox) return; // Safety check
-  if (query.length < 2) { resBox.style.display = 'none'; return; }
+  const q=query.trim().toLowerCase();
+  if (q.length < 2) { resBox.style.display = 'none'; return; }
 
   clearTimeout(searchTimer);
   searchTimer = setTimeout(async () => {
     try {
-      // We use your worker's new "search" capability
-      const r = await fetch(`https://meridian-proxy.navinmv1981.workers.dev/?search=${encodeURIComponent(query)}`);
-      const data = await r.json();
-      
-      if (data.quotes && data.quotes.length > 0) {
-        resBox.innerHTML = data.quotes.map(s => `
+      const pool=getWatchlistSearchPool();
+      const ranked=[...new Map(pool
+        .map(x=>({x,score:wlSearchScore(x,q)}))
+        .filter(r=>r.score>=0)
+        .sort((a,b)=>b.score-a.score)
+        .slice(0,12)
+        .map(r=>[r.x.s,r.x])
+      ).values()];
+
+      if (ranked.length > 0) {
+        resBox.innerHTML = ranked.map(s => `
           <div style="padding:12px; cursor:pointer; border-bottom:1px solid var(--border); background:var(--bg2); color:var(--text); transition: background 0.2s;" 
                onmouseover="this.style.background='var(--bg3)'" 
                onmouseout="this.style.background='var(--bg2)'"
-               onclick="selectForWatchlist('${s.symbol}')">
-            <b style="color:var(--blue);">${s.symbol}</b> - ${s.shortname || s.longname || 'Unknown'}
+               onclick="selectForWatchlist('${s.s}','${(s.n||s.s).replace(/'/g,"\\'")}')">
+            <b style="color:var(--blue);">${s.s}</b> - ${s.n || s.s}
           </div>
         `).join('');
         resBox.style.display = 'block';
@@ -1038,8 +1081,8 @@ async function handleSearch(query) {
 }
 
 // ALSO PASTE THE CONNECTOR HERE:
-function selectForWatchlist(symbol) {
-  wlAdd(symbol);
+function selectForWatchlist(symbol,name) {
+  wlAdd(symbol,name);
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -1099,6 +1142,18 @@ const TICK_SYMS=[
   {s:'AAPL',n:'AAPL'},{s:'MSFT',n:'MSFT'},{s:'NVDA',n:'NVDA'},{s:'TSLA',n:'TSLA'},{s:'ASML',n:'ASML'},
 ];
 
+const SECTOR_ETFS=[
+  {name:'Technology', s:'XLK'},
+  {name:'Energy', s:'XLE'},
+  {name:'Financials', s:'XLF'},
+  {name:'Software', s:'IGV'}, // software proxy ETF
+  {name:'Communication Services', s:'XLC'},
+  {name:'Industrials', s:'XLI'},
+  {name:'Utilities', s:'XLU'},
+  {name:'Real Estate', s:'XLRE'},
+  {name:'Healthcare', s:'XLV'}
+];
+
 // ── CLOCK ─────────────────────────────────────────────────────────────────────
 const p2=n=>String(n).padStart(2,'0');
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1111,17 +1166,57 @@ setInterval(tickClock,1000); tickClock();
 
 // ── FETCH ─────────────────────────────────────────────────────────────────────
 async function fetchSym(sym){
-  const url=`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1mo`;
+  const chartUrl=`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1mo`;
   try{
-    const r=await pfetch(url);
-    const j=await r.json();
+    const chartResp=await pfetch(chartUrl);
+    const j=await chartResp.json();
     const res=j?.chart?.result?.[0]; if(!res) return null;
     const m=res.meta;
     const closes=(res.indicators?.quote?.[0]?.close||[]).filter(v=>v!=null);
-    const price=m.regularMarketPrice??m.chartPreviousClose??0;
-    const prev=m.chartPreviousClose??m.previousClose??price;
-    const chg=price-prev,pct=prev?(chg/prev)*100:0;
-    return{price,chg,pct,high:m.regularMarketDayHigh,low:m.regularMarketDayLow,vol:m.regularMarketVolume,closes};
+    const price=m.regularMarketPrice??closes[closes.length-1]??m.chartPreviousClose??m.previousClose??0;
+    const lastClose=closes.length?closes[closes.length-1]:null;
+    const prevSeries=closes.length>1?closes[closes.length-2]:null;
+    const relDiff=(a,b)=>Math.abs(a-b)/Math.max(1,Math.abs(a),Math.abs(b));
+
+    // Global previous-close picker:
+    // - If price approximately equals last series close, that close is "today/last print",
+    //   so previous session is series[-2].
+    // - Otherwise series[-1] is typically previous session close.
+    let seriesPrev=null;
+    if(lastClose!=null&&!isNaN(lastClose)&&lastClose>0){
+      seriesPrev = relDiff(price,lastClose) < 0.0005
+        ? (prevSeries??null)
+        : lastClose;
+    }
+
+    const prevCandidates=[
+      seriesPrev,
+      m.regularMarketPreviousClose,
+      m.previousClose,
+      prevSeries,
+      m.chartPreviousClose
+    ].filter(v=>v!=null&&!isNaN(v)&&v>0);
+
+    // Guard against stale/outlier previous-close values by choosing candidate closest to seriesPrev.
+    let prev=price;
+    if(prevCandidates.length){
+      if(seriesPrev!=null){
+        prev=prevCandidates.reduce((best,cur)=>relDiff(cur,seriesPrev)<relDiff(best,seriesPrev)?cur:best,prevCandidates[0]);
+      }else{
+        prev=prevCandidates[0];
+      }
+    }
+    const chg=price-prev;
+    const pct=prev?(chg/prev)*100:0;
+    return{
+      price,
+      chg,
+      pct,
+      high:m.regularMarketDayHigh,
+      low:m.regularMarketDayLow,
+      vol:m.regularMarketVolume,
+      closes
+    };
   }catch{return null;}
 }
 async function fetchAll(syms){
@@ -1592,7 +1687,7 @@ function renderCalendar(){
 // ── WATCHLIST ─────────────────────────────────────────────────────────────────
 let wlItems=JSON.parse(localStorage.getItem('ma_wl')||'[]');
 function wlSave(){localStorage.setItem('ma_wl',JSON.stringify(wlItems));}
-async function wlAdd(overrideSym) {
+async function wlAdd(overrideSym,overrideName) {
   const inp = document.getElementById('wl-input');
   
   // LOGIC: If we passed a symbol (from a click), use it. 
@@ -1608,7 +1703,7 @@ async function wlAdd(overrideSym) {
   // Standard checks: don't add if empty or already there
   if (!sym || wlItems.find(x => x.s === sym)) return;
   
-  wlItems.push({ s: sym, n: sym }); 
+  wlItems.push({ s: sym, n: (overrideName||sym) }); 
   wlSave(); 
   renderWatchlist();
   
@@ -1623,8 +1718,8 @@ async function wlAdd(overrideSym) {
 
 // Add this tiny function right below wlAdd
 // This is what the search results "click" triggers
-function selectForWatchlist(symbol) {
-  wlAdd(symbol);
+function selectForWatchlist(symbol,name) {
+  wlAdd(symbol,name);
 }
 document.getElementById('wl-input').addEventListener('keydown',e=>{if(e.key==='Enter')wlAdd();});
 function wlRemove(sym){wlItems=wlItems.filter(x=>x.s!==sym);wlSave();renderWatchlist();}
@@ -1650,27 +1745,26 @@ function updateWatchlistData(data){
   if(missing.length)fetchAll(missing).then(extra=>{Object.assign(window._mdata,extra);renderWatchlist();});
 }
 
-// ── CORPORATE ACTIONS ─────────────────────────────────────────────────────────
-function renderCorporateActions(){
-  const events=[
-    {type:'IPO', name:'CoreWeave',        detail:'NASDAQ · AI cloud · Est. raise ~$2.7B',   date:'Late Mar 2025'},
-    {type:'IPO', name:'Klarna',           detail:'NYSE · BNPL fintech · Est. raise ~$1B',    date:'Q2 2025'},
-    {type:'IPO', name:'Chime Financial',  detail:'NASDAQ · Neobank · Est. raise ~$800M',     date:'Q2 2025'},
-    {type:'IPO', name:'Cerebras Systems', detail:'NASDAQ · AI chip maker · Filed S-1',       date:'2025 TBD'},
-    {type:'EARN',name:'Nike (NKE)',        detail:'Q3 FY2025 · After market close',           date:'20 Mar 2025'},
-    {type:'EARN',name:'FedEx (FDX)',       detail:'Q3 FY2025 · After market close',           date:'20 Mar 2025'},
-    {type:'EARN',name:'General Mills',    detail:'Q3 FY2025',                                date:'26 Mar 2025'},
-    {type:'DIV', name:'Microsoft (MSFT)', detail:'Quarterly $0.83/share · Ex-date',          date:'21 Mar 2025'},
-    {type:'DIV', name:'Apple (AAPL)',      detail:'Quarterly $0.25/share · Ex-date',          date:'10 Feb 2025'},
-    {type:'SPLIT',name:'NVIDIA (NVDA)',   detail:'10-for-1 stock split completed',            date:'Jun 2024'},
-  ];
-  const tc={IPO:'ca-IPO',DIV:'ca-DIV',SPLIT:'ca-SPLIT',EARN:'ca-EARN'};
-  document.getElementById('ca-list').innerHTML=events.map(e=>`
-    <div class="ca-item">
-      <span class="ca-badge ${tc[e.type]}">${e.type}</span>
-      <div class="ca-body"><div class="ca-name">${e.name}</div><div class="ca-detail">${e.detail}</div></div>
-      <div class="ca-date">${e.date}</div>
-    </div>`).join('');
+// ── EQUITY SECTORS (live ETF snapshot) ────────────────────────────────────────
+function renderEquitySectors(data=window._mdata||{}){
+  const box=document.getElementById('sector-list');
+  if(!box) return;
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  box.innerHTML=SECTOR_ETFS.map(({name,s})=>{
+    const d=data?.[s];
+    const pct=d?.pct;
+    const cls=pct==null?'nc':pct>=0?'up':'dn';
+    const arr=pct==null?'•':pct>=0?'▲':'▼';
+    const pctTxt=pct==null?'Live…':`${arr} ${Math.abs(pct).toFixed(2)}%`;
+    const barW=pct==null?16:clamp(Math.abs(pct)*12,6,100);
+    const barCol=pct==null?'var(--dim)':pct>=0?'var(--green)':'var(--red)';
+    return `<div class="sec-row" onclick="openBySymbol('${s}','${name}')">
+      <span class="sec-name">${name}</span>
+      <span class="sec-sym">${s}</span>
+      <span class="sec-bar-wrap"><span class="sec-bar" style="width:${barW.toFixed(1)}%;background:${barCol}"></span></span>
+      <span class="sec-pct ${cls}">${pctTxt}</span>
+    </div>`;
+  }).join('');
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
@@ -1734,6 +1828,7 @@ function renderModal(sym,name,d,f){
   const upside=f?.targetPrice&&price?((f.targetPrice-price)/price*100):null;
   const recKey=(f?.recommendation||'').replace(/ /g,'_');
   const hasFund=!!f;
+  const unsupportedFundType=sym.startsWith('^')||sym.includes('=F');
 
   // ── price header (shared across tabs)
   const priceHdr=`
@@ -1760,7 +1855,7 @@ function renderModal(sym,name,d,f){
   // ── overview panel (chart + analyst)
   const overviewPanel=`
     <div class="mtab-panel active" data-panel="overview">
-      ${!hasFund?`<div style="color:var(--amber);font-size:10px;padding:6px 0 10px;border-bottom:1px solid var(--border);margin-bottom:12px">⚠ Fundamental data not available for indices, bonds and FX instruments</div>`:''}
+      ${(!hasFund&&unsupportedFundType)?`<div style="color:var(--amber);font-size:10px;padding:6px 0 10px;border-bottom:1px solid var(--border);margin-bottom:12px">⚠ Fundamental data not available for indices and commodities</div>`:''}
       ${hasFund?`<div class="mgrid">
         <div class="mblock"><div class="mbtitle">Valuation</div>
           <div class="mitem"><div class="mlabel">Market Cap</div><div class="mval">${fmc(f.marketCap)}</div></div>
@@ -1906,13 +2001,13 @@ function renderModal(sym,name,d,f){
         <a class="myf" href="https://finance.yahoo.com/quote/${sym}/financials" target="_blank">↗ Full financials on Yahoo Finance</a>
       </div>
     </div>`
-  :`<div class="mtab-panel" data-panel="fundamentals"><div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Fundamental data not available for this instrument type.<br><span style="font-size:10px;color:var(--dim)">Indices, bonds and FX pairs do not carry company fundamentals.</span></div></div>`;
+  :`<div class="mtab-panel" data-panel="fundamentals"><div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">${unsupportedFundType?'Fundamental data not available for this instrument type.':'Fundamental data is temporarily unavailable for this symbol.'}<br><span style="font-size:10px;color:var(--dim)">${unsupportedFundType?'Indices and commodities do not carry company fundamentals.':'Try refreshing in a few seconds.'}</span></div></div>`;
 
 
   // v2.3: ── analyst calls panel ───────────────────────────────────────────
   let analystPanel='';
   if(!hasFund){
-    analystPanel=`<div class="mtab-panel" data-panel="analyst"><div class="ac-none">Analyst data not available for this instrument type.</div></div>`;
+    analystPanel=`<div class="mtab-panel" data-panel="analyst"><div class="ac-none">${unsupportedFundType?'Analyst data not available for this instrument type.':'Analyst data is temporarily unavailable for this symbol.'}</div></div>`;
   } else {
     // Summary counts — use stored raw counts from cache
     const sBuy=(f.strongBuy||0)+(f.buy||0);
@@ -2731,6 +2826,7 @@ async function doRefresh(){
     ...IDX_ALL.map(x=>x.s),
     ...Object.values(YIELD_SYMS),
     ...SECTIONS.flatMap(s=>s.syms.map(x=>x.s)),
+    ...SECTOR_ETFS.map(x=>x.s),
     ...TICK_SYMS.map(x=>x.s),
     '^GSPC','^IXIC','^STOXX50E','^HSI','^N225','^VIX','GC=F','CL=F','EURUSD=X','USDJPY=X',
     'BTC-USD','ETH-USD','^IRX','^FVX','^TNX','^TYX',
@@ -2752,6 +2848,7 @@ async function doRefresh(){
     renderMovers();       // v2.8: update market movers
     renderYieldCurve(data);    // v2.8.6: yield curve visual
     renderCreditSnapshot(data); // v2.8.6: credit snapshot
+    renderEquitySectors(data);
     const now=new Date();
     setS(`Meridian Atlas — ${n}/${allS.length} symbols loaded — ${p2(now.getUTCHours())}:${p2(now.getUTCMinutes())} GMT — next refresh in 60s`,'ok');
   }catch(e){
@@ -2814,8 +2911,8 @@ function setMvTab(tab, btn){
 
 function renderMovers(){
   const data = window._mdata || {};
-  const rows = document.getElementById('mv-rows');
-  if(!rows) return;
+  const grid = document.getElementById('mv-grid');
+  if(!grid) return;
 
   // Build list from universe, only symbols with data
   let items = MV_UNIVERSE
@@ -2829,35 +2926,59 @@ function renderMovers(){
     });
 
   if(!items.length){
-    rows.innerHTML = '<tr><td colspan="4" class="mv-none">Data unavailable — refresh to load</td></tr>';
+    grid.innerHTML = '<div class="mv-none" style="padding:20px 0">Data unavailable — refresh to load</div>';
     return;
   }
 
-  if(mvFilter === 'gainers')      items = items.filter(x => x.pct > 0).sort((a,b) => b.pct - a.pct).slice(0, 10);
-  else if(mvFilter === 'losers')  items = items.filter(x => x.pct < 0).sort((a,b) => a.pct - b.pct).slice(0, 10);
-  else                             items = items.sort((a,b) => b.vol - a.vol).slice(0, 10);
-
-  if(!items.length){
-    rows.innerHTML = `<tr><td colspan="4" class="mv-none">No ${mvFilter} in current data</td></tr>`;
-    return;
-  }
+  const gainers = items.filter(x => x.pct > 0).sort((a,b) => b.pct - a.pct).slice(0, 10);
+  const losers  = items.filter(x => x.pct < 0).sort((a,b) => a.pct - b.pct).slice(0, 10);
+  const active  = items.slice().sort((a,b) => b.vol - a.vol).slice(0, 10);
 
   const isFX = s => s.includes('=X');
-  rows.innerHTML = items.map(({s,name,price,pct,vol}) => {
-    const pCls = pct >= 0 ? 'up' : 'dn';
-    const pArr = pct >= 0 ? '▲' : '▼';
-    const priceStr = isFX(s) ? price.toFixed(4) : price >= 1000
-      ? price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-      : price.toFixed(2);
-    const volStr = vol >= 1e9 ? (vol/1e9).toFixed(1)+'B' : vol >= 1e6 ? (vol/1e6).toFixed(1)+'M' : vol >= 1e3 ? (vol/1e3).toFixed(0)+'K' : vol ? String(vol) : '—';
-    const safeN = name.replace(/'/g, '');
-    return `<tr onclick="openBySymbol('${s}','${safeN}')">
-      <td><span class="mv-sym">${s}</span><span class="mv-name">${name !== s ? name : ''}</span></td>
-      <td class="mv-price">${priceStr}</td>
-      <td class="mv-pct ${pCls}">${pArr} ${Math.abs(pct).toFixed(2)}%</td>
-      <td class="mv-vol">${volStr}</td>
-    </tr>`;
-  }).join('');
+  function rowHtml(arr){
+    if(!arr.length){
+      return `<tr><td colspan="4" class="mv-none">No data</td></tr>`;
+    }
+    return arr.map(({s,name,price,pct,vol}) => {
+      const pCls = pct >= 0 ? 'up' : 'dn';
+      const pArr = pct >= 0 ? '▲' : '▼';
+      const priceStr = isFX(s) ? price.toFixed(4) : price >= 1000
+        ? price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+        : price.toFixed(2);
+      const volStr = vol >= 1e9 ? (vol/1e9).toFixed(1)+'B' : vol >= 1e6 ? (vol/1e6).toFixed(1)+'M' : vol >= 1e3 ? (vol/1e3).toFixed(0)+'K' : vol ? String(vol) : '—';
+      const safeN = name.replace(/'/g, '');
+      return `<tr onclick="openBySymbol('${s}','${safeN}')">
+        <td><span class="mv-sym">${s}</span><span class="mv-name">${name !== s ? name : ''}</span></td>
+        <td class="mv-price">${priceStr}</td>
+        <td class="mv-pct ${pCls}">${pArr} ${Math.abs(pct).toFixed(2)}%</td>
+        <td class="mv-vol">${volStr}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  grid.innerHTML = `
+    <div>
+      <div class="mv-group-title">▲ Gainers</div>
+      <table class="mv-table mv-subtable">
+        <thead><tr><th>Ticker</th><th>Price</th><th>% Chg</th><th>Volume</th></tr></thead>
+        <tbody>${rowHtml(gainers)}</tbody>
+      </table>
+    </div>
+    <div>
+      <div class="mv-group-title">▼ Losers</div>
+      <table class="mv-table mv-subtable">
+        <thead><tr><th>Ticker</th><th>Price</th><th>% Chg</th><th>Volume</th></tr></thead>
+        <tbody>${rowHtml(losers)}</tbody>
+      </table>
+    </div>
+    <div>
+      <div class="mv-group-title">⚡ Most Active</div>
+      <table class="mv-table mv-subtable">
+        <thead><tr><th>Ticker</th><th>Price</th><th>% Chg</th><th>Volume</th></tr></thead>
+        <tbody>${rowHtml(active)}</tbody>
+      </table>
+    </div>
+  `;
 
   const upd = document.getElementById('mv-updated');
   if(upd){ const n=new Date(); upd.textContent=`${String(n.getUTCHours()).padStart(2,'0')}:${String(n.getUTCMinutes()).padStart(2,'0')} GMT`; }
@@ -2869,7 +2990,7 @@ function buildSymNames(){
   if(typeof SECTIONS !== 'undefined') SECTIONS.forEach(s => s.syms.forEach(x => { m[x.s] = x.n; }));
   if(typeof IDX_ALL !== 'undefined') IDX_ALL.forEach(x => { m[x.s] = x.n; });
   // Known extras
-  const extras = {'GC=F':'Gold','CL=F':'WTI Oil','BZ=F':'Brent','SI=F':'Silver','LQD':'US IG Corp','HYG':'US HY Corp','SPY':'S&P 500 ETF','QQQ':'Nasdaq ETF','GLD':'Gold ETF','BTC-USD':'Bitcoin','ETH-USD':'Ethereum'};
+  const extras = {'GC=F':'Gold','CL=F':'WTI Oil','BZ=F':'Brent','SI=F':'Silver','LQD':'US IG Corp','HYG':'US HY Corp','SPY':'S&P 500 ETF','QQQ':'Nasdaq ETF','GLD':'Gold ETF','BTC-USD':'Bitcoin','ETH-USD':'Ethereum','XLK':'Technology','XLE':'Energy','XLF':'Financials','IGV':'Software','XLC':'Communication Services','XLI':'Industrials','XLU':'Utilities','XLRE':'Real Estate','XLV':'Healthcare'};
   Object.assign(m, extras);
   window._allSymNames = m;
 }
@@ -3248,7 +3369,7 @@ setRdMode = function(mode) {
   applyDark();            // v2.8: apply saved dark mode preference
   buildSymNames();        // v2.8: build name map before first render
   renderCalendar();
-  renderCorporateActions();
+  renderEquitySectors();
   renderEarningsSnapshot(); // v2.8.6: earnings snapshot
   renderWatchlist();
   await Promise.all([doRefresh(),doNews()]);
