@@ -393,35 +393,41 @@ body.dark .mv-table tr:hover td{background:var(--bg3)}
 
 
 
-/* RESEARCH TABS CSS */
+/* v2.8.5 SCREENER START */
 .rd-mode-bar{display:flex;gap:0;padding:10px 18px 0;flex-shrink:0}
 .rd-mode-btn{font-size:11px;font-weight:600;padding:6px 16px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);background:none;border-top:none;border-left:none;border-right:none;transition:all .15s;letter-spacing:.02em}
 .rd-mode-btn:hover{color:var(--text)}
 .rd-mode-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
-.res-tab{display:none;flex-direction:column;flex:1;overflow:hidden}
-.res-tab.show{display:flex}
-.res-input{flex:1;height:34px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:0 14px;font-family:var(--mono);font-size:12px;color:var(--text);outline:none;transition:all .15s}
-.res-input:focus{border-color:var(--blue);background:var(--bg2);box-shadow:0 0 0 3px rgba(26,86,160,.1)}
-.res-btn{background:var(--blue);color:#fff;border:none;border-radius:20px;padding:6px 16px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
-.res-btn:hover{background:#154888}
-.res-table{width:100%;border-collapse:collapse}
-.res-table th{font-size:8px;font-weight:700;letter-spacing:.09em;color:var(--dim);text-transform:uppercase;text-align:left;padding:5px 10px;background:var(--bg3);border-bottom:1px solid var(--border)}
-.res-table td{font-family:var(--sans);font-size:11px;padding:6px 10px;border-bottom:1px solid #f0efe9;color:var(--text2)}
-body.dark .res-table td{border-bottom-color:var(--border)}
-.res-table tr:hover td{background:var(--bg3)}
-.res-link{color:var(--blue);text-decoration:none;font-weight:500;font-family:var(--sans)}
-.res-link:hover{text-decoration:underline}
-.res-badge{font-family:var(--mono);font-size:8px;font-weight:700;padding:2px 6px;border-radius:20px;background:var(--bg3);color:var(--dim)}
-.holdings-row{display:none;background:var(--bg4)}
-.holdings-row.open{display:table-row}
-.h-wrap{padding:12px;background:var(--bg3);box-shadow:inset 0 2px 4px rgba(0,0,0,0.03)}
-.h-table{width:100%;border-collapse:collapse;border:1px solid var(--border);background:var(--bg2)}
-.h-table th{font-size:8px;font-weight:700;letter-spacing:.09em;color:var(--dim);text-transform:uppercase;text-align:left;padding:6px 10px;background:var(--bg4);border-bottom:1px solid var(--border)}
-.h-table td{font-family:var(--mono);font-size:10px;padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text2)}
-.h-table tr:hover td{background:var(--bg3)}
-.fund-summary{font-size:11px;color:var(--text2);line-height:1.5;background:var(--bg3);padding:12px;border:1px solid var(--border);border-radius:4px;margin-bottom:16px}
-.h-btn{font-family:var(--sans);font-size:9px;font-weight:600;padding:4px 10px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all 0.1s}
-.h-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+#scr-controls{padding:12px 18px;border-bottom:1px solid var(--border);flex-shrink:0;display:none;flex-direction:column;gap:8px}
+#scr-controls.show{display:flex}
+.scr-row{display:flex;align-items:center;gap:8px}
+.scr-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;min-width:110px;flex-shrink:0}
+.scr-input{height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:0 8px;font-family:var(--mono);font-size:11px;color:var(--text);outline:none;width:70px;transition:border .15s}
+.scr-input:focus{border-color:var(--blue)}
+.scr-input-hint{font-size:9px;color:var(--dim)}
+.scr-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.scr-toggle input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue);cursor:pointer}
+.scr-toggle-label{font-size:11px;color:var(--text2);font-weight:500}
+#scr-run-btn{margin:0 18px 12px;background:var(--blue);color:#fff;border:none;border-radius:20px;padding:7px 20px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;display:none;align-self:flex-start}
+#scr-run-btn.show{display:block}
+#scr-run-btn:hover{background:#154888}
+#scr-header{display:none;padding:8px 18px 0;font-size:9px;color:var(--dim);letter-spacing:.07em}
+#scr-header.show{display:block}
+.scr-table{width:100%;border-collapse:collapse}
+.scr-table th{font-size:8px;font-weight:700;letter-spacing:.09em;color:var(--dim);text-transform:uppercase;text-align:right;padding:5px 10px;background:var(--bg3);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
+.scr-table th:first-child{text-align:left}
+.scr-table th:hover{color:var(--blue)}
+.scr-table th.sort-active{color:var(--blue)}
+.scr-table td{font-family:var(--mono);font-size:11px;padding:5px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+body.dark .scr-table td{border-bottom-color:var(--border)}
+.scr-table tr:last-child td{border-bottom:none}
+.scr-table tr:hover td{background:var(--bg3);cursor:pointer}
+.scr-sym{font-weight:700;color:var(--blue);font-size:11px;text-align:left}
+.scr-name{font-size:9px;color:var(--dim);font-family:var(--sans);display:block}
+.scr-none{padding:24px;text-align:center;color:var(--muted);font-size:12px}
+.scr-count{font-size:9px;color:var(--dim);float:right;font-family:var(--mono)}
+/* v2.8.5 SCREENER END */
+
 
 /* v2.8.6 START */
 /* Yield Curve Visual */
@@ -868,62 +874,36 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 
 <!-- v2.3: RESEARCH PANEL — v2.8.5: SCREENER ADDED -->
 <div id="research-panel" onclick="rpClick(event)">
-  <div id="research-drawer">
+    <div id="research-drawer">
     <div class="rd-hdr">
       <div class="rd-title" id="rd-title">🔍 Research</div>
       <button class="rd-close" onclick="closeResearch()">✕</button>
     </div>
 
-    <!-- RESEARCH TABS -->
+    <!-- Mode toggle -->
     <div class="rd-mode-bar" style="border-bottom:1px solid var(--border);margin-bottom:0">
-      <button class="rd-mode-btn active" id="tab-btn-fund" onclick="setResTab('fund')">Fundamentals</button>
-      <button class="rd-mode-btn" id="tab-btn-sec" onclick="setResTab('sec')">Company Filings</button>
-      <button class="rd-mode-btn" id="tab-btn-13f" onclick="setResTab('13f')">13F Holdings</button>
+      <button class="rd-mode-btn active" id="mode-fundamentals" onclick="setRdMode('fundamentals')">Fundamentals</button>
+      <button class="rd-mode-btn" id="mode-sec" onclick="setRdMode('sec')">SEC Filings</button>
+      <button class="rd-mode-btn" id="mode-13f" onclick="setRdMode('13f')">13F Search</button>
     </div>
 
-    <!-- FUNDAMENTALS TAB -->
-    <div id="tab-fund" class="res-tab show">
-      <div class="rd-search-row">
-        <input id="rd-input-fund" class="res-input" type="text" placeholder="Enter ticker e.g. AAPL, MSFT…" autocomplete="off">
-        <button id="rd-btn-fund" class="res-btn" onclick="resFundSearch()">Search</button>
-      </div>
-      <div id="rd-body-fund" style="flex:1;overflow-y:auto;padding:16px 18px">
-        <div class="rd-none">Enter a ticker symbol above to load company research data.</div>
-      </div>
+    <!-- Search row -->
+    <div class="rd-search-row" id="rd-search-row">
+      <input id="rd-input" type="text" placeholder="Enter ticker e.g. AAPL, MSFT, NVDA…" autocomplete="off">
+      <button id="rd-btn" onclick="rdSearch()">Search</button>
     </div>
 
-    <!-- COMPANY FILINGS TAB -->
-    <div id="tab-sec" class="res-tab">
-      <div class="rd-search-row">
-        <input id="rd-input-sec" class="res-input" type="text" placeholder="Enter ticker e.g. TSLA, NVDA…" autocomplete="off" style="text-transform:uppercase">
-        <button id="rd-btn-sec" class="res-btn" onclick="resSecSearch()">Search</button>
-      </div>
-      <div id="rd-body-sec" style="flex:1;overflow-y:auto;padding:0">
-        <div class="rd-none" style="padding-top:30px">Enter a ticker to load recent company filings.</div>
-      </div>
+    <div id="rd-body">
+      <div class="rd-none">Enter a query above to load data.</div>
     </div>
-
-    <!-- 13F HOLDINGS TAB -->
-    <div id="tab-13f" class="res-tab">
-      <div class="rd-search-row">
-        <input id="rd-input-13f" class="res-input" type="text" placeholder="Enter Manager e.g. Ackman, Berkshire…" autocomplete="off" style="text-transform:none">
-        <button id="rd-btn-13f" class="res-btn" onclick="res13FSearch()">Search</button>
-      </div>
-      <div style="background:var(--amber-bg);color:var(--amber);font-size:10px;padding:6px 18px;border-bottom:1px solid var(--amber-bd)">
-        Note: Tracks institutional manager 13F-HR filings (holdings), not issuer filings.
-      </div>
-      <div id="rd-body-13f" style="flex:1;overflow-y:auto;padding:0">
-        <div class="rd-none" style="padding-top:30px">Enter an institutional manager to search 13F filings.</div>
-      </div>
-    </div>
-  </div>
+  </div></div>
 </div>
 
 <script>
 // ── PROXY ─────────────────────────────────────────────────────────────────────
-async function pfetch(url) {
+async function pfetch(url, options = {}) {
   const proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(url)}`;
-  const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
+  const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000), ...options });
   if (!r.ok) throw new Error(`Proxy ${r.status}`);
   return r;
 }
@@ -2046,100 +2026,10 @@ function renderModal(sym,name,d,f){
 
 
 // ── v2.3: RESEARCH PANEL ─────────────────────────────────────────────────────
-// Separate cache with 20-min TTL (not shared with modal fundCache)
-const rdCache={};
-const RD_TTL=20*60*1000; // 20 minutes
 
-async function fetchResearch(sym){
-  const now=Date.now();
-  if(rdCache[sym]&&(now-rdCache[sym].ts)<RD_TTL) return rdCache[sym].data;
-  let fallbackData = {
-    name:sym,
-    symbol:sym,
-    cik: '000'+Math.floor(Math.random()*899999+100000),
-    riskFactors: [
-      'Macroeconomic conditions and general market volatility may adversely affect the business.',
-      'Intense competition in the core operating segments could pressure margins.',
-      'Regulatory scrutiny regarding data privacy and antitrust matters.'
-    ],
-    recentFilings: [
-      { type:'10-Q', date:'2026-04-20', link:'https://www.sec.gov/edgar/search' },
-      { type:'10-K', date:'2026-02-15', link:'https://www.sec.gov/edgar/search' },
-      { type:'8-K', date:'2026-01-20', link:'https://www.sec.gov/edgar/search' }
-    ]
-  };
-
-  try {
-    const url=`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=price,summaryDetail,defaultKeyStatistics,financialData,recommendationTrend,upgradeDowngradeHistory,assetProfile,earningsTrend`;
-    const r=await pfetch(url);
-    const j=await r.json();
-    const res=j?.quoteSummary?.result?.[0];
-    if(res) {
-      const pr=res.price||{};
-      const sd=res.summaryDetail||{};
-      const ks=res.defaultKeyStatistics||{};
-      const fd=res.financialData||{};
-      const rt=res.recommendationTrend?.trend?.[0]||{};
-      const udh=res.upgradeDowngradeHistory?.history||[];
-      const ap=res.assetProfile||{};
-      let rec='No data available';
-      const{strongBuy=0,buy=0,hold=0,sell=0,strongSell=0}=rt;
-      const total=strongBuy+buy+hold+sell+strongSell;
-      if(total>0){const sc=(strongBuy*1+buy*2+hold*3+sell*4+strongSell*5)/total;rec=sc<1.5?'STRONG BUY':sc<2.5?'BUY':sc<3.5?'HOLD':sc<4.5?'SELL':'STRONG SELL';}
-      Object.assign(fallbackData, {
-        name:pr.longName||pr.shortName||sym,
-        price:pr.regularMarketPrice?.raw,
-        pct:pr.regularMarketChangePercent?.raw,
-        chg:pr.regularMarketChange?.raw,
-        currency:pr.currency||'USD',
-        sector:ap.sector,
-        industry:ap.industry,
-        description:ap.longBusinessSummary,
-        employees:ap.fullTimeEmployees,
-        website:ap.website,
-        marketCap:pr.marketCap?.raw||sd.marketCap?.raw,
-        peTrailing:sd.trailingPE?.raw,
-        peForward:sd.forwardPE?.raw,
-        eps:ks.trailingEps?.raw,
-        epsForward:ks.forwardEps?.raw,
-        priceToBook:ks.priceToBook?.raw,
-        evToRevenue:ks.enterpriseToRevenue?.raw,
-        evToEbitda:ks.enterpriseToEbitda?.raw,
-        totalRevenue:fd.totalRevenue?.raw,
-        revenueGrowth:fd.revenueGrowth?.raw,
-        grossMargins:fd.grossMargins?.raw,
-        ebitdaMargins:fd.ebitdaMargins?.raw,
-        profitMargin:fd.profitMargins?.raw,
-        operatingMargins:fd.operatingMargins?.raw,
-        roe:fd.returnOnEquity?.raw,
-        roa:fd.returnOnAssets?.raw,
-        ebitda:fd.ebitda?.raw,
-        totalCash:fd.totalCash?.raw,
-        totalDebt:fd.totalDebt?.raw,
-        debtToEquity:fd.debtToEquity?.raw,
-        currentRatio:fd.currentRatio?.raw,
-        quickRatio:fd.quickRatio?.raw,
-        targetMean:fd.targetMeanPrice?.raw,
-        targetHigh:fd.targetHighPrice?.raw,
-        targetLow:fd.targetLowPrice?.raw,
-        recommendation:rec,
-        analystCount:total,
-        strongBuy,buy,hold,sell,strongSell,
-        week52High:sd.fiftyTwoWeekHigh?.raw,
-        week52Low:sd.fiftyTwoWeekLow?.raw,
-        beta:sd.beta?.raw,
-        dividend:sd.dividendYield?.raw,
-        upgradeHistory:udh.slice(0,10)
-      });
-    }
-  } catch(e) {
-    console.warn('Finance fetch failed, using fallback SEC data fallback', sym);
-    fallbackData.description = `${sym} operates in its primary industry segments, issuing regular disclosures with the SEC. Active terminal connection displaying available profile data.`;
-  }
-  
-  rdCache[sym]={ts:now,data:fallbackData};
-  return fallbackData;
-}
+// ── RESEARCH PANEL LOGIC ──────────────────────────────────────────────────────
+let rdMode = 'fundamentals';
+const rdCache = {};
 
 function openResearch(){
   document.getElementById('research-panel').classList.add('show');
@@ -2154,102 +2044,191 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&document.getElementById('research-panel').classList.contains('show')) closeResearch();
 });
 
-async function resFundSearch(){
-  const inp=document.getElementById('rd-input-fund');
-  const sym=inp.value.trim().toUpperCase();
-  if(!sym)return;
-  const body=document.getElementById('rd-body-fund');
-  body.innerHTML=`<div class="rd-loading"><div class="rd-spinner"></div><br>Loading fundamentals for <strong>${sym}</strong>…</div>`;
-  const d=await fetchResearch(sym);
-  if(!d){
-    body.innerHTML=`<div class="rd-none">No data available for <strong>${sym}</strong>.<br><span style="font-size:10px;color:var(--dim)">Check the ticker symbol and try again.</span></div>`;
-    return;
+function setRdMode(mode) {
+  rdMode = mode;
+  document.getElementById('mode-fundamentals').classList.toggle('active', mode === 'fundamentals');
+  document.getElementById('mode-sec').classList.toggle('active', mode === 'sec');
+  document.getElementById('mode-13f').classList.toggle('active', mode === '13f');
+  
+  const inp = document.getElementById('rd-input');
+  if (mode === 'fundamentals') {
+    inp.placeholder = 'Enter ticker e.g. AAPL, MSFT...';
+  } else if (mode === 'sec') {
+    inp.placeholder = 'Enter ticker or company name...';
+  } else if (mode === '13f') {
+    inp.placeholder = 'Enter manager name (e.g. Berkshire) or company...';
   }
-  renderResearch(sym,d,body);
+  
+  document.getElementById('rd-body').innerHTML = '<div class="rd-none">Enter a query above to load data.</div>';
 }
 
-function setResTab(tab) {
-  document.querySelectorAll('.rd-mode-btn').forEach(btn => btn.classList.remove('active'));
-  document.getElementById('tab-btn-' + tab).classList.add('active');
-  document.querySelectorAll('.res-tab').forEach(t => t.classList.remove('show'));
-  document.getElementById('tab-' + tab).classList.add('show');
+document.getElementById('rd-input').addEventListener('keydown', e => { if(e.key==='Enter') rdSearch(); });
+
+async function rdSearch(){
+  const inp=document.getElementById('rd-input');
+  const q=inp.value.trim().toUpperCase();
+  if(!q) return;
+  const body=document.getElementById('rd-body');
+  
+  if (rdMode === 'fundamentals') {
+    body.innerHTML=`<div class="rd-loading"><div class="rd-spinner"></div><br>Loading fundamentals for <strong>${q}</strong>…</div>`;
+    const d = await fetchFundamentals(q);
+    if(!d){
+      body.innerHTML=`<div class="rd-none">No data available for <strong>${q}</strong>.<br><span style="font-size:10px;color:var(--dim)">Check the ticker symbol and try again.</span></div>`;
+    } else {
+      renderFundamentals(q, d, body);
+    }
+  } else if (rdMode === 'sec') {
+    body.innerHTML=`<div class="rd-loading"><div class="rd-spinner"></div><br>Searching SEC filings for <strong>${q}</strong>…</div>`;
+    const d = await fetchSEC(q);
+    if(!d || !d.length){
+      body.innerHTML=`<div class="rd-none">No SEC filings found for <strong>${q}</strong>.</div>`;
+    } else {
+      renderSEC(q, d, body);
+    }
+  } else if (rdMode === '13f') {
+    body.innerHTML=`<div class="rd-loading"><div class="rd-spinner"></div><br>Searching 13F filings for <strong>${q}</strong>…</div>`;
+    const d = await fetch13F(q);
+    if(!d || !d.length){
+      body.innerHTML=`<div class="rd-none">No 13F filings found for <strong>${q}</strong>.<br><span style="font-size:10px;color:var(--dim)">Note: 13F filings are typically submitted by institutional investment managers, not issuers.</span></div>`;
+    } else {
+      render13F(q, d, body);
+    }
+  }
 }
 
-// Ensure Enter keys work for our active tabs
-document.addEventListener('keydown', e => {
-  if(e.key==='Enter') {
-    if(document.activeElement.id==='rd-input-fund') resFundSearch();
-    if(document.activeElement.id==='rd-input-sec') resSecSearch();
-    if(document.activeElement.id==='rd-input-13f') res13FSearch();
+async function fetchFundamentals(sym){
+  const now = Date.now();
+  if(rdCache[sym] && (now-rdCache[sym].ts)<30*60000) return rdCache[sym].data;
+  
+  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=price,summaryDetail,defaultKeyStatistics,financialData,assetProfile,recommendationTrend,upgradeDowngradeHistory`;
+  
+  const diag = { query: sym, source: 'Yahoo Finance', fieldsFound: [], fieldsMissing: [] };
+  
+  try {
+    const r = await pfetch(url);
+    const j = await r.json();
+    const res = j?.quoteSummary?.result?.[0];
+    if(!res) return null;
+    
+    const pr = res.price || {};
+    const sd = res.summaryDetail || {};
+    const ks = res.defaultKeyStatistics || {};
+    const fd = res.financialData || {};
+    const ap = res.assetProfile || {};
+    const rt = res.recommendationTrend?.trend?.[0]||{};
+    const udh = res.upgradeDowngradeHistory?.history||[];
+    
+    const extract = (name, paths) => {
+      for(const p of paths) { if(p != null) { diag.fieldsFound.push(name); return p; } }
+      diag.fieldsMissing.push(name);
+      return null;
+    };
+    
+    let rec = 'No data available';
+    const {strongBuy=0,buy=0,hold=0,sell=0,strongSell=0} = rt;
+    const total = strongBuy+buy+hold+sell+strongSell;
+    if(total>0){
+      const sc = (strongBuy*1+buy*2+hold*3+sell*4+strongSell*5)/total;
+      rec = sc<1.5?'STRONG BUY':sc<2.5?'BUY':sc<3.5?'HOLD':sc<4.5?'SELL':'STRONG SELL';
+    }
+    
+    const data = {
+      diagnostics: diag,
+      name: extract('Name', [pr.longName, pr.shortName, sym]),
+      symbol: extract('Symbol', [pr.symbol, sym]),
+      price: extract('Price', [pr.regularMarketPrice?.raw]),
+      pct: extract('Change %', [pr.regularMarketChangePercent?.raw]),
+      chg: extract('Change', [pr.regularMarketChange?.raw]),
+      currency: extract('Currency', [pr.currency, 'USD']),
+      exchange: extract('Exchange', [pr.exchangeName]),
+      sector: extract('Sector', [ap.sector]),
+      industry: extract('Industry', [ap.industry]),
+      description: extract('Summary', [ap.longBusinessSummary]),
+      website: extract('Website', [ap.website]),
+      marketCap: extract('Market Cap', [pr.marketCap?.raw, sd.marketCap?.raw]),
+      ev: extract('Enterprise Value', [ks.enterpriseValue?.raw]),
+      peTrailing: extract('P/E (TTM)', [sd.trailingPE?.raw]),
+      peForward: extract('P/E (Fwd)', [sd.forwardPE?.raw]),
+      eps: extract('EPS (TTM)', [ks.trailingEps?.raw]),
+      priceToBook: extract('Price/Book', [ks.priceToBook?.raw]),
+      evToRevenue: extract('EV/Rev', [ks.enterpriseToRevenue?.raw]),
+      evToEbitda: extract('EV/EBITDA', [ks.enterpriseToEbitda?.raw]),
+      dividend: extract('Dividend Yield', [sd.dividendYield?.raw]),
+      totalRevenue: extract('Revenue', [fd.totalRevenue?.raw]),
+      revenueGrowth: extract('Rev Growth', [fd.revenueGrowth?.raw]),
+      grossMargins: extract('Gross Margin', [fd.grossMargins?.raw]),
+      operatingMargins: extract('Op Margin', [fd.operatingMargins?.raw]),
+      profitMargin: extract('Profit Margin', [fd.profitMargins?.raw]),
+      roe: extract('ROE', [fd.returnOnEquity?.raw]),
+      roa: extract('ROA', [fd.returnOnAssets?.raw]),
+      ebitda: extract('EBITDA', [fd.ebitda?.raw]),
+      totalCash: extract('Total Cash', [fd.totalCash?.raw]),
+      totalDebt: extract('Total Debt', [fd.totalDebt?.raw]),
+      debtToEquity: extract('Debt/Equity', [fd.debtToEquity?.raw]),
+      currentRatio: extract('Current Ratio', [fd.currentRatio?.raw]),
+      quickRatio: extract('Quick Ratio', [fd.quickRatio?.raw]),
+      beta: extract('Beta', [sd.beta?.raw]),
+      week52High: extract('52W High', [sd.fiftyTwoWeekHigh?.raw]),
+      week52Low: extract('52W Low', [sd.fiftyTwoWeekLow?.raw]),
+      sharesOutstanding: extract('Shares Out', [ks.sharesOutstanding?.raw]),
+      freeCashFlow: extract('Free Cash Flow', [fd.freeCashflow?.raw]),
+      recommendation: rec,
+      analystCount: total,
+      strongBuy, buy, hold, sell, strongSell,
+      upgradeHistory: udh
+    };
+    
+    rdCache[sym] = {ts: now, data};
+    return data;
+  } catch(e) {
+    console.error(e);
+    return null;
   }
-});
+}
 
-function renderResearch(sym,d,body){
+function renderFundamentals(sym, d, body) {
   const fmtV=(v,pre='',suf='')=>v!=null&&!isNaN(v)?pre+v.toFixed(2)+suf:'No data available';
   const fmtP=(v)=>v!=null&&!isNaN(v)?(v*100).toFixed(2)+'%':'No data available';
   const fmtM=(v)=>{if(v==null||isNaN(v))return'No data available';if(v>=1e12)return'$'+(v/1e12).toFixed(2)+'T';if(v>=1e9)return'$'+(v/1e9).toFixed(1)+'B';if(v>=1e6)return'$'+(v/1e6).toFixed(1)+'M';return'$'+v.toFixed(0);};
   const price=d.price??0,pct=d.pct??0,chgCls=pct>=0?'up':'dn';
-  const upside=d.targetMean&&price?((d.targetMean-price)/price*100):null;
-  const sBuy=(d.strongBuy||0)+(d.buy||0),sHold=d.hold||0,sSell=(d.sell||0)+(d.strongSell||0);
-  const sTotal=sBuy+sHold+sSell||1;
-  const recKey=(d.recommendation||'').replace(/ /g,'_');
+  
+  const diagHTML = `
+    <details style="margin-bottom:14px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px;font-size:10px;">
+      <summary style="cursor:pointer;font-weight:600;color:var(--dim)">Data Diagnostics</summary>
+      <div style="margin-top:6px;color:var(--text2)">
+        <div><strong>Query:</strong> ${d.diagnostics.query}</div>
+        <div><strong>Source:</strong> ${d.diagnostics.source}</div>
+        <div><strong>Fields Found:</strong> ${d.diagnostics.fieldsFound.join(', ')}</div>
+        ${d.diagnostics.fieldsMissing.length ? `<div style="color:var(--red);margin-top:4px"><strong>Fields Missing:</strong> ${d.diagnostics.fieldsMissing.join(', ')}</div>` : ''}
+        <div style="margin-top:4px;font-style:italic;color:var(--dim)">Note: SEC Issuer identity is intentionally isolated from this view.</div>
+      </div>
+    </details>
+  `;
 
-  // Recent analyst actions
-  const hist=d.upgradeHistory||[];
-  const histHTML=hist.length?`<table class="ac-table" style="width:100%">
-    <thead><tr><th>Firm</th><th>Action</th><th>Rating</th><th>Date</th></tr></thead>
-    <tbody>${hist.map(h=>{
-      const dt=h.epochGradeDate?new Date(h.epochGradeDate*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'—';
-      const act=(h.action||'').toUpperCase();
-      const lbl=act==='UP'?'UPGRADE':act==='DOWN'?'DOWNGRADE':act==='INIT'?'INITIATE':'MAINTAIN';
-      const cls=`ac-action-${act==='UP'?'UP':act==='DOWN'?'DOWN':act==='INIT'?'INIT':'MAIN'}`;
-      return`<tr><td class="ac-firm">${h.firm||'—'}</td><td><span class="${cls}">${lbl}</span></td><td class="ac-rating">${h.fromGrade?h.fromGrade+' → ':''}${h.toGrade||'—'}</td><td class="ac-date">${dt}</td></tr>`;
-    }).join('')}</tbody>
-  </table>`:'<div style="color:var(--dim);font-size:11px;padding:8px 0">No recent analyst actions</div>';
-
-  // v2.9 START: Micro insight for research panel
-  let miHtml = '';
-  if (d.price != null) {
-    const miParts = [];
-    if (d.revenueGrowth != null) {
-      const rg = d.revenueGrowth * 100;
-      miParts.push(rg >= 20 ? 'strong revenue growth (' + rg.toFixed(0) + '% YoY)' : rg >= 10 ? 'moderate revenue growth (' + rg.toFixed(0) + '% YoY)' : rg >= 0 ? 'slowing growth (' + rg.toFixed(1) + '% YoY)' : 'revenue declining (' + rg.toFixed(1) + '% YoY)');
-    }
-    if (d.peTrailing != null) {
-      miParts.push(d.peTrailing < 15 ? 'trades at a low P/E of ' + d.peTrailing.toFixed(1) : d.peTrailing < 30 ? 'P/E of ' + d.peTrailing.toFixed(1) + ' is within range' : 'P/E of ' + d.peTrailing.toFixed(1) + ' is elevated');
-    }
-    const recStr = d.recommendation || '';
-    if (recStr === 'STRONG BUY' || recStr === 'BUY') miParts.push('analysts are bullish (' + recStr + ')');
-    else if (recStr === 'SELL' || recStr === 'STRONG SELL') miParts.push('analysts are cautious (' + recStr + ')');
-    if (miParts.length > 0) {
-      const miText = miParts.slice(0,2).join(', ') + '.';
-      miHtml = `<div class="mi-box"><div class="mi-label">💡 Why this stands out</div><div class="mi-text">${miText.charAt(0).toUpperCase()+miText.slice(1)}</div></div>`;
-    }
-  }
-  // v2.9 END
   body.innerHTML=`
-    ${miHtml}
+    ${diagHTML}
     <div class="rd-co-hdr">
       <div class="rd-co-name">${d.name}</div>
-      <div class="rd-co-sub">${[d.sector,d.industry,sym].filter(Boolean).join(' · ')}</div>
+      <div class="rd-co-sub">${[d.exchange, d.sector, d.industry, sym].filter(Boolean).join(' · ')}</div>
     </div>
     <div class="rd-price-row">
       <div class="rd-price">${price>0?price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</div>
       <div class="rd-chg ${chgCls}">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(2)}%</div>
-      ${d.currency?`<div style="font-size:10px;color:var(--dim);margin-left:auto">${d.currency}</div>`:''}
+      ${d.currency?`<div style="font-size:10px;color:var(--dim);margin-left:auto">${d.currency}</div>`:``}
     </div>
 
     <div class="rd-section">
       <div class="rd-section-title">Valuation</div>
       <div class="rd-grid">
         <div class="rd-item"><div class="rd-lbl">Market Cap</div><div class="rd-val">${fmtM(d.marketCap)}</div></div>
+        <div class="rd-item"><div class="rd-lbl">Enterprise Value</div><div class="rd-val">${fmtM(d.ev)}</div></div>
         <div class="rd-item"><div class="rd-lbl">P/E (TTM)</div><div class="rd-val">${fmtV(d.peTrailing)}</div></div>
         <div class="rd-item"><div class="rd-lbl">P/E (Forward)</div><div class="rd-val">${fmtV(d.peForward)}</div></div>
         <div class="rd-item"><div class="rd-lbl">EPS (TTM)</div><div class="rd-val">${d.eps!=null?'$'+fmtV(d.eps):'No data available'}</div></div>
-        <div class="rd-item"><div class="rd-lbl">Price / Book</div><div class="rd-val">${fmtV(d.priceToBook)}</div></div>
+        <div class="rd-item"><div class="rd-lbl">Shares Out</div><div class="rd-val">${fmtM(d.sharesOutstanding)}</div></div>
         <div class="rd-item"><div class="rd-lbl">EV / Revenue</div><div class="rd-val">${fmtV(d.evToRevenue)}</div></div>
         <div class="rd-item"><div class="rd-lbl">EV / EBITDA</div><div class="rd-val">${fmtV(d.evToEbitda)}</div></div>
-        <div class="rd-item"><div class="rd-lbl">Dividend Yield</div><div class="rd-val">${d.dividend!=null?fmtP(d.dividend):'No data available'}</div></div>
       </div>
     </div>
 
@@ -2259,213 +2238,128 @@ function renderResearch(sym,d,body){
         <div class="rd-item"><div class="rd-lbl">Revenue (TTM)</div><div class="rd-val">${fmtM(d.totalRevenue)}</div></div>
         <div class="rd-item"><div class="rd-lbl">EBITDA</div><div class="rd-val">${fmtM(d.ebitda)}</div></div>
         <div class="rd-item"><div class="rd-lbl">Revenue Growth</div><div class="rd-val ${(d.revenueGrowth??0)>=0?'up':'dn'}">${d.revenueGrowth!=null?fmtP(d.revenueGrowth):'No data available'}</div></div>
+        <div class="rd-item"><div class="rd-lbl">Free Cash Flow</div><div class="rd-val">${fmtM(d.freeCashFlow)}</div></div>
         <div class="rd-item"><div class="rd-lbl">Gross Margin</div><div class="rd-val">${d.grossMargins!=null?fmtP(d.grossMargins):'No data available'}</div></div>
         <div class="rd-item"><div class="rd-lbl">Operating Margin</div><div class="rd-val">${d.operatingMargins!=null?fmtP(d.operatingMargins):'No data available'}</div></div>
-        <div class="rd-item"><div class="rd-lbl">Profit Margin</div><div class="rd-val ${(d.profitMargin??0)>=0?'up':'dn'}">${d.profitMargin!=null?fmtP(d.profitMargin):'No data available'}</div></div>
         <div class="rd-item"><div class="rd-lbl">Return on Equity</div><div class="rd-val">${d.roe!=null?fmtP(d.roe):'No data available'}</div></div>
         <div class="rd-item"><div class="rd-lbl">Return on Assets</div><div class="rd-val">${d.roa!=null?fmtP(d.roa):'No data available'}</div></div>
       </div>
     </div>
 
-    <div class="rd-section">
-      <div class="rd-section-title">Balance Sheet</div>
-      <div class="rd-grid">
-        <div class="rd-item"><div class="rd-lbl">Total Cash</div><div class="rd-val">${fmtM(d.totalCash)}</div></div>
-        <div class="rd-item"><div class="rd-lbl">Total Debt</div><div class="rd-val">${fmtM(d.totalDebt)}</div></div>
-        <div class="rd-item"><div class="rd-lbl">Debt / Equity</div><div class="rd-val">${fmtV(d.debtToEquity)}</div></div>
-        <div class="rd-item"><div class="rd-lbl">Current Ratio</div><div class="rd-val">${fmtV(d.currentRatio)}</div></div>
-        <div class="rd-item"><div class="rd-lbl">Quick Ratio</div><div class="rd-val">${fmtV(d.quickRatio)}</div></div>
-        <div class="rd-item"><div class="rd-lbl">Beta</div><div class="rd-val">${fmtV(d.beta)}</div></div>
-        <div class="rd-item"><div class="rd-lbl">52W High</div><div class="rd-val up">${fmtV(d.week52High)}</div></div>
-        <div class="rd-item"><div class="rd-lbl">52W Low</div><div class="rd-val dn">${fmtV(d.week52Low)}</div></div>
-      </div>
-    </div>
-
-    <div class="rd-section">
-      <div class="rd-section-title">Analyst Consensus · ${d.analystCount||0} analysts</div>
-      <div class="ac-summary" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:10px">
-        <div class="ac-tile"><div class="ac-tile-label">Buy / St. Buy</div><div class="ac-tile-val buy">${sBuy}</div></div>
-        <div class="ac-tile"><div class="ac-tile-label">Hold</div><div class="ac-tile-val hold">${sHold}</div></div>
-        <div class="ac-tile"><div class="ac-tile-label">Sell</div><div class="ac-tile-val sell">${sSell}</div></div>
-        <div class="ac-tile"><div class="ac-tile-label">Rating</div><div class="ac-tile-val" style="font-size:11px"><span class="mrec rec-${recKey}">${d.recommendation}</span></div></div>
-      </div>
-      <div class="ac-bar" style="margin-bottom:8px">
-        <div class="ac-bar-buy" style="width:${(sBuy/sTotal*100).toFixed(0)}%"></div>
-        <div class="ac-bar-hold" style="width:${(sHold/sTotal*100).toFixed(0)}%"></div>
-        <div class="ac-bar-sell" style="width:${(sSell/sTotal*100).toFixed(0)}%"></div>
-      </div>
-      <div class="rd-grid" style="margin-bottom:10px">
-        <div class="rd-item"><div class="rd-lbl">Mean Target</div><div class="rd-val">${d.targetMean?'$'+d.targetMean.toFixed(2):'No data available'}</div></div>
-        <div class="rd-item"><div class="rd-lbl">Upside to Target</div><div class="rd-val ${(upside??0)>=0?'up':'dn'}">${upside!=null?(upside>=0?'+':'')+upside.toFixed(1)+'%':'No data available'}</div></div>
-        <div class="rd-item"><div class="rd-lbl">High Target</div><div class="rd-val">${d.targetHigh?'$'+d.targetHigh.toFixed(2):'No data available'}</div></div>
-        <div class="rd-item"><div class="rd-lbl">Low Target</div><div class="rd-val">${d.targetLow?'$'+d.targetLow.toFixed(2):'No data available'}</div></div>
-      </div>
-      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:6px">Recent Analyst Actions</div>
-      ${histHTML}
-    </div>
-
-    <div class="rd-section">
-      <div class="rd-section-title">SEC Issuer Details</div>
-      <div class="rd-grid" style="margin-bottom:10px">
-        <div class="rd-item"><div class="rd-lbl">CIK</div><div class="rd-val">${d.cik||'—'}</div></div>
-        ${(d.recentFilings||[]).map(f=>`<div class="rd-item"><div class="rd-lbl">Recent ${f.type}</div><div class="rd-val"><a class="res-link" href="${f.link}" target="_blank">${f.date} ↗</a></div></div>`).join('')}
-      </div>
-      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:6px">Business Summary</div>
-      <div class="fund-summary">${d.description||'No business summary available.'}
-        ${d.website?`<br><br><a href="${d.website}" target="_blank" style="font-size:10px;color:var(--blue);text-decoration:none;display:inline-block">${d.website} ↗</a>`:''}
-      </div>
-      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:6px">Risk Factors & Notes</div>
-      <div class="fund-summary" style="margin-bottom:0">
-        <ul style="margin:0;padding-left:14px;color:var(--text2)">
-          ${(d.riskFactors||[]).map(r=>`<li style="margin-bottom:4px">${r}</li>`).join('')}
-        </ul>
-      </div>
-    </div>
+    ${d.description?`<div class="rd-section">
+      <div class="rd-section-title">About</div>
+      <div class="rd-desc">${d.description}</div>
+      ${d.website?`<a href="${d.website}" target="_blank" style="font-size:10px;color:var(--blue);text-decoration:none;display:inline-block;margin-top:6px">${d.website} ↗</a>`:``}
+    </div>`:``}
+    
     <div style="padding:8px 0;text-align:right;font-size:10px;color:var(--dim)">
       <a href="https://finance.yahoo.com/quote/${sym}" target="_blank" style="color:var(--blue);text-decoration:none">↗ Full profile on Yahoo Finance</a>
+    </div>
+  `;
+}
+
+// ── SEC & 13F WORKFLOWS ───────────────────────────────────────────────────────
+async function fetchSEC(q) {
+  const payload = {
+    keysTyped: q,
+    narrow: true,
+    q: q,
+    sort: "date",
+    startdt: "2010-01-01",
+    enddt: new Date().toISOString().split('T')[0],
+    forms: ["10-K","10-Q","8-K","DEF 14A"]
+  };
+  try {
+    const r = await pfetch('https://efts.sec.gov/LATEST/search-index', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {'Content-Type': 'application/json'}
+    });
+    const j = await r.json();
+    return j.hits?.hits || [];
+  } catch(e) { console.error(e); return []; }
+}
+
+function renderSEC(q, hits, body) {
+  const rows = hits.map(hit => {
+    const s = hit._source;
+    const date = s.file_date || '—';
+    const form = s.form || '—';
+    const co = (s.display_names && s.display_names[0]) || '—';
+    
+    const ciks = s.ciks?.[0] || '';
+    const adsh_folder = s.adsh?.replace(/-/g, '') || '';
+    const link = `https://www.sec.gov/Archives/edgar/data/${ciks}/${adsh_folder}/${s.adsh}-index.htm`;
+    
+    return `<div style="margin-bottom:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-weight:700;color:var(--text)">${form}</span>
+        <span style="font-size:10px;color:var(--dim)">${date}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px">${co.split(' (')[0]}</div>
+      <a href="${link}" target="_blank" style="font-size:10px;color:var(--blue);text-decoration:none">↗ View on SEC EDGAR</a>
     </div>`;
-}
-
-
-// Mock SEC Filings fetcher
-async function fetchSECFilings(sym) {
-  await new Promise(r => setTimeout(r, 700));
-  return [
-    { form:'10-Q', date:'2026-04-20', title:'Quarterly Report', link:'https://www.sec.gov/edgar/search' },
-    { form:'8-K', date:'2026-04-18', title:'Current Report', link:'https://www.sec.gov/edgar/search' },
-    { form:'10-K', date:'2026-02-15', title:'Annual Report', link:'https://www.sec.gov/edgar/search' },
-    { form:'DEF 14A', date:'2026-01-10', title:'Proxy Statement', link:'https://www.sec.gov/edgar/search' },
-    { form:'8-K', date:'2025-10-15', title:'Current Report', link:'https://www.sec.gov/edgar/search' },
-    { form:'10-Q', date:'2025-10-14', title:'Quarterly Report', link:'https://www.sec.gov/edgar/search' },
-    { form:'10-Q', date:'2025-07-20', title:'Quarterly Report', link:'https://www.sec.gov/edgar/search' }
-  ].sort((a,b) => new Date(b.date) - new Date(a.date));
-}
-
-async function resSecSearch() {
-  const inp=document.getElementById('rd-input-sec');
-  const sym=inp.value.trim().toUpperCase();
-  if(!sym)return;
-  const body=document.getElementById('rd-body-sec');
-  body.innerHTML=`<div class="rd-loading" style="margin-top:30px"><div class="rd-spinner"></div><br>Searching SEC EDGAR for <strong>${sym}</strong>…</div>`;
+  }).join('');
   
+  body.innerHTML = `
+    <div style="font-size:11px;color:var(--dim);margin-bottom:12px;font-weight:600">Found ${hits.length} SEC filings for "${q}"</div>
+    ${rows}
+  `;
+}
+
+async function fetch13F(q) {
+  const payload = {
+    keysTyped: q,
+    narrow: true,
+    q: q,
+    sort: "date",
+    startdt: "2010-01-01",
+    enddt: new Date().toISOString().split('T')[0],
+    forms: ["13F-HR","13F-HR/A","13F-NT","13F-NT/A"]
+  };
   try {
-    const filings = await fetchSECFilings(sym);
-    let html = `<div style="padding:16px 18px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Latest Filings for ${sym}</div>
-      <table class="res-table">
-        <thead><tr><th>Form</th><th>Date</th><th>Description</th><th style="text-align:right">Link</th></tr></thead>
-        <tbody>`;
-    filings.forEach(f => {
-      let cls = 'res-badge';
-      if(f.form==='10-K') cls+=' bOP'; 
-      else if(f.form==='10-Q') cls+=' bPR';
-      html += `<tr>
-        <td><span class="${cls}">${f.form}</span></td>
-        <td style="color:var(--dim)">${f.date}</td>
-        <td>${f.title}</td>
-        <td style="text-align:right"><a class="res-link" href="${f.link}" target="_blank">EDGAR ↗</a></td>
-      </tr>`;
+    const r = await pfetch('https://efts.sec.gov/LATEST/search-index', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {'Content-Type': 'application/json'}
     });
-    html += `</tbody></table></div>`;
-    body.innerHTML = html;
-  } catch(e) {
-    body.innerHTML=`<div class="rd-none" style="margin-top:30px">Error fetching SEC filings for ${sym}.</div>`;
-  }
+    const j = await r.json();
+    return j.hits?.hits || [];
+  } catch(e) { console.error(e); return []; }
 }
 
-// Mock 13F Fetcher
-async function fetch13F(mgr) {
-  await new Promise(r => setTimeout(r, 800));
-  const results = [
-    { id: 'f_1', form:'13F-HR', date:'2026-05-15', period:'2026-03-31', qtr:'Q1 2026', link:'https://www.sec.gov/edgar/search' },
-    { id: 'f_2', form:'13F-HR', date:'2026-02-14', period:'2025-12-31', qtr:'Q4 2025', link:'https://www.sec.gov/edgar/search' },
-    { id: 'f_3', form:'13F-HR', date:'2025-11-14', period:'2025-09-30', qtr:'Q3 2025', link:'https://www.sec.gov/edgar/search' },
-    { id: 'f_4', form:'13F-HR', date:'2025-08-15', period:'2025-06-30', qtr:'Q2 2025', link:'https://www.sec.gov/edgar/search' }
-  ];
-  return results.sort((a,b) => new Date(b.date) - new Date(a.date));
-}
-
-async function fetch13FHoldings(filingId) {
-  await new Promise(r => setTimeout(r, 600));
-  return [
-    { issuer:'APPLE INC', class:'COM', cusip:'037833100', val:145620000, shs:850000, disc:'SOLE', vote:850000 },
-    { issuer:'MICROSOFT CORP', class:'COM', cusip:'594918104', val:96000000, shs:230000, disc:'SOLE', vote:230000 },
-    { issuer:'NVIDIA CORP', class:'COM', cusip:'67066G104', val:88000000, shs:95000, disc:'SOLE', vote:95000 },
-    { issuer:'AMAZON COM INC', class:'COM', cusip:'023135106', val:72000000, shs:400000, disc:'SOLE', vote:400000 },
-    { issuer:'ALPHABET INC', class:'CAP STK CL A', cusip:'02079K305', val:65000000, shs:380000, disc:'SOLE', vote:380000 },
-  ];
-}
-
-window.toggleHoldings = async function(btn, filingId) {
-  const row = document.getElementById('holdings-' + filingId);
-  if(row.classList.contains('open')) {
-    row.classList.remove('open');
-    btn.textContent = 'View Holdings';
-    return;
-  }
+function render13F(q, hits, body) {
+  const rows = hits.map((hit, i) => {
+    const s = hit._source;
+    const date = s.file_date || '—';
+    const form = s.form || '—';
+    const co = (s.display_names && s.display_names[0]) || '—';
+    const period = s.period_ending || '—';
+    
+    const ciks = s.ciks?.[0] || '';
+    const adsh_folder = s.adsh?.replace(/-/g, '') || '';
+    const link = `https://www.sec.gov/Archives/edgar/data/${ciks}/${adsh_folder}/${s.adsh}-index.htm`;
+    
+    return `<details style="margin-bottom:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;overflow:hidden">
+      <summary style="padding:10px;cursor:pointer;font-weight:600;font-size:11px;display:flex;justify-content:space-between;align-items:center;background:var(--bg2)">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${co.split(' (')[0]}</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-left:10px">${form}</span>
+      </summary>
+      <div style="padding:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text2)">
+        <div style="margin-bottom:4px"><strong>Filer:</strong> ${co}</div>
+        <div style="margin-bottom:4px"><strong>Form:</strong> ${form}</div>
+        <div style="margin-bottom:4px"><strong>Filing Date:</strong> ${date}</div>
+        <div style="margin-bottom:4px"><strong>Period Ending:</strong> ${period}</div>
+        <div style="margin-bottom:4px"><strong>Accession No:</strong> ${s.adsh}</div>
+        <div style="margin-top:8px"><a href="${link}" target="_blank" style="color:var(--blue);text-decoration:none">↗ Deep Link to SEC EDGAR</a></div>
+      </div>
+    </details>`;
+  }).join('');
   
-  row.classList.add('open');
-  btn.textContent = 'Hide Holdings';
-  const wrap = document.getElementById('hw-' + filingId);
-  if(wrap.innerHTML !== '') return; // already loaded
-  
-  wrap.innerHTML = '<div style="font-size:10px;color:var(--dim);text-align:center;padding:10px">Loading 13F Information Table…</div>';
-  try {
-    const data = await fetch13FHoldings(filingId);
-    let html = `<table class="h-table">
-      <thead><tr><th>Issuer</th><th>Class</th><th>CUSIP</th><th style="text-align:right">Value ($)</th><th style="text-align:right">Shs/Prn</th><th>Discretion</th><th>Voting</th></tr></thead>
-      <tbody>`;
-    data.forEach(h => {
-      html += `<tr>
-        <td style="font-family:var(--sans);font-weight:600;color:var(--text)">${h.issuer}</td>
-        <td>${h.class}</td>
-        <td>${h.cusip}</td>
-        <td style="text-align:right">${h.val.toLocaleString()}</td>
-        <td style="text-align:right">${h.shs.toLocaleString()}</td>
-        <td>${h.disc}</td>
-        <td>${h.vote.toLocaleString()}</td>
-      </tr>`;
-    });
-    html += `</tbody></table>`;
-    wrap.innerHTML = html;
-  } catch(e) {
-    wrap.innerHTML = '<div style="font-size:10px;color:var(--red);text-align:center;padding:10px">Failed to load holdings.</div>';
-  }
-};
-
-async function res13FSearch() {
-  const inp=document.getElementById('rd-input-13f');
-  const mgr=inp.value.trim();
-  if(!mgr)return;
-  const body=document.getElementById('rd-body-13f');
-  body.innerHTML=`<div class="rd-loading" style="margin-top:30px"><div class="rd-spinner"></div><br>Searching institutional filings for <strong>${mgr}</strong>…</div>`;
-  
-  try {
-    const filings = await fetch13F(mgr);
-    let html = `<div style="padding:16px 18px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Manager: ${mgr}</div>
-      <table class="res-table">
-        <thead><tr><th>Form</th><th>Filed Date</th><th>Period End</th><th style="text-align:center">Action</th><th style="text-align:right">Link</th></tr></thead>
-        <tbody>`;
-    filings.forEach(f => {
-      html += `<tr>
-        <td><span class="res-badge bPR">${f.form}</span></td>
-        <td style="color:var(--dim)">${f.date}</td>
-        <td><strong>${f.qtr}</strong></td>
-        <td style="text-align:center"><button class="h-btn" onclick="toggleHoldings(this, '${f.id}')">View Holdings</button></td>
-        <td style="text-align:right"><a class="res-link" href="${f.link}" target="_blank">Open filing ↗</a></td>
-      </tr>
-      <tr class="holdings-row" id="holdings-${f.id}">
-        <td colspan="5" style="padding:0">
-          <div class="h-wrap" id="hw-${f.id}"></div>
-        </td>
-      </tr>`;
-    });
-    html += `</tbody></table></div>`;
-    body.innerHTML = html;
-  } catch(e) {
-    body.innerHTML=`<div class="rd-none" style="margin-top:30px">Error fetching 13F for ${mgr}.</div>`;
-  }
+  body.innerHTML = `
+    <div style="font-size:11px;color:var(--dim);margin-bottom:12px;font-weight:600">Found ${hits.length} 13F filings matching "${q}"</div>
+    ${rows}
+  `;
 }
 
 function closeModal(){document.getElementById('ov').classList.remove('show');}
@@ -2982,6 +2876,76 @@ function renderEarningsSnapshot() {
   }).join('');
 }
 
+// ── TASK 5: Preset screens ───────────────────────────────────────────
+// v2.9 START: Enhanced presets with descriptions
+const PRESET_DESCS = {
+  value:   'Low valuation, stable earnings — P/E ≤20, Fwd P/E ≤18, EV/EBITDA ≤12',
+  growth:  'High revenue and earnings expansion — Rev Growth ≥15%, EPS Growth ≥10%, bullish analysts',
+  quality: 'Strong margins and profitability — ROE ≥20%, Op Margin ≥20%, Debt/Equity ≤1.5',
+  income:  'High dividend yield with reasonable valuation — Div Yield ≥2.5%, P/E ≤25',
+};
+
+function applyPreset(name, btn) {
+  // Clear active state on all preset buttons
+  document.querySelectorAll('.scr-preset-btn').forEach(b => b.classList.remove('active'));
+
+  // Clear all inputs first
+  ['scr-pe','scr-fwdpe','scr-evebitda','scr-growth','scr-earngrowth',
+   'scr-roe','scr-opmargin','scr-debtequity','scr-fcf','scr-divyield'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const bull = document.getElementById('scr-bullish');
+  if (bull) bull.checked = false;
+
+  // Hide description
+  const descEl = document.getElementById('scr-preset-desc');
+
+  if (name === 'clear') {
+    if (descEl) { descEl.textContent = ''; descEl.classList.remove('show'); }
+    return;
+  }
+  if (btn) btn.classList.add('active');
+
+  // Show description
+  if (descEl && PRESET_DESCS[name]) {
+    descEl.textContent = PRESET_DESCS[name];
+    descEl.classList.add('show');
+  }
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+
+  if (name === 'value') {
+    set('scr-pe', 20);
+    set('scr-fwdpe', 18);
+    set('scr-evebitda', 12);
+  }
+  else if (name === 'growth') {
+    set('scr-growth', 15);
+    set('scr-earngrowth', 10);
+    document.getElementById('scr-bullish').checked = true;
+  }
+  else if (name === 'quality') {
+    set('scr-roe', 20);
+    set('scr-opmargin', 20);
+    set('scr-debtequity', 1.5);
+  }
+  else if (name === 'income') {
+    set('scr-divyield', 2.5);
+    set('scr-pe', 25);
+  }
+}
+// v2.9 END
+
+// ── TASK 4: Update setRdMode to show/hide presets ────────────────────
+const _origSetRdMode = setRdMode;
+setRdMode = function(mode) {
+  _origSetRdMode(mode);
+  const presets = document.getElementById('scr-presets');
+  if (presets) presets.style.display = mode === 'screener' ? 'flex' : 'none';
+};
+
+// v2.8.6 END ────────────────────────────────────────────────────────
 
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
