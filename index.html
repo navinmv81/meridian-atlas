@@ -1724,7 +1724,7 @@ async function fetchFund(sym){
       strongBuy, buy, hold, sell, strongSell,  // raw counts
       upgradeHistory: udh.slice(0,15),  // most recent 15 actions
       sector:ap.sector, industry:ap.industry, employees:ap.fullTimeEmployees
-    };
+    };	
     fundCache[sym]=out; return out;
   }catch(e){console.warn('Fund',sym,e);return null;}
 }
@@ -2330,19 +2330,25 @@ function renderResearch(sym,d,body){
     </div>`;
 }
 
-
+const MY_WORKER_URL = 'https://your-worker-name.workers.dev';
 // Mock SEC Filings fetcher
 async function fetchSECFilings(sym) {
-  await new Promise(r => setTimeout(r, 700));
-  return [
-    { form:'10-Q', date:'2026-04-20', title:'Quarterly Report', link:'https://www.sec.gov/edgar/search' },
-    { form:'8-K', date:'2026-04-18', title:'Current Report', link:'https://www.sec.gov/edgar/search' },
-    { form:'10-K', date:'2026-02-15', title:'Annual Report', link:'https://www.sec.gov/edgar/search' },
-    { form:'DEF 14A', date:'2026-01-10', title:'Proxy Statement', link:'https://www.sec.gov/edgar/search' },
-    { form:'8-K', date:'2025-10-15', title:'Current Report', link:'https://www.sec.gov/edgar/search' },
-    { form:'10-Q', date:'2025-10-14', title:'Quarterly Report', link:'https://www.sec.gov/edgar/search' },
-    { form:'10-Q', date:'2025-07-20', title:'Quarterly Report', link:'https://www.sec.gov/edgar/search' }
-  ].sort((a,b) => new Date(b.date) - new Date(a.date));
+  const fmpUrl = `https://financialmodelingprep.com/stable/sec-filings-search/symbol?symbol=${sym.toUpperCase()}&limit=15`;
+  const proxyUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(fmpUrl)}`;
+
+  try {
+    const response = await fetch(proxyUrl);
+    const data = await response.json();
+    return data.map(f => ({
+      form: f.type,
+      date: f.fillingDate.split(' ')[0],
+      title: f.type === '10-K' ? 'Annual Report' : (f.type === '10-Q' ? 'Quarterly Report' : 'SEC Filing'),
+      link: f.finalLink
+    }));
+  } catch (e) {
+    console.error("SEC Error:", e);
+    return [];
+  }
 }
 
 async function resSecSearch() {
@@ -2379,62 +2385,95 @@ async function resSecSearch() {
 
 // Mock 13F Fetcher
 async function fetch13F(mgr) {
-  await new Promise(r => setTimeout(r, 800));
-  const results = [
-    { id: 'f_1', form:'13F-HR', date:'2026-05-15', period:'2026-03-31', qtr:'Q1 2026', link:'https://www.sec.gov/edgar/search' },
-    { id: 'f_2', form:'13F-HR', date:'2026-02-14', period:'2025-12-31', qtr:'Q4 2025', link:'https://www.sec.gov/edgar/search' },
-    { id: 'f_3', form:'13F-HR', date:'2025-11-14', period:'2025-09-30', qtr:'Q3 2025', link:'https://www.sec.gov/edgar/search' },
-    { id: 'f_4', form:'13F-HR', date:'2025-08-15', period:'2025-06-30', qtr:'Q2 2025', link:'https://www.sec.gov/edgar/search' }
-  ];
-  return results.sort((a,b) => new Date(b.date) - new Date(a.date));
-}
+  // We use the institutional-ownership endpoint for FMP
+  const fmpUrl = `https://financialmodelingprep.com/stable/institutional-ownership/latest?symbol=${mgr.toUpperCase()}&limit=20`;
+  const proxyUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(fmpUrl)}`;
 
-async function fetch13FHoldings(filingId) {
-  await new Promise(r => setTimeout(r, 600));
-  return [
-    { issuer:'APPLE INC', class:'COM', cusip:'037833100', val:145620000, shs:850000, disc:'SOLE', vote:850000 },
-    { issuer:'MICROSOFT CORP', class:'COM', cusip:'594918104', val:96000000, shs:230000, disc:'SOLE', vote:230000 },
-    { issuer:'NVIDIA CORP', class:'COM', cusip:'67066G104', val:88000000, shs:95000, disc:'SOLE', vote:95000 },
-    { issuer:'AMAZON COM INC', class:'COM', cusip:'023135106', val:72000000, shs:400000, disc:'SOLE', vote:400000 },
-    { issuer:'ALPHABET INC', class:'CAP STK CL A', cusip:'02079K305', val:65000000, shs:380000, disc:'SOLE', vote:380000 },
-  ];
-}
-
-window.toggleHoldings = async function(btn, filingId) {
-  const row = document.getElementById('holdings-' + filingId);
-  if(row.classList.contains('open')) {
-    row.classList.remove('open');
-    btn.textContent = 'View Holdings';
-    return;
-  }
-  
-  row.classList.add('open');
-  btn.textContent = 'Hide Holdings';
-  const wrap = document.getElementById('hw-' + filingId);
-  if(wrap.innerHTML !== '') return; // already loaded
-  
-  wrap.innerHTML = '<div style="font-size:10px;color:var(--dim);text-align:center;padding:10px">Loading 13F Information Table…</div>';
   try {
-    const data = await fetch13FHoldings(filingId);
-    let html = `<table class="h-table">
-      <thead><tr><th>Issuer</th><th>Class</th><th>CUSIP</th><th style="text-align:right">Value ($)</th><th style="text-align:right">Shs/Prn</th><th>Discretion</th><th>Voting</th></tr></thead>
-      <tbody>`;
-    data.forEach(h => {
-      html += `<tr>
-        <td style="font-family:var(--sans);font-weight:600;color:var(--text)">${h.issuer}</td>
-        <td>${h.class}</td>
-        <td>${h.cusip}</td>
-        <td style="text-align:right">${h.val.toLocaleString()}</td>
-        <td style="text-align:right">${h.shs.toLocaleString()}</td>
-        <td>${h.disc}</td>
-        <td>${h.vote.toLocaleString()}</td>
-      </tr>`;
-    });
-    html += `</tbody></table>`;
-    wrap.innerHTML = html;
-  } catch(e) {
-    wrap.innerHTML = '<div style="font-size:10px;color:var(--red);text-align:center;padding:10px">Failed to load holdings.</div>';
+    const response = await fetch(proxyUrl);
+    const data = await response.json();
+    return data.map((item, index) => ({
+      id: item.cik + '-' + index, // Creating a unique ID for the UI
+      cik: item.cik,
+      form: '13F-HR',
+      date: item.filingDate,
+      period: item.reportDate,
+      qtr: `Q${Math.floor(new Date(item.reportDate).getMonth() / 3) + 1} ${new Date(item.reportDate).getFullYear()}`,
+      link: item.link || '#'
+    }));
+  } catch (e) {
+    console.error("13F Error:", e);
+    return [];
   }
+}
+
+// 1. Standalone fetcher (OUTSIDE of toggleHoldings)
+async function fetch13FHoldings(filingId) {
+    const cik = filingId.split('-')[0];
+    const fmpUrl = `https://financialmodelingprep.com/stable/institutional-ownership/portfolio-holding?cik=${cik}&limit=50`;
+    const proxyUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(fmpUrl)}`;
+
+    try {
+        const response = await fetch(proxyUrl);
+        const data = await response.json();
+        return data.map(h => ({
+            issuer: h.underlyingSymbol || 'Unknown',
+            class: 'COM',
+            cusip: h.cusip || '-',
+            val: h.value || 0,
+            shs: h.shares || 0,
+            disc: 'SOLE',
+            vote: h.shares || 0
+        }));
+    } catch (e) {
+        console.error("Holdings Error:", e);
+        return [];
+    }
+}
+
+// 2. The UI Toggle Logic
+window.toggleHoldings = async function(btn, filingId) {
+    const row = document.getElementById('holdings-' + filingId);
+    if (row.classList.contains('open')) {
+        row.classList.remove('open');
+        btn.textContent = 'View Holdings';
+        return;
+    }
+
+    row.classList.add('open');
+    btn.textContent = 'Hide Holdings';
+    const wrap = document.getElementById('hw-' + filingId);
+    if (wrap.innerHTML !== '') return; // already loaded
+
+    wrap.innerHTML = '<div style="font-size:10px;color:var(--dim);text-align:center;padding:10px">Loading 13F Information Table…</div>';
+    
+    try {
+        const data = await fetch13FHoldings(filingId);
+        if (!data || data.length === 0) {
+            wrap.innerHTML = '<div style="font-size:10px;color:var(--dim);text-align:center;padding:10px">No holdings found for this CIK.</div>';
+            return;
+        }
+
+        let html = `<table class="h-table">
+            <thead><tr><th>Issuer</th><th>Class</th><th>CUSIP</th><th style="text-align:right">Value ($)</th><th style="text-align:right">Shs/Prn</th><th>Discretion</th><th>Voting</th></tr></thead>
+            <tbody>`;
+        
+        data.forEach(h => {
+            html += `<tr>
+                <td style="font-family:var(--sans);font-weight:600;color:var(--text)">${h.issuer}</td>
+                <td>${h.class}</td>
+                <td>${h.cusip}</td>
+                <td style="text-align:right">${h.val.toLocaleString()}</td>
+                <td style="text-align:right">${h.shs.toLocaleString()}</td>
+                <td>${h.disc}</td>
+                <td>${h.vote.toLocaleString()}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+        wrap.innerHTML = html;
+    } catch (e) {
+        wrap.innerHTML = '<div style="font-size:10px;color:var(--red);text-align:center;padding:10px">Failed to load holdings.</div>';
+    }
 };
 
 async function res13FSearch() {
