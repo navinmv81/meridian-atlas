@@ -586,12 +586,46 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 .ft{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--dim)}
 .ft a{color:var(--blue);text-decoration:none}.ft a:hover{text-decoration:underline}
 .fdis{font-size:9px;color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--r);padding:6px 12px;line-height:1.6;letter-spacing:.02em}
+
+/* ─── UTILITIES / ACCENTS ───────────────────────────────────── */
+.card-blue{--cc:#1a56a0}
+.card-purple{--cc:#6d28d9}
+.card-green{--cc:#1a7a4a}
+.card-orange{--cc:#e67e22}
+.card-amber{--cc:#b45309}
+.card-cyan{--cc:#0e7490}
+.card-slate{--cc:#475569}
+.card-teal{--cc:#0f766e}
+.card-violet{--cc:#7e22ce}
+.card-red{--cc:#c0392b}
+
+.scroll-360{max-height:360px;overflow-y:auto}
+.scroll-280{max-height:280px;overflow-y:auto}
+.txt-dim-10{font-size:10px;color:var(--dim)}
+.txt-dim-9{font-size:9px;color:var(--dim)}
+.top-sep{border-top:1px solid var(--border)}
+.bd-btm{border-bottom:1px solid var(--border)}
+.mb-0{margin-bottom:0}
+.ml-auto{margin-left:auto}
+.abs-search-results{position:absolute;background:var(--bg2);border:1px solid var(--blue);display:none;z-index:1000;width:100%}
+.rd-body{flex:1;overflow-y:auto;padding:0}
+.rd-body-pad{padding:16px 18px}
+.rd-none-top{padding-top:30px}
+.caps{text-transform:uppercase}
+.normal-case{text-transform:none}
+.pad-note{padding:5px 12px 7px}
+.tiny-dim{font-size:8px;font-weight:600;color:var(--dim)}
+.h-52{height:52px}
+.mv-loading{padding:20px 0;grid-column:1/-1}
+.loading-center{padding:20px;text-align:center}
+.geo-title{color:#c0392b}
+.rd-amber-note{background:var(--amber-bg);color:var(--amber);padding:6px 18px;border-bottom:1px solid var(--amber-bd)}
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
-<div id="header">
+<header id="header">
   <a class="logo" href="#">
     <svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect width="30" height="30" rx="6" fill="#eef4fc"/>
@@ -606,37 +640,30 @@ body.dark .res-table td{border-bottom-color:var(--border)}
       <div class="logo-sub">Global Market Intelligence</div>
     </div>
   </a>
-
   <div id="sw">
     <span class="sico">⌕</span>
     <input id="search" type="text" placeholder="Ticker or name… (AAPL, Gold, EUR/USD)" autocomplete="off">
     <div id="sr"></div>
   </div>
-
   <div class="hsp"></div>
-  <div class="live-pill"><div class="live-dot"></div><div class="live-txt">LIVE</div></div>
+  <div class="live-pill"><span class="live-dot"></span><span class="live-txt">LIVE</span></div>
   <div id="clock"></div>
-  <!-- compact toggle -->
   <button class="btn" id="cmpbtn" onclick="toggleCompact()" title="Toggle compact mode">⊟ Compact</button>
-  <!-- v2.3: Research Panel button -->
   <button class="btn" id="resbtn" onclick="openResearch()" title="Fundamental Research">🔍 Research</button>
-  <!-- v2.8 START — Dark Mode button -->
   <button class="btn" id="darkbtn" onclick="toggleDark()" title="Toggle dark mode">◑ Dark</button>
-  <!-- v2.8 END -->
   <button class="btn on" id="abtn" onclick="toggleAuto()">Auto</button>
   <button class="btn" id="rbtn" onclick="doRefresh()"><span id="ricon">↻</span></button>
-</div>
+</header>
 
 <div id="sbar">Initialising Meridian Atlas…</div>
 
-<!-- ═══ MARKET INTELLIGENCE BANNER ═══════════════════════════ -->
-<div id="intel-banner">
+<!-- MARKET INTELLIGENCE -->
+<section id="intel-banner" aria-label="Market intelligence banner">
   <div class="intel-top">
     <span id="risk-label" class="risk-label risk-neu">Neutral</span>
-    <div id="market-narrative">Fetching market data…</div>
+    <p id="market-narrative">Fetching market data…</p>
   </div>
   <div class="intel-tiles">
-    <!-- EQUITIES group -->
     <div class="intel-group">
       <div class="intel-group-label">Equities</div>
       <div class="intel-tiles-inner">
@@ -674,7 +701,6 @@ body.dark .res-table td{border-bottom-color:var(--border)}
       </div>
     </div>
   </div>
-  <!-- v2.7 INTELLIGENCE START -->
   <div class="regime-drivers" id="regime-drivers">
     <span class="driver-item"><span class="driver-label">EQUITIES</span><span class="driver-arrow nc">—</span></span>
     <span class="driver-item"><span class="driver-label">YIELDS</span><span class="driver-arrow nc">—</span></span>
@@ -683,20 +709,16 @@ body.dark .res-table td{border-bottom-color:var(--border)}
     <span class="driver-item"><span class="driver-label">GOLD</span><span class="driver-arrow nc">—</span></span>
     <span class="driver-item"><span class="driver-label">OIL</span><span class="driver-arrow nc">—</span></span>
   </div>
-  <!-- v2.7 INTELLIGENCE END -->
-</div>
+</section>
 
 <!-- TICKER -->
 <div id="tkwrap"><div id="tkinner"></div></div>
 
 <!-- MAIN -->
-<div id="main">
-  <div id="left">
-
-    <!-- ROW 1: World Indices + Sovereign Yields -->
+<main id="main">
+  <section id="left" aria-label="Primary market panels">
     <div class="grid2">
-      <!-- WORLD INDICES with Dev/EM toggle -->
-      <div class="card" style="--cc:#1a56a0">
+      <section class="card card-blue">
         <div class="chdr">
           <span class="ctitle">World Indices</span>
           <div class="seg" id="idx-seg">
@@ -707,10 +729,9 @@ body.dark .res-table td{border-bottom-color:var(--border)}
         </div>
         <table class="dt"><thead><tr><th>Index</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>H/L</th></tr></thead>
         <tbody id="tb-global"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
-      </div>
+      </section>
 
-      <!-- SOVEREIGN YIELDS matrix -->
-      <div class="card" style="--cc:#6d28d9">
+      <section class="card card-purple">
         <div class="chdr">
           <span class="ctitle">Sovereign Yields</span>
           <span id="curve-lbl" class="curve-lbl curve-FLAT">—</span>
@@ -722,21 +743,18 @@ body.dark .res-table td{border-bottom-color:var(--border)}
             <tr><td>🇬🇧 UK</td><td>—</td><td>—</td><td id="y-uk10">—</td><td>—</td></tr>
             <tr><td>🇩🇪 Germany</td><td>—</td><td>—</td><td id="y-de10">—</td><td>—</td></tr>
             <tr><td>🇯🇵 Japan</td><td>—</td><td>—</td><td id="y-jp10">—</td><td>—</td></tr>
-            <!-- v2.2: Corp Bond Proxies Start -->
             <tr class="corp-bond-row"><td>🇺🇸 US IG Corp <span class="corp-bond-proxy">LQD proxy</span></td><td colspan="2" id="y-lqd-chg">—</td><td id="y-lqd-price" colspan="2">—</td></tr>
             <tr class="corp-bond-row"><td>🇺🇸 US HY Corp <span class="corp-bond-proxy">HYG proxy</span></td><td colspan="2" id="y-hyg-chg">—</td><td id="y-hyg-price" colspan="2">—</td></tr>
             <tr class="corp-bond-row"><td>🇪🇺 Euro IG Corp <span class="corp-bond-proxy">IEAC proxy</span></td><td colspan="2" id="y-ieac-chg">—</td><td id="y-ieac-price" colspan="2">—</td></tr>
-            <!-- v2.2: Corp Bond Proxies End -->
           </tbody>
         </table>
-        <div style="padding:5px 12px 7px;font-size:9px;color:var(--dim);border-top:1px solid var(--border)">* Yield curve: US 2Y vs 10Y spread · Corp bonds shown as ETF price proxies (LQD, HYG, IEAC)</div>
-        <!-- v2.8.6 START: Yield Curve Visual + Credit Snapshot -->
+        <div class="txt-dim-9 top-sep pad-note">* Yield curve: US 2Y vs 10Y spread · Corp bonds shown as ETF price proxies (LQD, HYG, IEAC)</div>
         <div class="yc-wrap">
           <div class="yc-title">
             <span>US Yield Curve</span>
-            <span id="yc-shape-lbl" style="font-size:8px;font-weight:600;color:var(--dim)">—</span>
+            <span id="yc-shape-lbl" class="tiny-dim">—</span>
           </div>
-          <svg class="yc-svg" id="yc-svg" viewBox="0 0 280 52" xmlns="http://www.w3.org/2000/svg" style="height:52px"></svg>
+          <svg class="yc-svg h-52" id="yc-svg" viewBox="0 0 280 52" xmlns="http://www.w3.org/2000/svg"></svg>
           <div class="yc-labels"><span>2Y</span><span>5Y</span><span>10Y</span><span>30Y</span></div>
         </div>
         <div class="cr-wrap">
@@ -744,180 +762,159 @@ body.dark .res-table td{border-bottom-color:var(--border)}
           <div class="cr-grid">
             <div class="cr-item"><div class="cr-lbl">US IG (LQD)</div><div class="cr-val" id="cr-lqd-price">—</div><div class="cr-chg" id="cr-lqd-chg"></div></div>
             <div class="cr-item"><div class="cr-lbl">US HY (HYG)</div><div class="cr-val" id="cr-hyg-price">—</div><div class="cr-chg" id="cr-hyg-chg"></div></div>
-            <div class="cr-item"><div class="cr-lbl">IG/HY Spread</div><div class="cr-val" id="cr-spread">—</div><div class="cr-chg" style="font-size:8px;color:var(--dim)" id="cr-spread-lbl">proxy</div></div>
+            <div class="cr-item"><div class="cr-lbl">IG/HY Spread</div><div class="cr-val" id="cr-spread">—</div><div class="cr-chg tiny-dim" id="cr-spread-lbl">proxy</div></div>
           </div>
         </div>
-        <!-- v2.8.6 END -->
-      </div>
+      </section>
     </div>
 
-    <!-- ROW 2: US + European Equities -->
     <div class="grid2">
-      <div class="card" style="--cc:#1a56a0">
+      <section class="card card-blue">
         <div class="chdr"><span class="ctitle">US Equities</span><span id="b-us" class="cbadge bCL">—</span></div>
         <table class="dt"><thead><tr><th>Stock</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>Vol</th></tr></thead>
         <tbody id="tb-us"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
-      </div>
-      <div class="card" style="--cc:#1a7a4a">
+      </section>
+      <section class="card card-green">
         <div class="chdr"><span class="ctitle">European Equities</span><span id="b-eu" class="cbadge bCL">—</span></div>
         <table class="dt"><thead><tr><th>Stock</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>Vol</th></tr></thead>
         <tbody id="tb-eu"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
-      </div>
+      </section>
     </div>
 
-    <!-- v2.8 START — Market Movers -->
-    <div class="card" style="--cc:#e67e22">
+    <section class="card card-orange">
       <div class="chdr">
         <span class="ctitle">Market Movers</span>
-        <span style="font-size:9px;color:var(--dim)" id="mv-updated"></span>
+        <span class="txt-dim-9" id="mv-updated"></span>
       </div>
       <div id="mv-grid" class="mv-grid">
-        <div class="mv-none" style="padding:20px 0;grid-column:1/-1">Loading…</div>
+        <div class="mv-none mv-loading">Loading…</div>
       </div>
-    </div>
-    <!-- v2.8 END — Market Movers -->
+    </section>
 
-    <!-- ROW 3: Commodities + G10 FX -->
     <div class="grid2">
-      <div class="card" style="--cc:#b45309">
+      <section class="card card-amber">
         <div class="chdr"><span class="ctitle">Commodities</span><span class="cbadge b24">24H</span></div>
         <table class="dt"><thead><tr><th>Name</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>H/L</th></tr></thead>
         <tbody id="tb-commodities"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
-      </div>
-      <div class="card" style="--cc:#0e7490">
+      </section>
+      <section class="card card-cyan">
         <div class="chdr"><span class="ctitle">G10 Currencies</span><span class="cbadge b24">24/5</span></div>
         <table class="dt"><thead><tr><th>Pair</th><th class="chart-col">Chart (1M)</th><th>Rate</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>H/L</th></tr></thead>
         <tbody id="tb-fx"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
-      </div>
+      </section>
     </div>
 
-    <!-- ROW 4: Futures full width -->
-    <div class="card" style="--cc:#475569">
+    <section class="card card-slate">
       <div class="chdr"><span class="ctitle">Futures</span><span id="b-fut" class="cbadge bCL">—</span></div>
       <table class="dt"><thead><tr><th>Contract</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>Session H/L</th><th>Vol</th></tr></thead>
       <tbody id="tb-futures"><tr class="lrow"><td colspan="7">Loading…</td></tr></tbody></table>
-    </div>
+    </section>
+  </section>
 
-  </div><!-- /left -->
+  <aside id="right" aria-label="News and secondary panels">
+    <section class="card card-blue scroll-360">
+      <div class="nhdr card-blue"><div class="nhtitle">Market News</div><div id="nc" class="txt-dim-10">—</div></div>
+      <div id="nlist"><div class="lrow loading-center">Loading…</div></div>
+    </section>
 
-  <div id="right">
+    <section class="card card-red scroll-280">
+      <div class="nhdr card-red"><div class="nhtitle geo-title">Geopolitics</div><div id="nc-geo" class="txt-dim-10">—</div></div>
+      <div id="glist"><div class="lrow loading-center">Loading…</div></div>
+    </section>
 
-    <!-- Market News -->
-    <div class="card" style="max-height:360px;overflow-y:auto;--cc:#1a56a0">
-      <div class="nhdr" style="--cc:#1a56a0"><div class="nhtitle">Market News</div><div id="nc" style="font-size:10px;color:var(--dim)">—</div></div>
-      <div id="nlist"><div class="lrow" style="padding:20px;text-align:center">Loading…</div></div>
-    </div>
-
-    <!-- Geopolitics News -->
-    <div class="card" style="max-height:280px;overflow-y:auto;--cc:#c0392b">
-      <div class="nhdr" style="--cc:#c0392b"><div class="nhtitle" style="color:#c0392b">Geopolitics</div><div id="nc-geo" style="font-size:10px;color:var(--dim)">—</div></div>
-      <div id="glist"><div class="lrow" style="padding:20px;text-align:center">Loading…</div></div>
-    </div>
-
-    <!-- Economic Calendar -->
-    <div class="card" style="--cc:#6d28d9">
+    <section class="card card-purple">
       <div class="chdr">
         <span class="ctitle">Economic Calendar</span>
-        <div class="seg" id="cal-seg" style="margin-left:auto">
+        <div class="seg ml-auto" id="cal-seg">
           <button class="seg-btn" onclick="setCalFilter('today',this)">Today</button>
           <button class="seg-btn active" onclick="setCalFilter('week',this)">This Week</button>
           <button class="seg-btn" onclick="setCalFilter('next',this)">Next Week</button>
         </div>
       </div>
       <div id="cal-list"></div>
-    </div>
+    </section>
 
-    <!-- Watchlist -->
-    <div class="card" style="--cc:#0f766e">
-      <div class="chdr"><span class="ctitle">Watchlist</span><span id="wl-count" style="font-size:9px;color:var(--dim)"></span></div>
+    <section class="card card-teal">
+      <div class="chdr"><span class="ctitle">Watchlist</span><span id="wl-count" class="txt-dim-9"></span></div>
       <div id="wl-input-row">
-      <input type="text" id="wl-input" placeholder="Search Company..." oninput="handleSearch(this.value)" autocomplete="off">
-<div id="search-results" style="position: absolute; background: var(--bg2); border: 1px solid var(--blue); display: none; z-index: 1000; width: 100%;"></div>
+        <input type="text" id="wl-input" placeholder="Search Company..." oninput="handleSearch(this.value)" autocomplete="off">
+        <div id="search-results" class="abs-search-results"></div>
         <button id="wl-add" onclick="wlAdd()">+ Add</button>
       </div>
       <div id="wl-list"></div>
-    </div>
+    </section>
 
-    <!-- Equity Sectors -->
-    <div class="card" style="--cc:#7e22ce">
+    <section class="card card-violet">
       <div class="chdr"><span class="ctitle">Equity Sectors</span><span class="sec-hdr-note">Live ETF view</span></div>
       <div id="sector-list"></div>
-    </div>
+    </section>
 
-    <!-- v2.8.6 START: Earnings Snapshot -->
-    <div class="card" style="--cc:#0f766e">
-      <div class="chdr"><span class="ctitle">Earnings Snapshot</span><span style="font-size:9px;color:var(--dim)">Next 14 days</span></div>
+    <section class="card card-teal">
+      <div class="chdr"><span class="ctitle">Earnings Snapshot</span><span class="txt-dim-9">Next 14 days</span></div>
       <div id="earn-list"></div>
-    </div>
-    <!-- v2.8.6 END -->
-
-  </div><!-- /right -->
-</div>
+    </section>
+  </aside>
+</main>
 
 <!-- FOOTER -->
-<div id="footer">
+<footer id="footer">
   <div class="ft">
     <div>© Meridian Atlas — Data: Yahoo Finance — Prices may be delayed — Sparklines: 30D</div>
     <div><a href="https://claude.ai" target="_blank">Built with Claude</a></div>
   </div>
   <div class="fdis">⚠ ⚠ DISCLAIMER: THIS IS A PERSONAL TESTING PROJECT ONLY. ALL DATA IS SOURCED FROM YAHOO FINANCE AND FINANCIAL MODELING PREP (FMP) and MAY BE DELAYED, INCOMPLETE, OR INACCURATE. THIS TOOL DOES NOT CONSTITUTE FINANCIAL ADVICE, INVESTMENT ADVICE, OR ANY FORM OF RECOMMENDATION. DO NOT MAKE FINANCIAL DECISIONS BASED ON THIS DATA. ALWAYS CONSULT A QUALIFIED FINANCIAL PROFESSIONAL.</div>
-</div>
+</footer>
 
 <!-- MODAL -->
 <div id="ov" onclick="ovClick(event)"><div id="modal"><div id="mc"></div></div></div>
 
-<!-- v2.3: RESEARCH PANEL — v2.8.5: SCREENER ADDED -->
-<div id="research-panel" onclick="rpClick(event)">
+<!-- RESEARCH PANEL -->
+<section id="research-panel" onclick="rpClick(event)" aria-label="Research drawer">
   <div id="research-drawer">
     <div class="rd-hdr">
       <div class="rd-title" id="rd-title">🔍 Research</div>
       <button class="rd-close" onclick="closeResearch()">✕</button>
     </div>
-
-    <!-- RESEARCH TABS -->
-    <div class="rd-mode-bar" style="border-bottom:1px solid var(--border);margin-bottom:0">
+    <nav class="rd-mode-bar bd-btm mb-0" aria-label="Research tabs">
       <button class="rd-mode-btn active" id="tab-btn-fund" onclick="setResTab('fund')">Fundamentals</button>
       <button class="rd-mode-btn" id="tab-btn-sec" onclick="setResTab('sec')">Company Filings</button>
       <button class="rd-mode-btn" id="tab-btn-13f" onclick="setResTab('13f')">13F Holdings</button>
-    </div>
+    </nav>
 
-    <!-- FUNDAMENTALS TAB -->
-    <div id="tab-fund" class="res-tab show">
+    <section id="tab-fund" class="res-tab show">
       <div class="rd-search-row">
         <input id="rd-input-fund" class="res-input" type="text" placeholder="Enter ticker e.g. AAPL, MSFT…" autocomplete="off">
         <button id="rd-btn-fund" class="res-btn" onclick="resFundSearch()">Search</button>
       </div>
-      <div id="rd-body-fund" style="flex:1;overflow-y:auto;padding:16px 18px">
+      <div id="rd-body-fund" class="rd-body rd-body-pad">
         <div class="rd-none">Enter a ticker symbol above to load company research data.</div>
       </div>
-    </div>
+    </section>
 
-    <!-- COMPANY FILINGS TAB -->
-    <div id="tab-sec" class="res-tab">
+    <section id="tab-sec" class="res-tab">
       <div class="rd-search-row">
-        <input id="rd-input-sec" class="res-input" type="text" placeholder="Enter ticker e.g. TSLA, NVDA…" autocomplete="off" style="text-transform:uppercase">
+        <input id="rd-input-sec" class="res-input caps" type="text" placeholder="Enter ticker e.g. TSLA, NVDA…" autocomplete="off">
         <button id="rd-btn-sec" class="res-btn" onclick="resSecSearch()">Search</button>
       </div>
-      <div id="rd-body-sec" style="flex:1;overflow-y:auto;padding:0">
-        <div class="rd-none" style="padding-top:30px">Enter a ticker to load recent company filings.</div>
+      <div id="rd-body-sec" class="rd-body">
+        <div class="rd-none rd-none-top">Enter a ticker to load recent company filings.</div>
       </div>
-    </div>
+    </section>
 
-    <!-- 13F HOLDINGS TAB -->
-    <div id="tab-13f" class="res-tab">
+    <section id="tab-13f" class="res-tab">
       <div class="rd-search-row">
-        <input id="rd-input-13f" class="res-input" type="text" placeholder="Enter Manager e.g. Ackman, Berkshire…" autocomplete="off" style="text-transform:none">
+        <input id="rd-input-13f" class="res-input normal-case" type="text" placeholder="Enter Manager e.g. Ackman, Berkshire…" autocomplete="off">
         <button id="rd-btn-13f" class="res-btn" onclick="res13FSearch()">Search</button>
       </div>
-      <div style="background:var(--amber-bg);color:var(--amber);font-size:10px;padding:6px 18px;border-bottom:1px solid var(--amber-bd)">
+      <div class="txt-dim-10 rd-amber-note">
         Note: Tracks institutional manager 13F-HR filings (holdings), not issuer filings.
       </div>
-      <div id="rd-body-13f" style="flex:1;overflow-y:auto;padding:0">
-        <div class="rd-none" style="padding-top:30px">Enter an institutional manager to search 13F filings.</div>
+      <div id="rd-body-13f" class="rd-body">
+        <div class="rd-none rd-none-top">Enter an institutional manager to search 13F filings.</div>
       </div>
-    </div>
+    </section>
   </div>
-</div>
+</section>
 
 <script>
 // ── PROXY ─────────────────────────────────────────────────────────────────────
@@ -2330,7 +2327,7 @@ function renderResearch(sym,d,body){
     </div>`;
 }
 
-const MY_WORKER_URL = 'https://meridian-proxy.navinmv1981.workers.dev';
+const MY_WORKER_URL = 'https://your-worker-name.workers.dev';
 // Mock SEC Filings fetcher
 async function fetchSECFilings(sym) {
   const fmpUrl = `https://financialmodelingprep.com/stable/sec-filings-search/symbol?symbol=${sym.toUpperCase()}&limit=15`;
