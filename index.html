@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meridian Atlas — Global Market Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#f5f4f0; --bg2:#ffffff; --bg3:#f0efe9; --bg4:#e8e6df;
-  --border:#dddbd2; --border2:#ccc9bf;
+  --bg:#F9F8F3; --bg2:#ffffff; --bg3:#f5f4ee; --bg4:#ecebe3;
+  --border:#E2E2D5; --border2:#d2d2c3;
   --text:#1a1917; --text2:#3d3b36; --muted:#6b6860; --dim:#9e9b93;
   --green:#1a7a4a; --green-bg:#edf7f1; --green-bd:#b7e3c8;
   --red:#c0392b; --red-bg:#fdf0ee; --red-bd:#f0b8b3;
   --blue:#1a56a0; --blue-bg:#eef4fc; --blue-bd:#b3cef0;
   --amber:#b45309; --amber-bg:#fef3e2; --amber-bd:#f5d5a0;
   --cyan:#0e7490; --purple:#6d28d9; --teal:#0f766e;
-  --mono:'JetBrains Mono',monospace; --sans:'Inter',sans-serif;
-  --r:6px; --sh:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
-  --sh-md:0 4px 16px rgba(0,0,0,.12),0 2px 4px rgba(0,0,0,.06);
+  --mono:'Inter',sans-serif; --sans:'Inter',sans-serif;
+  --r:4px; --sh:none;
+  --sh-md:none;
   --row-h:32px;
 }
 .compact { --row-h:22px; }
@@ -65,7 +65,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
 /* ─── HEADER ──────────────────────────────────────────────── */
-#header{position:sticky;top:0;z-index:200;background:var(--bg2);border-bottom:1px solid var(--border);box-shadow:var(--sh);padding:0 20px;height:52px;display:flex;align-items:center;gap:14px}
+#header{position:sticky;top:0;z-index:200;background:var(--bg);border-bottom:1px solid var(--border);box-shadow:none;padding:0 16px;height:52px;display:flex;align-items:center;gap:10px}
 .logo{display:flex;align-items:center;gap:10px;flex-shrink:0;text-decoration:none}
 .logo svg{width:30px;height:30px}
 .logo-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.02em}
@@ -73,12 +73,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .logo-sub{font-size:9px;color:var(--muted);margin-top:1px;letter-spacing:.02em}
 
 /* SEARCH */
-#sw{flex:1;max-width:380px;position:relative}
-#search{width:100%;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:0 14px 0 34px;font-family:var(--sans);font-size:12px;color:var(--text);outline:none;transition:all .15s}
-#search:focus{border-color:var(--blue);background:var(--bg2);box-shadow:0 0 0 3px rgba(26,86,160,.1)}
-#search::placeholder{color:var(--dim)}
-.sico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:13px;pointer-events:none}
-#sr{position:absolute;top:calc(100% + 5px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh-md);max-height:260px;overflow-y:auto;display:none;z-index:300}
+#sw{flex:1;max-width:560px;position:relative}
+#search{width:100%;height:36px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:0 14px 0 36px;font-family:var(--sans);font-size:12px;color:var(--text);outline:none;transition:border-color .2s ease, background-color .2s ease}
+#search:focus{border-color:#c8c8b9;background:#fff;box-shadow:none}
+#search::placeholder{color:#8f8c82}
+.sico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#9a988f;font-size:12px;pointer-events:none}
+#sr{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:4px;box-shadow:none;max-height:260px;overflow-y:auto;display:none;z-index:300}
 #sr.show{display:block}
 .sri{padding:7px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .1s}
 .sri:last-child{border-bottom:none}
@@ -93,15 +93,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 @keyframes pdot{0%,100%{box-shadow:0 0 0 0 rgba(26,122,74,.5)}50%{box-shadow:0 0 0 4px rgba(26,122,74,0)}}
 .live-txt{font-size:10px;font-weight:600;color:var(--green);letter-spacing:.05em}
 #clock{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
-.btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 11px;border-radius:20px;cursor:pointer;transition:all .15s;white-space:nowrap}
-.btn:hover{background:var(--bg4);color:var(--text)}
+.btn{background:#fff;border:1px solid var(--border);color:var(--muted);font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;border-radius:4px;cursor:pointer;transition:background-color .2s ease,border-color .2s ease,color .2s ease;white-space:nowrap}
+.btn:hover{background:var(--bg3);border-color:#d6d6c6;color:var(--text)}
 .btn.on{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
 #rbtn{padding:4px 9px;font-size:14px}
 .spin{display:inline-block;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 
 /* ─── STATUS ──────────────────────────────────────────────── */
-#sbar{background:var(--bg3);border-bottom:1px solid var(--border);padding:3px 20px;font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.07em;min-height:20px}
+#sbar{background:var(--bg);border-bottom:1px solid var(--border);padding:3px 16px;font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.07em;min-height:20px}
 #sbar.ok{color:var(--green)}#sbar.err{color:var(--red)}#sbar.info{color:var(--amber)}
 
 /* ─── MARKET INTELLIGENCE BANNER ─────────────────────────── */
@@ -241,15 +241,28 @@ body.dark .mv-table tr:hover td{background:var(--bg3)}
 
 /* ─── LAYOUT ──────────────────────────────────────────────── */
 #main{display:flex;align-items:flex-start}
-#left{flex:1;min-width:0;padding:12px 10px 12px 18px;display:flex;flex-direction:column;gap:10px}
-#right{width:330px;flex-shrink:0;padding:12px 18px 12px 8px;display:flex;flex-direction:column;gap:10px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#left{flex:1;min-width:0;padding:10px 8px 10px 12px;display:flex;flex-direction:column;gap:8px}
+#right{width:330px;flex-shrink:0;padding:10px 12px 10px 6px;display:flex;flex-direction:column;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 
 /* ─── CARD ────────────────────────────────────────────────── */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
-.chdr{padding:8px 12px 7px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;border-left:3px solid var(--cc,var(--blue))}
-.ctitle{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cc,var(--blue))}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;box-shadow:none;overflow:hidden}
+.chdr{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;border-left:1px solid var(--cc,var(--blue))}
+.ctitle{font-size:12px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--cc,var(--blue))}
 .cbadge{font-size:8px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+.action-tile{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:6px 10px;
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--text2);
+  transition:border-color .2s ease, background-color .2s ease, color .2s ease;
+}
+.action-tile:hover{background:var(--bg3);border-color:#d0d0bf;color:var(--text)}
 .bOP{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
 .bCL{background:var(--bg3);color:var(--dim);border:1px solid var(--border)}
 .bPR{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
@@ -620,6 +633,240 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 .loading-center{padding:20px;text-align:center}
 .geo-title{color:#c0392b}
 .rd-amber-note{background:var(--amber-bg);color:var(--amber);padding:6px 18px;border-bottom:1px solid var(--amber-bd)}
+
+/* terminal typography refinements */
+.dt th,.mv-table th,.ym-table th,.ac-table th,.region-hdr td,.mv-group-title,.driver-label,.qi-label,.ac-sig-label,.chart-stat-l,.intel-group-label,.ms-l,.dcf-section h3,.dcf-card-label{
+  font-size:12px;
+  font-weight:500;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+
+.pr,.ch,.pc,.hl,.vo,.vo-em,.tp,.tc,.ms-p,.ms-c,.mv-price,.mv-pct,.mv-vol,.wl-price,.wl-pct,.sec-pct,.fund-val,.ac-tile-val,.ac-rating,.ac-price,.ac-date,.rd-price,.rd-chg,.rd-val,.dcf-card-value{
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
+}
+
+.dt td:not(:first-child),.mv-table td:not(:first-child),.ym-table td:not(:first-child),.ac-table td:not(:first-child){
+  font-feature-settings:"tnum" 1;
+  font-variant-numeric:tabular-nums;
+}
+/* --- DCF TAB START --- */
+.dcf-backdrop{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.45);
+  backdrop-filter:blur(2px);
+  z-index:445;
+}
+.dcf-backdrop.show{display:block}
+.dcf-panel{
+  display:none;
+  position:fixed;
+  top:64px;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(1200px,96vw);
+  height:min(860px,calc(100vh - 88px));
+  background:var(--panel, #fff);
+  border:1px solid var(--line, #e5e7eb);
+  border-radius:4px;
+  box-shadow:none;
+  z-index:450;
+  overflow:hidden;
+}
+
+.dcf-panel.show{
+  display:flex;
+  flex-direction:column;
+}
+
+.dcf-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 12px;
+  border-bottom:1px solid var(--line, #e5e7eb);
+  background:var(--bg, #F9F8F3);
+}
+
+.dcf-title{
+  font-size:13px;
+  font-weight:500;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+
+.dcf-close{
+  border:1px solid var(--line, #d1d5db);
+  background:transparent;
+  color:var(--text, #111827);
+  border-radius:10px;
+  padding:6px 10px;
+  cursor:pointer;
+}
+.dcf-close:hover{background:var(--bg3)}
+
+.dcf-body{
+  display:grid;
+  grid-template-columns:340px 1fr;
+  gap:0;
+  min-height:0;
+  flex:1;
+}
+
+.dcf-sidebar{
+  border-right:1px solid var(--line, #e5e7eb);
+  padding:12px;
+  overflow:auto;
+  background:var(--panel, #fff);
+}
+
+.dcf-main{
+  padding:12px;
+  overflow:auto;
+  background:var(--bg, #f8fafc);
+}
+
+.dcf-section{
+  margin-bottom:14px;
+  padding:12px;
+  border:1px solid var(--line, #e5e7eb);
+  border-radius:4px;
+  background:var(--panel, #fff);
+  overflow:hidden;
+}
+
+.dcf-section h3{
+  margin:0 0 10px 0;
+  font-size:13px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+  color:var(--muted, #6b7280);
+}
+
+.dcf-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  column-gap:10px;
+  row-gap:8px;
+  align-items:start;
+}
+
+.dcf-field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:0;
+  min-width:0;
+}
+
+.dcf-field label{
+  font-size:12px;
+  color:var(--muted, #6b7280);
+  font-weight:600;
+}
+
+.dcf-field input,
+.dcf-field select{
+  width:100%;
+  height:38px;
+  border:1px solid var(--line, #d1d5db);
+  border-radius:4px;
+  padding:0 10px;
+  background:var(--panel, #fff);
+  color:var(--text, #111827);
+}
+.dcf-field input:focus,
+.dcf-field select:focus{
+  outline:none;
+  border-color:var(--blue,#1a56a0);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--blue,#1a56a0) 18%, transparent);
+}
+
+.dcf-actions{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+
+.dcf-btn{
+  border:1px solid var(--line, #d1d5db);
+  border-radius:4px;
+  padding:8px 12px;
+  cursor:pointer;
+  background:var(--panel, #fff);
+  color:var(--text, #111827);
+  font-weight:600;
+}
+.dcf-btn:hover{background:var(--bg3)}
+
+.dcf-btn.primary{
+  background:#2563eb;
+  color:#fff;
+  border-color:#2563eb;
+}
+.dcf-btn.primary:hover{background:#1d4ed8;border-color:#1d4ed8}
+
+.dcf-cards{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:8px;
+  margin-bottom:14px;
+}
+
+.dcf-card{
+  padding:12px;
+  border:1px solid var(--line, #e5e7eb);
+  border-radius:4px;
+  background:var(--panel, #fff);
+}
+
+.dcf-card-label{
+  font-size:11px;
+  color:var(--muted, #6b7280);
+  text-transform:uppercase;
+  letter-spacing:.4px;
+  margin-bottom:6px;
+}
+
+.dcf-card-value{
+  font-size:20px;
+  font-weight:700;
+  line-height:1.25;
+}
+
+.dcf-explain{
+  line-height:1.55;
+  font-size:13px;
+  color:var(--text, #111827);
+}
+
+.dcf-note{
+  margin-top:10px;
+  font-size:12px;
+  color:var(--muted, #6b7280);
+}
+
+@media (max-width: 980px){
+  .dcf-panel{
+    top:58px;
+    width:98vw;
+    height:calc(100vh - 70px);
+    border-radius:14px;
+  }
+  .dcf-body{grid-template-columns:1fr}
+  .dcf-sidebar{border-right:none;border-bottom:1px solid var(--line, #e5e7eb)}
+  .dcf-cards{grid-template-columns:repeat(2, minmax(0,1fr))}
+}
+
+@media (max-width: 640px){
+  .dcf-grid{grid-template-columns:1fr}
+  .dcf-cards{grid-template-columns:1fr}
+}
+/* --- DCF TAB END --- */
 </style>
 </head>
 <body>
@@ -641,18 +888,19 @@ body.dark .res-table td{border-bottom-color:var(--border)}
     </div>
   </a>
   <div id="sw">
-    <span class="sico">⌕</span>
+    <span class="sico">⌘</span>
     <input id="search" type="text" placeholder="Ticker or name… (AAPL, Gold, EUR/USD)" autocomplete="off">
     <div id="sr"></div>
-  </div>
-  <div class="hsp"></div>
-  <div class="live-pill"><span class="live-dot"></span><span class="live-txt">LIVE</span></div>
-  <div id="clock"></div>
-  <button class="btn" id="cmpbtn" onclick="toggleCompact()" title="Toggle compact mode">⊟ Compact</button>
-  <button class="btn" id="resbtn" onclick="openResearch()" title="Fundamental Research">🔍 Research</button>
-  <button class="btn" id="darkbtn" onclick="toggleDark()" title="Toggle dark mode">◑ Dark</button>
-  <button class="btn on" id="abtn" onclick="toggleAuto()">Auto</button>
-  <button class="btn" id="rbtn" onclick="doRefresh()"><span id="ricon">↻</span></button>
+</div>
+<div class="hsp"></div>
+<div class="live-pill"><span class="live-dot"></span><span class="live-txt">LIVE</span></div>
+<div id="clock"></div>
+<button class="btn" id="cmpbtn" onclick="toggleCompact()" title="Toggle compact mode">⊟ Compact</button>
+<button class="btn action-tile" id="resbtn" onclick="openResearch()" title="Fundamental Research">Research</button>
+<button class="btn action-tile" id="dcfTabBtn" onclick="openDCF()" title="Discounted Cash Flow">DCF</button>
+<button class="btn" id="darkbtn" onclick="toggleDark()" title="Toggle dark mode">◑ Dark</button>
+<button class="btn on" id="abtn" onclick="toggleAuto()">Auto</button>
+<button class="btn" id="rbtn" onclick="doRefresh()"><span id="ricon">↻</span></button>
 </header>
 
 <div id="sbar">Initialising Meridian Atlas…</div>
@@ -1924,6 +2172,8 @@ function renderModal(sym,name,d,f){
   :`<div class="mtab-panel" data-panel="fundamentals"><div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">${unsupportedFundType?'Fundamental data not available for this instrument type.':'Fundamental data is temporarily unavailable for this symbol.'}<br><span style="font-size:10px;color:var(--dim)">${unsupportedFundType?'Indices and commodities do not carry company fundamentals.':'Try refreshing in a few seconds.'}</span></div></div>`;
 
 
+
+
   // v2.3: ── analyst calls panel ───────────────────────────────────────────
   let analystPanel='';
   if(!hasFund){
@@ -2327,25 +2577,60 @@ function renderResearch(sym,d,body){
     </div>`;
 }
 
-const MY_WORKER_URL = 'https://your-worker-name.workers.dev';
-// Mock SEC Filings fetcher
-async function fetchSECFilings(sym) {
-  const fmpUrl = `https://financialmodelingprep.com/stable/sec-filings-search/symbol?symbol=${sym.toUpperCase()}&limit=15`;
-  const proxyUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(fmpUrl)}`;
+const MY_WORKER_URL = 'https://meridian-proxy.navinmv1981.workers.dev';
 
+function secDisplayTrim(v) {
+  if (v == null) return '';
+  if (typeof v === 'object') return '';
+  const s = String(v).trim();
+  return s || '';
+}
+
+/** EDGAR issuer filings via Worker (ticker → CIK → submissions); returns { ok, error?, companyName?, filings } */
+async function fetchSECFilings(sym) {
+  const t = sym.trim().toUpperCase();
+  const url = `${MY_WORKER_URL}/?secfilings=${encodeURIComponent(t)}`;
   try {
-    const response = await fetch(proxyUrl);
-    const data = await response.json();
-    return data.map(f => ({
-      form: f.type,
-      date: f.fillingDate.split(' ')[0],
-      title: f.type === '10-K' ? 'Annual Report' : (f.type === '10-Q' ? 'Quarterly Report' : 'SEC Filing'),
-      link: f.finalLink
+    const response = await fetch(url, { signal: AbortSignal.timeout(25000) });
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+    if (!response.ok) {
+      const msg = (data && data.error) ? data.error : `SEC request failed (${response.status})`;
+      return { ok: false, error: msg, companyName: null, filings: [] };
+    }
+    if (data && data.error) {
+      return { ok: false, error: data.error, companyName: null, filings: [] };
+    }
+    // Prefer explicit companyName; fall back to submissions `name` (older Worker payloads omit companyName).
+    const cn =
+      secDisplayTrim(data.companyName) ||
+      secDisplayTrim(data.name) ||
+      t;
+    const rows = Array.isArray(data.filings) ? data.filings : [];
+    const filings = rows.map(f => ({
+      form: f.form || '—',
+      date: (f.filingDate || '').split(' ')[0],
+      title: filingTitleFromRow(f),
+      link: f.link || 'https://www.sec.gov/edgar/search/'
     }));
+    return { ok: true, error: null, companyName: cn, filings };
   } catch (e) {
-    console.error("SEC Error:", e);
-    return [];
+    console.error('SEC Error:', e);
+    return { ok: false, error: 'Could not reach filings service.', companyName: null, filings: [] };
   }
+}
+
+function filingTitleFromRow(f) {
+  const d = (f.primaryDocDescription || '').trim();
+  if (d) return d;
+  const form = f.form || '';
+  if (form === '10-K') return 'Annual Report';
+  if (form === '10-Q') return 'Quarterly Report';
+  return 'SEC Filing';
 }
 
 async function resSecSearch() {
@@ -2356,9 +2641,22 @@ async function resSecSearch() {
   body.innerHTML=`<div class="rd-loading" style="margin-top:30px"><div class="rd-spinner"></div><br>Searching SEC EDGAR for <strong>${sym}</strong>…</div>`;
   
   try {
-    const filings = await fetchSECFilings(sym);
+    const { ok, error, filings, companyName } = await fetchSECFilings(sym);
+    const resolvedCo = secDisplayTrim(companyName) || sym;
+    const filingHeaderHtml =
+      resolvedCo.toUpperCase() !== sym
+        ? `${escapeRdHtml(resolvedCo)} (${escapeRdHtml(sym)})`
+        : escapeRdHtml(resolvedCo);
+    if (!ok && error) {
+      body.innerHTML = `<div class="rd-none" style="margin-top:30px">${escapeRdHtml(error)}</div>`;
+      return;
+    }
+    if (!filings.length) {
+      body.innerHTML = `<div class="rd-none" style="margin-top:30px">No recent filings found for <strong>${filingHeaderHtml}</strong> in EDGAR.</div>`;
+      return;
+    }
     let html = `<div style="padding:16px 18px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Latest Filings for ${sym}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Latest Filings for ${filingHeaderHtml}</div>
       <table class="res-table">
         <thead><tr><th>Form</th><th>Date</th><th>Description</th><th style="text-align:right">Link</th></tr></thead>
         <tbody>`;
@@ -2366,11 +2664,12 @@ async function resSecSearch() {
       let cls = 'res-badge';
       if(f.form==='10-K') cls+=' bOP'; 
       else if(f.form==='10-Q') cls+=' bPR';
+      const safeLink = (f.link && /^https:\/\//i.test(f.link)) ? f.link : 'https://www.sec.gov/edgar/search/';
       html += `<tr>
-        <td><span class="${cls}">${f.form}</span></td>
-        <td style="color:var(--dim)">${f.date}</td>
-        <td>${f.title}</td>
-        <td style="text-align:right"><a class="res-link" href="${f.link}" target="_blank">EDGAR ↗</a></td>
+        <td><span class="${cls}">${escapeRdHtml(f.form)}</span></td>
+        <td style="color:var(--dim)">${escapeRdHtml(f.date)}</td>
+        <td>${escapeRdHtml(f.title)}</td>
+        <td style="text-align:right"><a class="res-link" href="${escapeRdAttr(safeLink)}" target="_blank" rel="noopener noreferrer">EDGAR ↗</a></td>
       </tr>`;
     });
     html += `</tbody></table></div>`;
@@ -2378,6 +2677,17 @@ async function resSecSearch() {
   } catch(e) {
     body.innerHTML=`<div class="rd-none" style="margin-top:30px">Error fetching SEC filings for ${sym}.</div>`;
   }
+}
+
+function escapeRdHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+function escapeRdAttr(s) {
+  return escapeRdHtml(s).replace(/'/g,'&#39;');
 }
 
 // Mock 13F Fetcher
@@ -3037,6 +3347,461 @@ function renderEarningsSnapshot() {
   qT=setInterval(doRefresh,60000);
   nT=setInterval(doNews,120000);
 })();
+/* --- DCF SCRIPT START --- */
+const DCF_PANEL_HTML = `
+<div id="dcfBackdrop" class="dcf-backdrop" aria-hidden="true"></div>
+<div id="dcfPanel" class="dcf-panel" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Discounted Cash Flow">
+  <div class="dcf-head">
+    <div class="dcf-title">Discounted Cash Flow (DCF) Beta</div>
+    <button class="dcf-close" onclick="closeDCF()">✕</button>
+  </div>
+  <div class="dcf-body">
+    <div class="dcf-sidebar">
+      <div class="dcf-section">
+        <h3>Setup</h3>
+        <div class="dcf-field">
+          <label for="dcfSymbol">Supported symbol</label>
+          <select id="dcfSymbol"></select>
+        </div>
+        <div class="dcf-field">
+          <label for="dcfForecastYears">Forecast years</label>
+          <select id="dcfForecastYears">
+            <option value="5" selected>5 Years</option>
+            <option value="10">10 Years</option>
+          </select>
+        </div>
+        <div class="dcf-field">
+          <label for="dcfDiscountMode">Discount mode</label>
+          <select id="dcfDiscountMode">
+            <option value="auto" selected>Auto WACC</option>
+            <option value="manual">Manual Override</option>
+          </select>
+        </div>
+        <div class="dcf-actions">
+          <button class="dcf-btn primary" onclick="loadDCFData()">Load Data</button>
+          <button class="dcf-btn" onclick="calculateDCFAction()">Review and Adjust inputs and Calculate DCF</button>
+          <button class="dcf-btn" onclick="resetDCFToSource()">Reset to Source</button>
+        </div>
+      </div>
+      <div class="dcf-section">
+        <h3>Assumptions</h3>
+        <div class="dcf-grid">
+          <div class="dcf-field"><label for="dcfRevenueGrowthPct">Revenue Growth %</label><input id="dcfRevenueGrowthPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfEbitdaPct">EBITDA %</label><input id="dcfEbitdaPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfDepAmPct">D&A %</label><input id="dcfDepAmPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfEbitPct">EBIT %</label><input id="dcfEbitPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfCapexPct">Capex %</label><input id="dcfCapexPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfTaxRate">Tax Rate %</label><input id="dcfTaxRate" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfReceivablesPct">Receivables %</label><input id="dcfReceivablesPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfInventoriesPct">Inventories %</label><input id="dcfInventoriesPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfPayablePct">Payables %</label><input id="dcfPayablePct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfLongTermGrowthRate">Terminal Growth %</label><input id="dcfLongTermGrowthRate" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfCostOfDebt">Cost of Debt %</label><input id="dcfCostOfDebt" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfCostOfEquity">Cost of Equity %</label><input id="dcfCostOfEquity" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfMarketRiskPremium">Market Risk Premium %</label><input id="dcfMarketRiskPremium" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfBeta">Beta</label><input id="dcfBeta" type="number" step="0.001"></div>
+          <div class="dcf-field"><label for="dcfRiskFreeRate">Risk Free Rate %</label><input id="dcfRiskFreeRate" type="number" step="0.01"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dcf-main">
+      <div class="dcf-cards">
+        <div class="dcf-card"><div class="dcf-card-label">Implied Fair Value</div><div id="dcfFairValue" class="dcf-card-value">—</div></div>
+        <div class="dcf-card"><div class="dcf-card-label">Current Price</div><div id="dcfCurrentPrice" class="dcf-card-value">—</div></div>
+        <div class="dcf-card"><div class="dcf-card-label">Upside / Downside</div><div id="dcfUpside" class="dcf-card-value">—</div></div>
+        <div class="dcf-card"><div class="dcf-card-label">WACC Used</div><div id="dcfWaccUsed" class="dcf-card-value">—</div></div>
+      </div>
+      <div class="dcf-section">
+        <h3>Model explanation</h3>
+        <div id="dcfExplain" class="dcf-explain">Select a supported symbol, review the assumptions, and run the model.</div>
+        <div class="dcf-note">Discounted Cash Flow (DCF) Beta — This feature is for educational and informational purposes only. Valuation outputs are model-based estimates that depend heavily on assumptions and external data, which may be incomplete or inaccurate, and should not be relied on as investment advice or a recommendation to buy or sell any security.</div>
+      </div>
+      <div class="dcf-section">
+        <h3>Loaded data</h3>
+        <div id="dcfLoadedData" class="dcf-explain">No data loaded.</div>
+      </div>
+      <div class="dcf-section">
+        <h3>Forecast summary</h3>
+        <div id="dcfForecastTableWrap" class="dcf-explain">No forecast yet.</div>
+      </div>
+    </div>
+  </div>
+</div>`;
+
+const DCF_SUPPORTED_SYMBOLS = ["AAPL","TSLA","AMZN","MSFT","NVDA","GOOGL","META","NFLX","JPM","V","BAC","PYPL","DIS","T","PFE","COST","INTC","KO","TGT","NKE","SPY","BA","BABA","XOM","WMT","GE","CSCO","VZ","JNJ","CVX","PLTR","SQ","SHOP","SBUX","SOFI","HOOD","RBLX","SNAP","AMD","UBER","FDX","ABBV","ETSY","MRNA","LMT","GM","F","LCID","CCL","DAL","UAL","AAL","TSM","SONY","ET","MRO","COIN","RIVN","RIOT","CPRX","VWO","SPYG","NOK","ROKU","VIAC","ATVI","BIDU","DOCU","ZM","PINS","TLRY","WBA","MGM","NIO","C","GS","WFC","ADBE","PEP","UNH","CARR","HCA","TWTR","BILI","SIRI","FUBO","RKT"];
+
+const MY_DCF_WORKER_URL = "https://meridian-proxy.navinmv1981.workers.dev";
+let dcfLoadedPayload = null;
+let dcfHasLoadedData = false;
+
+function ensureDCFPanelExists() {
+  if (document.getElementById("dcfPanel")) return;
+  document.body.insertAdjacentHTML("beforeend", DCF_PANEL_HTML);
+  const backdrop = document.getElementById("dcfBackdrop");
+  if (backdrop) backdrop.addEventListener("click", closeDCF);
+}
+
+function initDCFUI() {
+  ensureDCFPanelExists();
+  const sel = document.getElementById("dcfSymbol");
+  if (!sel || sel.options.length) return;
+  DCF_SUPPORTED_SYMBOLS.forEach(sym => {
+    const opt = document.createElement("option");
+    opt.value = sym; opt.textContent = sym; sel.appendChild(opt);
+  });
+  sel.value = "AAPL";
+}
+
+function bindDCFButton() {
+  const btn = document.getElementById("dcfTabBtn");
+  if (!btn || btn.dataset.dcfBound === "1") return;
+  btn.dataset.dcfBound = "1";
+  btn.addEventListener("click", (ev) => { ev.preventDefault(); openDCF(); });
+}
+
+function openDCF() {
+  initDCFUI();
+  const panel = document.getElementById("dcfPanel");
+  const backdrop = document.getElementById("dcfBackdrop");
+  if (!panel) return;
+  panel.classList.add("show");
+  panel.setAttribute("aria-hidden", "false");
+  if (backdrop) { backdrop.classList.add("show"); backdrop.setAttribute("aria-hidden", "false"); }
+  document.body.style.overflow = "hidden";
+}
+
+function closeDCF() {
+  const panel = document.getElementById("dcfPanel");
+  const backdrop = document.getElementById("dcfBackdrop");
+  if (!panel) return;
+  panel.classList.remove("show");
+  panel.setAttribute("aria-hidden", "true");
+  if (backdrop) { backdrop.classList.remove("show"); backdrop.setAttribute("aria-hidden", "true"); }
+  document.body.style.overflow = "";
+}
+
+function resetDCFInputs() {
+  const defaults = {
+    dcfRevenueGrowthPct: "10.00", dcfEbitdaPct: "", dcfDepAmPct: "", dcfEbitPct: "", dcfCapexPct: "",
+    dcfTaxRate: "15.00", dcfReceivablesPct: "", dcfInventoriesPct: "", dcfPayablePct: "",
+    dcfLongTermGrowthRate: "4.00", dcfCostOfDebt: "3.64", dcfCostOfEquity: "9.51",
+    dcfMarketRiskPremium: "4.72", dcfBeta: "", dcfRiskFreeRate: "3.64"
+  };
+  Object.entries(defaults).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  });
+}
+
+function fmtMoney(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
+}
+
+function fmtPct(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return `${n.toFixed(2)}%`;
+}
+
+/**
+ * FETCH: Updated to use YOUR worker logic
+ */
+async function fetchDCF(symbol) {
+  const url = `${MY_DCF_WORKER_URL}/?dcf=${encodeURIComponent(symbol)}`;
+  const resp = await fetch(url);
+  const data = await resp.json();
+  
+  if (!resp.ok || data.error) throw new Error(data.error || "Failed to load data");
+  
+  // YOUR WORKER returns: { symbol, revenue, sharesOutstanding, assumptions: {...} }
+  // We check these exact keys:
+  if (!data.revenue || !data.sharesOutstanding) {
+  console.error("DCF URL:", url);
+  console.error("Worker Response Data (JSON):", JSON.stringify(data, null, 2));
+
+  const likelyQuotaHit =
+    data.currentPrice == null &&
+    data.marketCap == null &&
+    data.revenue == null &&
+    data.sharesOutstanding == null;
+
+  if (likelyQuotaHit) {
+    throw new Error("FMP data unavailable — likely daily API limit exceeded. Please wait for reset or reduce calls.");
+  }
+
+  throw new Error(`Missing Revenue/Shares for ${symbol}. Check Worker Logs.`);
+
+  }
+  
+  return data;
+}
+
+function valOrPct(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "";
+  return n.toFixed(2);
+}
+
+function fillDCFInputs(payload) {
+  const a = payload.assumptions || {};
+  document.getElementById("dcfRevenueGrowthPct").value = valOrPct(a.revenueGrowthPct);
+  document.getElementById("dcfEbitdaPct").value = valOrPct(a.ebitdaPct);
+  document.getElementById("dcfDepAmPct").value = valOrPct(a.depreciationAndAmortizationPct);
+  document.getElementById("dcfEbitPct").value = valOrPct(a.ebitPct);
+  document.getElementById("dcfCapexPct").value = valOrPct(a.capitalExpenditurePct);
+  document.getElementById("dcfTaxRate").value = valOrPct(a.taxRate);
+  document.getElementById("dcfReceivablesPct").value = valOrPct(a.receivablesPct);
+  document.getElementById("dcfInventoriesPct").value = valOrPct(a.inventoriesPct);
+  document.getElementById("dcfPayablePct").value = valOrPct(a.payablePct);
+  document.getElementById("dcfLongTermGrowthRate").value = valOrPct(a.longTermGrowthRate);
+  document.getElementById("dcfCostOfDebt").value = valOrPct(a.costOfDebt);
+  document.getElementById("dcfCostOfEquity").value = valOrPct(a.costOfEquity);
+  document.getElementById("dcfMarketRiskPremium").value = valOrPct(a.marketRiskPremium);
+  document.getElementById("dcfBeta").value = a.beta ? a.beta.toFixed(3) : "1.000";
+  document.getElementById("dcfRiskFreeRate").value = valOrPct(a.riskFreeRate);
+  document.getElementById("dcfCurrentPrice").textContent = fmtMoney(payload.currentPrice);
+}
+
+function clearDCFValuationOutput() {
+  document.getElementById("dcfFairValue").textContent = "—";
+  document.getElementById("dcfCurrentPrice").textContent = "—";
+  document.getElementById("dcfUpside").textContent = "—";
+  document.getElementById("dcfWaccUsed").textContent = "—";
+  document.getElementById("dcfForecastTableWrap").textContent = "No forecast yet.";
+}
+
+function fmtLargeNumber(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
+}
+
+function safeText(v) {
+  return v == null || v === "" ? "—" : String(v);
+}
+
+function renderDCFLoadedData(payload) {
+  const el = document.getElementById("dcfLoadedData");
+  if (!el) return;
+  const symbol = safeText(payload?.symbol);
+  const companyName = safeText(payload?.companyName || payload?.name);
+  const currentPrice = fmtMoney(payload?.currentPrice);
+  const marketCap = fmtMoney(payload?.marketCap);
+  const sharesOutstanding = fmtLargeNumber(payload?.sharesOutstanding);
+  const revenue = fmtLargeNumber(payload?.revenue);
+  const cash = fmtMoney(payload?.assumptions?.cash);
+  const debt = fmtMoney(payload?.assumptions?.totalDebt);
+  const sharesSource = safeText(payload?.sharesSource);
+  const lastUpdated = safeText(payload?.lastUpdated);
+
+  el.innerHTML = `
+    <div><b>Symbol:</b> ${symbol}</div>
+    <div><b>Company Name:</b> ${companyName}</div>
+    <div><b>Current Price:</b> ${currentPrice}</div>
+    <div><b>Market Cap:</b> ${marketCap}</div>
+    <div><b>Shares Outstanding:</b> ${sharesOutstanding}</div>
+    <div><b>Revenue:</b> ${revenue}</div>
+    <div><b>Cash:</b> ${cash}</div>
+    <div><b>Debt:</b> ${debt}</div>
+    <div><b>Shares Source:</b> ${sharesSource}</div>
+    <div><b>Last Updated:</b> ${lastUpdated}</div>
+  `;
+}
+
+function getDCFInputs() {
+  return {
+    forecastYears: Number(document.getElementById("dcfForecastYears").value || 5),
+    discountMode: document.getElementById("dcfDiscountMode").value,
+    revenueGrowthPct: Number(document.getElementById("dcfRevenueGrowthPct").value || 0),
+    ebitdaPct: Number(document.getElementById("dcfEbitdaPct").value || 0),
+    depreciationAndAmortizationPct: Number(document.getElementById("dcfDepAmPct").value || 0),
+    ebitPct: Number(document.getElementById("dcfEbitPct").value || 0),
+    capitalExpenditurePct: Number(document.getElementById("dcfCapexPct").value || 0),
+    taxRate: Number(document.getElementById("dcfTaxRate").value || 0),
+    receivablesPct: Number(document.getElementById("dcfReceivablesPct").value || 0),
+    inventoriesPct: Number(document.getElementById("dcfInventoriesPct").value || 0),
+    payablePct: Number(document.getElementById("dcfPayablePct").value || 0),
+    longTermGrowthRate: Number(document.getElementById("dcfLongTermGrowthRate").value || 0),
+    costOfDebt: Number(document.getElementById("dcfCostOfDebt").value || 0),
+    costOfEquity: Number(document.getElementById("dcfCostOfEquity").value || 0),
+    marketRiskPremium: Number(document.getElementById("dcfMarketRiskPremium").value || 0),
+    beta: Number(document.getElementById("dcfBeta").value || 1),
+    riskFreeRate: Number(document.getElementById("dcfRiskFreeRate").value || 0)
+  };
+}
+
+function calculateWacc(inputs, payload) {
+  if (inputs.discountMode === "manual") return (inputs.costOfEquity || 9.5) / 100;
+  
+  const marketCap = Number(payload.marketCap || 0);
+  const totalDebt = Number(payload.assumptions?.totalDebt || 0);
+  const taxRate = inputs.taxRate / 100;
+  const costOfDebt = (inputs.costOfDebt || 3.64) / 100;
+  
+  // CAPM for Cost of Equity
+  const riskFree = inputs.riskFreeRate / 100;
+  const mrp = inputs.marketRiskPremium / 100;
+  const costOfEquity = riskFree + (inputs.beta * mrp);
+  
+  const totalCap = marketCap + totalDebt;
+  if (totalCap <= 0) return 0.095; // default fallback 9.5%
+  
+  const weightEquity = marketCap / totalCap;
+  const weightDebt = totalDebt / totalCap;
+  
+  return (weightEquity * costOfEquity) + (weightDebt * costOfDebt * (1 - taxRate));
+}
+
+function calculateDCF(payload, inputs) {
+  const revenue0 = Number(payload.revenue || 0);
+  const shares = Number(payload.sharesOutstanding || 0);
+  const cash = Number(payload.assumptions?.cash || 0);
+  const debt = Number(payload.assumptions?.totalDebt || 0);
+
+  const wacc = calculateWacc(inputs, payload);
+  const growth = inputs.revenueGrowthPct / 100;
+  const ebitMargin = inputs.ebitPct / 100;
+  const taxRate = inputs.taxRate / 100;
+  const daPct = inputs.depreciationAndAmortizationPct / 100;
+  const capexPct = inputs.capitalExpenditurePct / 100;
+  const nwcp = (inputs.receivablesPct + inputs.inventoriesPct - inputs.payablePct) / 100;
+  const terminalGrowth = inputs.longTermGrowthRate / 100;
+
+  if (wacc <= terminalGrowth) throw new Error("WACC must be higher than terminal growth rate.");
+
+  let revPrev = revenue0;
+  let nwcPrev = revenue0 * nwcp;
+  let pvFcffSum = 0;
+  const forecast = [];
+
+  for (let y = 1; y <= inputs.forecastYears; y++) {
+    const revenue = revPrev * (1 + growth);
+    const ebit = revenue * ebitMargin;
+    const nopat = ebit * (1 - taxRate);
+    const da = revenue * daPct;
+    const capex = revenue * capexPct;
+    const nwc = revenue * nwcp;
+    const deltaNwc = nwc - nwcPrev;
+    const fcff = nopat + da - capex - deltaNwc;
+    const pvFcff = fcff / Math.pow(1 + wacc, y);
+
+    forecast.push({ year: y, revenue, fcff, pvFcff });
+    pvFcffSum += pvFcff;
+    revPrev = revenue;
+    nwcPrev = nwc;
+  }
+
+  const finalFcff = forecast[forecast.length - 1].fcff;
+  const terminalValue = (finalFcff * (1 + terminalGrowth)) / (wacc - terminalGrowth);
+  const pvTV = terminalValue / Math.pow(1 + wacc, inputs.forecastYears);
+  const ev = pvFcffSum + pvTV;
+  const equityValue = ev + cash - debt;
+  const fairValue = equityValue / shares;
+
+  return { 
+    wacc, forecast, pvTerminalValue: pvTV, enterpriseValue: ev, 
+    equityValue, fairValuePerShare: fairValue, 
+    currentPrice: Number(payload.currentPrice || 0),
+    upsidePct: payload.currentPrice ? ((fairValue / payload.currentPrice) - 1) * 100 : 0
+  };
+}
+
+function renderDCFResult(result) {
+  document.getElementById("dcfFairValue").textContent = fmtMoney(result.fairValuePerShare);
+  document.getElementById("dcfCurrentPrice").textContent = fmtMoney(result.currentPrice);
+  document.getElementById("dcfUpside").textContent = fmtPct(result.upsidePct);
+  document.getElementById("dcfWaccUsed").textContent = fmtPct(result.wacc * 100);
+
+  const rows = result.forecast.map(r => `
+    <tr>
+      <td style="padding:8px;border-bottom:1px solid #eee">Year ${r.year}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid #eee">${fmtMoney(r.revenue)}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid #eee">${fmtMoney(r.fcff)}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid #eee">${fmtMoney(r.pvFcff)}</td>
+    </tr>`).join("");
+
+  document.getElementById("dcfForecastTableWrap").innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:11px">
+      <thead><tr style="background:#f5f5f5">
+        <th style="text-align:left;padding:8px">Year</th><th style="text-align:right;padding:8px">Revenue</th>
+        <th style="text-align:right;padding:8px">FCFF</th><th style="text-align:right;padding:8px">PV</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr style="border-top:2px solid #ddd"><td colspan="3" style="text-align:right;padding:4px"><b>Enterprise Value</b></td><td style="text-align:right">${fmtMoney(result.enterpriseValue)}</td></tr>
+        <tr><td colspan="3" style="text-align:right;padding:4px"><b>Equity Value</b></td><td style="text-align:right">${fmtMoney(result.equityValue)}</td></tr>
+      </tfoot>
+    </table>`;
+}
+
+async function runDCF() {
+  const explain = document.getElementById("dcfExplain");
+  const symbol = document.getElementById("dcfSymbol").value;
+  try {
+    explain.textContent = `Loading data for ${symbol}...`;
+    const payload = await fetchDCF(symbol);
+    dcfLoadedPayload = payload;
+    dcfHasLoadedData = true;
+    fillDCFInputs(payload);
+    renderDCFLoadedData(payload);
+    clearDCFValuationOutput();
+    explain.textContent = `Data loaded for ${symbol}. Review assumptions, then click Calculate DCF.`;
+  } catch (err) {
+    dcfLoadedPayload = null;
+    dcfHasLoadedData = false;
+    explain.textContent = `Error: ${err.message}`;
+    console.error(err);
+  }
+}
+
+async function loadDCFData() {
+  return runDCF();
+}
+
+function calculateDCFAction() {
+  const explain = document.getElementById("dcfExplain");
+  if (!dcfLoadedPayload || !dcfHasLoadedData) {
+    explain.textContent = "Load data first.";
+    return;
+  }
+  try {
+    const inputs = getDCFInputs();
+    const result = calculateDCF(dcfLoadedPayload, inputs);
+    renderDCFResult(result);
+    explain.textContent = `${safeText(dcfLoadedPayload.symbol)} valuation complete. Based on a ${inputs.forecastYears}-year model.`;
+  } catch (err) {
+    explain.textContent = `Error: ${err.message}`;
+    console.error(err);
+  }
+}
+
+function resetDCFToSource() {
+  const explain = document.getElementById("dcfExplain");
+  if (dcfLoadedPayload && dcfHasLoadedData) {
+    fillDCFInputs(dcfLoadedPayload);
+    explain.textContent = `Assumptions reset to loaded source data for ${safeText(dcfLoadedPayload.symbol)}.`;
+    return;
+  }
+  resetDCFInputs();
+  explain.textContent = "Assumptions reset to defaults. Load data to source assumptions.";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  bindDCFButton();
+  initDCFUI();
+});
+/* --- DCF SCRIPT END --- */
+
+// Keep inline onclick handlers stable across refactors.
+window.openDCF = openDCF;
+window.closeDCF = closeDCF;
+window.resetDCFInputs = resetDCFInputs;
+window.loadDCFData = loadDCFData;
+window.calculateDCFAction = calculateDCFAction;
+window.resetDCFToSource = resetDCFToSource;
+window.bindDCFButton = bindDCFButton;
 </script>
 </body>
 </html>
