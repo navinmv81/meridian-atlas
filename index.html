@@ -241,8 +241,8 @@ body.dark .mv-table tr:hover td{background:var(--bg3)}
 
 /* ─── LAYOUT ──────────────────────────────────────────────── */
 #main{display:flex;align-items:flex-start}
-#left{flex:1;min-width:0;padding:10px 8px 10px 12px;display:flex;flex-direction:column;gap:8px}
-#right{width:330px;flex-shrink:0;padding:10px 12px 10px 6px;display:flex;flex-direction:column;gap:8px}
+#left{flex:1;min-width:0;padding:10px 8px 10px 12px;display:flex;flex-direction:column;gap:10px}
+#right{width:330px;flex-shrink:0;padding:10px 12px 10px 6px;display:flex;flex-direction:column;gap:10px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 
 /* ─── CARD ────────────────────────────────────────────────── */
@@ -867,6 +867,198 @@ body.dark .res-table td{border-bottom-color:var(--border)}
   .dcf-cards{grid-template-columns:1fr}
 }
 /* --- DCF TAB END --- */
+
+/* ─── BATCH 3: Search Action Modal ──────────────────────────────────────────── */
+/* Batch 4: Profile enrichment in SAM */
+#sam-desc {
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text2);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#sam-desc:empty { display: none !important; }
+.sam-loading-meta {
+  display: inline-block;
+  width: 80px;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  animation: sam-pulse 1.2s ease infinite;
+}
+@keyframes sam-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+#sam-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: rgba(0,0,0,.28);
+  backdrop-filter: blur(3px);
+  align-items: center;
+  justify-content: center;
+}
+#sam-overlay.show { display: flex; }
+#sam-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--sh-md);
+  width: 380px;
+  max-width: 94vw;
+  overflow: hidden;
+  animation: sam-in .15s ease;
+}
+@keyframes sam-in {
+  from { opacity: 0; transform: translateY(-10px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+.sam-hdr {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sam-sym {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--blue);
+  line-height: 1;
+}
+.sam-name {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+.sam-price-block {
+  text-align: right;
+  flex-shrink: 0;
+}
+.sam-price {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.sam-chg {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.sam-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--dim);
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.sam-close-btn:hover { background: var(--bg3); color: var(--text); }
+.sam-actions {
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sam-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 2px;
+}
+.sam-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg2);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background .1s, border-color .1s;
+  width: 100%;
+}
+.sam-btn:hover { background: var(--bg3); border-color: var(--border2); }
+.sam-btn-icon {
+  font-size: 15px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.sam-btn-sub {
+  font-size: 9px;
+  color: var(--dim);
+  margin-top: 1px;
+  font-weight: 400;
+}
+.sam-btn-text { display: flex; flex-direction: column; }
+.sam-btn-primary { border-color: var(--blue-bd); background: var(--blue-bg); }
+.sam-btn-primary:hover { background: color-mix(in srgb, var(--blue-bg) 80%, var(--border)); }
+.sam-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+.news-mini-item {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  transition: background 0.1s;
+}
+.news-mini-item:hover { background: var(--bg3); }
+.news-mini-item:last-child { border-bottom: none; }
+.news-mini-bullet {
+  width: 3px;
+  height: 12px;
+  background: var(--red);
+  margin-top: 2px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+.news-mini-title {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--text);
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  letter-spacing: 0.01em;
+}
+
+
+
+
+.scroll-420 { max-height: 420px !important; display: flex; flex-direction: column; }
+.scroll-420 #nlist { flex: 1; overflow-y: auto; }
+.scroll-320 { max-height: 320px !important; display: flex; flex-direction: column; }
+.scroll-320 #glist { flex: 1; overflow-y: auto; }
+
 </style>
 </head>
 <body>
@@ -1060,15 +1252,17 @@ body.dark .res-table td{border-bottom-color:var(--border)}
   </section>
 
   <aside id="right" aria-label="News and secondary panels">
-    <section class="card card-blue scroll-360">
+    <section class="card card-blue scroll-420">
       <div class="nhdr card-blue"><div class="nhtitle">Market News</div><div id="nc" class="txt-dim-10">—</div></div>
       <div id="nlist"><div class="lrow loading-center">Loading…</div></div>
     </section>
 
-    <section class="card card-red scroll-280">
+    <section class="card card-red scroll-320">
       <div class="nhdr card-red"><div class="nhtitle geo-title">Geopolitics</div><div id="nc-geo" class="txt-dim-10">—</div></div>
       <div id="glist"><div class="lrow loading-center">Loading…</div></div>
     </section>
+
+    
 
     <section class="card card-purple">
       <div class="chdr">
@@ -1097,10 +1291,7 @@ body.dark .res-table td{border-bottom-color:var(--border)}
       <div id="sector-list"></div>
     </section>
 
-    <section class="card card-teal">
-      <div class="chdr"><span class="ctitle">Earnings Snapshot</span><span class="txt-dim-9">Next 14 days</span></div>
-      <div id="earn-list"></div>
-    </section>
+    
   </aside>
 </main>
 
@@ -1115,6 +1306,57 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 
 <!-- MODAL -->
 <div id="ov" onclick="ovClick(event)"><div id="modal"><div id="mc"></div></div></div>
+
+<!-- BATCH 3: SEARCH ACTION MODAL -->
+<div id="sam-overlay" onclick="samOverlayClick(event)" role="dialog" aria-modal="true" aria-label="Symbol actions">
+  <div id="sam-box">
+    <div class="sam-hdr" style="position:relative;">
+      <div style="flex:1;min-width:0;">
+        <div class="sam-sym" id="sam-sym">—</div>
+        <div class="sam-name" id="sam-name">—</div>
+        <div id="sam-meta" style="font-size:9px;color:var(--dim);margin-top:3px;letter-spacing:.03em;min-height:13px;"></div>
+      </div>
+      <div class="sam-price-block">
+        <div class="sam-price" id="sam-price">—</div>
+        <div class="sam-chg" id="sam-chg"></div>
+      </div>
+      <button class="sam-close-btn" onclick="closeSAM()" aria-label="Close">✕</button>
+    </div>
+    <div id="sam-desc" style="display:none;padding:10px 18px;border-bottom:1px solid var(--border);font-size:10px;color:var(--text2);line-height:1.55;overflow:hidden;"></div>
+    <div class="sam-actions">
+      <div class="sam-label">What would you like to do?</div>
+      <button class="sam-btn sam-btn-primary" id="sam-chart-btn" onclick="samOpenChart()">
+        <span class="sam-btn-icon">📊</span>
+        <span class="sam-btn-text">
+          <span>Chart &amp; Overview</span>
+          <span class="sam-btn-sub">Price chart, key stats, analyst ratings</span>
+        </span>
+      </button>
+      <button class="sam-btn" id="sam-research-btn" onclick="samOpenResearch()">
+        <span class="sam-btn-icon">🔍</span>
+        <span class="sam-btn-text">
+          <span>Deep Research</span>
+          <span class="sam-btn-sub">Fundamentals, filings, 13F holdings</span>
+        </span>
+      </button>
+      <hr class="sam-divider">
+      <button class="sam-btn" id="sam-wl-btn" onclick="samAddToWatchlist()">
+        <span class="sam-btn-icon">★</span>
+        <span class="sam-btn-text">
+          <span>Add to Watchlist</span>
+          <span class="sam-btn-sub">Track price on the main dashboard</span>
+        </span>
+      </button>
+      <button class="sam-btn" id="sam-dcf-btn" onclick="samOpenDCF()">
+        <span class="sam-btn-icon">📐</span>
+        <span class="sam-btn-text">
+          <span>DCF Valuation</span>
+          <span class="sam-btn-sub">Intrinsic value model · select tickers only</span>
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- RESEARCH PANEL -->
 <section id="research-panel" onclick="rpClick(event)" aria-label="Research drawer">
@@ -1165,9 +1407,23 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 </section>
 
 <script>
+const DEAD_SYMS = new Set(['GB10YT=RR', 'JP10YT=RR', 'DE10YT=RR', 'AU10YT=RR', 'IT10YT=RR', 'GB10Y=RR', 'JP10Y=RR']);
+
 // ── PROXY ─────────────────────────────────────────────────────────────────────
+async function fetchWithTimeout(url, timeout = 10000) {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(timeout) });
+    const data = await r.json();
+    return { ok: r.ok, status: r.status, data };
+  } catch(e) {
+    let type = 'network_error';
+    if (e.name === 'TimeoutError') type = 'timeout';
+    return { ok: false, status: 0, type, error: e.message, data: null };
+  }
+}
+
 async function pfetch(url) {
-  const proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(url)}`;
+  const proxyUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(url)}`;
   const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`Proxy ${r.status}`);
   return r;
@@ -1312,14 +1568,20 @@ const TICK_SYMS=[
 
 const SECTOR_ETFS=[
   {name:'Technology', s:'XLK'},
+  {name:'Software', s:'IGV'},
+  {name:'Semiconductors', s:'SOXX'},
   {name:'Energy', s:'XLE'},
   {name:'Financials', s:'XLF'},
-  {name:'Software', s:'IGV'}, // software proxy ETF
-  {name:'Communication Services', s:'XLC'},
   {name:'Industrials', s:'XLI'},
+  {name:'Materials', s:'XLB'},
+  {name:'Consumer Staples', s:'XLP'},
+  {name:'Healthcare', s:'XLV'},
   {name:'Utilities', s:'XLU'},
   {name:'Real Estate', s:'XLRE'},
-  {name:'Healthcare', s:'XLV'}
+  {name:'Communication Svcs', s:'XLC'},
+  {name:'US Broad Market', s:'SPY'},
+  {name:'Growth', s:'VUG'},
+  {name:'Value', s:'VTV'},
 ];
 
 // ── CLOCK ─────────────────────────────────────────────────────────────────────
@@ -1334,6 +1596,9 @@ setInterval(tickClock,1000); tickClock();
 
 // ── FETCH ─────────────────────────────────────────────────────────────────────
 async function fetchSym(sym){
+  if(!sym) return null;
+  if (DEAD_SYMS.has(sym)) return null;
+
   const chartUrl=`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(decodeURIComponent(sym))}?interval=1d&range=1mo`;
   try{
     const chartResp=await pfetch(chartUrl);
@@ -1760,7 +2025,7 @@ async function loadNews(){
       const r=await pfetch(feed),txt=await r.text();
       const xml=new DOMParser().parseFromString(txt,'text/xml');
       xml.querySelectorAll('item').forEach(el=>{
-        const title=dh(el.querySelector('title')?.textContent||'');
+        const title=dh(el.querySelector('title')?.textContent||'').trim();
         const desc=dh(el.querySelector('description')?.textContent||'').replace(/<[^>]*>/g,'').trim();
         const link=el.querySelector('link')?.textContent||'#';
         const pub=el.querySelector('pubDate')?.textContent||'';
@@ -1779,6 +2044,9 @@ async function loadNews(){
 
   document.getElementById('nc-geo').textContent=geo.length+' articles';
   document.getElementById('glist').innerHTML=geo.length?makeNewsHTML(geo):'<div class="lrow" style="padding:16px;text-align:center;color:var(--muted)">No geopolitics stories</div>';
+
+  
+  
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
@@ -1938,40 +2206,67 @@ function renderEquitySectors(data=window._mdata||{}){
 // ── MODAL ─────────────────────────────────────────────────────────────────────
 const fundCache={};
 async function fetchFund(sym){
-  if(fundCache[sym])return fundCache[sym];
-  // v2.3: added upgradeDowngradeHistory for Analyst Calls tab
-  const url=`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(decodeURIComponent(sym))}?modules=summaryDetail,defaultKeyStatistics,financialData,recommendationTrend,upgradeDowngradeHistory,assetProfile`;
-  try{
-    const r=await pfetch(url),j=await r.json();
-    const res=j?.quoteSummary?.result?.[0]; if(!res)return null;
-    const sd=res.summaryDetail||{},ks=res.defaultKeyStatistics||{},
-          fd=res.financialData||{},rt=res.recommendationTrend?.trend?.[0]||{},
-          udh=res.upgradeDowngradeHistory?.history||[],ap=res.assetProfile||{};
-    let rec='—';
-    const{strongBuy=0,buy=0,hold=0,sell=0,strongSell=0}=rt;
-    const total=strongBuy+buy+hold+sell+strongSell;
-    if(total>0){const sc=(strongBuy*1+buy*2+hold*3+sell*4+strongSell*5)/total;rec=sc<1.5?'STRONG BUY':sc<2.5?'BUY':sc<3.5?'HOLD':sc<4.5?'SELL':'STRONG SELL';}
-    // v2.2: extended fields for Fundamentals tab
-    const out={
-      marketCap:ks.enterpriseValue?.raw||sd.marketCap?.raw,
-      peTrailing:sd.trailingPE?.raw, peForward:sd.forwardPE?.raw,
-      eps:ks.trailingEps?.raw, epsForward:ks.forwardEps?.raw,
-      beta:sd.beta?.raw, dividend:sd.dividendYield?.raw,
-      week52High:sd.fiftyTwoWeekHigh?.raw, week52Low:sd.fiftyTwoWeekLow?.raw,
-      targetPrice:fd.targetMeanPrice?.raw, revenueGrowth:fd.revenueGrowth?.raw,
-      profitMargin:fd.profitMargins?.raw, debtToEquity:fd.debtToEquity?.raw,
-      currentRatio:fd.currentRatio?.raw, quickRatio:fd.quickRatio?.raw,
-      roe:fd.returnOnEquity?.raw, shortFloat:ks.shortPercentOfFloat?.raw,
-      totalRevenue:fd.totalRevenue?.raw, ebitda:fd.ebitda?.raw,
-      grossMargins:fd.grossMargins?.raw, totalCash:fd.totalCash?.raw,
-      totalDebt:fd.totalDebt?.raw,
-      recommendation:rec, analystCount:total,
-      strongBuy, buy, hold, sell, strongSell,  // raw counts
-      upgradeHistory: udh.slice(0,15),  // most recent 15 actions
-      sector:ap.sector, industry:ap.industry, employees:ap.fullTimeEmployees
-    };	
-    fundCache[sym]=out; return out;
-  }catch(e){console.warn('Fund',sym,e);return null;}
+  if(!sym) return null;
+  if(fundCache[sym]) return fundCache[sym];
+  
+  // Try Yahoo first (v10 quoteSummary)
+  const yUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=summaryDetail,defaultKeyStatistics,financialData,recommendationTrend,upgradeDowngradeHistory,assetProfile`;
+  try {
+    const r = await pfetch(yUrl);
+    const j = await r.json();
+    const res = j?.quoteSummary?.result?.[0];
+    if (res) {
+      const sd = res.summaryDetail || {}, ks = res.defaultKeyStatistics || {},
+            fd = res.financialData || {}, rt = res.recommendationTrend?.trend?.[0] || {},
+            udh = res.upgradeDowngradeHistory?.history || [], ap = res.assetProfile || {};
+      let rec = '—';
+      const { strongBuy=0, buy=0, hold=0, sell=0, strongSell=0 } = rt;
+      const total = strongBuy+buy+hold+sell+strongSell;
+      if (total > 0) {
+        const sc = (strongBuy*1 + buy*2 + hold*3 + sell*4 + strongSell*5) / total;
+        rec = sc<1.5?'STRONG BUY':sc<2.5?'BUY':sc<3.5?'HOLD':sc<4.5?'SELL':'STRONG SELL';
+      }
+      const out = {
+        marketCap: ks.enterpriseValue?.raw || sd.marketCap?.raw,
+        peTrailing: sd.trailingPE?.raw, peForward: sd.forwardPE?.raw,
+        eps: ks.trailingEps?.raw, epsForward: ks.forwardEps?.raw,
+        beta: sd.beta?.raw, dividend: sd.dividendYield?.raw,
+        week52High: sd.fiftyTwoWeekHigh?.raw, week52Low: sd.fiftyTwoWeekLow?.raw,
+        targetPrice: fd.targetMeanPrice?.raw, revenueGrowth: fd.revenueGrowth?.raw,
+        profitMargin: fd.profitMargins?.raw, debtToEquity: fd.debtToEquity?.raw,
+        currentRatio: fd.currentRatio?.raw, quickRatio: fd.quickRatio?.raw,
+        roe: fd.returnOnEquity?.raw, shortFloat: ks.shortPercentOfFloat?.raw,
+        totalRevenue: fd.totalRevenue?.raw, ebitda: fd.ebitda?.raw,
+        grossMargins: fd.grossMargins?.raw, totalCash: fd.totalCash?.raw,
+        totalDebt: fd.totalDebt?.raw,
+        recommendation: rec, analystCount: total,
+        strongBuy, buy, hold, sell, strongSell,
+        upgradeHistory: udh.slice(0, 15),
+        sector: ap.sector, industry: ap.industry, employees: ap.fullTimeEmployees
+      };
+      fundCache[sym] = out;
+      return out;
+    }
+  } catch(e) {
+    console.warn('Yahoo fetchFund failed for', sym, '- switching to FMP fallback');
+  }
+
+  // FMP Fallback (via Worker route ?fundsymbol=)
+  try {
+    const fUrl = `${MY_WORKER_URL}/?fundsymbol=${encodeURIComponent(sym)}`;
+    const r = await fetch(fUrl); // Hit worker route directly
+    if (r.ok) {
+      const out = await r.json();
+      if (out && out.marketCap) {
+        fundCache[sym] = out;
+        return out;
+      }
+    }
+  } catch(e) {
+    console.warn('FMP fetchFund fallback failed for', sym, e.message);
+  }
+
+  return null;
 }
 function showModal(html){document.getElementById('mc').innerHTML=html;document.getElementById('ov').classList.add('show');}
 async function openModal(rowEl){
@@ -1979,9 +2274,20 @@ async function openModal(rowEl){
   showModal(`<div class="mload"><div class="mspinner"></div><br>Loading ${name}…</div>`);
   renderModal(sym,name,window._mdata?.[sym],await fetchFund(sym));
 }
+// Batch 1: global flag to disable main-page click-throughs
+// Set window.workspaceEnabled = true in future when workspace is ready
+window.mainPageClicksDisabled = false;
+
 async function openBySymbol(sym,name){
+  if(window.mainPageClicksDisabled) return;
   showModal(`<div class="mload"><div class="mspinner"></div><br>Loading ${name}…</div>`);
-  renderModal(sym,name,window._mdata?.[sym],await fetchFund(sym));
+  try {
+    const fund = await fetchFund(sym);
+    renderModal(sym, name, window._mdata?.[sym], fund);
+  } catch(e) {
+    console.warn('openBySymbol failed', e);
+    renderModal(sym, name, window._mdata?.[sym], null);
+  }
 }
 // v2.2: Tabbed Modal (Overview + Fundamentals)
 function switchTab(tabName){
@@ -3003,13 +3309,23 @@ function renderHoldingsTable(data) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Restore core loaders accidentally removed in Batch 1/3
+  doRefresh();
+  doNews();
+  fetchIPOCalendar();
+
+  // Watchlist & Modal listeners
   const s = document.getElementById('holdingsSearch');
   const o = document.getElementById('holdingsSortSelect');
   if (s) s.addEventListener('input', () => renderHoldingsTable(_holdingsData));
   if (o) o.addEventListener('change', () => renderHoldingsTable(_holdingsData));
-  document.getElementById('holdingsModal').addEventListener('click', function(e) {
-    if (e.target === this) closeHoldingsModal();
-  });
+  
+  const hModal = document.getElementById('holdingsModal');
+  if (hModal) {
+    hModal.addEventListener('click', function(e) {
+      if (e.target === this) closeHoldingsModal();
+    });
+  }
 });
 
 async function res13FSearch() {
@@ -3075,7 +3391,187 @@ sinput.addEventListener('input',()=>{
   sres.classList.add('show');
 });
 document.addEventListener('click',e=>{if(!document.getElementById('sw').contains(e.target))sres.classList.remove('show');});
-function searchPick(sym,name){sinput.value='';sres.classList.remove('show');openBySymbol(sym,name);}
+function searchPick(sym, name) {
+  _samSym = sym;
+  _samName = name;
+  const si = document.getElementById('search');
+  const sr = document.getElementById('sr');
+  if (si) si.value = '';
+  if (sr) sr.classList.remove('show');
+  showSAM(sym, name);
+}
+
+// ── BATCH 3: SEARCH ACTION MODAL ─────────────────────────────────────────────
+let _samSym = '', _samName = '';
+
+// Batch 4: In-memory quick profile cache (1h TTL matches Worker edge cache)
+const _samProfileCache = new Map();
+function _samProfileCacheGet(sym) {
+  const hit = _samProfileCache.get(sym);
+  if (hit && Date.now() < hit.expiresAt) return hit.data;
+  if (hit) _samProfileCache.delete(sym);
+  return null;
+}
+function _samProfileCacheSet(sym, data) {
+  _samProfileCache.set(sym, { data, expiresAt: Date.now() + 3600 * 1000 });
+}
+
+async function fetchQuickProfile(sym) {
+  const cached = _samProfileCacheGet(sym);
+  if (cached) return cached;
+  try {
+    const url = `${MY_WORKER_URL}/?quickprofile=${encodeURIComponent(sym)}`;
+    const res = await fetchWithTimeout(url, 6000);
+    if (res.ok && res.data?.symbol) {
+      _samProfileCacheSet(sym, res.data);
+      return res.data;
+    }
+  } catch(e) {
+    console.warn('Quick profile fetch failed for', sym, e.message);
+  }
+  return null;
+}
+
+function showSAM(sym, name) {
+  _samSym = sym;
+  _samName = name;
+
+  // Fill header
+  document.getElementById('sam-sym').textContent = sym;
+  document.getElementById('sam-name').textContent = name || sym;
+
+  // Pull live price from _mdata if already loaded
+  const d = window._mdata?.[sym];
+  const priceEl = document.getElementById('sam-price');
+  const chgEl = document.getElementById('sam-chg');
+  if (d?.price) {
+    priceEl.textContent = d.price.toFixed(2);
+    const pct = d.pct ?? 0, chg = d.chg ?? 0;
+    const sign = pct >= 0 ? '▲' : '▼';
+    chgEl.textContent = `${sign} ${Math.abs(pct).toFixed(2)}% (${chg >= 0 ? '+' : ''}${chg.toFixed(2)})`;
+    chgEl.className = 'sam-chg ' + (pct >= 0 ? 'up' : 'dn');
+  } else {
+    priceEl.textContent = '—';
+    chgEl.textContent = '';
+  }
+
+  // Show/hide DCF button based on whether symbol is supported
+  const dcfBtn = document.getElementById('sam-dcf-btn');
+  if (dcfBtn) {
+    const dcfSupported = typeof DCF_ALLOWED !== 'undefined'
+      ? DCF_ALLOWED.has(sym.toUpperCase())
+      : true; // show by default if we can't check
+    dcfBtn.style.display = dcfSupported ? '' : 'none';
+  }
+
+  // Clear any previous enrichment
+  const metaEl = document.getElementById('sam-meta');
+  const descEl = document.getElementById('sam-desc');
+  if (metaEl) metaEl.innerHTML = '<span class="sam-loading-meta"></span>';
+  if (descEl) { descEl.style.display = 'none'; descEl.textContent = ''; }
+
+  document.getElementById('sam-overlay').classList.add('show');
+  document.getElementById('sam-box').focus?.();
+
+  // Batch 4: async enrichment — fires after modal is visible, updates in place
+  fetchQuickProfile(sym).then(p => {
+    // Guard: if user already closed or switched symbols, discard
+    if (_samSym !== sym) return;
+
+    if (metaEl) {
+      const parts = [];
+      if (p?.exchange) parts.push(p.exchange);
+      if (p?.sector)   parts.push(p.sector);
+      if (p?.country && p.country !== 'US') parts.push(p.country);
+      metaEl.textContent = parts.join(' · ') || '';
+    }
+
+    if (descEl && p?.description) {
+      descEl.textContent = p.description;
+      descEl.style.display = '';
+      descEl.style.webkitLineClamp = '3';
+    }
+
+    // If we got a name from FMP and name was just the symbol, upgrade it
+    if (p?.name && document.getElementById('sam-name')?.textContent === sym) {
+      document.getElementById('sam-name').textContent = p.name;
+      _samName = p.name;
+    }
+
+    // Upgrade employee count in description sub-row if available
+    if (p?.employees && metaEl && p.employees > 0) {
+      const emp = p.employees.toLocaleString() + ' employees';
+      const existing = metaEl.textContent;
+      if (existing && !existing.includes('employee')) {
+        metaEl.textContent = existing + ' · ' + emp;
+      }
+    }
+  });
+}
+
+function closeSAM() {
+  document.getElementById('sam-overlay').classList.remove('show');
+  _samSym = '';
+  _samName = '';
+}
+
+function samOverlayClick(e) {
+  if (e.target === document.getElementById('sam-overlay')) closeSAM();
+}
+
+// Action handlers — each closes the SAM then fires the existing flow unchanged
+function samOpenChart() {
+  // Capture current state before closing modal
+  const sym = _samSym;
+  const name = _samName;
+  closeSAM();
+  if (sym) {
+    openBySymbol(sym, name);
+  } else {
+    console.warn('samOpenChart: Symbol was lost');
+  }
+}
+
+function samOpenResearch() {
+  closeSAM();
+  // Pre-fill the Research panel's Fundamentals input with the symbol and open
+  const fundInput = document.getElementById('rd-input-fund');
+  if (fundInput) fundInput.value = _samSym;
+  openResearch();
+  // Auto-trigger the search so the user lands on data immediately
+  setTimeout(() => resFundSearch(), 120);
+}
+
+function samAddToWatchlist() {
+  wlAdd(_samSym, _samName);
+  // Give brief visual feedback then close
+  const btn = document.getElementById('sam-wl-btn');
+  if (btn) {
+    const orig = btn.querySelector('span:not(.sam-btn-icon):not(.sam-btn-sub):not(.sam-btn-text)') ||
+                 btn.querySelector('.sam-btn-text span:first-child');
+    if (orig) {
+      const prev = orig.textContent;
+      orig.textContent = 'Added ✓';
+      setTimeout(() => { orig.textContent = prev; closeSAM(); }, 800);
+    } else {
+      closeSAM();
+    }
+  } else {
+    closeSAM();
+  }
+}
+
+function samOpenDCF() {
+  closeSAM();
+  openDCF();
+}
+
+// Close on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('sam-overlay')?.classList.contains('show')) {
+    closeSAM();
+  }
+});
 
 // ── MAIN REFRESH ──────────────────────────────────────────────────────────────
 let autoOn=true,qT=null,nT=null;
@@ -3263,6 +3759,12 @@ const chartCache = {};
 const CHART_INTERVALS = { '1d':'5m', '5d':'15m', '1mo':'1d', '6mo':'1wk', '1y':'1wk' };
 
 async function loadChartTab(sym, range, btnEl){
+  if (DEAD_SYMS.has(sym)) {
+    const wrap = document.getElementById('chart-tab-svg-wrap');
+    if (wrap) wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dim);font-size:11px">Market data for this instrument is currently unavailable from Yahoo.</div>';
+    return;
+  }
+
   // Update active range button
   if(btnEl){
     document.querySelectorAll('.chart-range-btn').forEach(b => b.classList.remove('active'));
@@ -3500,58 +4002,54 @@ function renderCreditSnapshot(data) {
 }
 
 // ── TASK 2: Earnings Snapshot ────────────────────────────────────────
-function renderEarningsSnapshot() {
-  const el = document.getElementById('earn-list');
+// Batch 2: IPO Calendar (replaces Dividends)
+function renderIPOCalendar(data) {
+  const el = document.getElementById('ipo-list');
   if (!el) return;
 
-  // Static upcoming earnings (refreshed per version)
-  const earnings = [
-    {ticker:'NKE',   co:'Nike',           date:'2025-03-20', time:'AMC'},
-    {ticker:'FDX',   co:'FedEx',          date:'2025-03-20', time:'AMC'},
-    {ticker:'GIS',   co:'General Mills',  date:'2025-03-26', time:'BMO'},
-    {ticker:'MU',    co:'Micron',         date:'2025-03-26', time:'AMC'},
-    {ticker:'WBA',   co:'Walgreens',      date:'2025-04-01', time:'BMO'},
-    {ticker:'STZ',   co:'Constellation',  date:'2025-04-02', time:'BMO'},
-    {ticker:'PAYX',  co:'Paychex',        date:'2025-04-02', time:'BMO'},
-    {ticker:'LEN',   co:'Lennar',         date:'2025-04-02', time:'AMC'},
-    {ticker:'DAL',   co:'Delta Air',      date:'2025-04-09', time:'BMO'},
-    {ticker:'JPM',   co:'JPMorgan',       date:'2025-04-11', time:'BMO'},
-    {ticker:'GS',    co:'Goldman Sachs',  date:'2025-04-14', time:'BMO'},
-    {ticker:'BAC',   co:'Bank of America',date:'2025-04-15', time:'BMO'},
-    {ticker:'NFLX',  co:'Netflix',        date:'2025-04-15', time:'AMC'},
-    {ticker:'TSLA',  co:'Tesla',          date:'2025-04-22', time:'AMC'},
-    {ticker:'GOOGL', co:'Alphabet',       date:'2025-04-29', time:'AMC'},
-    {ticker:'META',  co:'Meta',           date:'2025-04-30', time:'AMC'},
-    {ticker:'AAPL',  co:'Apple',          date:'2025-05-01', time:'AMC'},
-    {ticker:'AMZN',  co:'Amazon',         date:'2025-05-01', time:'AMC'},
-    {ticker:'MSFT',  co:'Microsoft',      date:'2025-04-30', time:'AMC'},
-  ];
-
-  const now = new Date();
-  const cutoff = new Date(now.getTime() + 14*24*3600*1000);
-
-  const upcoming = earnings
-    .filter(e => new Date(e.date) >= now && new Date(e.date) <= cutoff)
-    .sort((a,b) => new Date(a.date) - new Date(b.date))
-    .slice(0, 10);
-
-  if (!upcoming.length) {
-    el.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--dim)">No earnings in next 14 days</div>';
+  if (!data || !Array.isArray(data) || !data.length) {
+    el.innerHTML = '<div style="padding:14px 12px;text-align:center;font-size:11px;color:var(--dim)">No upcoming IPOs found.</div>';
     return;
   }
 
-  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  el.innerHTML = upcoming.map(e => {
-    const d = new Date(e.date);
-    const dayStr = days[d.getUTCDay()] + ' ' + String(d.getUTCDate()).padStart(2,'0') + '/' + String(d.getUTCMonth()+1).padStart(2,'0');
-    const timeCls = e.time === 'BMO' ? 'earn-bmo' : e.time === 'AMC' ? 'earn-amc' : 'earn-unk';
-    return `<div class="earn-item" onclick="openBySymbol('${e.ticker}','${e.co}')">
+  const now = new Date();
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // Show the most recent 12 IPOs
+  const items = data.slice(0, 12);
+
+  el.innerHTML = items.map(d => {
+    const dt = new Date(d.date || '');
+    const dayStr = !isNaN(dt)
+      ? days[dt.getUTCDay()] + ' ' + String(dt.getUTCDate()).padStart(2, '0') + '/' + String(dt.getUTCMonth() + 1).padStart(2, '0')
+      : 'TBD';
+    const sym = (d.symbol || '').toUpperCase();
+    const name = d.company || sym;
+    const priceRange = d.priceRange || '—';
+    
+    return `<div class="earn-item" onclick="openBySymbol('${sym}','${name.replace(/'/g, '')}')">
       <span class="earn-date">${dayStr}</span>
-      <span class="earn-ticker">${e.ticker}</span>
-      <span class="earn-co">${e.co}</span>
-      <span class="earn-time ${timeCls}">${e.time}</span>
+      <span class="earn-ticker">${sym || 'IPO'}</span>
+      <span class="earn-co" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+      <span class="earn-time earn-unk" style="font-size:10px;color:var(--dim)">${priceRange}</span>
     </div>`;
   }).join('');
+}
+
+async function fetchIPOCalendar() {
+  const el = document.getElementById('ipo-list');
+  try {
+    const url = `${MY_WORKER_URL}/?ipos=1`;
+    const res = await fetchWithTimeout(url, 8000);
+    if (res.ok && Array.isArray(res.data)) {
+      renderIPOCalendar(res.data);
+    } else {
+      if (el) el.innerHTML = '<div style="padding:14px 12px;text-align:center;font-size:11px;color:var(--dim)">IPO data unavailable.</div>';
+    }
+  } catch(e) {
+    console.warn('IPO calendar fetch failed:', e.message);
+    if (el) el.innerHTML = '<div style="padding:14px 12px;text-align:center;font-size:11px;color:var(--dim)">IPO data unavailable.</div>';
+  }
 }
 
 
@@ -3563,7 +4061,7 @@ function renderEarningsSnapshot() {
   buildSymNames();        // v2.8: build name map before first render
   renderCalendar();
   renderEquitySectors();
-  renderEarningsSnapshot(); // v2.8.6: earnings snapshot
+  // renderEarningsSnapshot() removed in Batch 1 // v2.8.6: earnings snapshot
   renderWatchlist();
   await Promise.all([doRefresh(),doNews()]);
   qT=setInterval(doRefresh,60000);
