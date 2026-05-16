@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meridian Atlas — Global Market Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#f5f4f0; --bg2:#ffffff; --bg3:#f0efe9; --bg4:#e8e6df;
-  --border:#dddbd2; --border2:#ccc9bf;
+  --bg:#F9F8F3; --bg2:#ffffff; --bg3:#f5f4ee; --bg4:#ecebe3;
+  --border:#E2E2D5; --border2:#d2d2c3;
   --text:#1a1917; --text2:#3d3b36; --muted:#6b6860; --dim:#9e9b93;
   --green:#1a7a4a; --green-bg:#edf7f1; --green-bd:#b7e3c8;
   --red:#c0392b; --red-bg:#fdf0ee; --red-bd:#f0b8b3;
   --blue:#1a56a0; --blue-bg:#eef4fc; --blue-bd:#b3cef0;
   --amber:#b45309; --amber-bg:#fef3e2; --amber-bd:#f5d5a0;
   --cyan:#0e7490; --purple:#6d28d9; --teal:#0f766e;
-  --mono:'JetBrains Mono',monospace; --sans:'Inter',sans-serif;
-  --r:6px; --sh:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
-  --sh-md:0 4px 16px rgba(0,0,0,.12),0 2px 4px rgba(0,0,0,.06);
+  --mono:'Inter',sans-serif; --sans:'Inter',sans-serif;
+  --r:4px; --sh:none;
+  --sh-md:none;
   --row-h:32px;
 }
 .compact { --row-h:22px; }
@@ -65,7 +65,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
 /* ─── HEADER ──────────────────────────────────────────────── */
-#header{position:sticky;top:0;z-index:200;background:var(--bg2);border-bottom:1px solid var(--border);box-shadow:var(--sh);padding:0 20px;height:52px;display:flex;align-items:center;gap:14px}
+#header{position:sticky;top:0;z-index:200;background:var(--bg);border-bottom:1px solid var(--border);box-shadow:none;padding:0 16px;height:52px;display:flex;align-items:center;gap:10px}
 .logo{display:flex;align-items:center;gap:10px;flex-shrink:0;text-decoration:none}
 .logo svg{width:30px;height:30px}
 .logo-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.02em}
@@ -73,12 +73,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .logo-sub{font-size:9px;color:var(--muted);margin-top:1px;letter-spacing:.02em}
 
 /* SEARCH */
-#sw{flex:1;max-width:380px;position:relative}
-#search{width:100%;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:0 14px 0 34px;font-family:var(--sans);font-size:12px;color:var(--text);outline:none;transition:all .15s}
-#search:focus{border-color:var(--blue);background:var(--bg2);box-shadow:0 0 0 3px rgba(26,86,160,.1)}
-#search::placeholder{color:var(--dim)}
-.sico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:13px;pointer-events:none}
-#sr{position:absolute;top:calc(100% + 5px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh-md);max-height:260px;overflow-y:auto;display:none;z-index:300}
+#sw{flex:1;max-width:560px;position:relative}
+#search{width:100%;height:36px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:0 14px 0 36px;font-family:var(--sans);font-size:12px;color:var(--text);outline:none;transition:border-color .2s ease, background-color .2s ease}
+#search:focus{border-color:#c8c8b9;background:#fff;box-shadow:none}
+#search::placeholder{color:#8f8c82}
+.sico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#9a988f;font-size:12px;pointer-events:none}
+#sr{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:4px;box-shadow:none;max-height:260px;overflow-y:auto;display:none;z-index:300}
 #sr.show{display:block}
 .sri{padding:7px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .1s}
 .sri:last-child{border-bottom:none}
@@ -93,15 +93,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 @keyframes pdot{0%,100%{box-shadow:0 0 0 0 rgba(26,122,74,.5)}50%{box-shadow:0 0 0 4px rgba(26,122,74,0)}}
 .live-txt{font-size:10px;font-weight:600;color:var(--green);letter-spacing:.05em}
 #clock{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
-.btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 11px;border-radius:20px;cursor:pointer;transition:all .15s;white-space:nowrap}
-.btn:hover{background:var(--bg4);color:var(--text)}
+.btn{background:#fff;border:1px solid var(--border);color:var(--muted);font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;border-radius:4px;cursor:pointer;transition:background-color .2s ease,border-color .2s ease,color .2s ease;white-space:nowrap}
+.btn:hover{background:var(--bg3);border-color:#d6d6c6;color:var(--text)}
 .btn.on{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
 #rbtn{padding:4px 9px;font-size:14px}
 .spin{display:inline-block;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 
 /* ─── STATUS ──────────────────────────────────────────────── */
-#sbar{background:var(--bg3);border-bottom:1px solid var(--border);padding:3px 20px;font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.07em;min-height:20px}
+#sbar{background:var(--bg);border-bottom:1px solid var(--border);padding:3px 16px;font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.07em;min-height:20px}
 #sbar.ok{color:var(--green)}#sbar.err{color:var(--red)}#sbar.info{color:var(--amber)}
 
 /* ─── MARKET INTELLIGENCE BANNER ─────────────────────────── */
@@ -241,15 +241,28 @@ body.dark .mv-table tr:hover td{background:var(--bg3)}
 
 /* ─── LAYOUT ──────────────────────────────────────────────── */
 #main{display:flex;align-items:flex-start}
-#left{flex:1;min-width:0;padding:12px 10px 12px 18px;display:flex;flex-direction:column;gap:10px}
-#right{width:330px;flex-shrink:0;padding:12px 18px 12px 8px;display:flex;flex-direction:column;gap:10px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#left{flex:1;min-width:0;padding:10px 8px 10px 12px;display:flex;flex-direction:column;gap:10px}
+#right{width:330px;flex-shrink:0;padding:10px 12px 10px 6px;display:flex;flex-direction:column;gap:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 
 /* ─── CARD ────────────────────────────────────────────────── */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
-.chdr{padding:8px 12px 7px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;border-left:3px solid var(--cc,var(--blue))}
-.ctitle{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cc,var(--blue))}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;box-shadow:none;overflow:hidden}
+.chdr{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;border-left:1px solid var(--cc,var(--blue))}
+.ctitle{font-size:12px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--cc,var(--blue))}
 .cbadge{font-size:8px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+.action-tile{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:6px 10px;
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--text2);
+  transition:border-color .2s ease, background-color .2s ease, color .2s ease;
+}
+.action-tile:hover{background:var(--bg3);border-color:#d0d0bf;color:var(--text)}
 .bOP{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
 .bCL{background:var(--bg3);color:var(--dim);border:1px solid var(--border)}
 .bPR{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
@@ -414,10 +427,10 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 .res-badge{font-family:var(--mono);font-size:8px;font-weight:700;padding:2px 6px;border-radius:20px;background:var(--bg3);color:var(--dim)}
 .holdings-row{display:none;background:var(--bg4)}
 .holdings-row.open{display:table-row}
-.h-wrap{padding:12px;background:var(--bg3);box-shadow:inset 0 2px 4px rgba(0,0,0,0.03)}
-.h-table{width:100%;border-collapse:collapse;border:1px solid var(--border);background:var(--bg2)}
-.h-table th{font-size:8px;font-weight:700;letter-spacing:.09em;color:var(--dim);text-transform:uppercase;text-align:left;padding:6px 10px;background:var(--bg4);border-bottom:1px solid var(--border)}
-.h-table td{font-family:var(--mono);font-size:10px;padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text2)}
+.h-wrap{padding:12px;background:var(--bg3);box-shadow:inset 0 2px 4px rgba(0,0,0,0.03);width:100%;min-height:500px;overflow-x:auto}
+.h-table{width:100%;table-layout:auto;border-collapse:collapse;border:1px solid var(--border);background:var(--bg2)}
+.h-table th{position:sticky;top:0;font-size:8px;font-weight:700;letter-spacing:.09em;color:var(--dim);text-transform:uppercase;text-align:left;padding:8px 12px;background:var(--bg4);border-bottom:1px solid var(--border);z-index:1}
+.h-table td{font-family:var(--mono);font-size:10px;padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text2)}
 .h-table tr:hover td{background:var(--bg3)}
 .fund-summary{font-size:11px;color:var(--text2);line-height:1.5;background:var(--bg3);padding:12px;border:1px solid var(--border);border-radius:4px;margin-bottom:16px}
 .h-btn{font-family:var(--sans);font-size:9px;font-weight:600;padding:4px 10px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all 0.1s}
@@ -586,12 +599,472 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 .ft{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--dim)}
 .ft a{color:var(--blue);text-decoration:none}.ft a:hover{text-decoration:underline}
 .fdis{font-size:9px;color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--r);padding:6px 12px;line-height:1.6;letter-spacing:.02em}
+
+/* ─── UTILITIES / ACCENTS ───────────────────────────────────── */
+.card-blue{--cc:#1a56a0}
+.card-purple{--cc:#6d28d9}
+.card-green{--cc:#1a7a4a}
+.card-orange{--cc:#e67e22}
+.card-amber{--cc:#b45309}
+.card-cyan{--cc:#0e7490}
+.card-slate{--cc:#475569}
+.card-teal{--cc:#0f766e}
+.card-violet{--cc:#7e22ce}
+.card-red{--cc:#c0392b}
+
+.scroll-360{max-height:360px;overflow-y:auto}
+.scroll-280{max-height:280px;overflow-y:auto}
+.txt-dim-10{font-size:10px;color:var(--dim)}
+.txt-dim-9{font-size:9px;color:var(--dim)}
+.top-sep{border-top:1px solid var(--border)}
+.bd-btm{border-bottom:1px solid var(--border)}
+.mb-0{margin-bottom:0}
+.ml-auto{margin-left:auto}
+.abs-search-results{position:absolute;background:var(--bg2);border:1px solid var(--blue);display:none;z-index:1000;width:100%}
+.rd-body{flex:1;overflow-y:auto;padding:0}
+.rd-body-pad{padding:16px 18px}
+.rd-none-top{padding-top:30px}
+.caps{text-transform:uppercase}
+.normal-case{text-transform:none}
+.pad-note{padding:5px 12px 7px}
+.tiny-dim{font-size:8px;font-weight:600;color:var(--dim)}
+.h-52{height:52px}
+.mv-loading{padding:20px 0;grid-column:1/-1}
+.loading-center{padding:20px;text-align:center}
+.geo-title{color:#c0392b}
+.rd-amber-note{background:var(--amber-bg);color:var(--amber);padding:6px 18px;border-bottom:1px solid var(--amber-bd)}
+
+/* terminal typography refinements */
+.dt th,.mv-table th,.ym-table th,.ac-table th,.region-hdr td,.mv-group-title,.driver-label,.qi-label,.ac-sig-label,.chart-stat-l,.intel-group-label,.ms-l,.dcf-section h3,.dcf-card-label{
+  font-size:12px;
+  font-weight:500;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+
+.pr,.ch,.pc,.hl,.vo,.vo-em,.tp,.tc,.ms-p,.ms-c,.mv-price,.mv-pct,.mv-vol,.wl-price,.wl-pct,.sec-pct,.fund-val,.ac-tile-val,.ac-rating,.ac-price,.ac-date,.rd-price,.rd-chg,.rd-val,.dcf-card-value{
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
+}
+
+.dt td:not(:first-child),.mv-table td:not(:first-child),.ym-table td:not(:first-child),.ac-table td:not(:first-child){
+  font-feature-settings:"tnum" 1;
+  font-variant-numeric:tabular-nums;
+}
+/* --- DCF TAB START --- */
+.dcf-backdrop{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.45);
+  backdrop-filter:blur(2px);
+  z-index:445;
+}
+.dcf-backdrop.show{display:block}
+.dcf-panel{
+  display:none;
+  position:fixed;
+  top:64px;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(1200px,96vw);
+  height:min(860px,calc(100vh - 88px));
+  background:var(--panel, #fff);
+  border:1px solid var(--line, #e5e7eb);
+  border-radius:4px;
+  box-shadow:none;
+  z-index:450;
+  overflow:hidden;
+}
+
+.dcf-panel.show{
+  display:flex;
+  flex-direction:column;
+}
+
+.dcf-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 12px;
+  border-bottom:1px solid var(--line, #e5e7eb);
+  background:var(--bg, #F9F8F3);
+}
+
+.dcf-title{
+  font-size:13px;
+  font-weight:500;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+
+.dcf-close{
+  border:1px solid var(--line, #d1d5db);
+  background:transparent;
+  color:var(--text, #111827);
+  border-radius:10px;
+  padding:6px 10px;
+  cursor:pointer;
+}
+.dcf-close:hover{background:var(--bg3)}
+
+.dcf-body{
+  display:grid;
+  grid-template-columns:340px 1fr;
+  gap:0;
+  min-height:0;
+  flex:1;
+}
+
+.dcf-sidebar{
+  border-right:1px solid var(--line, #e5e7eb);
+  padding:12px;
+  overflow:auto;
+  background:var(--panel, #fff);
+}
+
+.dcf-main{
+  padding:12px;
+  overflow:auto;
+  background:var(--bg, #f8fafc);
+}
+
+.dcf-section{
+  margin-bottom:14px;
+  padding:12px;
+  border:1px solid var(--line, #e5e7eb);
+  border-radius:4px;
+  background:var(--panel, #fff);
+  overflow:hidden;
+}
+
+.dcf-section h3{
+  margin:0 0 10px 0;
+  font-size:13px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+  color:var(--muted, #6b7280);
+}
+
+.dcf-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  column-gap:10px;
+  row-gap:8px;
+  align-items:start;
+}
+
+.dcf-field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:0;
+  min-width:0;
+}
+
+.dcf-field label{
+  font-size:12px;
+  color:var(--muted, #6b7280);
+  font-weight:600;
+}
+
+.dcf-field input,
+.dcf-field select{
+  width:100%;
+  height:38px;
+  border:1px solid var(--line, #d1d5db);
+  border-radius:4px;
+  padding:0 10px;
+  background:var(--panel, #fff);
+  color:var(--text, #111827);
+}
+.dcf-field input:focus,
+.dcf-field select:focus{
+  outline:none;
+  border-color:var(--blue,#1a56a0);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--blue,#1a56a0) 18%, transparent);
+}
+
+.dcf-actions{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+
+.dcf-btn{
+  border:1px solid var(--line, #d1d5db);
+  border-radius:4px;
+  padding:8px 12px;
+  cursor:pointer;
+  background:var(--panel, #fff);
+  color:var(--text, #111827);
+  font-weight:600;
+}
+.dcf-btn:hover{background:var(--bg3)}
+
+.dcf-btn.primary{
+  background:#2563eb;
+  color:#fff;
+  border-color:#2563eb;
+}
+.dcf-btn.primary:hover{background:#1d4ed8;border-color:#1d4ed8}
+
+.dcf-cards{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:8px;
+  margin-bottom:14px;
+}
+
+.dcf-card{
+  padding:12px;
+  border:1px solid var(--line, #e5e7eb);
+  border-radius:4px;
+  background:var(--panel, #fff);
+}
+
+.dcf-card-label{
+  font-size:11px;
+  color:var(--muted, #6b7280);
+  text-transform:uppercase;
+  letter-spacing:.4px;
+  margin-bottom:6px;
+}
+
+.dcf-card-value{
+  font-size:20px;
+  font-weight:700;
+  line-height:1.25;
+}
+
+.dcf-explain{
+  line-height:1.55;
+  font-size:13px;
+  color:var(--text, #111827);
+}
+
+.dcf-note{
+  margin-top:10px;
+  font-size:12px;
+  color:var(--muted, #6b7280);
+}
+
+@media (max-width: 980px){
+  .dcf-panel{
+    top:58px;
+    width:98vw;
+    height:calc(100vh - 70px);
+    border-radius:14px;
+  }
+  .dcf-body{grid-template-columns:1fr}
+  .dcf-sidebar{border-right:none;border-bottom:1px solid var(--line, #e5e7eb)}
+  .dcf-cards{grid-template-columns:repeat(2, minmax(0,1fr))}
+}
+
+@media (max-width: 640px){
+  .dcf-grid{grid-template-columns:1fr}
+  .dcf-cards{grid-template-columns:1fr}
+}
+/* --- DCF TAB END --- */
+
+/* ─── BATCH 3: Search Action Modal ──────────────────────────────────────────── */
+/* Batch 4: Profile enrichment in SAM */
+#sam-desc {
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text2);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#sam-desc:empty { display: none !important; }
+.sam-loading-meta {
+  display: inline-block;
+  width: 80px;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  animation: sam-pulse 1.2s ease infinite;
+}
+@keyframes sam-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+#sam-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: rgba(0,0,0,.28);
+  backdrop-filter: blur(3px);
+  align-items: center;
+  justify-content: center;
+}
+#sam-overlay.show { display: flex; }
+#sam-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--sh-md);
+  width: 380px;
+  max-width: 94vw;
+  overflow: hidden;
+  animation: sam-in .15s ease;
+}
+@keyframes sam-in {
+  from { opacity: 0; transform: translateY(-10px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+.sam-hdr {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sam-sym {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--blue);
+  line-height: 1;
+}
+.sam-name {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+.sam-price-block {
+  text-align: right;
+  flex-shrink: 0;
+}
+.sam-price {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.sam-chg {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.sam-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--dim);
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.sam-close-btn:hover { background: var(--bg3); color: var(--text); }
+.sam-actions {
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sam-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 2px;
+}
+.sam-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg2);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background .1s, border-color .1s;
+  width: 100%;
+}
+.sam-btn:hover { background: var(--bg3); border-color: var(--border2); }
+.sam-btn-icon {
+  font-size: 15px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.sam-btn-sub {
+  font-size: 9px;
+  color: var(--dim);
+  margin-top: 1px;
+  font-weight: 400;
+}
+.sam-btn-text { display: flex; flex-direction: column; }
+.sam-btn-primary { border-color: var(--blue-bd); background: var(--blue-bg); }
+.sam-btn-primary:hover { background: color-mix(in srgb, var(--blue-bg) 80%, var(--border)); }
+.sam-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+.news-mini-item {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  transition: background 0.1s;
+}
+.news-mini-item:hover { background: var(--bg3); }
+.news-mini-item:last-child { border-bottom: none; }
+.news-mini-bullet {
+  width: 3px;
+  height: 12px;
+  background: var(--red);
+  margin-top: 2px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+.news-mini-title {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--text);
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  letter-spacing: 0.01em;
+}
+
+
+
+
+.scroll-420 { max-height: 420px !important; display: flex; flex-direction: column; }
+.scroll-420 #nlist { flex: 1; overflow-y: auto; }
+.scroll-320 { max-height: 320px !important; display: flex; flex-direction: column; }
+.scroll-320 #glist { flex: 1; overflow-y: auto; }
+
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
-<div id="header">
+<header id="header">
   <a class="logo" href="#">
     <svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect width="30" height="30" rx="6" fill="#eef4fc"/>
@@ -606,37 +1079,31 @@ body.dark .res-table td{border-bottom-color:var(--border)}
       <div class="logo-sub">Global Market Intelligence</div>
     </div>
   </a>
-
   <div id="sw">
-    <span class="sico">⌕</span>
+    <span class="sico">⌘</span>
     <input id="search" type="text" placeholder="Ticker or name… (AAPL, Gold, EUR/USD)" autocomplete="off">
     <div id="sr"></div>
-  </div>
-
-  <div class="hsp"></div>
-  <div class="live-pill"><div class="live-dot"></div><div class="live-txt">LIVE</div></div>
-  <div id="clock"></div>
-  <!-- compact toggle -->
-  <button class="btn" id="cmpbtn" onclick="toggleCompact()" title="Toggle compact mode">⊟ Compact</button>
-  <!-- v2.3: Research Panel button -->
-  <button class="btn" id="resbtn" onclick="openResearch()" title="Fundamental Research">🔍 Research</button>
-  <!-- v2.8 START — Dark Mode button -->
-  <button class="btn" id="darkbtn" onclick="toggleDark()" title="Toggle dark mode">◑ Dark</button>
-  <!-- v2.8 END -->
-  <button class="btn on" id="abtn" onclick="toggleAuto()">Auto</button>
-  <button class="btn" id="rbtn" onclick="doRefresh()"><span id="ricon">↻</span></button>
 </div>
+<div class="hsp"></div>
+<div class="live-pill"><span class="live-dot"></span><span class="live-txt">LIVE</span></div>
+<div id="clock"></div>
+<button class="btn" id="cmpbtn" onclick="toggleCompact()" title="Toggle compact mode">⊟ Compact</button>
+<button class="btn action-tile" id="resbtn" onclick="openResearch()" title="Fundamental Research">Research</button>
+<button class="btn action-tile" id="dcfTabBtn" onclick="openDCF()" title="Discounted Cash Flow">DCF</button>
+<button class="btn" id="darkbtn" onclick="toggleDark()" title="Toggle dark mode">◑ Dark</button>
+<button class="btn on" id="abtn" onclick="toggleAuto()">Auto</button>
+<button class="btn" id="rbtn" onclick="doRefresh()"><span id="ricon">↻</span></button>
+</header>
 
 <div id="sbar">Initialising Meridian Atlas…</div>
 
-<!-- ═══ MARKET INTELLIGENCE BANNER ═══════════════════════════ -->
-<div id="intel-banner">
+<!-- MARKET INTELLIGENCE -->
+<section id="intel-banner" aria-label="Market intelligence banner">
   <div class="intel-top">
     <span id="risk-label" class="risk-label risk-neu">Neutral</span>
-    <div id="market-narrative">Fetching market data…</div>
+    <p id="market-narrative">Fetching market data…</p>
   </div>
   <div class="intel-tiles">
-    <!-- EQUITIES group -->
     <div class="intel-group">
       <div class="intel-group-label">Equities</div>
       <div class="intel-tiles-inner">
@@ -674,7 +1141,6 @@ body.dark .res-table td{border-bottom-color:var(--border)}
       </div>
     </div>
   </div>
-  <!-- v2.7 INTELLIGENCE START -->
   <div class="regime-drivers" id="regime-drivers">
     <span class="driver-item"><span class="driver-label">EQUITIES</span><span class="driver-arrow nc">—</span></span>
     <span class="driver-item"><span class="driver-label">YIELDS</span><span class="driver-arrow nc">—</span></span>
@@ -683,20 +1149,16 @@ body.dark .res-table td{border-bottom-color:var(--border)}
     <span class="driver-item"><span class="driver-label">GOLD</span><span class="driver-arrow nc">—</span></span>
     <span class="driver-item"><span class="driver-label">OIL</span><span class="driver-arrow nc">—</span></span>
   </div>
-  <!-- v2.7 INTELLIGENCE END -->
-</div>
+</section>
 
 <!-- TICKER -->
 <div id="tkwrap"><div id="tkinner"></div></div>
 
 <!-- MAIN -->
-<div id="main">
-  <div id="left">
-
-    <!-- ROW 1: World Indices + Sovereign Yields -->
+<main id="main">
+  <section id="left" aria-label="Primary market panels">
     <div class="grid2">
-      <!-- WORLD INDICES with Dev/EM toggle -->
-      <div class="card" style="--cc:#1a56a0">
+      <section class="card card-blue">
         <div class="chdr">
           <span class="ctitle">World Indices</span>
           <div class="seg" id="idx-seg">
@@ -707,10 +1169,9 @@ body.dark .res-table td{border-bottom-color:var(--border)}
         </div>
         <table class="dt"><thead><tr><th>Index</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>H/L</th></tr></thead>
         <tbody id="tb-global"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
-      </div>
+      </section>
 
-      <!-- SOVEREIGN YIELDS matrix -->
-      <div class="card" style="--cc:#6d28d9">
+      <section class="card card-purple">
         <div class="chdr">
           <span class="ctitle">Sovereign Yields</span>
           <span id="curve-lbl" class="curve-lbl curve-FLAT">—</span>
@@ -722,21 +1183,18 @@ body.dark .res-table td{border-bottom-color:var(--border)}
             <tr><td>🇬🇧 UK</td><td>—</td><td>—</td><td id="y-uk10">—</td><td>—</td></tr>
             <tr><td>🇩🇪 Germany</td><td>—</td><td>—</td><td id="y-de10">—</td><td>—</td></tr>
             <tr><td>🇯🇵 Japan</td><td>—</td><td>—</td><td id="y-jp10">—</td><td>—</td></tr>
-            <!-- v2.2: Corp Bond Proxies Start -->
             <tr class="corp-bond-row"><td>🇺🇸 US IG Corp <span class="corp-bond-proxy">LQD proxy</span></td><td colspan="2" id="y-lqd-chg">—</td><td id="y-lqd-price" colspan="2">—</td></tr>
             <tr class="corp-bond-row"><td>🇺🇸 US HY Corp <span class="corp-bond-proxy">HYG proxy</span></td><td colspan="2" id="y-hyg-chg">—</td><td id="y-hyg-price" colspan="2">—</td></tr>
             <tr class="corp-bond-row"><td>🇪🇺 Euro IG Corp <span class="corp-bond-proxy">IEAC proxy</span></td><td colspan="2" id="y-ieac-chg">—</td><td id="y-ieac-price" colspan="2">—</td></tr>
-            <!-- v2.2: Corp Bond Proxies End -->
           </tbody>
         </table>
-        <div style="padding:5px 12px 7px;font-size:9px;color:var(--dim);border-top:1px solid var(--border)">* Yield curve: US 2Y vs 10Y spread · Corp bonds shown as ETF price proxies (LQD, HYG, IEAC)</div>
-        <!-- v2.8.6 START: Yield Curve Visual + Credit Snapshot -->
+        <div class="txt-dim-9 top-sep pad-note">* Yield curve: US 2Y vs 10Y spread · Corp bonds shown as ETF price proxies (LQD, HYG, IEAC)</div>
         <div class="yc-wrap">
           <div class="yc-title">
             <span>US Yield Curve</span>
-            <span id="yc-shape-lbl" style="font-size:8px;font-weight:600;color:var(--dim)">—</span>
+            <span id="yc-shape-lbl" class="tiny-dim">—</span>
           </div>
-          <svg class="yc-svg" id="yc-svg" viewBox="0 0 280 52" xmlns="http://www.w3.org/2000/svg" style="height:52px"></svg>
+          <svg class="yc-svg h-52" id="yc-svg" viewBox="0 0 280 52" xmlns="http://www.w3.org/2000/svg"></svg>
           <div class="yc-labels"><span>2Y</span><span>5Y</span><span>10Y</span><span>30Y</span></div>
         </div>
         <div class="cr-wrap">
@@ -744,185 +1202,228 @@ body.dark .res-table td{border-bottom-color:var(--border)}
           <div class="cr-grid">
             <div class="cr-item"><div class="cr-lbl">US IG (LQD)</div><div class="cr-val" id="cr-lqd-price">—</div><div class="cr-chg" id="cr-lqd-chg"></div></div>
             <div class="cr-item"><div class="cr-lbl">US HY (HYG)</div><div class="cr-val" id="cr-hyg-price">—</div><div class="cr-chg" id="cr-hyg-chg"></div></div>
-            <div class="cr-item"><div class="cr-lbl">IG/HY Spread</div><div class="cr-val" id="cr-spread">—</div><div class="cr-chg" style="font-size:8px;color:var(--dim)" id="cr-spread-lbl">proxy</div></div>
+            <div class="cr-item"><div class="cr-lbl">IG/HY Spread</div><div class="cr-val" id="cr-spread">—</div><div class="cr-chg tiny-dim" id="cr-spread-lbl">proxy</div></div>
           </div>
         </div>
-        <!-- v2.8.6 END -->
-      </div>
+      </section>
     </div>
 
-    <!-- ROW 2: US + European Equities -->
     <div class="grid2">
-      <div class="card" style="--cc:#1a56a0">
+      <section class="card card-blue">
         <div class="chdr"><span class="ctitle">US Equities</span><span id="b-us" class="cbadge bCL">—</span></div>
         <table class="dt"><thead><tr><th>Stock</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>Vol</th></tr></thead>
         <tbody id="tb-us"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
-      </div>
-      <div class="card" style="--cc:#1a7a4a">
+      </section>
+      <section class="card card-green">
         <div class="chdr"><span class="ctitle">European Equities</span><span id="b-eu" class="cbadge bCL">—</span></div>
         <table class="dt"><thead><tr><th>Stock</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>Vol</th></tr></thead>
         <tbody id="tb-eu"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
-      </div>
+      </section>
     </div>
 
-    <!-- v2.8 START — Market Movers -->
-    <div class="card" style="--cc:#e67e22">
+    <section class="card card-orange">
       <div class="chdr">
         <span class="ctitle">Market Movers</span>
-        <span style="font-size:9px;color:var(--dim)" id="mv-updated"></span>
+        <span class="txt-dim-9" id="mv-updated"></span>
       </div>
       <div id="mv-grid" class="mv-grid">
-        <div class="mv-none" style="padding:20px 0;grid-column:1/-1">Loading…</div>
+        <div class="mv-none mv-loading">Loading…</div>
       </div>
-    </div>
-    <!-- v2.8 END — Market Movers -->
+    </section>
 
-    <!-- ROW 3: Commodities + G10 FX -->
     <div class="grid2">
-      <div class="card" style="--cc:#b45309">
+      <section class="card card-amber">
         <div class="chdr"><span class="ctitle">Commodities</span><span class="cbadge b24">24H</span></div>
         <table class="dt"><thead><tr><th>Name</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>H/L</th></tr></thead>
         <tbody id="tb-commodities"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
-      </div>
-      <div class="card" style="--cc:#0e7490">
+      </section>
+      <section class="card card-cyan">
         <div class="chdr"><span class="ctitle">G10 Currencies</span><span class="cbadge b24">24/5</span></div>
         <table class="dt"><thead><tr><th>Pair</th><th class="chart-col">Chart (1M)</th><th>Rate</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>H/L</th></tr></thead>
         <tbody id="tb-fx"><tr class="lrow"><td colspan="6">Loading…</td></tr></tbody></table>
-      </div>
+      </section>
     </div>
 
-    <!-- ROW 4: Futures full width -->
-    <div class="card" style="--cc:#475569">
+    <section class="card card-slate">
       <div class="chdr"><span class="ctitle">Futures</span><span id="b-fut" class="cbadge bCL">—</span></div>
       <table class="dt"><thead><tr><th>Contract</th><th class="chart-col">Chart (1M)</th><th>Last</th><th>Chg (Session)</th><th>%Chg (Session)</th><th>Session H/L</th><th>Vol</th></tr></thead>
       <tbody id="tb-futures"><tr class="lrow"><td colspan="7">Loading…</td></tr></tbody></table>
-    </div>
+    </section>
+  </section>
 
-  </div><!-- /left -->
+  <aside id="right" aria-label="News and secondary panels">
+    <section class="card card-blue scroll-420">
+      <div class="nhdr card-blue"><div class="nhtitle">Market News</div><div id="nc" class="txt-dim-10">—</div></div>
+      <div id="nlist"><div class="lrow loading-center">Loading…</div></div>
+    </section>
 
-  <div id="right">
+    <section class="card card-red scroll-320">
+      <div class="nhdr card-red"><div class="nhtitle geo-title">Geopolitics</div><div id="nc-geo" class="txt-dim-10">—</div></div>
+      <div id="glist"><div class="lrow loading-center">Loading…</div></div>
+    </section>
 
-    <!-- Market News -->
-    <div class="card" style="max-height:360px;overflow-y:auto;--cc:#1a56a0">
-      <div class="nhdr" style="--cc:#1a56a0"><div class="nhtitle">Market News</div><div id="nc" style="font-size:10px;color:var(--dim)">—</div></div>
-      <div id="nlist"><div class="lrow" style="padding:20px;text-align:center">Loading…</div></div>
-    </div>
+    
 
-    <!-- Geopolitics News -->
-    <div class="card" style="max-height:280px;overflow-y:auto;--cc:#c0392b">
-      <div class="nhdr" style="--cc:#c0392b"><div class="nhtitle" style="color:#c0392b">Geopolitics</div><div id="nc-geo" style="font-size:10px;color:var(--dim)">—</div></div>
-      <div id="glist"><div class="lrow" style="padding:20px;text-align:center">Loading…</div></div>
-    </div>
-
-    <!-- Economic Calendar -->
-    <div class="card" style="--cc:#6d28d9">
+    <section class="card card-purple">
       <div class="chdr">
         <span class="ctitle">Economic Calendar</span>
-        <div class="seg" id="cal-seg" style="margin-left:auto">
+        <div class="seg ml-auto" id="cal-seg">
           <button class="seg-btn" onclick="setCalFilter('today',this)">Today</button>
           <button class="seg-btn active" onclick="setCalFilter('week',this)">This Week</button>
           <button class="seg-btn" onclick="setCalFilter('next',this)">Next Week</button>
         </div>
       </div>
       <div id="cal-list"></div>
-    </div>
+    </section>
 
-    <!-- Watchlist -->
-    <div class="card" style="--cc:#0f766e">
-      <div class="chdr"><span class="ctitle">Watchlist</span><span id="wl-count" style="font-size:9px;color:var(--dim)"></span></div>
+    <section class="card card-teal">
+      <div class="chdr"><span class="ctitle">Watchlist</span><span id="wl-count" class="txt-dim-9"></span></div>
       <div id="wl-input-row">
-      <input type="text" id="wl-input" placeholder="Search Company..." oninput="handleSearch(this.value)" autocomplete="off">
-<div id="search-results" style="position: absolute; background: var(--bg2); border: 1px solid var(--blue); display: none; z-index: 1000; width: 100%;"></div>
+        <input type="text" id="wl-input" placeholder="Search Company..." oninput="handleSearch(this.value)" autocomplete="off">
+        <div id="search-results" class="abs-search-results"></div>
         <button id="wl-add" onclick="wlAdd()">+ Add</button>
       </div>
       <div id="wl-list"></div>
-    </div>
+    </section>
 
-    <!-- Equity Sectors -->
-    <div class="card" style="--cc:#7e22ce">
+    <section class="card card-violet">
       <div class="chdr"><span class="ctitle">Equity Sectors</span><span class="sec-hdr-note">Live ETF view</span></div>
       <div id="sector-list"></div>
-    </div>
+    </section>
 
-    <!-- v2.8.6 START: Earnings Snapshot -->
-    <div class="card" style="--cc:#0f766e">
-      <div class="chdr"><span class="ctitle">Earnings Snapshot</span><span style="font-size:9px;color:var(--dim)">Next 14 days</span></div>
-      <div id="earn-list"></div>
-    </div>
-    <!-- v2.8.6 END -->
-
-  </div><!-- /right -->
-</div>
+    
+  </aside>
+</main>
 
 <!-- FOOTER -->
-<div id="footer">
+<footer id="footer">
   <div class="ft">
     <div>© Meridian Atlas — Data: Yahoo Finance — Prices may be delayed — Sparklines: 30D</div>
     <div><a href="https://claude.ai" target="_blank">Built with Claude</a></div>
   </div>
   <div class="fdis">⚠ ⚠ DISCLAIMER: THIS IS A PERSONAL TESTING PROJECT ONLY. ALL DATA IS SOURCED FROM YAHOO FINANCE AND FINANCIAL MODELING PREP (FMP) and MAY BE DELAYED, INCOMPLETE, OR INACCURATE. THIS TOOL DOES NOT CONSTITUTE FINANCIAL ADVICE, INVESTMENT ADVICE, OR ANY FORM OF RECOMMENDATION. DO NOT MAKE FINANCIAL DECISIONS BASED ON THIS DATA. ALWAYS CONSULT A QUALIFIED FINANCIAL PROFESSIONAL.</div>
-</div>
+</footer>
 
 <!-- MODAL -->
 <div id="ov" onclick="ovClick(event)"><div id="modal"><div id="mc"></div></div></div>
 
-<!-- v2.3: RESEARCH PANEL — v2.8.5: SCREENER ADDED -->
-<div id="research-panel" onclick="rpClick(event)">
+<!-- BATCH 3: SEARCH ACTION MODAL -->
+<div id="sam-overlay" onclick="samOverlayClick(event)" role="dialog" aria-modal="true" aria-label="Symbol actions">
+  <div id="sam-box">
+    <div class="sam-hdr" style="position:relative;">
+      <div style="flex:1;min-width:0;">
+        <div class="sam-sym" id="sam-sym">—</div>
+        <div class="sam-name" id="sam-name">—</div>
+        <div id="sam-meta" style="font-size:9px;color:var(--dim);margin-top:3px;letter-spacing:.03em;min-height:13px;"></div>
+      </div>
+      <div class="sam-price-block">
+        <div class="sam-price" id="sam-price">—</div>
+        <div class="sam-chg" id="sam-chg"></div>
+      </div>
+      <button class="sam-close-btn" onclick="closeSAM()" aria-label="Close">✕</button>
+    </div>
+    <div id="sam-desc" style="display:none;padding:10px 18px;border-bottom:1px solid var(--border);font-size:10px;color:var(--text2);line-height:1.55;overflow:hidden;"></div>
+    <div class="sam-actions">
+      <div class="sam-label">What would you like to do?</div>
+      <button class="sam-btn sam-btn-primary" id="sam-chart-btn" onclick="samOpenChart()">
+        <span class="sam-btn-icon">📊</span>
+        <span class="sam-btn-text">
+          <span>Chart &amp; Overview</span>
+          <span class="sam-btn-sub">Price chart, key stats, analyst ratings</span>
+        </span>
+      </button>
+      <button class="sam-btn" id="sam-research-btn" onclick="samOpenResearch()">
+        <span class="sam-btn-icon">🔍</span>
+        <span class="sam-btn-text">
+          <span>Deep Research</span>
+          <span class="sam-btn-sub">Fundamentals, filings, 13F holdings</span>
+        </span>
+      </button>
+      <hr class="sam-divider">
+      <button class="sam-btn" id="sam-wl-btn" onclick="samAddToWatchlist()">
+        <span class="sam-btn-icon">★</span>
+        <span class="sam-btn-text">
+          <span>Add to Watchlist</span>
+          <span class="sam-btn-sub">Track price on the main dashboard</span>
+        </span>
+      </button>
+      <button class="sam-btn" id="sam-dcf-btn" onclick="samOpenDCF()">
+        <span class="sam-btn-icon">📐</span>
+        <span class="sam-btn-text">
+          <span>DCF Valuation</span>
+          <span class="sam-btn-sub">Intrinsic value model · select tickers only</span>
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- RESEARCH PANEL -->
+<section id="research-panel" onclick="rpClick(event)" aria-label="Research drawer">
   <div id="research-drawer">
     <div class="rd-hdr">
       <div class="rd-title" id="rd-title">🔍 Research</div>
       <button class="rd-close" onclick="closeResearch()">✕</button>
     </div>
-
-    <!-- RESEARCH TABS -->
-    <div class="rd-mode-bar" style="border-bottom:1px solid var(--border);margin-bottom:0">
+    <nav class="rd-mode-bar bd-btm mb-0" aria-label="Research tabs">
       <button class="rd-mode-btn active" id="tab-btn-fund" onclick="setResTab('fund')">Fundamentals</button>
       <button class="rd-mode-btn" id="tab-btn-sec" onclick="setResTab('sec')">Company Filings</button>
       <button class="rd-mode-btn" id="tab-btn-13f" onclick="setResTab('13f')">13F Holdings</button>
-    </div>
+    </nav>
 
-    <!-- FUNDAMENTALS TAB -->
-    <div id="tab-fund" class="res-tab show">
+    <section id="tab-fund" class="res-tab show">
       <div class="rd-search-row">
         <input id="rd-input-fund" class="res-input" type="text" placeholder="Enter ticker e.g. AAPL, MSFT…" autocomplete="off">
         <button id="rd-btn-fund" class="res-btn" onclick="resFundSearch()">Search</button>
       </div>
-      <div id="rd-body-fund" style="flex:1;overflow-y:auto;padding:16px 18px">
+      <div id="rd-body-fund" class="rd-body rd-body-pad">
         <div class="rd-none">Enter a ticker symbol above to load company research data.</div>
       </div>
-    </div>
+    </section>
 
-    <!-- COMPANY FILINGS TAB -->
-    <div id="tab-sec" class="res-tab">
+    <section id="tab-sec" class="res-tab">
       <div class="rd-search-row">
-        <input id="rd-input-sec" class="res-input" type="text" placeholder="Enter ticker e.g. TSLA, NVDA…" autocomplete="off" style="text-transform:uppercase">
+        <input id="rd-input-sec" class="res-input caps" type="text" placeholder="Enter ticker e.g. TSLA, NVDA…" autocomplete="off">
         <button id="rd-btn-sec" class="res-btn" onclick="resSecSearch()">Search</button>
       </div>
-      <div id="rd-body-sec" style="flex:1;overflow-y:auto;padding:0">
-        <div class="rd-none" style="padding-top:30px">Enter a ticker to load recent company filings.</div>
+      <div id="rd-body-sec" class="rd-body">
+        <div class="rd-none rd-none-top">Enter a ticker to load recent company filings.</div>
       </div>
-    </div>
+    </section>
 
-    <!-- 13F HOLDINGS TAB -->
-    <div id="tab-13f" class="res-tab">
+    <section id="tab-13f" class="res-tab">
       <div class="rd-search-row">
-        <input id="rd-input-13f" class="res-input" type="text" placeholder="Enter Manager e.g. Ackman, Berkshire…" autocomplete="off" style="text-transform:none">
+        <input id="rd-input-13f" class="res-input normal-case" type="text" placeholder="Enter Manager e.g. Ackman, Berkshire…" autocomplete="off">
         <button id="rd-btn-13f" class="res-btn" onclick="res13FSearch()">Search</button>
       </div>
-      <div style="background:var(--amber-bg);color:var(--amber);font-size:10px;padding:6px 18px;border-bottom:1px solid var(--amber-bd)">
+      <div class="txt-dim-10 rd-amber-note">
         Note: Tracks institutional manager 13F-HR filings (holdings), not issuer filings.
       </div>
-      <div id="rd-body-13f" style="flex:1;overflow-y:auto;padding:0">
-        <div class="rd-none" style="padding-top:30px">Enter an institutional manager to search 13F filings.</div>
+      <div id="rd-body-13f" class="rd-body">
+        <div class="rd-none rd-none-top">Enter an institutional manager to search 13F filings.</div>
       </div>
-    </div>
+    </section>
   </div>
-</div>
+</section>
 
 <script>
+const DEAD_SYMS = new Set(['GB10YT=RR', 'JP10YT=RR', 'DE10YT=RR', 'AU10YT=RR', 'IT10YT=RR', 'GB10Y=RR', 'JP10Y=RR']);
+
 // ── PROXY ─────────────────────────────────────────────────────────────────────
+async function fetchWithTimeout(url, timeout = 10000) {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(timeout) });
+    const data = await r.json();
+    return { ok: r.ok, status: r.status, data };
+  } catch(e) {
+    let type = 'network_error';
+    if (e.name === 'TimeoutError') type = 'timeout';
+    return { ok: false, status: 0, type, error: e.message, data: null };
+  }
+}
+
 async function pfetch(url) {
-  const proxyUrl = `https://meridian-proxy.navinmv1981.workers.dev/?url=${encodeURIComponent(url)}`;
+  const proxyUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(url)}`;
   const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`Proxy ${r.status}`);
   return r;
@@ -1030,7 +1531,7 @@ let idxFilter='all';
 // Yield symbols
 const YIELD_SYMS={
   us2:'^IRX', us5:'^FVX', us10:'^TNX', us30:'^TYX',
-  uk10:'GB10Y=X', de10:'GBGB10YT=RR', jp10:'JPY10Y=X'
+  uk10:'GB10YT=RR', de10:'GB10YT=RR', jp10:'JP10YT=RR'
 };
 
 const SECTIONS=[
@@ -1067,14 +1568,20 @@ const TICK_SYMS=[
 
 const SECTOR_ETFS=[
   {name:'Technology', s:'XLK'},
+  {name:'Software', s:'IGV'},
+  {name:'Semiconductors', s:'SOXX'},
   {name:'Energy', s:'XLE'},
   {name:'Financials', s:'XLF'},
-  {name:'Software', s:'IGV'}, // software proxy ETF
-  {name:'Communication Services', s:'XLC'},
   {name:'Industrials', s:'XLI'},
+  {name:'Materials', s:'XLB'},
+  {name:'Consumer Staples', s:'XLP'},
+  {name:'Healthcare', s:'XLV'},
   {name:'Utilities', s:'XLU'},
   {name:'Real Estate', s:'XLRE'},
-  {name:'Healthcare', s:'XLV'}
+  {name:'Communication Svcs', s:'XLC'},
+  {name:'US Broad Market', s:'SPY'},
+  {name:'Growth', s:'VUG'},
+  {name:'Value', s:'VTV'},
 ];
 
 // ── CLOCK ─────────────────────────────────────────────────────────────────────
@@ -1089,7 +1596,10 @@ setInterval(tickClock,1000); tickClock();
 
 // ── FETCH ─────────────────────────────────────────────────────────────────────
 async function fetchSym(sym){
-  const chartUrl=`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1mo`;
+  if(!sym) return null;
+  if (DEAD_SYMS.has(sym)) return null;
+
+  const chartUrl=`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(decodeURIComponent(sym))}?interval=1d&range=1mo`;
   try{
     const chartResp=await pfetch(chartUrl);
     const j=await chartResp.json();
@@ -1253,7 +1763,7 @@ function renderYields(data){
   set('y-us2', '^IRX'); set('y-us5','^FVX'); set('y-us10','^TNX'); set('y-us30','^TYX');
   // UK / Germany / Japan — YF tickers for these are unreliable;
   // display what we get, fall back gracefully
-  set('y-uk10','GB10Y=X'); set('y-de10','GBGB10YT=RR'); set('y-jp10','JPY10Y=X');
+  set('y-uk10','GB10YT=RR'); set('y-de10','GB10YT=RR'); set('y-jp10','JP10YT=RR');
 
   // v2.2: Corp bond proxy ETFs
   const corpBondMap=[
@@ -1515,7 +2025,7 @@ async function loadNews(){
       const r=await pfetch(feed),txt=await r.text();
       const xml=new DOMParser().parseFromString(txt,'text/xml');
       xml.querySelectorAll('item').forEach(el=>{
-        const title=dh(el.querySelector('title')?.textContent||'');
+        const title=dh(el.querySelector('title')?.textContent||'').trim();
         const desc=dh(el.querySelector('description')?.textContent||'').replace(/<[^>]*>/g,'').trim();
         const link=el.querySelector('link')?.textContent||'#';
         const pub=el.querySelector('pubDate')?.textContent||'';
@@ -1534,6 +2044,9 @@ async function loadNews(){
 
   document.getElementById('nc-geo').textContent=geo.length+' articles';
   document.getElementById('glist').innerHTML=geo.length?makeNewsHTML(geo):'<div class="lrow" style="padding:16px;text-align:center;color:var(--muted)">No geopolitics stories</div>';
+
+  
+  
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
@@ -1693,40 +2206,67 @@ function renderEquitySectors(data=window._mdata||{}){
 // ── MODAL ─────────────────────────────────────────────────────────────────────
 const fundCache={};
 async function fetchFund(sym){
-  if(fundCache[sym])return fundCache[sym];
-  // v2.3: added upgradeDowngradeHistory for Analyst Calls tab
-  const url=`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=summaryDetail,defaultKeyStatistics,financialData,recommendationTrend,upgradeDowngradeHistory,assetProfile`;
-  try{
-    const r=await pfetch(url),j=await r.json();
-    const res=j?.quoteSummary?.result?.[0]; if(!res)return null;
-    const sd=res.summaryDetail||{},ks=res.defaultKeyStatistics||{},
-          fd=res.financialData||{},rt=res.recommendationTrend?.trend?.[0]||{},
-          udh=res.upgradeDowngradeHistory?.history||[],ap=res.assetProfile||{};
-    let rec='—';
-    const{strongBuy=0,buy=0,hold=0,sell=0,strongSell=0}=rt;
-    const total=strongBuy+buy+hold+sell+strongSell;
-    if(total>0){const sc=(strongBuy*1+buy*2+hold*3+sell*4+strongSell*5)/total;rec=sc<1.5?'STRONG BUY':sc<2.5?'BUY':sc<3.5?'HOLD':sc<4.5?'SELL':'STRONG SELL';}
-    // v2.2: extended fields for Fundamentals tab
-    const out={
-      marketCap:ks.enterpriseValue?.raw||sd.marketCap?.raw,
-      peTrailing:sd.trailingPE?.raw, peForward:sd.forwardPE?.raw,
-      eps:ks.trailingEps?.raw, epsForward:ks.forwardEps?.raw,
-      beta:sd.beta?.raw, dividend:sd.dividendYield?.raw,
-      week52High:sd.fiftyTwoWeekHigh?.raw, week52Low:sd.fiftyTwoWeekLow?.raw,
-      targetPrice:fd.targetMeanPrice?.raw, revenueGrowth:fd.revenueGrowth?.raw,
-      profitMargin:fd.profitMargins?.raw, debtToEquity:fd.debtToEquity?.raw,
-      currentRatio:fd.currentRatio?.raw, quickRatio:fd.quickRatio?.raw,
-      roe:fd.returnOnEquity?.raw, shortFloat:ks.shortPercentOfFloat?.raw,
-      totalRevenue:fd.totalRevenue?.raw, ebitda:fd.ebitda?.raw,
-      grossMargins:fd.grossMargins?.raw, totalCash:fd.totalCash?.raw,
-      totalDebt:fd.totalDebt?.raw,
-      recommendation:rec, analystCount:total,
-      strongBuy, buy, hold, sell, strongSell,  // raw counts
-      upgradeHistory: udh.slice(0,15),  // most recent 15 actions
-      sector:ap.sector, industry:ap.industry, employees:ap.fullTimeEmployees
-    };	
-    fundCache[sym]=out; return out;
-  }catch(e){console.warn('Fund',sym,e);return null;}
+  if(!sym) return null;
+  if(fundCache[sym]) return fundCache[sym];
+  
+  // Try Yahoo first (v10 quoteSummary)
+  const yUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=summaryDetail,defaultKeyStatistics,financialData,recommendationTrend,upgradeDowngradeHistory,assetProfile`;
+  try {
+    const r = await pfetch(yUrl);
+    const j = await r.json();
+    const res = j?.quoteSummary?.result?.[0];
+    if (res) {
+      const sd = res.summaryDetail || {}, ks = res.defaultKeyStatistics || {},
+            fd = res.financialData || {}, rt = res.recommendationTrend?.trend?.[0] || {},
+            udh = res.upgradeDowngradeHistory?.history || [], ap = res.assetProfile || {};
+      let rec = '—';
+      const { strongBuy=0, buy=0, hold=0, sell=0, strongSell=0 } = rt;
+      const total = strongBuy+buy+hold+sell+strongSell;
+      if (total > 0) {
+        const sc = (strongBuy*1 + buy*2 + hold*3 + sell*4 + strongSell*5) / total;
+        rec = sc<1.5?'STRONG BUY':sc<2.5?'BUY':sc<3.5?'HOLD':sc<4.5?'SELL':'STRONG SELL';
+      }
+      const out = {
+        marketCap: ks.enterpriseValue?.raw || sd.marketCap?.raw,
+        peTrailing: sd.trailingPE?.raw, peForward: sd.forwardPE?.raw,
+        eps: ks.trailingEps?.raw, epsForward: ks.forwardEps?.raw,
+        beta: sd.beta?.raw, dividend: sd.dividendYield?.raw,
+        week52High: sd.fiftyTwoWeekHigh?.raw, week52Low: sd.fiftyTwoWeekLow?.raw,
+        targetPrice: fd.targetMeanPrice?.raw, revenueGrowth: fd.revenueGrowth?.raw,
+        profitMargin: fd.profitMargins?.raw, debtToEquity: fd.debtToEquity?.raw,
+        currentRatio: fd.currentRatio?.raw, quickRatio: fd.quickRatio?.raw,
+        roe: fd.returnOnEquity?.raw, shortFloat: ks.shortPercentOfFloat?.raw,
+        totalRevenue: fd.totalRevenue?.raw, ebitda: fd.ebitda?.raw,
+        grossMargins: fd.grossMargins?.raw, totalCash: fd.totalCash?.raw,
+        totalDebt: fd.totalDebt?.raw,
+        recommendation: rec, analystCount: total,
+        strongBuy, buy, hold, sell, strongSell,
+        upgradeHistory: udh.slice(0, 15),
+        sector: ap.sector, industry: ap.industry, employees: ap.fullTimeEmployees
+      };
+      fundCache[sym] = out;
+      return out;
+    }
+  } catch(e) {
+    console.warn('Yahoo fetchFund failed for', sym, '- switching to FMP fallback');
+  }
+
+  // FMP Fallback (via Worker route ?fundsymbol=)
+  try {
+    const fUrl = `${MY_WORKER_URL}/?fundsymbol=${encodeURIComponent(sym)}`;
+    const r = await fetch(fUrl); // Hit worker route directly
+    if (r.ok) {
+      const out = await r.json();
+      if (out && out.marketCap) {
+        fundCache[sym] = out;
+        return out;
+      }
+    }
+  } catch(e) {
+    console.warn('FMP fetchFund fallback failed for', sym, e.message);
+  }
+
+  return null;
 }
 function showModal(html){document.getElementById('mc').innerHTML=html;document.getElementById('ov').classList.add('show');}
 async function openModal(rowEl){
@@ -1734,9 +2274,20 @@ async function openModal(rowEl){
   showModal(`<div class="mload"><div class="mspinner"></div><br>Loading ${name}…</div>`);
   renderModal(sym,name,window._mdata?.[sym],await fetchFund(sym));
 }
+// Batch 1: global flag to disable main-page click-throughs
+// Set window.workspaceEnabled = true in future when workspace is ready
+window.mainPageClicksDisabled = false;
+
 async function openBySymbol(sym,name){
+  if(window.mainPageClicksDisabled) return;
   showModal(`<div class="mload"><div class="mspinner"></div><br>Loading ${name}…</div>`);
-  renderModal(sym,name,window._mdata?.[sym],await fetchFund(sym));
+  try {
+    const fund = await fetchFund(sym);
+    renderModal(sym, name, window._mdata?.[sym], fund);
+  } catch(e) {
+    console.warn('openBySymbol failed', e);
+    renderModal(sym, name, window._mdata?.[sym], null);
+  }
 }
 // v2.2: Tabbed Modal (Overview + Fundamentals)
 function switchTab(tabName){
@@ -1925,6 +2476,8 @@ function renderModal(sym,name,d,f){
       </div>
     </div>`
   :`<div class="mtab-panel" data-panel="fundamentals"><div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">${unsupportedFundType?'Fundamental data not available for this instrument type.':'Fundamental data is temporarily unavailable for this symbol.'}<br><span style="font-size:10px;color:var(--dim)">${unsupportedFundType?'Indices and commodities do not carry company fundamentals.':'Try refreshing in a few seconds.'}</span></div></div>`;
+
+
 
 
   // v2.3: ── analyst calls panel ───────────────────────────────────────────
@@ -2331,24 +2884,59 @@ function renderResearch(sym,d,body){
 }
 
 const MY_WORKER_URL = 'https://meridian-proxy.navinmv1981.workers.dev';
-// Mock SEC Filings fetcher
-async function fetchSECFilings(sym) {
-  const fmpUrl = `https://financialmodelingprep.com/stable/sec-filings-search/symbol?symbol=${sym.toUpperCase()}&limit=15`;
-  const proxyUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(fmpUrl)}`;
 
+function secDisplayTrim(v) {
+  if (v == null) return '';
+  if (typeof v === 'object') return '';
+  const s = String(v).trim();
+  return s || '';
+}
+
+/** EDGAR issuer filings via Worker (ticker → CIK → submissions); returns { ok, error?, companyName?, filings } */
+async function fetchSECFilings(sym) {
+  const t = sym.trim().toUpperCase();
+  const url = `${MY_WORKER_URL}/?secfilings=${encodeURIComponent(t)}`;
   try {
-    const response = await fetch(proxyUrl);
-    const data = await response.json();
-    return data.map(f => ({
-      form: f.type,
-      date: f.fillingDate.split(' ')[0],
-      title: f.type === '10-K' ? 'Annual Report' : (f.type === '10-Q' ? 'Quarterly Report' : 'SEC Filing'),
-      link: f.finalLink
+    const response = await fetch(url, { signal: AbortSignal.timeout(25000) });
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+    if (!response.ok) {
+      const msg = (data && data.error) ? data.error : `SEC request failed (${response.status})`;
+      return { ok: false, error: msg, companyName: null, filings: [] };
+    }
+    if (data && data.error) {
+      return { ok: false, error: data.error, companyName: null, filings: [] };
+    }
+    // Prefer explicit companyName; fall back to submissions `name` (older Worker payloads omit companyName).
+    const cn =
+      secDisplayTrim(data.companyName) ||
+      secDisplayTrim(data.name) ||
+      t;
+    const rows = Array.isArray(data.filings) ? data.filings : [];
+    const filings = rows.map(f => ({
+      form: f.form || '—',
+      date: (f.filingDate || '').split(' ')[0],
+      title: filingTitleFromRow(f),
+      link: f.link || 'https://www.sec.gov/edgar/search/'
     }));
+    return { ok: true, error: null, companyName: cn, filings };
   } catch (e) {
-    console.error("SEC Error:", e);
-    return [];
+    console.error('SEC Error:', e);
+    return { ok: false, error: 'Could not reach filings service.', companyName: null, filings: [] };
   }
+}
+
+function filingTitleFromRow(f) {
+  const d = (f.primaryDocDescription || '').trim();
+  if (d) return d;
+  const form = f.form || '';
+  if (form === '10-K') return 'Annual Report';
+  if (form === '10-Q') return 'Quarterly Report';
+  return 'SEC Filing';
 }
 
 async function resSecSearch() {
@@ -2359,9 +2947,22 @@ async function resSecSearch() {
   body.innerHTML=`<div class="rd-loading" style="margin-top:30px"><div class="rd-spinner"></div><br>Searching SEC EDGAR for <strong>${sym}</strong>…</div>`;
   
   try {
-    const filings = await fetchSECFilings(sym);
+    const { ok, error, filings, companyName } = await fetchSECFilings(sym);
+    const resolvedCo = secDisplayTrim(companyName) || sym;
+    const filingHeaderHtml =
+      resolvedCo.toUpperCase() !== sym
+        ? `${escapeRdHtml(resolvedCo)} (${escapeRdHtml(sym)})`
+        : escapeRdHtml(resolvedCo);
+    if (!ok && error) {
+      body.innerHTML = `<div class="rd-none" style="margin-top:30px">${escapeRdHtml(error)}</div>`;
+      return;
+    }
+    if (!filings.length) {
+      body.innerHTML = `<div class="rd-none" style="margin-top:30px">No recent filings found for <strong>${filingHeaderHtml}</strong> in EDGAR.</div>`;
+      return;
+    }
     let html = `<div style="padding:16px 18px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Latest Filings for ${sym}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Latest Filings for ${filingHeaderHtml}</div>
       <table class="res-table">
         <thead><tr><th>Form</th><th>Date</th><th>Description</th><th style="text-align:right">Link</th></tr></thead>
         <tbody>`;
@@ -2369,11 +2970,12 @@ async function resSecSearch() {
       let cls = 'res-badge';
       if(f.form==='10-K') cls+=' bOP'; 
       else if(f.form==='10-Q') cls+=' bPR';
+      const safeLink = (f.link && /^https:\/\//i.test(f.link)) ? f.link : 'https://www.sec.gov/edgar/search/';
       html += `<tr>
-        <td><span class="${cls}">${f.form}</span></td>
-        <td style="color:var(--dim)">${f.date}</td>
-        <td>${f.title}</td>
-        <td style="text-align:right"><a class="res-link" href="${f.link}" target="_blank">EDGAR ↗</a></td>
+        <td><span class="${cls}">${escapeRdHtml(f.form)}</span></td>
+        <td style="color:var(--dim)">${escapeRdHtml(f.date)}</td>
+        <td>${escapeRdHtml(f.title)}</td>
+        <td style="text-align:right"><a class="res-link" href="${escapeRdAttr(safeLink)}" target="_blank" rel="noopener noreferrer">EDGAR ↗</a></td>
       </tr>`;
     });
     html += `</tbody></table></div>`;
@@ -2383,131 +2985,374 @@ async function resSecSearch() {
   }
 }
 
-// Mock 13F Fetcher
-async function fetch13F(mgr) {
-  // We use the institutional-ownership endpoint for FMP
-  const fmpUrl = `https://financialmodelingprep.com/stable/institutional-ownership/latest?symbol=${mgr.toUpperCase()}&limit=20`;
-  const proxyUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(fmpUrl)}`;
+function escapeRdHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+function escapeRdAttr(s) {
+  return escapeRdHtml(s).replace(/'/g,'&#39;');
+}
 
+// SEC data requests use MY_WORKER_URL; the Cloudflare Worker must send this header to SEC: User-Agent: "MeridianAtlas contact@youremail.com" (cannot be set from index.html for proxied SEC hosts — configure the Worker).
+async function resolveCIK(name) {
+  const raw = String(name || '').trim();
+  if (!raw) return [];
+  const norm = (s) => String(s || '').toLowerCase();
+  const q = norm(raw);
+  const digitsOnly = raw.replace(/\D/g, '');
+  if (/^\d{7,12}$/.test(digitsOnly)) {
+    const c10 = digitsOnly.length > 10 ? digitsOnly.slice(-10) : digitsOnly.padStart(10, '0');
+    return [{ cik: c10, name: 'CIK ' + c10 }];
+  }
+  const out = [];
+  const seen = new Set();
+  const add = (cikVal, dispName) => {
+    const d = String(cikVal == null ? '' : cikVal).replace(/\D/g, '');
+    if (!d) return;
+    const c10 = d.length > 10 ? d.slice(-10) : d.padStart(10, '0');
+    if (seen.has(c10)) return;
+    seen.add(c10);
+    out.push({ cik: c10, name: dispName || raw });
+  };
+  try {
+    const ctUrl = 'https://www.sec.gov/files/company_tickers.json';
+    const ctRes = await fetch(`${MY_WORKER_URL}/?sec13f=${encodeURIComponent(ctUrl)}`);
+    if (ctRes.ok) {
+      const ctData = await ctRes.json();
+      const rows = Array.isArray(ctData) ? ctData : Object.values(ctData);
+      for (const row of rows) {
+        if (norm(row.ticker) === q) add(row.cik_str != null ? row.cik_str : row.cik, row.title || row.ticker);
+      }
+      if (out.length < 5) {
+        for (const row of rows) {
+          if (out.length >= 5) break;
+          const title = norm(row.title || '');
+          if (q.length >= 2 && title.includes(q)) add(row.cik_str != null ? row.cik_str : row.cik, row.title || row.ticker);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('resolveCIK company_tickers:', e);
+  }
+  if (out.length) return out.slice(0, 5);
+  try {
+    const quoted = '"' + raw.replace(/"/g, '') + '"';
+    const eftsUrl = 'https://efts.sec.gov/LATEST/search-index?q=' + encodeURIComponent(quoted) + '&forms=' + encodeURIComponent('13F-HR') + '&size=50';
+    const eftsRes = await fetch(`${MY_WORKER_URL}/?sec13f=${encodeURIComponent(eftsUrl)}`);
+    if (!eftsRes.ok) return [];
+    const eftsData = await eftsRes.json();
+    const hits = (eftsData.hits && eftsData.hits.hits) || [];
+    const byAcc = new Set();
+    for (const hit of hits) {
+      if (out.length >= 5) break;
+      const id = hit._id || '';
+      const accPart = id.split(':')[0];
+      if (!accPart || byAcc.has(accPart)) continue;
+      byAcc.add(accPart);
+      const src = hit._source || {};
+      const entity = src.entity_name || (Array.isArray(src.display_names) ? src.display_names[0] : src.display_names) || accPart;
+      const dnJoin = Array.isArray(src.display_names) ? src.display_names.join(' ') : String(src.display_names || '');
+      let cik = null;
+      const m = dnJoin.match(/\(CIK[:\s]*(\d{7,10})\)/i) || String(entity).match(/\(CIK[:\s]*(\d{7,10})\)/i);
+      if (m) cik = m[1].padStart(10, '0').slice(-10);
+      else {
+        const parts = accPart.split('-');
+        if (parts[0] && /^\d{10}$/.test(parts[0])) cik = parts[0];
+      }
+      if (cik) add(cik, entity);
+    }
+  } catch (e) {
+    console.error('resolveCIK EFTS:', e);
+  }
+  return out.slice(0, 5);
+}
+
+async function fetch13F(cik) {
+  const d = String(cik == null ? '' : cik).replace(/\D/g, '');
+  if (!d) return [];
+  const cik10 = d.length > 10 ? d.slice(-10) : d.padStart(10, '0');
+  const url = `https://data.sec.gov/submissions/CIK${cik10}.json`;
+  const proxyUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(url)}`;
   try {
     const response = await fetch(proxyUrl);
-    const data = await response.json();
-    return data.map((item, index) => ({
-      id: item.cik + '-' + index, // Creating a unique ID for the UI
-      cik: item.cik,
-      form: '13F-HR',
-      date: item.filingDate,
-      period: item.reportDate,
-      qtr: `Q${Math.floor(new Date(item.reportDate).getMonth() / 3) + 1} ${new Date(item.reportDate).getFullYear()}`,
-      link: item.link || '#'
-    }));
+    if (!response.ok) return [];
+    const j = await response.json();
+    const recent = j.filings && j.filings.recent;
+    if (!recent || !recent.form) return [];
+    const cikInt = String(parseInt(cik10, 10));
+    const list = [];
+    for (let i = 0; i < recent.form.length; i++) {
+      if (recent.form[i] !== '13F-HR') continue;
+      const accession = recent.accessionNumber[i];
+      const accNoDash = accession.replace(/-/g, '');
+      const id = cikInt + '_' + accNoDash;
+      const filingDate = recent.filingDate[i];
+      const reportDate = recent.reportDate[i];
+      const rd = new Date(String(reportDate) + 'T12:00:00Z');
+      const qtr = isNaN(rd.getTime()) ? '' : 'Q' + (Math.floor(rd.getUTCMonth() / 3) + 1) + ' ' + rd.getUTCFullYear();
+      const link = 'https://www.sec.gov/cgi-bin/viewer?action=view&cik=' + encodeURIComponent(cikInt) + '&accession_number=' + encodeURIComponent(accession) + '&xbrl_type=v';
+      list.push({ id, cik: cik10, accession, form: '13F-HR', date: filingDate, period: reportDate, qtr, link });
+    }
+    return list;
   } catch (e) {
-    console.error("13F Error:", e);
+    console.error('13F Error:', e);
     return [];
   }
 }
 
 // 1. Standalone fetcher (OUTSIDE of toggleHoldings)
 async function fetch13FHoldings(filingId) {
-    const cik = filingId.split('-')[0];
-    const fmpUrl = `https://financialmodelingprep.com/stable/institutional-ownership/portfolio-holding?cik=${cik}&limit=50`;
-    const proxyUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(fmpUrl)}`;
+  try {
+    // STEP 1 — Build URLs from the accession number
+    const [cikInt, accNoDash] = filingId.split('_');
+    const accWithDash = accNoDash.slice(0,10) + '-' + accNoDash.slice(10,12) + '-' + accNoDash.slice(12);
+    const baseFolder = `https://www.sec.gov/Archives/edgar/data/${cikInt}/${accNoDash}/`;
+    const indexUrl = `${baseFolder}${accWithDash}-index.htm`;
 
-    try {
-        const response = await fetch(proxyUrl);
-        const data = await response.json();
-        return data.map(h => ({
-            issuer: h.underlyingSymbol || 'Unknown',
-            class: 'COM',
-            cusip: h.cusip || '-',
-            val: h.value || 0,
-            shs: h.shares || 0,
-            disc: 'SOLE',
-            vote: h.shares || 0
-        }));
-    } catch (e) {
-        console.error("Holdings Error:", e);
-        return [];
+    // STEP 2 — Fetch index.htm and parse it to find the InfoTable XML filename
+    const proxyIndexUrl = `${MY_WORKER_URL}/?sec13f=${encodeURIComponent(indexUrl)}`;
+    const hRes = await fetch(proxyIndexUrl);
+    if (!hRes.ok) throw new Error("Could not fetch filing index");
+    
+    const htmlText = await hRes.text();
+    const hDoc = new DOMParser().parseFromString(htmlText, 'text/html');
+    const links = Array.from(hDoc.querySelectorAll('a[href]')).map(a => a.getAttribute('href'));
+    
+    let bestHref = null;
+    let priority = 99;
+    
+    for (const href of links) {
+      if (!href) continue;
+      const lower = href.toLowerCase();
+      // a. href contains "infotable" (case-insensitive) AND does NOT contain "xslForm13F"
+      if (lower.includes('infotable') && !lower.includes('xslform13f')) {
+        if (priority > 1) { bestHref = href; priority = 1; }
+      } 
+      // b. href ends in ".xml" AND does NOT contain "primary_doc" AND does NOT contain "xslForm13F"
+      //    AND does NOT end in "-index.htm" AND does NOT end in ".txt"
+      else if (lower.endsWith('.xml') && !lower.includes('primary_doc') && !lower.includes('xslform13f') && !lower.endsWith('-index.htm') && !lower.endsWith('.txt')) {
+        if (priority > 2) { bestHref = href; priority = 2; }
+      }
     }
+    
+    if (!bestHref) {
+      console.error("Could not locate InfoTable in filing index");
+      return [];
+    }
+    
+    let docUrl = null;
+    if (bestHref.startsWith('/Archives')) {
+      docUrl = `https://www.sec.gov${bestHref}`;
+    } else if (!bestHref.startsWith('http')) {
+      // relative path
+      docUrl = `${baseFolder}${bestHref}`;
+    } else {
+      docUrl = bestHref;
+    }
+
+    // STEP 3 — Fetch the InfoTable XML and parse holdings
+    const proxyDocUrl = `${MY_WORKER_URL}/?sec13f=${encodeURIComponent(docUrl)}`;
+    const xmlRes = await fetch(proxyDocUrl);
+    if (!xmlRes.ok) throw new Error("Could not fetch InfoTable XML");
+    
+    const xmlTextBody = await xmlRes.text();
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlTextBody, 'text/xml');
+    
+    const entries = Array.from(xmlDoc.getElementsByTagName('infoTable'))
+      .concat(Array.from(xmlDoc.getElementsByTagName('ns1:infoTable')));
+      
+    if (entries.length === 0) return [];
+    
+    const getVal = (el, tag) => {
+      const found = el.getElementsByTagName(tag)[0] || el.getElementsByTagName('ns1:' + tag)[0];
+      return found ? found.textContent.trim() : '';
+    };
+    
+    const rows = [];
+    for (const e of entries) {
+      const issuer = getVal(e, 'nameOfIssuer');
+      const cls = getVal(e, 'titleOfClass');
+      const cusip = getVal(e, 'cusip');
+      const value = parseInt(getVal(e, 'value') || '0', 10) * 1000;
+      const shares = parseInt(getVal(e, 'sshPrnamt') || '0', 10);
+      const type = getVal(e, 'sshPrnamtType') || 'SH';
+      const disc = getVal(e, 'investmentDiscretion') || 'SOLE';
+      const vote = parseInt(getVal(e, 'Sole') || getVal(e, 'sole') || '0', 10) || shares;
+      
+      rows.push({
+        issuer: issuer || '-',
+        class: cls || '-',
+        cusip: cusip || '-',
+        val: value,
+        shs: shares,
+        type: type,
+        disc: disc,
+        vote: vote
+      });
+    }
+    
+    rows.sort((a, b) => b.val - a.val);
+    return rows;
+  } catch (e) {
+    console.error('Holdings Error:', e);
+    return [];
+  }
 }
 
-// 2. The UI Toggle Logic
-window.toggleHoldings = async function(btn, filingId) {
-    const row = document.getElementById('holdings-' + filingId);
-    if (row.classList.contains('open')) {
-        row.classList.remove('open');
-        btn.textContent = 'View Holdings';
-        return;
+window.loadFilingsForCIK = async function(cik, name) {
+  const body = document.getElementById('rd-body-13f');
+  const disp = (name && String(name).trim()) ? String(name).trim() : ('CIK ' + cik);
+  body.innerHTML = '<div class="rd-loading" style="margin-top:30px"><div class="rd-spinner"></div><br>Loading 13F-HR filings for <strong>' + escapeRdHtml(disp) + '</strong>…</div>';
+  try {
+    const filings = await fetch13F(cik);
+    const subLine = ((name && String(name).trim()) ? escapeRdHtml(String(name).trim()) + ' — ' : '') + 'CIK ' + escapeRdHtml(String(cik));
+    if (!filings.length) {
+      body.innerHTML = '<div style="padding:16px 18px"><div style="font-size:11px;color:var(--dim);margin-bottom:10px">' + subLine + '</div><div class="rd-none">No 13F-HR filings found in SEC submissions for this CIK.</div></div>';
+      return;
     }
+    let html = '<div style="padding:16px 18px">\n      <div style="font-size:13px;font-weight:700;margin-bottom:12px">' + escapeRdHtml(disp) + '</div>\n      <div style="font-size:11px;color:var(--dim);margin-bottom:12px">' + subLine + '</div>\n      <table class="res-table">\n        <thead><tr><th>Form</th><th>Filed Date</th><th>Period End</th><th style="text-align:center">Action</th><th style="text-align:right">Link</th></tr></thead>\n        <tbody>';
+    filings.forEach(f => {
+      const cleanName = disp.replace(/'/g, "\\'");
+      const fDate = f.qtr + ' · Filed ' + f.date;
+      html += '<tr>\n        <td><span class="res-badge bPR">' + f.form + '</span></td>\n        <td style="color:var(--dim)">' + f.date + '</td>\n        <td><strong>' + f.qtr + '</strong></td>\n        <td style="text-align:center"><button class="h-btn" onclick="toggleHoldings(this, \'' + f.id + '\', \'' + cleanName + '\', \'' + fDate + '\')">View Holdings</button></td>\n        <td style="text-align:right"><a class="res-link" href="' + f.link + '" target="_blank">Open filing ↗</a></td>\n      </tr>';
+    });
+    html += '</tbody></table></div>';
+    body.innerHTML = html;
+  } catch (e) {
+    body.innerHTML = '<div class="rd-none" style="margin-top:30px">Error fetching 13F for ' + escapeRdHtml(disp) + '.</div>';
+  }
+};
 
-    row.classList.add('open');
-    btn.textContent = 'Hide Holdings';
-    const wrap = document.getElementById('hw-' + filingId);
-    if (wrap.innerHTML !== '') return; // already loaded
 
-    wrap.innerHTML = '<div style="font-size:10px;color:var(--dim);text-align:center;padding:10px">Loading 13F Information Table…</div>';
-    
+// 2. The UI Toggle Logic
+window.toggleHoldings = async function(btn, filingId, entityName, filingDate) {
+    const oldText = btn.textContent;
+    btn.textContent = 'Loading...';
     try {
         const data = await fetch13FHoldings(filingId);
+        btn.textContent = oldText;
         if (!data || data.length === 0) {
-            wrap.innerHTML = '<div style="font-size:10px;color:var(--dim);text-align:center;padding:10px">No holdings found for this CIK.</div>';
+            alert('No holdings found for this filing.');
             return;
         }
-
-        let html = `<table class="h-table">
-            <thead><tr><th>Issuer</th><th>Class</th><th>CUSIP</th><th style="text-align:right">Value ($)</th><th style="text-align:right">Shs/Prn</th><th>Discretion</th><th>Voting</th></tr></thead>
-            <tbody>`;
         
-        data.forEach(h => {
-            html += `<tr>
-                <td style="font-family:var(--sans);font-weight:600;color:var(--text)">${h.issuer}</td>
-                <td>${h.class}</td>
-                <td>${h.cusip}</td>
-                <td style="text-align:right">${h.val.toLocaleString()}</td>
-                <td style="text-align:right">${h.shs.toLocaleString()}</td>
-                <td>${h.disc}</td>
-                <td>${h.vote.toLocaleString()}</td>
-            </tr>`;
-        });
-        html += `</tbody></table>`;
-        wrap.innerHTML = html;
+        const mappedData = data.map(d => ({
+            name: d.issuer,
+            cusip: d.cusip,
+            value: d.val,
+            shares: d.shs,
+            type: d.type || 'SH'
+        }));
+        
+        openHoldingsModal(entityName, filingDate, mappedData);
     } catch (e) {
-        wrap.innerHTML = '<div style="font-size:10px;color:var(--red);text-align:center;padding:10px">Failed to load holdings.</div>';
+        console.error(e);
+        btn.textContent = oldText;
+        alert('Failed to load holdings.');
     }
 };
+
+let _holdingsData = [];
+
+function openHoldingsModal(title, meta, holdings) {
+  _holdingsData = holdings;
+  document.getElementById('holdingsModalTitle').textContent = title;
+  document.getElementById('holdingsModalMeta').textContent = meta;
+  document.getElementById('holdingsSearch').value = '';
+  document.getElementById('holdingsSortSelect').value = 'value';
+  renderHoldingsTable(_holdingsData);
+  const modal = document.getElementById('holdingsModal');
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeHoldingsModal() {
+  document.getElementById('holdingsModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function renderHoldingsTable(data) {
+  const sortBy = document.getElementById('holdingsSortSelect').value;
+  const filter = (document.getElementById('holdingsSearch').value || '').toLowerCase();
+
+  let filtered = data.filter(h =>
+    !filter ||
+    (h.name || '').toLowerCase().includes(filter) ||
+    (h.cusip || '').toLowerCase().includes(filter)
+  );
+
+  if (sortBy === 'value') filtered.sort((a,b) => (b.value||0) - (a.value||0));
+  else if (sortBy === 'shares') filtered.sort((a,b) => (b.shares||0) - (a.shares||0));
+  else if (sortBy === 'name') filtered.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+
+  const fmt = n => n ? '$' + Math.round(n).toLocaleString() : '—';
+  const fmtN = n => n ? Math.round(n).toLocaleString() : '—';
+
+  const tbody = document.getElementById('holdingsTableBody');
+  tbody.innerHTML = filtered.map((h, i) => `
+    <tr style="border-bottom:1px solid var(--border); ${i%2===0?'background:var(--bg2);':'background:var(--bg3);'}">
+      <td style="padding:8px; text-align:right; color:var(--dim);">${i+1}</td>
+      <td style="padding:8px; color:var(--text); font-weight:600; font-family:var(--sans);">${h.name || '—'}</td>
+      <td style="padding:8px; color:var(--dim); font-family:var(--mono); font-size:0.8rem;">${h.cusip || '—'}</td>
+      <td style="padding:8px; text-align:right; color:var(--text2); font-weight:600;">${fmt(h.value)}</td>
+      <td style="padding:8px; text-align:right; color:var(--text2);">${fmtN(h.shares)}</td>
+      <td style="padding:8px; text-align:center; color:var(--dim); font-size:0.75rem;">${h.type || 'SH'}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('holdingsModalMeta').textContent =
+    `${filtered.length.toLocaleString()} positions${filter ? ' (filtered)' : ''}`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Restore core loaders accidentally removed in Batch 1/3
+  doRefresh();
+  doNews();
+  fetchIPOCalendar();
+
+  // Watchlist & Modal listeners
+  const s = document.getElementById('holdingsSearch');
+  const o = document.getElementById('holdingsSortSelect');
+  if (s) s.addEventListener('input', () => renderHoldingsTable(_holdingsData));
+  if (o) o.addEventListener('change', () => renderHoldingsTable(_holdingsData));
+  
+  const hModal = document.getElementById('holdingsModal');
+  if (hModal) {
+    hModal.addEventListener('click', function(e) {
+      if (e.target === this) closeHoldingsModal();
+    });
+  }
+});
 
 async function res13FSearch() {
   const inp=document.getElementById('rd-input-13f');
   const mgr=inp.value.trim();
   if(!mgr)return;
   const body=document.getElementById('rd-body-13f');
-  body.innerHTML=`<div class="rd-loading" style="margin-top:30px"><div class="rd-spinner"></div><br>Searching institutional filings for <strong>${mgr}</strong>…</div>`;
+  body.innerHTML=`<div class="rd-loading" style="margin-top:30px"><div class="rd-spinner"></div><br>Searching institutional filings for <strong>${escapeRdHtml(mgr)}</strong>…</div>`;
   
   try {
-    const filings = await fetch13F(mgr);
-    let html = `<div style="padding:16px 18px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Manager: ${mgr}</div>
-      <table class="res-table">
-        <thead><tr><th>Form</th><th>Filed Date</th><th>Period End</th><th style="text-align:center">Action</th><th style="text-align:right">Link</th></tr></thead>
-        <tbody>`;
-    filings.forEach(f => {
-      html += `<tr>
-        <td><span class="res-badge bPR">${f.form}</span></td>
-        <td style="color:var(--dim)">${f.date}</td>
-        <td><strong>${f.qtr}</strong></td>
-        <td style="text-align:center"><button class="h-btn" onclick="toggleHoldings(this, '${f.id}')">View Holdings</button></td>
-        <td style="text-align:right"><a class="res-link" href="${f.link}" target="_blank">Open filing ↗</a></td>
-      </tr>
-      <tr class="holdings-row" id="holdings-${f.id}">
-        <td colspan="5" style="padding:0">
-          <div class="h-wrap" id="hw-${f.id}"></div>
-        </td>
-      </tr>`;
-    });
-    html += `</tbody></table></div>`;
-    body.innerHTML = html;
+    const cands = await resolveCIK(mgr);
+    if (!cands.length) {
+      body.innerHTML = '<div class="rd-none" style="margin-top:30px">No institutional filer found for ' + escapeRdHtml(mgr) + '.</div>';
+      return;
+    }
+    if (cands.length > 1) {
+      let pick = '<div style="padding:16px 18px">\n      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Multiple matches — select an entity</div>';
+      cands.forEach(c => {
+        pick += '<button type="button" class="h-btn" style="margin:6px 6px 6px 0" onclick=\'loadFilingsForCIK(' + JSON.stringify(c.cik) + ',' + JSON.stringify(c.name) + ')\'>' + escapeRdHtml(c.name) + ' <span style="color:var(--dim)">(' + escapeRdHtml(c.cik) + ')</span></button>';
+      });
+      pick += '</div>';
+      body.innerHTML = pick;
+      return;
+    }
+    await loadFilingsForCIK(cands[0].cik, cands[0].name);
   } catch(e) {
-    body.innerHTML=`<div class="rd-none" style="margin-top:30px">Error fetching 13F for ${mgr}.</div>`;
+    body.innerHTML=`<div class="rd-none" style="margin-top:30px">Error fetching 13F for ${escapeRdHtml(mgr)}.</div>`;
   }
 }
 
@@ -2546,7 +3391,187 @@ sinput.addEventListener('input',()=>{
   sres.classList.add('show');
 });
 document.addEventListener('click',e=>{if(!document.getElementById('sw').contains(e.target))sres.classList.remove('show');});
-function searchPick(sym,name){sinput.value='';sres.classList.remove('show');openBySymbol(sym,name);}
+function searchPick(sym, name) {
+  _samSym = sym;
+  _samName = name;
+  const si = document.getElementById('search');
+  const sr = document.getElementById('sr');
+  if (si) si.value = '';
+  if (sr) sr.classList.remove('show');
+  showSAM(sym, name);
+}
+
+// ── BATCH 3: SEARCH ACTION MODAL ─────────────────────────────────────────────
+let _samSym = '', _samName = '';
+
+// Batch 4: In-memory quick profile cache (1h TTL matches Worker edge cache)
+const _samProfileCache = new Map();
+function _samProfileCacheGet(sym) {
+  const hit = _samProfileCache.get(sym);
+  if (hit && Date.now() < hit.expiresAt) return hit.data;
+  if (hit) _samProfileCache.delete(sym);
+  return null;
+}
+function _samProfileCacheSet(sym, data) {
+  _samProfileCache.set(sym, { data, expiresAt: Date.now() + 3600 * 1000 });
+}
+
+async function fetchQuickProfile(sym) {
+  const cached = _samProfileCacheGet(sym);
+  if (cached) return cached;
+  try {
+    const url = `${MY_WORKER_URL}/?quickprofile=${encodeURIComponent(sym)}`;
+    const res = await fetchWithTimeout(url, 6000);
+    if (res.ok && res.data?.symbol) {
+      _samProfileCacheSet(sym, res.data);
+      return res.data;
+    }
+  } catch(e) {
+    console.warn('Quick profile fetch failed for', sym, e.message);
+  }
+  return null;
+}
+
+function showSAM(sym, name) {
+  _samSym = sym;
+  _samName = name;
+
+  // Fill header
+  document.getElementById('sam-sym').textContent = sym;
+  document.getElementById('sam-name').textContent = name || sym;
+
+  // Pull live price from _mdata if already loaded
+  const d = window._mdata?.[sym];
+  const priceEl = document.getElementById('sam-price');
+  const chgEl = document.getElementById('sam-chg');
+  if (d?.price) {
+    priceEl.textContent = d.price.toFixed(2);
+    const pct = d.pct ?? 0, chg = d.chg ?? 0;
+    const sign = pct >= 0 ? '▲' : '▼';
+    chgEl.textContent = `${sign} ${Math.abs(pct).toFixed(2)}% (${chg >= 0 ? '+' : ''}${chg.toFixed(2)})`;
+    chgEl.className = 'sam-chg ' + (pct >= 0 ? 'up' : 'dn');
+  } else {
+    priceEl.textContent = '—';
+    chgEl.textContent = '';
+  }
+
+  // Show/hide DCF button based on whether symbol is supported
+  const dcfBtn = document.getElementById('sam-dcf-btn');
+  if (dcfBtn) {
+    const dcfSupported = typeof DCF_ALLOWED !== 'undefined'
+      ? DCF_ALLOWED.has(sym.toUpperCase())
+      : true; // show by default if we can't check
+    dcfBtn.style.display = dcfSupported ? '' : 'none';
+  }
+
+  // Clear any previous enrichment
+  const metaEl = document.getElementById('sam-meta');
+  const descEl = document.getElementById('sam-desc');
+  if (metaEl) metaEl.innerHTML = '<span class="sam-loading-meta"></span>';
+  if (descEl) { descEl.style.display = 'none'; descEl.textContent = ''; }
+
+  document.getElementById('sam-overlay').classList.add('show');
+  document.getElementById('sam-box').focus?.();
+
+  // Batch 4: async enrichment — fires after modal is visible, updates in place
+  fetchQuickProfile(sym).then(p => {
+    // Guard: if user already closed or switched symbols, discard
+    if (_samSym !== sym) return;
+
+    if (metaEl) {
+      const parts = [];
+      if (p?.exchange) parts.push(p.exchange);
+      if (p?.sector)   parts.push(p.sector);
+      if (p?.country && p.country !== 'US') parts.push(p.country);
+      metaEl.textContent = parts.join(' · ') || '';
+    }
+
+    if (descEl && p?.description) {
+      descEl.textContent = p.description;
+      descEl.style.display = '';
+      descEl.style.webkitLineClamp = '3';
+    }
+
+    // If we got a name from FMP and name was just the symbol, upgrade it
+    if (p?.name && document.getElementById('sam-name')?.textContent === sym) {
+      document.getElementById('sam-name').textContent = p.name;
+      _samName = p.name;
+    }
+
+    // Upgrade employee count in description sub-row if available
+    if (p?.employees && metaEl && p.employees > 0) {
+      const emp = p.employees.toLocaleString() + ' employees';
+      const existing = metaEl.textContent;
+      if (existing && !existing.includes('employee')) {
+        metaEl.textContent = existing + ' · ' + emp;
+      }
+    }
+  });
+}
+
+function closeSAM() {
+  document.getElementById('sam-overlay').classList.remove('show');
+  _samSym = '';
+  _samName = '';
+}
+
+function samOverlayClick(e) {
+  if (e.target === document.getElementById('sam-overlay')) closeSAM();
+}
+
+// Action handlers — each closes the SAM then fires the existing flow unchanged
+function samOpenChart() {
+  // Capture current state before closing modal
+  const sym = _samSym;
+  const name = _samName;
+  closeSAM();
+  if (sym) {
+    openBySymbol(sym, name);
+  } else {
+    console.warn('samOpenChart: Symbol was lost');
+  }
+}
+
+function samOpenResearch() {
+  closeSAM();
+  // Pre-fill the Research panel's Fundamentals input with the symbol and open
+  const fundInput = document.getElementById('rd-input-fund');
+  if (fundInput) fundInput.value = _samSym;
+  openResearch();
+  // Auto-trigger the search so the user lands on data immediately
+  setTimeout(() => resFundSearch(), 120);
+}
+
+function samAddToWatchlist() {
+  wlAdd(_samSym, _samName);
+  // Give brief visual feedback then close
+  const btn = document.getElementById('sam-wl-btn');
+  if (btn) {
+    const orig = btn.querySelector('span:not(.sam-btn-icon):not(.sam-btn-sub):not(.sam-btn-text)') ||
+                 btn.querySelector('.sam-btn-text span:first-child');
+    if (orig) {
+      const prev = orig.textContent;
+      orig.textContent = 'Added ✓';
+      setTimeout(() => { orig.textContent = prev; closeSAM(); }, 800);
+    } else {
+      closeSAM();
+    }
+  } else {
+    closeSAM();
+  }
+}
+
+function samOpenDCF() {
+  closeSAM();
+  openDCF();
+}
+
+// Close on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('sam-overlay')?.classList.contains('show')) {
+    closeSAM();
+  }
+});
 
 // ── MAIN REFRESH ──────────────────────────────────────────────────────────────
 let autoOn=true,qT=null,nT=null;
@@ -2734,6 +3759,12 @@ const chartCache = {};
 const CHART_INTERVALS = { '1d':'5m', '5d':'15m', '1mo':'1d', '6mo':'1wk', '1y':'1wk' };
 
 async function loadChartTab(sym, range, btnEl){
+  if (DEAD_SYMS.has(sym)) {
+    const wrap = document.getElementById('chart-tab-svg-wrap');
+    if (wrap) wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dim);font-size:11px">Market data for this instrument is currently unavailable from Yahoo.</div>';
+    return;
+  }
+
   // Update active range button
   if(btnEl){
     document.querySelectorAll('.chart-range-btn').forEach(b => b.classList.remove('active'));
@@ -2762,7 +3793,7 @@ async function loadChartTab(sym, range, btnEl){
   wrap.innerHTML = '<div class="chart-tab-loading"><span class="chart-tab-spinner"></span>Loading…</div>';
 
   const interval = CHART_INTERVALS[range] || '1d';
-  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${interval}&range=${range}`;
+  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(decodeURIComponent(sym))}?interval=${interval}&range=${range}`;
   try{
     const r = await pfetch(url);
     const j = await r.json();
@@ -2971,58 +4002,54 @@ function renderCreditSnapshot(data) {
 }
 
 // ── TASK 2: Earnings Snapshot ────────────────────────────────────────
-function renderEarningsSnapshot() {
-  const el = document.getElementById('earn-list');
+// Batch 2: IPO Calendar (replaces Dividends)
+function renderIPOCalendar(data) {
+  const el = document.getElementById('ipo-list');
   if (!el) return;
 
-  // Static upcoming earnings (refreshed per version)
-  const earnings = [
-    {ticker:'NKE',   co:'Nike',           date:'2025-03-20', time:'AMC'},
-    {ticker:'FDX',   co:'FedEx',          date:'2025-03-20', time:'AMC'},
-    {ticker:'GIS',   co:'General Mills',  date:'2025-03-26', time:'BMO'},
-    {ticker:'MU',    co:'Micron',         date:'2025-03-26', time:'AMC'},
-    {ticker:'WBA',   co:'Walgreens',      date:'2025-04-01', time:'BMO'},
-    {ticker:'STZ',   co:'Constellation',  date:'2025-04-02', time:'BMO'},
-    {ticker:'PAYX',  co:'Paychex',        date:'2025-04-02', time:'BMO'},
-    {ticker:'LEN',   co:'Lennar',         date:'2025-04-02', time:'AMC'},
-    {ticker:'DAL',   co:'Delta Air',      date:'2025-04-09', time:'BMO'},
-    {ticker:'JPM',   co:'JPMorgan',       date:'2025-04-11', time:'BMO'},
-    {ticker:'GS',    co:'Goldman Sachs',  date:'2025-04-14', time:'BMO'},
-    {ticker:'BAC',   co:'Bank of America',date:'2025-04-15', time:'BMO'},
-    {ticker:'NFLX',  co:'Netflix',        date:'2025-04-15', time:'AMC'},
-    {ticker:'TSLA',  co:'Tesla',          date:'2025-04-22', time:'AMC'},
-    {ticker:'GOOGL', co:'Alphabet',       date:'2025-04-29', time:'AMC'},
-    {ticker:'META',  co:'Meta',           date:'2025-04-30', time:'AMC'},
-    {ticker:'AAPL',  co:'Apple',          date:'2025-05-01', time:'AMC'},
-    {ticker:'AMZN',  co:'Amazon',         date:'2025-05-01', time:'AMC'},
-    {ticker:'MSFT',  co:'Microsoft',      date:'2025-04-30', time:'AMC'},
-  ];
-
-  const now = new Date();
-  const cutoff = new Date(now.getTime() + 14*24*3600*1000);
-
-  const upcoming = earnings
-    .filter(e => new Date(e.date) >= now && new Date(e.date) <= cutoff)
-    .sort((a,b) => new Date(a.date) - new Date(b.date))
-    .slice(0, 10);
-
-  if (!upcoming.length) {
-    el.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--dim)">No earnings in next 14 days</div>';
+  if (!data || !Array.isArray(data) || !data.length) {
+    el.innerHTML = '<div style="padding:14px 12px;text-align:center;font-size:11px;color:var(--dim)">No upcoming IPOs found.</div>';
     return;
   }
 
-  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  el.innerHTML = upcoming.map(e => {
-    const d = new Date(e.date);
-    const dayStr = days[d.getUTCDay()] + ' ' + String(d.getUTCDate()).padStart(2,'0') + '/' + String(d.getUTCMonth()+1).padStart(2,'0');
-    const timeCls = e.time === 'BMO' ? 'earn-bmo' : e.time === 'AMC' ? 'earn-amc' : 'earn-unk';
-    return `<div class="earn-item" onclick="openBySymbol('${e.ticker}','${e.co}')">
+  const now = new Date();
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // Show the most recent 12 IPOs
+  const items = data.slice(0, 12);
+
+  el.innerHTML = items.map(d => {
+    const dt = new Date(d.date || '');
+    const dayStr = !isNaN(dt)
+      ? days[dt.getUTCDay()] + ' ' + String(dt.getUTCDate()).padStart(2, '0') + '/' + String(dt.getUTCMonth() + 1).padStart(2, '0')
+      : 'TBD';
+    const sym = (d.symbol || '').toUpperCase();
+    const name = d.company || sym;
+    const priceRange = d.priceRange || '—';
+    
+    return `<div class="earn-item" onclick="openBySymbol('${sym}','${name.replace(/'/g, '')}')">
       <span class="earn-date">${dayStr}</span>
-      <span class="earn-ticker">${e.ticker}</span>
-      <span class="earn-co">${e.co}</span>
-      <span class="earn-time ${timeCls}">${e.time}</span>
+      <span class="earn-ticker">${sym || 'IPO'}</span>
+      <span class="earn-co" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+      <span class="earn-time earn-unk" style="font-size:10px;color:var(--dim)">${priceRange}</span>
     </div>`;
   }).join('');
+}
+
+async function fetchIPOCalendar() {
+  const el = document.getElementById('ipo-list');
+  try {
+    const url = `${MY_WORKER_URL}/?ipos=1`;
+    const res = await fetchWithTimeout(url, 8000);
+    if (res.ok && Array.isArray(res.data)) {
+      renderIPOCalendar(res.data);
+    } else {
+      if (el) el.innerHTML = '<div style="padding:14px 12px;text-align:center;font-size:11px;color:var(--dim)">IPO data unavailable.</div>';
+    }
+  } catch(e) {
+    console.warn('IPO calendar fetch failed:', e.message);
+    if (el) el.innerHTML = '<div style="padding:14px 12px;text-align:center;font-size:11px;color:var(--dim)">IPO data unavailable.</div>';
+  }
 }
 
 
@@ -3034,12 +4061,504 @@ function renderEarningsSnapshot() {
   buildSymNames();        // v2.8: build name map before first render
   renderCalendar();
   renderEquitySectors();
-  renderEarningsSnapshot(); // v2.8.6: earnings snapshot
+  // renderEarningsSnapshot() removed in Batch 1 // v2.8.6: earnings snapshot
   renderWatchlist();
   await Promise.all([doRefresh(),doNews()]);
   qT=setInterval(doRefresh,60000);
   nT=setInterval(doNews,120000);
 })();
+/* --- DCF SCRIPT START --- */
+const DCF_PANEL_HTML = `
+<div id="dcfBackdrop" class="dcf-backdrop" aria-hidden="true"></div>
+<div id="dcfPanel" class="dcf-panel" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Discounted Cash Flow">
+  <div class="dcf-head">
+    <div class="dcf-title">Discounted Cash Flow (DCF) Beta</div>
+    <button class="dcf-close" onclick="closeDCF()">✕</button>
+  </div>
+  <div class="dcf-body">
+    <div class="dcf-sidebar">
+      <div class="dcf-section">
+        <h3>Setup</h3>
+        <div class="dcf-field">
+          <label for="dcfSymbol">Supported symbol</label>
+          <select id="dcfSymbol"></select>
+        </div>
+        <div class="dcf-field">
+          <label for="dcfForecastYears">Forecast years</label>
+          <select id="dcfForecastYears">
+            <option value="5" selected>5 Years</option>
+            <option value="10">10 Years</option>
+          </select>
+        </div>
+        <div class="dcf-field">
+          <label for="dcfDiscountMode">Discount mode</label>
+          <select id="dcfDiscountMode">
+            <option value="auto" selected>Auto WACC</option>
+            <option value="manual">Manual Override</option>
+          </select>
+        </div>
+        <div class="dcf-actions">
+          <button class="dcf-btn primary" onclick="loadDCFData()">Load Data</button>
+          <button class="dcf-btn" onclick="calculateDCFAction()">Review and Adjust inputs and Calculate DCF</button>
+          <button class="dcf-btn" onclick="resetDCFToSource()">Reset to Source</button>
+        </div>
+      </div>
+      <div class="dcf-section">
+        <h3>Assumptions</h3>
+        <div class="dcf-grid">
+          <div class="dcf-field"><label for="dcfRevenueGrowthPct">Revenue Growth %</label><input id="dcfRevenueGrowthPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfEbitdaPct">EBITDA %</label><input id="dcfEbitdaPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfDepAmPct">D&A %</label><input id="dcfDepAmPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfEbitPct">EBIT %</label><input id="dcfEbitPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfCapexPct">Capex %</label><input id="dcfCapexPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfTaxRate">Tax Rate %</label><input id="dcfTaxRate" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfReceivablesPct">Receivables %</label><input id="dcfReceivablesPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfInventoriesPct">Inventories %</label><input id="dcfInventoriesPct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfPayablePct">Payables %</label><input id="dcfPayablePct" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfLongTermGrowthRate">Terminal Growth %</label><input id="dcfLongTermGrowthRate" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfCostOfDebt">Cost of Debt %</label><input id="dcfCostOfDebt" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfCostOfEquity">Cost of Equity %</label><input id="dcfCostOfEquity" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfMarketRiskPremium">Market Risk Premium %</label><input id="dcfMarketRiskPremium" type="number" step="0.01"></div>
+          <div class="dcf-field"><label for="dcfBeta">Beta</label><input id="dcfBeta" type="number" step="0.001"></div>
+          <div class="dcf-field"><label for="dcfRiskFreeRate">Risk Free Rate %</label><input id="dcfRiskFreeRate" type="number" step="0.01"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dcf-main">
+      <div class="dcf-cards">
+        <div class="dcf-card"><div class="dcf-card-label">Implied Fair Value</div><div id="dcfFairValue" class="dcf-card-value">—</div></div>
+        <div class="dcf-card"><div class="dcf-card-label">Current Price</div><div id="dcfCurrentPrice" class="dcf-card-value">—</div></div>
+        <div class="dcf-card"><div class="dcf-card-label">Upside / Downside</div><div id="dcfUpside" class="dcf-card-value">—</div></div>
+        <div class="dcf-card"><div class="dcf-card-label">WACC Used</div><div id="dcfWaccUsed" class="dcf-card-value">—</div></div>
+      </div>
+      <div class="dcf-section">
+        <h3>Model explanation</h3>
+        <div id="dcfExplain" class="dcf-explain">Select a supported symbol, review the assumptions, and run the model.</div>
+        <div class="dcf-note">Discounted Cash Flow (DCF) Beta — This feature is for educational and informational purposes only. Valuation outputs are model-based estimates that depend heavily on assumptions and external data, which may be incomplete or inaccurate, and should not be relied on as investment advice or a recommendation to buy or sell any security.</div>
+      </div>
+      <div class="dcf-section">
+        <h3>Loaded data</h3>
+        <div id="dcfLoadedData" class="dcf-explain">No data loaded.</div>
+      </div>
+      <div class="dcf-section">
+        <h3>Forecast summary</h3>
+        <div id="dcfForecastTableWrap" class="dcf-explain">No forecast yet.</div>
+      </div>
+    </div>
+  </div>
+</div>`;
+
+const DCF_SUPPORTED_SYMBOLS = ["AAPL","TSLA","AMZN","MSFT","NVDA","GOOGL","META","NFLX","JPM","V","BAC","PYPL","DIS","T","PFE","COST","INTC","KO","TGT","NKE","SPY","BA","BABA","XOM","WMT","GE","CSCO","VZ","JNJ","CVX","PLTR","SQ","SHOP","SBUX","SOFI","HOOD","RBLX","SNAP","AMD","UBER","FDX","ABBV","ETSY","MRNA","LMT","GM","F","LCID","CCL","DAL","UAL","AAL","TSM","SONY","ET","MRO","COIN","RIVN","RIOT","CPRX","VWO","SPYG","NOK","ROKU","VIAC","ATVI","BIDU","DOCU","ZM","PINS","TLRY","WBA","MGM","NIO","C","GS","WFC","ADBE","PEP","UNH","CARR","HCA","TWTR","BILI","SIRI","FUBO","RKT"];
+
+const MY_DCF_WORKER_URL = "https://meridian-proxy.navinmv1981.workers.dev";
+let dcfLoadedPayload = null;
+let dcfHasLoadedData = false;
+
+function ensureDCFPanelExists() {
+  if (document.getElementById("dcfPanel")) return;
+  document.body.insertAdjacentHTML("beforeend", DCF_PANEL_HTML);
+  const backdrop = document.getElementById("dcfBackdrop");
+  if (backdrop) backdrop.addEventListener("click", closeDCF);
+}
+
+function initDCFUI() {
+  ensureDCFPanelExists();
+  const sel = document.getElementById("dcfSymbol");
+  if (!sel || sel.options.length) return;
+  DCF_SUPPORTED_SYMBOLS.forEach(sym => {
+    const opt = document.createElement("option");
+    opt.value = sym; opt.textContent = sym; sel.appendChild(opt);
+  });
+  sel.value = "AAPL";
+}
+
+function bindDCFButton() {
+  const btn = document.getElementById("dcfTabBtn");
+  if (!btn || btn.dataset.dcfBound === "1") return;
+  btn.dataset.dcfBound = "1";
+  btn.addEventListener("click", (ev) => { ev.preventDefault(); openDCF(); });
+}
+
+function openDCF() {
+  initDCFUI();
+  const panel = document.getElementById("dcfPanel");
+  const backdrop = document.getElementById("dcfBackdrop");
+  if (!panel) return;
+  panel.classList.add("show");
+  panel.setAttribute("aria-hidden", "false");
+  if (backdrop) { backdrop.classList.add("show"); backdrop.setAttribute("aria-hidden", "false"); }
+  document.body.style.overflow = "hidden";
+}
+
+function closeDCF() {
+  const panel = document.getElementById("dcfPanel");
+  const backdrop = document.getElementById("dcfBackdrop");
+  if (!panel) return;
+  panel.classList.remove("show");
+  panel.setAttribute("aria-hidden", "true");
+  if (backdrop) { backdrop.classList.remove("show"); backdrop.setAttribute("aria-hidden", "true"); }
+  document.body.style.overflow = "";
+}
+
+function resetDCFInputs() {
+  const defaults = {
+    dcfRevenueGrowthPct: "10.00", dcfEbitdaPct: "", dcfDepAmPct: "", dcfEbitPct: "", dcfCapexPct: "",
+    dcfTaxRate: "15.00", dcfReceivablesPct: "", dcfInventoriesPct: "", dcfPayablePct: "",
+    dcfLongTermGrowthRate: "4.00", dcfCostOfDebt: "3.64", dcfCostOfEquity: "9.51",
+    dcfMarketRiskPremium: "4.72", dcfBeta: "", dcfRiskFreeRate: "3.64"
+  };
+  Object.entries(defaults).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  });
+}
+
+function fmtMoney(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
+}
+
+function fmtPct(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return `${n.toFixed(2)}%`;
+}
+
+/**
+ * FETCH: Updated to use YOUR worker logic
+ */
+async function fetchDCF(symbol) {
+  const url = `${MY_DCF_WORKER_URL}/?dcf=${encodeURIComponent(symbol)}`;
+  const resp = await fetch(url);
+  const data = await resp.json();
+  
+  if (!resp.ok || data.error) throw new Error(data.error || "Failed to load data");
+  
+  // YOUR WORKER returns: { symbol, revenue, sharesOutstanding, assumptions: {...} }
+  // We check these exact keys:
+  if (!data.revenue || !data.sharesOutstanding) {
+  console.error("DCF URL:", url);
+  console.error("Worker Response Data (JSON):", JSON.stringify(data, null, 2));
+
+  const likelyQuotaHit =
+    data.currentPrice == null &&
+    data.marketCap == null &&
+    data.revenue == null &&
+    data.sharesOutstanding == null;
+
+  if (likelyQuotaHit) {
+    throw new Error("FMP data unavailable — likely daily API limit exceeded. Please wait for reset or reduce calls.");
+  }
+
+  throw new Error(`Missing Revenue/Shares for ${symbol}. Check Worker Logs.`);
+
+  }
+  
+  return data;
+}
+
+function valOrPct(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "";
+  return n.toFixed(2);
+}
+
+function fillDCFInputs(payload) {
+  const a = payload.assumptions || {};
+  document.getElementById("dcfRevenueGrowthPct").value = valOrPct(a.revenueGrowthPct);
+  document.getElementById("dcfEbitdaPct").value = valOrPct(a.ebitdaPct);
+  document.getElementById("dcfDepAmPct").value = valOrPct(a.depreciationAndAmortizationPct);
+  document.getElementById("dcfEbitPct").value = valOrPct(a.ebitPct);
+  document.getElementById("dcfCapexPct").value = valOrPct(a.capitalExpenditurePct);
+  document.getElementById("dcfTaxRate").value = valOrPct(a.taxRate);
+  document.getElementById("dcfReceivablesPct").value = valOrPct(a.receivablesPct);
+  document.getElementById("dcfInventoriesPct").value = valOrPct(a.inventoriesPct);
+  document.getElementById("dcfPayablePct").value = valOrPct(a.payablePct);
+  document.getElementById("dcfLongTermGrowthRate").value = valOrPct(a.longTermGrowthRate);
+  document.getElementById("dcfCostOfDebt").value = valOrPct(a.costOfDebt);
+  document.getElementById("dcfCostOfEquity").value = valOrPct(a.costOfEquity);
+  document.getElementById("dcfMarketRiskPremium").value = valOrPct(a.marketRiskPremium);
+  document.getElementById("dcfBeta").value = a.beta ? a.beta.toFixed(3) : "1.000";
+  document.getElementById("dcfRiskFreeRate").value = valOrPct(a.riskFreeRate);
+  document.getElementById("dcfCurrentPrice").textContent = fmtMoney(payload.currentPrice);
+}
+
+function clearDCFValuationOutput() {
+  document.getElementById("dcfFairValue").textContent = "—";
+  document.getElementById("dcfCurrentPrice").textContent = "—";
+  document.getElementById("dcfUpside").textContent = "—";
+  document.getElementById("dcfWaccUsed").textContent = "—";
+  document.getElementById("dcfForecastTableWrap").textContent = "No forecast yet.";
+}
+
+function fmtLargeNumber(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
+}
+
+function safeText(v) {
+  return v == null || v === "" ? "—" : String(v);
+}
+
+function renderDCFLoadedData(payload) {
+  const el = document.getElementById("dcfLoadedData");
+  if (!el) return;
+  const symbol = safeText(payload?.symbol);
+  const companyName = safeText(payload?.companyName || payload?.name);
+  const currentPrice = fmtMoney(payload?.currentPrice);
+  const marketCap = fmtMoney(payload?.marketCap);
+  const sharesOutstanding = fmtLargeNumber(payload?.sharesOutstanding);
+  const revenue = fmtLargeNumber(payload?.revenue);
+  const cash = fmtMoney(payload?.assumptions?.cash);
+  const debt = fmtMoney(payload?.assumptions?.totalDebt);
+  const sharesSource = safeText(payload?.sharesSource);
+  const lastUpdated = safeText(payload?.lastUpdated);
+
+  el.innerHTML = `
+    <div><b>Symbol:</b> ${symbol}</div>
+    <div><b>Company Name:</b> ${companyName}</div>
+    <div><b>Current Price:</b> ${currentPrice}</div>
+    <div><b>Market Cap:</b> ${marketCap}</div>
+    <div><b>Shares Outstanding:</b> ${sharesOutstanding}</div>
+    <div><b>Revenue:</b> ${revenue}</div>
+    <div><b>Cash:</b> ${cash}</div>
+    <div><b>Debt:</b> ${debt}</div>
+    <div><b>Shares Source:</b> ${sharesSource}</div>
+    <div><b>Last Updated:</b> ${lastUpdated}</div>
+  `;
+}
+
+function getDCFInputs() {
+  return {
+    forecastYears: Number(document.getElementById("dcfForecastYears").value || 5),
+    discountMode: document.getElementById("dcfDiscountMode").value,
+    revenueGrowthPct: Number(document.getElementById("dcfRevenueGrowthPct").value || 0),
+    ebitdaPct: Number(document.getElementById("dcfEbitdaPct").value || 0),
+    depreciationAndAmortizationPct: Number(document.getElementById("dcfDepAmPct").value || 0),
+    ebitPct: Number(document.getElementById("dcfEbitPct").value || 0),
+    capitalExpenditurePct: Number(document.getElementById("dcfCapexPct").value || 0),
+    taxRate: Number(document.getElementById("dcfTaxRate").value || 0),
+    receivablesPct: Number(document.getElementById("dcfReceivablesPct").value || 0),
+    inventoriesPct: Number(document.getElementById("dcfInventoriesPct").value || 0),
+    payablePct: Number(document.getElementById("dcfPayablePct").value || 0),
+    longTermGrowthRate: Number(document.getElementById("dcfLongTermGrowthRate").value || 0),
+    costOfDebt: Number(document.getElementById("dcfCostOfDebt").value || 0),
+    costOfEquity: Number(document.getElementById("dcfCostOfEquity").value || 0),
+    marketRiskPremium: Number(document.getElementById("dcfMarketRiskPremium").value || 0),
+    beta: Number(document.getElementById("dcfBeta").value || 1),
+    riskFreeRate: Number(document.getElementById("dcfRiskFreeRate").value || 0)
+  };
+}
+
+function calculateWacc(inputs, payload) {
+  if (inputs.discountMode === "manual") return (inputs.costOfEquity || 9.5) / 100;
+  
+  const marketCap = Number(payload.marketCap || 0);
+  const totalDebt = Number(payload.assumptions?.totalDebt || 0);
+  const taxRate = inputs.taxRate / 100;
+  const costOfDebt = (inputs.costOfDebt || 3.64) / 100;
+  
+  // CAPM for Cost of Equity
+  const riskFree = inputs.riskFreeRate / 100;
+  const mrp = inputs.marketRiskPremium / 100;
+  const costOfEquity = riskFree + (inputs.beta * mrp);
+  
+  const totalCap = marketCap + totalDebt;
+  if (totalCap <= 0) return 0.095; // default fallback 9.5%
+  
+  const weightEquity = marketCap / totalCap;
+  const weightDebt = totalDebt / totalCap;
+  
+  return (weightEquity * costOfEquity) + (weightDebt * costOfDebt * (1 - taxRate));
+}
+
+function calculateDCF(payload, inputs) {
+  const revenue0 = Number(payload.revenue || 0);
+  const shares = Number(payload.sharesOutstanding || 0);
+  const cash = Number(payload.assumptions?.cash || 0);
+  const debt = Number(payload.assumptions?.totalDebt || 0);
+
+  const wacc = calculateWacc(inputs, payload);
+  const growth = inputs.revenueGrowthPct / 100;
+  const ebitMargin = inputs.ebitPct / 100;
+  const taxRate = inputs.taxRate / 100;
+  const daPct = inputs.depreciationAndAmortizationPct / 100;
+  const capexPct = inputs.capitalExpenditurePct / 100;
+  const nwcp = (inputs.receivablesPct + inputs.inventoriesPct - inputs.payablePct) / 100;
+  const terminalGrowth = inputs.longTermGrowthRate / 100;
+
+  if (wacc <= terminalGrowth) throw new Error("WACC must be higher than terminal growth rate.");
+
+  let revPrev = revenue0;
+  let nwcPrev = revenue0 * nwcp;
+  let pvFcffSum = 0;
+  const forecast = [];
+
+  for (let y = 1; y <= inputs.forecastYears; y++) {
+    const revenue = revPrev * (1 + growth);
+    const ebit = revenue * ebitMargin;
+    const nopat = ebit * (1 - taxRate);
+    const da = revenue * daPct;
+    const capex = revenue * capexPct;
+    const nwc = revenue * nwcp;
+    const deltaNwc = nwc - nwcPrev;
+    const fcff = nopat + da - capex - deltaNwc;
+    const pvFcff = fcff / Math.pow(1 + wacc, y);
+
+    forecast.push({ year: y, revenue, fcff, pvFcff });
+    pvFcffSum += pvFcff;
+    revPrev = revenue;
+    nwcPrev = nwc;
+  }
+
+  const finalFcff = forecast[forecast.length - 1].fcff;
+  const terminalValue = (finalFcff * (1 + terminalGrowth)) / (wacc - terminalGrowth);
+  const pvTV = terminalValue / Math.pow(1 + wacc, inputs.forecastYears);
+  const ev = pvFcffSum + pvTV;
+  const equityValue = ev + cash - debt;
+  const fairValue = equityValue / shares;
+
+  return { 
+    wacc, forecast, pvTerminalValue: pvTV, enterpriseValue: ev, 
+    equityValue, fairValuePerShare: fairValue, 
+    currentPrice: Number(payload.currentPrice || 0),
+    upsidePct: payload.currentPrice ? ((fairValue / payload.currentPrice) - 1) * 100 : 0
+  };
+}
+
+function renderDCFResult(result) {
+  document.getElementById("dcfFairValue").textContent = fmtMoney(result.fairValuePerShare);
+  document.getElementById("dcfCurrentPrice").textContent = fmtMoney(result.currentPrice);
+  document.getElementById("dcfUpside").textContent = fmtPct(result.upsidePct);
+  document.getElementById("dcfWaccUsed").textContent = fmtPct(result.wacc * 100);
+
+  const rows = result.forecast.map(r => `
+    <tr>
+      <td style="padding:8px;border-bottom:1px solid #eee">Year ${r.year}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid #eee">${fmtMoney(r.revenue)}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid #eee">${fmtMoney(r.fcff)}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid #eee">${fmtMoney(r.pvFcff)}</td>
+    </tr>`).join("");
+
+  document.getElementById("dcfForecastTableWrap").innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:11px">
+      <thead><tr style="background:#f5f5f5">
+        <th style="text-align:left;padding:8px">Year</th><th style="text-align:right;padding:8px">Revenue</th>
+        <th style="text-align:right;padding:8px">FCFF</th><th style="text-align:right;padding:8px">PV</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr style="border-top:2px solid #ddd"><td colspan="3" style="text-align:right;padding:4px"><b>Enterprise Value</b></td><td style="text-align:right">${fmtMoney(result.enterpriseValue)}</td></tr>
+        <tr><td colspan="3" style="text-align:right;padding:4px"><b>Equity Value</b></td><td style="text-align:right">${fmtMoney(result.equityValue)}</td></tr>
+      </tfoot>
+    </table>`;
+}
+
+async function runDCF() {
+  const explain = document.getElementById("dcfExplain");
+  const symbol = document.getElementById("dcfSymbol").value;
+  try {
+    explain.textContent = `Loading data for ${symbol}...`;
+    const payload = await fetchDCF(symbol);
+    dcfLoadedPayload = payload;
+    dcfHasLoadedData = true;
+    fillDCFInputs(payload);
+    renderDCFLoadedData(payload);
+    clearDCFValuationOutput();
+    explain.textContent = `Data loaded for ${symbol}. Review assumptions, then click Calculate DCF.`;
+  } catch (err) {
+    dcfLoadedPayload = null;
+    dcfHasLoadedData = false;
+    explain.textContent = `Error: ${err.message}`;
+    console.error(err);
+  }
+}
+
+async function loadDCFData() {
+  return runDCF();
+}
+
+function calculateDCFAction() {
+  const explain = document.getElementById("dcfExplain");
+  if (!dcfLoadedPayload || !dcfHasLoadedData) {
+    explain.textContent = "Load data first.";
+    return;
+  }
+  try {
+    const inputs = getDCFInputs();
+    const result = calculateDCF(dcfLoadedPayload, inputs);
+    renderDCFResult(result);
+    explain.textContent = `${safeText(dcfLoadedPayload.symbol)} valuation complete. Based on a ${inputs.forecastYears}-year model.`;
+  } catch (err) {
+    explain.textContent = `Error: ${err.message}`;
+    console.error(err);
+  }
+}
+
+function resetDCFToSource() {
+  const explain = document.getElementById("dcfExplain");
+  if (dcfLoadedPayload && dcfHasLoadedData) {
+    fillDCFInputs(dcfLoadedPayload);
+    explain.textContent = `Assumptions reset to loaded source data for ${safeText(dcfLoadedPayload.symbol)}.`;
+    return;
+  }
+  resetDCFInputs();
+  explain.textContent = "Assumptions reset to defaults. Load data to source assumptions.";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  bindDCFButton();
+  initDCFUI();
+});
+/* --- DCF SCRIPT END --- */
+
+// Keep inline onclick handlers stable across refactors.
+window.openDCF = openDCF;
+window.closeDCF = closeDCF;
+window.resetDCFInputs = resetDCFInputs;
+window.loadDCFData = loadDCFData;
+window.calculateDCFAction = calculateDCFAction;
+window.resetDCFToSource = resetDCFToSource;
+window.bindDCFButton = bindDCFButton;
 </script>
+
+<div id="holdingsModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9999; background:rgba(0,0,0,0.85); flex-direction:column; font-family:var(--sans);">
+  <!-- Header bar -->
+  <div id="holdingsModalHeader" style="display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:var(--bg2); border-bottom:1px solid var(--border); flex-shrink:0;">
+    <div>
+      <span id="holdingsModalTitle" style="font-size:1.1rem; font-weight:600; color:var(--text);">Holdings</span>
+      <span id="holdingsModalMeta" style="font-size:0.8rem; color:var(--dim); margin-left:12px;"></span>
+    </div>
+    <!-- Sort controls -->
+    <div style="display:flex; gap:10px; align-items:center;">
+      <label style="color:var(--dim); font-size:0.8rem;">Sort by:</label>
+      <select id="holdingsSortSelect" style="background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:4px 8px; font-size:0.8rem; font-family:var(--sans);">
+        <option value="value">Value (largest first)</option>
+        <option value="shares">Shares (largest first)</option>
+        <option value="name">Company Name (A–Z)</option>
+      </select>
+      <input id="holdingsSearch" type="text" placeholder="Filter by name or CUSIP..." style="background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:4px 10px; font-size:0.8rem; width:200px; font-family:var(--sans);">
+      <button onclick="closeHoldingsModal()" style="background:var(--red); color:var(--text); border:none; border-radius:4px; padding:6px 14px; cursor:pointer; font-size:0.85rem; font-family:var(--sans);">✕ Close</button>
+    </div>
+  </div>
+  <!-- Table container -->
+  <div style="flex:1; overflow-y:auto; padding:0 24px 24px;">
+    <table id="holdingsTable" style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-top:0;">
+      <thead>
+        <tr style="position:sticky; top:0; background:var(--bg2); z-index:10; font-family:var(--sans);">
+          <th style="padding:10px 8px; text-align:right; color:var(--dim); width:45px; border-bottom:1px solid var(--border);">#</th>
+          <th style="padding:10px 8px; text-align:left; color:var(--dim); border-bottom:1px solid var(--border);">Company</th>
+          <th style="padding:10px 8px; text-align:left; color:var(--dim); border-bottom:1px solid var(--border); width:100px;">CUSIP</th>
+          <th style="padding:10px 8px; text-align:right; color:var(--dim); border-bottom:1px solid var(--border); width:160px;">Market Value</th>
+          <th style="padding:10px 8px; text-align:right; color:var(--dim); border-bottom:1px solid var(--border); width:120px;">Shares</th>
+          <th style="padding:10px 8px; text-align:center; color:var(--dim); border-bottom:1px solid var(--border); width:50px;">Type</th>
+        </tr>
+      </thead>
+      <tbody id="holdingsTableBody"></tbody>
+    </table>
+  </div>
+</div>
 </body>
 </html>
