@@ -1,0 +1,13 @@
+name = "meridian-holdings"
+main = "src/holdings-pipeline.js"
+compatibility_date = "2024-01-01"
+account_id = "ea36070477560935a68ad9110a2fd40b"
+
+# HOLD lifted 2026-06-14 — resuming at original schedule
+[triggers]
+crons = ["0 */2 * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meridian-etf"
+database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
