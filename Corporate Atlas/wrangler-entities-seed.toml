@@ -7,5 +7,7 @@ binding = "DB"
 database_name = "meridian-etf"
 database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
 
+# HOLD 2026-07-04 — cron frozen for budget conservation during Sprint 2 13F seeding.
+# Original schedule preserved here for re-enable: crons = ["0 3 * * *"]
 [triggers]
-crons = ["0 3 * * *"]
+crons = []

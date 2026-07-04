@@ -9,5 +9,9 @@ database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
 
 # HOLD lifted 2026-06-17 18:0X BST — root cause fixed (entities-seed.js
 # queue population + Phase 2 type guard), full fund data revert verified
+# HOLD 2026-07-03 — cron frozen. Commenting out [triggers] alone does NOT
+# clear existing Cloudflare schedules; crons = [] below is what actually
+# disables them. Original schedule preserved here for easy re-enable:
+# crons = ["*/30 * * * *", "50 * * * *"]
 [triggers]
-crons = ["*/30 * * * *", "50 * * * *"]
+crons = []
