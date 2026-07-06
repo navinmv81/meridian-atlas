@@ -1,0 +1,12 @@
+name = "meridian-filings"
+main = "src/worker-filings.js"
+compatibility_date = "2024-01-01"
+account_id = "ea36070477560935a68ad9110a2fd40b"
+
+# D1 binding required — S2.10 will write filing metadata into meridian-etf
+[[d1_databases]]
+binding = "DB"
+database_name = "meridian-etf"
+database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
+
+# No crons — scheduled ingestion is out of scope for this Worker shell

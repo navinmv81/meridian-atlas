@@ -1,16 +1,19 @@
-// Dependencies this module needs from the global scope: MY_WORKER_URL, escapeRdHtml
+// Dependencies this module needs from the global scope: escapeRdHtml
+// MY_WORKER_URL is intentionally NOT used here — 13F routes now have dedicated Workers.
+const WORKER_13F_URL = "https://meridian-13f.navinmv1981.workers.dev";
+const WORKER_FILINGS_URL = "https://meridian-filings.navinmv1981.workers.dev";
 
 let _holdingsData = [];
 
 async function searchManager(name) {
-  const resp = await fetch(`${MY_WORKER_URL}/api/13f-search?manager=${encodeURIComponent(name)}`);
+  const resp = await fetch(`${WORKER_13F_URL}/api/13f-search?manager=${encodeURIComponent(name)}`);
   const data = await resp.json();
   if (!resp.ok) return { ok: false, error: data.error || 'Search failed' };
   return { ok: true, cik: data.cik, name: data.name, ticker: data.ticker };
 }
 
 async function load13FFilings(cik) {
-  const resp = await fetch(`${MY_WORKER_URL}/api/13f-filings?cik=${encodeURIComponent(cik)}`);
+  const resp = await fetch(`${WORKER_13F_URL}/api/13f-filings?cik=${encodeURIComponent(cik)}`);
   const data = await resp.json();
   if (!resp.ok) return { ok: false, error: data.error || 'Failed to load 13F filings' };
   return { ok: true, cik: data.cik, name: data.name, filings: data.filings };
@@ -26,7 +29,7 @@ async function fetch13FHoldings(filingId) {
     const indexUrl = `${baseFolder}${accWithDash}-index.htm`;
 
     // STEP 2 — Fetch index.htm and parse it to find the InfoTable XML filename
-    const proxyIndexUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(indexUrl)}`;
+    const proxyIndexUrl = `${WORKER_FILINGS_URL}/api/filing-doc?url=${encodeURIComponent(indexUrl)}`;
     const hRes = await fetch(proxyIndexUrl);
     if (!hRes.ok) throw new Error("Could not fetch filing index");
     
@@ -67,7 +70,7 @@ async function fetch13FHoldings(filingId) {
     }
 
     // STEP 3 — Fetch the InfoTable XML and parse holdings
-    const proxyDocUrl = `${MY_WORKER_URL}/?url=${encodeURIComponent(docUrl)}`;
+    const proxyDocUrl = `${WORKER_FILINGS_URL}/api/filing-doc?url=${encodeURIComponent(docUrl)}`;
     const xmlRes = await fetch(proxyDocUrl);
     if (!xmlRes.ok) throw new Error("Could not fetch InfoTable XML");
     
@@ -249,3 +252,226 @@ window.loadFilingsForCIK = loadFilingsForCIK;
 window.closeHoldingsModal = closeHoldingsModal;
 window.searchManager = searchManager;
 window.load13FFilings = load13FFilings;
+
+// ── Manager Page (S2.19) ─────────────────────────────────────────────────────
+// Sections: identity header, filing history (last 4 quarters), latest
+// holdings (top 25 + show-all), navigation into entity pages via
+// showEntityOverlay() from ma-entities.js.
+
+let _mgrHoldingsData = [];
+let _mgrHoldingsShowAll = false;
+let _mgrHoldingsMeta = { reportPeriod: '', filedDate: '' };
+let _mgrAliasesData = [];
+let _mgrAliasesShowAll = false;
+
+function mgr_qtrLabel(reportPeriod) {
+  const d = new Date(String(reportPeriod || '') + 'T12:00:00Z');
+  if (isNaN(d.getTime())) return reportPeriod || '';
+  return 'Q' + (Math.floor(d.getUTCMonth() / 3) + 1) + ' ' + d.getUTCFullYear();
+}
+
+async function mgr_fetchManagerData(cik) {
+  const resp = await fetch(`${WORKER_13F_URL}/api/13f-manager?cik=${encodeURIComponent(cik)}`);
+  const data = await resp.json();
+  if (!resp.ok) return { ok: false, error: data.error || 'Failed to load manager data' };
+  return { ok: true, ...data };
+}
+
+async function mgr_fetchHoldings(cik, accessionNumber) {
+  const resp = await fetch(`${WORKER_13F_URL}/api/13f-manager-holdings?cik=${encodeURIComponent(cik)}&accession_number=${encodeURIComponent(accessionNumber)}`);
+  const data = await resp.json();
+  if (!resp.ok) return { ok: false, error: data.error || 'Failed to load holdings' };
+  return { ok: true, ...data };
+}
+
+function mgr_injectPanel() {
+  if (document.getElementById('mgr-page-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'mgr-page-overlay';
+  overlay.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: var(--bg, #0f1117); z-index: 2000; overflow-y: auto; display: none;
+  `;
+  document.body.appendChild(overlay);
+}
+
+function mgr_renderShell(bodyHtml) {
+  return `
+    <div style="padding:32px; max-width:1000px; margin:0 auto;">
+      <button onclick="mgr_closeManagerPage()" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:0.9em;margin-bottom:24px;display:block;">← Close</button>
+      ${bodyHtml}
+    </div>`;
+}
+
+function mgr_openManagerPage(cik) {
+  mgr_injectPanel();
+  const overlay = document.getElementById('mgr-page-overlay');
+  overlay.style.display = 'block';
+  overlay.innerHTML = mgr_renderShell('<div class="rd-loading"><div class="rd-spinner"></div><br>Loading manager…</div>');
+  document.body.style.overflow = 'hidden';
+  mgr_loadManager(cik);
+}
+
+function mgr_closeManagerPage() {
+  const overlay = document.getElementById('mgr-page-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function mgr_loadManager(cik) {
+  const overlay = document.getElementById('mgr-page-overlay');
+  if (!overlay) return;
+
+  const result = await mgr_fetchManagerData(cik);
+  if (!result.ok) {
+    overlay.innerHTML = mgr_renderShell(`<div class="rd-none" style="margin-top:30px">${escapeRdHtml(result.error)}</div>`);
+    return;
+  }
+
+  const filings = result.filings || [];
+  if (!filings.length) {
+    overlay.innerHTML = mgr_renderShell(
+      mgr_renderIdentityHeader(result) +
+      '<div class="rd-none" style="margin-top:20px">No 13F filings found for this manager</div>'
+    );
+    return;
+  }
+
+  const latest = result.latest_filing || filings[0];
+  const isNT = String(latest.amendment_type || '').startsWith('13F-NT');
+
+  let html = mgr_renderIdentityHeader(result) + mgr_renderFilingHistory(filings);
+
+  if (isNT) {
+    html += '<div class="rd-none" style="margin-top:20px">This manager filed 13F-NT — no holdings reported for this period</div>';
+    overlay.innerHTML = mgr_renderShell(html);
+    return;
+  }
+
+  html += '<div id="mgr-holdings-section" style="margin-top:20px"><div class="rd-loading"><div class="rd-spinner"></div><br>Loading holdings…</div></div>';
+  overlay.innerHTML = mgr_renderShell(html);
+
+  mgr_loadHoldings(result.cik, latest.accession_number, latest.report_period, latest.filing_date);
+}
+
+function mgr_renderIdentityHeader(data) {
+  const name = data.manager_name || ('CIK ' + data.cik);
+  _mgrAliasesData = data.aliases || [];
+  _mgrAliasesShowAll = false;
+  const aliasBlock = _mgrAliasesData.length
+    ? `<div id="mgr-aliases-line" style="margin-top:8px;font-size:11px;color:var(--dim)">${mgr_renderAliasesLine()}</div>`
+    : '';
+  return `
+    <div style="padding:18px 20px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:16px">
+      <h2 style="margin:0 0 6px;font-size:17px;font-weight:700;color:var(--text)">${escapeRdHtml(name)}</h2>
+      <div style="font-size:11px;color:var(--text2)">CIK ${escapeRdHtml(String(data.cik))}${data.normalized_name ? ' · ' + escapeRdHtml(data.normalized_name) : ''}</div>
+      ${aliasBlock}
+    </div>`;
+}
+
+function mgr_renderAliasesLine() {
+  const visible = _mgrAliasesShowAll ? _mgrAliasesData : _mgrAliasesData.slice(0, 5);
+  const remaining = _mgrAliasesData.length - visible.length;
+  const moreLink = remaining > 0
+    ? ` <span style="cursor:pointer;color:var(--blue)" onclick="mgr_showAllAliases()">+${remaining} more</span>`
+    : '';
+  return `Also known as: ${visible.map(a => escapeRdHtml(a.alias)).join(', ')}${moreLink}`;
+}
+
+function mgr_showAllAliases() {
+  _mgrAliasesShowAll = true;
+  const el = document.getElementById('mgr-aliases-line');
+  if (el) el.innerHTML = mgr_renderAliasesLine();
+}
+
+function mgr_renderFilingHistory(filings) {
+  const mostRecentFiled = (filings[0] && filings[0].filing_date) || '';
+  const rows = filings.map(f => `
+    <tr>
+      <td>${escapeRdHtml(mgr_qtrLabel(f.report_period))}</td>
+      <td style="color:var(--dim)">${escapeRdHtml(f.filing_date || '')}</td>
+      <td><span class="res-badge">${escapeRdHtml(f.amendment_type || '')}</span></td>
+      <td style="text-align:right">${f.entry_total != null ? Number(f.entry_total).toLocaleString() : '—'}</td>
+      <td style="text-align:right">${f.value_total != null ? '$' + Number(f.value_total).toLocaleString() : '—'}</td>
+    </tr>`).join('');
+
+  return `
+    <div style="margin-bottom:8px;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim)">Filing History</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Filing data as of ${escapeRdHtml(mostRecentFiled)}</div>
+    <table class="res-table">
+      <thead><tr><th>Period</th><th>Filed</th><th>Type</th><th style="text-align:right">Entries</th><th style="text-align:right">Value</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+async function mgr_loadHoldings(cik, accessionNumber, reportPeriod, filedDate) {
+  const section = document.getElementById('mgr-holdings-section');
+  if (!section) return;
+
+  const result = await mgr_fetchHoldings(cik, accessionNumber);
+  if (!result.ok) {
+    section.innerHTML = `<div class="rd-none">${escapeRdHtml(result.error)}</div>`;
+    return;
+  }
+
+  _mgrHoldingsData = (result.holdings || []).slice().sort((a, b) => (b.value || 0) - (a.value || 0));
+  _mgrHoldingsShowAll = false;
+  _mgrHoldingsMeta = { reportPeriod, filedDate };
+  section.innerHTML = mgr_renderHoldingsSection();
+}
+
+function mgr_renderHoldingsSection() {
+  const { reportPeriod, filedDate } = _mgrHoldingsMeta;
+  const total = _mgrHoldingsData.length;
+  const visible = _mgrHoldingsShowAll ? _mgrHoldingsData : _mgrHoldingsData.slice(0, 25);
+
+  const rows = visible.map(h => {
+    const clickable = h.entity_id != null;
+    const trOpen = clickable
+      ? `<tr style="cursor:pointer" onclick="mgr_openEntity(${h.entity_id})">`
+      : `<tr>`;
+    const nameCell = clickable
+      ? `<span style="color:var(--blue)">${escapeRdHtml(h.issuer_name || '—')}</span>`
+      : `<span>${escapeRdHtml(h.issuer_name || '—')}</span>`;
+    return `
+      ${trOpen}
+        <td>${nameCell}</td>
+        <td style="font-family:var(--mono);font-size:0.8rem;color:var(--dim)">${escapeRdHtml(h.cusip || '—')}</td>
+        <td style="text-align:right">${h.value != null ? '$' + Number(h.value).toLocaleString() : '—'}</td>
+        <td style="text-align:right">${h.shares != null ? Number(h.shares).toLocaleString() : '—'}</td>
+        <td style="text-align:center">${escapeRdHtml(h.put_call || '—')}</td>
+      </tr>`;
+  }).join('');
+
+  const showAllBtn = (!_mgrHoldingsShowAll && total > 25)
+    ? `<button class="h-btn" onclick="mgr_showAllHoldings()" style="margin-top:10px">Show all ${total} holdings</button>`
+    : '';
+
+  return `
+    <div style="margin-bottom:8px;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim)">Latest Holdings</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Holdings as of ${escapeRdHtml(mgr_qtrLabel(reportPeriod))}, filed ${escapeRdHtml(filedDate || '')}</div>
+    <table class="res-table">
+      <thead><tr><th>Issuer</th><th>CUSIP</th><th style="text-align:right">Value</th><th style="text-align:right">Shares</th><th style="text-align:center">Type</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${showAllBtn}`;
+}
+
+function mgr_showAllHoldings() {
+  _mgrHoldingsShowAll = true;
+  const section = document.getElementById('mgr-holdings-section');
+  if (!section) return;
+  section.innerHTML = mgr_renderHoldingsSection();
+}
+
+function mgr_openEntity(entityId) {
+  if (entityId == null) return;
+  if (typeof showEntityOverlay === 'function') showEntityOverlay(entityId, 'Manager');
+}
+
+// Explicit window bindings — Manager page
+window.mgr_openManagerPage = mgr_openManagerPage;
+window.mgr_closeManagerPage = mgr_closeManagerPage;
+window.mgr_showAllHoldings = mgr_showAllHoldings;
+window.mgr_openEntity = mgr_openEntity;
+window.mgr_showAllAliases = mgr_showAllAliases;

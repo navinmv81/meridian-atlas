@@ -5,3 +5,7 @@ node_modules/
 *.sqlite-shm
 *.sqlite-wal
 *.zip
+*.db
+*.db-shm
+*.db-wal
+*.csv

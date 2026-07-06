@@ -1021,7 +1021,9 @@ function restoreEntityPreviousView() {
 
 // ── Entity overlay — shown on top of ETF Holdings panel ──────────────────────
 
-async function showEntityOverlay(entityId) {
+async function showEntityOverlay(entityId, backLabel) {
+  backLabel = backLabel || 'ETF Holdings';
+
   // Remove any existing overlay first
   const existing = document.getElementById('entity-overlay');
   if (existing) existing.remove();
@@ -1046,7 +1048,7 @@ async function showEntityOverlay(entityId) {
         style="background:none;border:none;color:#4DC8C8;
                cursor:pointer;font-size:0.9em;margin-bottom:24px;
                display:block;">
-        ← Back to ETF Holdings
+        ← Back to ${backLabel}
       </button>
       <div style="color:#888;padding:32px;">Loading entity...</div>
     </div>`;
@@ -1058,7 +1060,7 @@ async function showEntityOverlay(entityId) {
     const data = await res.json();
     const entity = data.entity || data;
 
-    overlay.innerHTML = _buildEntityDetailHTML(entity, 'ETF Holdings', 'closeEntityOverlay()');
+    overlay.innerHTML = _buildEntityDetailHTML(entity, backLabel, 'closeEntityOverlay()');
 
     const backBtn = overlay.querySelector('.entity-overlay-back');
     if (backBtn) {
@@ -1074,7 +1076,7 @@ async function showEntityOverlay(entityId) {
           style="background:none;border:none;color:#4DC8C8;
                  cursor:pointer;font-size:0.9em;margin-bottom:24px;
                  display:block;">
-          ← Back to ETF Holdings
+          ← Back to ${backLabel}
         </button>
         <div style="color:#888;">Entity data unavailable.</div>
       </div>`;
