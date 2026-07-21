@@ -358,7 +358,78 @@ async function handleIssuerPanels(env, entityId) {
     console.error('[entities-api] issuer-panels filings error:', e.message);
   }
 
-  return json({ ownership, financials, events, filings });
+  // overlap: ETF exposure + 13F institutional ownership shown side by side.
+  // NOTE: manager_count is issuer-wide (distinct 13F filers holding this
+  // issuer's stock at the latest report_period), NOT a per-ETF intersection —
+  // there's no data linking specific managers to specific ETF share holdings,
+  // so the same figure is attached to every ETF row, matching the panel spec's
+  // "manager count alongside each ETF" as a co-display, not a true join.
+  //
+  // entity_exposure_monthly has no fund_name/ticker/weight_pct/position_value
+  // columns (confirmed against live schema) — fund identity comes via
+  // fund_entity_link + entity_master, the same path handleEtfExposure already
+  // uses. weight_sum is already percentage-scaled (e.g. 13.9, not 0.139).
+  // There's no reliable dollar position value in this schema; aum_weighted is
+  // frequently NULL, so it's passed through as-is rather than backfilled.
+  let overlap = {
+    etfs: [],
+    etf_count: 0,
+    manager_count: 0,
+    latest_report_month: null,
+    latest_report_period: null
+  };
+  try {
+    const monthRow = await env.DB.prepare(
+      `SELECT MAX(report_month) m FROM entity_exposure_monthly WHERE entity_id = ?`
+    ).bind(id).first();
+    const latestMonth = monthRow?.m ?? null;
+
+    const periodRow = await env.DB.prepare(
+      `SELECT MAX(report_period) p FROM managerissuerpositionquarterly WHERE entity_id = ?`
+    ).bind(id).first();
+    const latestPeriod = periodRow?.p ?? null;
+
+    let etfs = [];
+    let etfCount = 0;
+    if (latestMonth) {
+      const etfRes = await env.DB.prepare(`
+        SELECT fel.etf_symbol AS ticker, em_fund.name AS fund_name,
+               eem.weight_sum AS weight_pct, eem.aum_weighted
+        FROM entity_exposure_monthly eem
+        JOIN fund_entity_link fel ON eem.holder_entity_id = fel.entity_id
+        LEFT JOIN entity_master em_fund ON fel.entity_id = em_fund.entity_id
+        WHERE eem.entity_id = ? AND eem.report_month = ?
+        ORDER BY eem.weight_sum DESC
+        LIMIT 10
+      `).bind(id, latestMonth).all();
+      etfs = etfRes.results ?? [];
+
+      const etfCountRow = await env.DB.prepare(
+        `SELECT COUNT(DISTINCT holder_entity_id) c FROM entity_exposure_monthly WHERE entity_id = ? AND report_month = ?`
+      ).bind(id, latestMonth).first();
+      etfCount = etfCountRow?.c ?? 0;
+    }
+
+    let managerCount = 0;
+    if (latestPeriod) {
+      const mgrCountRow = await env.DB.prepare(
+        `SELECT COUNT(DISTINCT cik) c FROM managerissuerpositionquarterly WHERE entity_id = ? AND report_period = ?`
+      ).bind(id, latestPeriod).first();
+      managerCount = mgrCountRow?.c ?? 0;
+    }
+
+    overlap = {
+      etfs: etfs.map(r => ({ ...r, manager_count: managerCount })),
+      etf_count: etfCount,
+      manager_count: managerCount,
+      latest_report_month: latestMonth,
+      latest_report_period: latestPeriod
+    };
+  } catch (e) {
+    console.error('[entities-api] issuer-panels overlap error:', e.message);
+  }
+
+  return json({ ownership, financials, events, filings, overlap });
 }
 
 export default {

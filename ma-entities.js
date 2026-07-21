@@ -1180,7 +1180,7 @@ async function ent_loadIssuerPanels(entityId) {
 function ent_renderOwnership(data) {
   const rows = data?.ownership ?? [];
   if (!rows.length) {
-    return _issuerPanelSection('13F Ownership', _issuerPanelEmpty('No 13F ownership data available'));
+    return _issuerPanelSection('13F Ownership', _issuerPanelEmpty('No 13F institutional holders found for this issuer'));
   }
 
   const reportLabel = rows[0].report_period ? _esc(rows[0].report_period) : '';
@@ -1209,8 +1209,12 @@ function ent_renderOwnership(data) {
       </tr>`;
   }).join('');
 
+  const freshnessLine = reportLabel
+    ? `<div style="font-size:9px;color:var(--muted);margin-bottom:8px">Holdings as of ${reportLabel}, sourced from SEC 13F filings</div>`
+    : '';
+
   const inner = `
-    <div style="font-size:10px;color:var(--dim);margin-bottom:8px">Top ${rows.length} holders${reportLabel ? ` · report period ${reportLabel}` : ''}</div>
+    ${freshnessLine}
     <table style="border-collapse:collapse;width:100%">
       <thead>
         <tr style="border-bottom:1px solid var(--border)">
@@ -1230,7 +1234,7 @@ function ent_renderOwnership(data) {
 function ent_renderFinancials(data) {
   const rows = data?.financials ?? [];
   if (!rows.length) {
-    return _issuerPanelSection('Financials', _issuerPanelEmpty('No financial data available'));
+    return _issuerPanelSection('Financials', _issuerPanelEmpty('Financial data not yet available for this issuer'));
   }
 
   // Pivot: one row per xbrl_tag with an annual and a quarterly column
@@ -1256,7 +1260,13 @@ function ent_renderFinancials(data) {
       </tr>`;
   }).join('');
 
+  const latestPeriodEnd = rows.reduce((max, r) => (r.period_end && (!max || r.period_end > max)) ? r.period_end : max, null);
+  const freshnessLine = latestPeriodEnd
+    ? `<div style="font-size:9px;color:var(--muted);margin-bottom:8px">Financials as of ${_esc(latestPeriodEnd)}, sourced from SEC XBRL</div>`
+    : '';
+
   const inner = `
+    ${freshnessLine}
     <table style="border-collapse:collapse;width:100%">
       <thead>
         <tr style="border-bottom:1px solid var(--border)">
@@ -1277,7 +1287,7 @@ function ent_renderEvents(data) {
   const hasRecent = rows.some(r => r.filed_date && new Date(r.filed_date).getTime() >= cutoff);
 
   if (!rows.length || !hasRecent) {
-    return _issuerPanelSection('8-K Events', _issuerPanelEmpty('No 8-K events in the last 12 months'));
+    return _issuerPanelSection('8-K Events', _issuerPanelEmpty('No material 8-K events in the last 12 months'));
   }
 
   const body = rows.map(r => {
@@ -1295,13 +1305,15 @@ function ent_renderEvents(data) {
       </div>`;
   }).join('');
 
-  return _issuerPanelSection('8-K Events', body);
+  const freshnessLine = `<div style="font-size:9px;color:var(--muted);margin-bottom:8px">Events from the last 12 months, sourced from SEC 8-K filings</div>`;
+
+  return _issuerPanelSection('8-K Events', freshnessLine + body);
 }
 
 function ent_renderFilings(data) {
   const rows = data?.filings ?? [];
   if (!rows.length) {
-    return _issuerPanelSection('Filing Timeline', _issuerPanelEmpty('No filings available'));
+    return _issuerPanelSection('Filing Timeline', _issuerPanelEmpty('No SEC filings found for this issuer'));
   }
 
   const body = rows.map(r => {
@@ -1316,7 +1328,64 @@ function ent_renderFilings(data) {
       </div>`;
   }).join('');
 
-  return _issuerPanelSection('Filing Timeline', body);
+  const freshnessLine = `<div style="font-size:9px;color:var(--muted);margin-bottom:8px">Filing history sourced from SEC EDGAR</div>`;
+
+  return _issuerPanelSection('Filing Timeline', freshnessLine + body);
+}
+
+function _fmtReportMonth(reportMonth) {
+  if (!reportMonth) return null;
+  const m = reportMonth.match(/^(\d{4})-(\d{2})/);
+  if (!m) return reportMonth;
+  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${mon[parseInt(m[2], 10) - 1]} ${m[1]}`;
+}
+
+// NOTE: manager_count here is issuer-wide (total distinct 13F filers holding
+// this issuer at the latest report_period) — not a true per-ETF intersection.
+// There's no data linking specific managers to specific ETF share holdings,
+// so the same figure appears on every ETF row (see entities-api.js comment).
+function ent_renderOverlap(data) {
+  const overlap = data?.overlap ?? {};
+  const etfs = overlap.etfs ?? [];
+  const etfCount = overlap.etf_count ?? 0;
+  const managerCount = overlap.manager_count ?? 0;
+
+  if (!etfCount && !managerCount) {
+    return _issuerPanelSection('ETF & 13F Overlap', _issuerPanelEmpty('No ETF or institutional overlap data available for this issuer'));
+  }
+
+  const monthLabel = _fmtReportMonth(overlap.latest_report_month);
+  const periodLabel = overlap.latest_report_period ? _esc(overlap.latest_report_period) : null;
+  const freshness = (monthLabel || periodLabel)
+    ? `<div style="font-size:9px;color:var(--muted);margin-bottom:8px">${monthLabel ? `ETF data as of ${_esc(monthLabel)}` : ''}${monthLabel && periodLabel ? ', ' : ''}${periodLabel ? `13F data as of ${periodLabel}` : ''}</div>`
+    : '';
+
+  const rows = etfs.map(r => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 8px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue)">${_esc(r.ticker ?? '—')}</td>
+      <td style="padding:5px 8px;font-size:11px;color:var(--text2)">${_esc(r.fund_name ?? '—')}</td>
+      <td style="padding:5px 8px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text);text-align:right">${r.weight_pct != null ? r.weight_pct.toFixed(2) + '%' : '—'}</td>
+      <td style="padding:5px 8px;font-family:var(--mono);font-size:11px;color:var(--text);text-align:right">${r.manager_count ?? 0}</td>
+    </tr>`).join('');
+
+  const inner = `
+    ${freshness}
+    <div style="font-size:11px;color:var(--text);margin-bottom:8px">Held by <strong>${etfCount}</strong> ETF${etfCount !== 1 ? 's' : ''} and <strong>${managerCount}</strong> institutional manager${managerCount !== 1 ? 's' : ''}</div>
+    ${etfs.length ? `
+    <table style="border-collapse:collapse;width:100%">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:4px 8px;text-align:left;font-size:9px;color:var(--dim);text-transform:uppercase">ETF</th>
+          <th style="padding:4px 8px;text-align:left;font-size:9px;color:var(--dim);text-transform:uppercase">Fund</th>
+          <th style="padding:4px 8px;text-align:right;font-size:9px;color:var(--dim);text-transform:uppercase">Weight</th>
+          <th style="padding:4px 8px;text-align:right;font-size:9px;color:var(--dim);text-transform:uppercase">13F Managers</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>` : `<div style="color:var(--dim);font-size:11px">No ETF exposure data available</div>`}`;
+
+  return _issuerPanelSection('ETF & 13F Overlap', inner);
 }
 
 async function ent_injectIssuerPanels(entityId) {
@@ -1324,13 +1393,19 @@ async function ent_injectIssuerPanels(entityId) {
   const container = document.getElementById(`issuer-panels-section-${entityId}`);
   if (!container) return;
 
+  container.innerHTML = `<div style="padding:14px 16px;color:var(--dim);font-size:11px">Loading issuer data...</div>`;
+
   const data = await ent_loadIssuerPanels(entityId);
-  if (!data) return; // fetch failed — leave container empty, rest of overlay is unaffected
+  if (!data) {
+    container.innerHTML = `<div style="padding:14px 16px;color:var(--dim);font-size:11px">Unable to load issuer data — please try again.</div>`;
+    return;
+  }
 
   container.innerHTML = [
     ent_renderOwnership(data),
     ent_renderFinancials(data),
     ent_renderEvents(data),
-    ent_renderFilings(data)
+    ent_renderFilings(data),
+    ent_renderOverlap(data)
   ].join('');
 }
