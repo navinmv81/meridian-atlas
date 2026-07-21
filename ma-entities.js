@@ -1037,6 +1037,10 @@ async function showEntityOverlay(entityId, backLabel) {
   if (existing) existing.remove();
 
   // Create overlay on top of ETF panel
+  // z-index must stay below mgr-page-overlay's 2000 (ma-13f.js) — that overlay
+  // is created once and only ever toggled via display, while this one is
+  // destroyed/recreated on every call, so equal z-index let DOM order (not
+  // z-index) decide precedence and could bury the Manager page on repeat opens.
   const overlay = document.createElement('div');
   overlay.id = 'entity-overlay';
   overlay.style.cssText = `
@@ -1044,7 +1048,7 @@ async function showEntityOverlay(entityId, backLabel) {
     top: 0; left: 0;
     width: 100vw; height: 100vh;
     background: var(--bg, #0f1117);
-    z-index: 2000;
+    z-index: 1500;
     overflow-y: auto;
     padding: 0;
   `;
@@ -1148,12 +1152,6 @@ function _fmtFinancialValue(value, unit) {
   return '$' + value.toFixed(2);
 }
 
-// net_margin is stored as a decimal fraction (0.05 == 5%), confirmed against live data
-function _fmtPercent(value) {
-  if (value == null) return null;
-  return (value * 100).toFixed(1) + '%';
-}
-
 function _issuerDocUrl(cik, accessionNumber, primaryDocument) {
   const cikNum = parseInt(cik, 10);
   const accNoDash = String(accessionNumber || '').replace(/-/g, '');
@@ -1231,6 +1229,26 @@ function ent_renderOwnership(data) {
   return _issuerPanelSection('13F Ownership', inner);
 }
 
+// Scoped to ent_renderFinancials only — ent_renderOwnership keeps using
+// _fmtFinancialValue, which formats sub-million USD differently (K-scaled).
+// unit accepts 'USD' | 'USD/shares' | 'shares' | 'net_margin'.
+function formatValue(value, unit) {
+  if (value == null) return '—';
+  // net_margin is stored as a decimal fraction (0.05 == 5%), confirmed against live data
+  if (unit === 'net_margin') return (value * 100).toFixed(1) + '%';
+  if (unit === 'USD/shares') return '$' + value.toFixed(2);
+  if (unit === 'shares') {
+    const abs = Math.abs(value);
+    if (abs >= 1e6) return (value / 1e6).toFixed(2) + 'M shares';
+    return value.toLocaleString() + ' shares';
+  }
+  // USD (default)
+  const abs = Math.abs(value);
+  if (abs >= 1e9) return '$' + (value / 1e9).toFixed(2) + 'B';
+  if (abs >= 1e6) return '$' + (value / 1e6).toFixed(2) + 'M';
+  return '$' + value.toLocaleString();
+}
+
 function ent_renderFinancials(data) {
   const rows = data?.financials ?? [];
   if (!rows.length) {
@@ -1249,9 +1267,10 @@ function ent_renderFinancials(data) {
     const annual = periods.annual;
     const quarterly = periods.quarterly;
     const unit = (annual ?? quarterly)?.unit;
-    const annualVal = annual ? _fmtFinancialValue(annual.value, unit) : '—';
-    const quarterlyVal = quarterly ? _fmtFinancialValue(quarterly.value, unit) : '—';
-    const margin = _fmtPercent(annual?.net_margin ?? quarterly?.net_margin ?? null);
+    const annualVal = formatValue(annual?.value, unit);
+    const quarterlyVal = formatValue(quarterly?.value, unit);
+    const marginRaw = annual?.net_margin ?? quarterly?.net_margin ?? null;
+    const margin = marginRaw != null ? formatValue(marginRaw, 'net_margin') : null;
     return `
       <tr style="border-bottom:1px solid var(--border)">
         <td style="padding:5px 8px;font-size:11px;color:var(--text2)">${_esc(tag)}${margin ? `<div style="font-size:9px;color:var(--dim)">Net margin: ${margin}</div>` : ''}</td>
