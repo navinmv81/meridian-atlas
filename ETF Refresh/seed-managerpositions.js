@@ -148,10 +148,28 @@ async function ensureTableExists() {
 
 // ── Main population SQL ───────────────────────────────────────────────────────
 // Amendment resolution (winning_filing) and entity_id resolution (instrument_master +
-// instrument_entity_map) run over ALL history — the window function needs the prior
-// quarter's row to compute prev_market_value/prev_share_count. Only the outer WHERE
-// (and, when chunking, ORDER BY/LIMIT/OFFSET) restrict what gets WRITTEN; the read
-// side still scans the full source tables every run regardless of chunk size.
+// instrument_entity_map) are pre-filtered to report_period IN (current, prior) before
+// the LAG window function runs. LAG only ever needs one prior row per
+// (cik, cusip, put_call) partition, so scanning history further back than the prior
+// quarter is wasted work. This cuts the holding13f_normalized scan from ~249,511 rows
+// (full history) to ~120,000 rows (2 quarters).
+//
+// REQUIRES an index on holding13f_normalized(report_period) and filing13f(report_period)
+// — see migrations/sprint3-holding13f-report-period-index.sql. Without it, D1 still
+// visits every row to evaluate `WHERE report_period IN (?, ?)` and this restructuring
+// buys nothing; the index is what lets SQLite seek straight to the matching rows.
+//
+// prior_period (resolved below, before this SQL runs) is MAX(report_period) < current
+// across the WHOLE table, not per (cik, cusip, put_call) partition — this assumes 13F
+// report_period values are the shared SEC quarter-end dates (true for this dataset),
+// so "prior quarter" is the same calendar date for every filer. Behavior change versus
+// the old full-history LAG: if a manager sold a position, skipped a quarter, then
+// reacquired it, the old query would LAG across the gap to the last quarter it was
+// actually held; this version sees no row in the gap quarter and reports
+// prev_market_value = NULL for the reacquisition quarter instead of the pre-gap value.
+// This matches the table's documented "QoQ" (quarter-over-quarter) semantics
+// (migrations/sprint3-managerissuerpositionquarterly.sql header) rather than "value
+// last ever held" — flagging in case that's not the intended behavior.
 //
 // Pagination applies to the OUTPUT of the window function, not the input — LIMIT/
 // OFFSET sit on the final SELECT, after `windowed` is fully computed, never inside
@@ -168,6 +186,7 @@ WITH winning_filing AS (
     SELECT cik, report_period, accession_number,
            ROW_NUMBER() OVER (PARTITION BY cik, report_period ORDER BY filing_date DESC) rn
     FROM filing13f
+    WHERE report_period IN (?, ?)
   ) WHERE rn = 1
 ),
 base AS (
@@ -182,6 +201,7 @@ base AS (
     ON im.cusip_issuer_6 = substr(h.cusip, 1, 6) AND im.cusip = h.cusip
   LEFT JOIN instrument_entity_map iem
     ON iem.instrument_key = im.instrument_key
+  WHERE h.report_period IN (?, ?)
 ),
 windowed AS (
   SELECT cik, cusip, put_call, entity_id, issuer_name, report_period,
@@ -239,8 +259,24 @@ async function main() {
     console.log(`Expected write volume: ~${sourceRowCount} rows × 4 (PK + UNIQUE + 2 indexes) = ~${sourceRowCount * 4} writes\n`);
   }
 
+  // Step 4b: resolve prior_period — the most recent report_period strictly before
+  // PERIOD that exists in holding13f_normalized. This is what winning_filing/base get
+  // pre-filtered to (current, prior) instead of scanning all history. Cheap only if
+  // holding13f_normalized(report_period) is indexed — see comment above buildPopulateSql.
+  const priorPeriodResult = await d1raw(
+    `SELECT MAX(report_period) AS prior FROM holding13f_normalized WHERE report_period < ?`,
+    [PERIOD]
+  );
+  const PRIOR_PERIOD = priorPeriodResult.rows[0]?.prior ?? null;
+  console.log(`Prior period resolved: ${PRIOR_PERIOD ?? '(none — this is the earliest period in holding13f_normalized)'}\n`);
+
   const sql = buildPopulateSql(PAGINATED);
-  const params = PAGINATED ? [PERIOD, LIMIT, OFFSET] : [PERIOD];
+  const params = [
+    PERIOD, PRIOR_PERIOD, // winning_filing filter
+    PERIOD, PRIOR_PERIOD, // base filter
+    PERIOD,               // final SELECT WHERE
+    ...(PAGINATED ? [LIMIT, OFFSET] : [])
+  ];
 
   if (DRY_RUN) {
     console.log('DRY RUN — SQL that would execute:\n');

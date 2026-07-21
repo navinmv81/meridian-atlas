@@ -270,6 +270,97 @@ async function handleExposure(env, entityId) {
   return json({ exposure: rows.results });
 }
 
+// GET /api/entities/:id/issuer-panels
+// Serves the 4 Issuer-page panels (13F ownership, financials, 8-K events,
+// filing timeline) in one call. Each sub-query is isolated in its own
+// try/catch so a problem with one panel degrades to an empty array
+// instead of failing the whole request.
+//
+// issuerfilingmaster has no entity_id column and entity_master has no cik
+// column, so there is no direct join from entity_id to issuerfilingmaster.
+// We resolve the issuer's cik via issuereventstream / issuerperiodsummary
+// instead — both are populated from the same per-issuer SEC backfill and
+// carry (cik, entity_id) together.
+async function resolveIssuerCik(env, id) {
+  const row = await env.DB.prepare(`
+    SELECT cik FROM issuereventstream WHERE entity_id = ?
+    UNION
+    SELECT cik FROM issuerperiodsummary WHERE entity_id = ?
+    LIMIT 1
+  `).bind(id, id).first();
+  return row ? row.cik : null;
+}
+
+async function handleIssuerPanels(env, entityId) {
+  const id = parseInt(entityId, 10);
+  if (!Number.isInteger(id) || id <= 0) return err('Invalid entity_id', 400);
+
+  let ownership = [];
+  try {
+    const res = await env.DB.prepare(`
+      SELECT q.cik, q.cusip, q.issuer_name, q.report_period, q.market_value, q.share_count,
+             q.prev_market_value, q.value_change, q.track, m.manager_name
+      FROM managerissuerpositionquarterly q
+      LEFT JOIN managermaster m ON m.cik = q.cik
+      WHERE q.entity_id = ?
+        AND q.report_period = (
+          SELECT MAX(report_period) FROM managerissuerpositionquarterly WHERE entity_id = ?
+        )
+      ORDER BY q.market_value DESC
+      LIMIT 25
+    `).bind(id, id).all();
+    ownership = res.results ?? [];
+  } catch (e) {
+    console.error('[entities-api] issuer-panels ownership error:', e.message);
+  }
+
+  let financials = [];
+  try {
+    const res = await env.DB.prepare(`
+      SELECT xbrl_tag, period_type, period_end, value, unit, net_margin
+      FROM issuerperiodsummary
+      WHERE entity_id = ?
+      ORDER BY period_type, xbrl_tag
+    `).bind(id).all();
+    financials = res.results ?? [];
+  } catch (e) {
+    console.error('[entities-api] issuer-panels financials error:', e.message);
+  }
+
+  let events = [];
+  try {
+    const res = await env.DB.prepare(`
+      SELECT cik, item_code, item_label, filed_date, accession_number
+      FROM issuereventstream
+      WHERE entity_id = ?
+      ORDER BY filed_date DESC
+      LIMIT 20
+    `).bind(id).all();
+    events = res.results ?? [];
+  } catch (e) {
+    console.error('[entities-api] issuer-panels events error:', e.message);
+  }
+
+  let filings = [];
+  try {
+    const issuerCik = await resolveIssuerCik(env, id);
+    if (issuerCik) {
+      const res = await env.DB.prepare(`
+        SELECT cik, form_type, filed_date, period_of_report, accession_number, primary_document
+        FROM issuerfilingmaster
+        WHERE cik = ? AND form_type IN ('10-K','10-Q','8-K')
+        ORDER BY filed_date DESC
+        LIMIT 20
+      `).bind(issuerCik).all();
+      filings = res.results ?? [];
+    }
+  } catch (e) {
+    console.error('[entities-api] issuer-panels filings error:', e.message);
+  }
+
+  return json({ ownership, financials, events, filings });
+}
+
 export default {
   async fetch(request, env, ctx) {
     // Preflight
@@ -300,6 +391,9 @@ export default {
 
       const etfExposureMatch = path.match(/^\/api\/entities\/(\d+)\/etf-exposure$/);
       if (etfExposureMatch) return await handleEtfExposure(env, etfExposureMatch[1]);
+
+      const issuerPanelsMatch = path.match(/^\/api\/entities\/(\d+)\/issuer-panels$/);
+      if (issuerPanelsMatch) return await handleIssuerPanels(env, issuerPanelsMatch[1]);
 
       const exposureMatch = path.match(/^\/api\/entities\/(\d+)\/exposure$/);
       if (exposureMatch) return await handleExposure(env, exposureMatch[1]);

@@ -4,6 +4,10 @@
 
 // Set this to the deployed meridian-entities-api Worker URL from Prompt 5
 const ENTITIES_API_URL = 'https://meridian-entities-api.navinmv1981.workers.dev';
+// WORKER_FILINGS_URL is declared in ma-13f.js, loaded before this file in
+// index.html. Classic <script> tags share one global let/const scope, so
+// it's already visible here — do NOT redeclare it, that throws a
+// duplicate-declaration SyntaxError and breaks the whole page.
 
 const ENTITY_TYPE_COLORS = {
   fund:       '#4A9EFF',
@@ -826,6 +830,10 @@ ${entity.expiration_date ? `Effective: ${entity.expiration_date.slice(0,10)}.` :
         <div style="color:var(--dim);font-size:11px">Loading exposure data…</div>
       </div>
 
+      <!-- Issuer panels: 13F ownership / financials / 8-K events / filing timeline -->
+      <!-- Populated by ent_injectIssuerPanels() — only called from showEntityOverlay today -->
+      <div id="issuer-panels-section-${entity.entity_id}"></div>
+
       <!-- 13F section -->
       <div style="margin:0 16px 24px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)">
         <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">13F Institutional Filings</div>
@@ -1069,6 +1077,9 @@ async function showEntityOverlay(entityId, backLabel) {
 
     // Load ETF exposure strip asynchronously
     _loadEntityExposureStrip(entityId, entity);
+
+    // Load Issuer page panels (13F ownership / financials / events / filings)
+    ent_injectIssuerPanels(entityId);
   } catch (e) {
     overlay.innerHTML = `
       <div style="padding:32px;">
@@ -1102,4 +1113,224 @@ function closeEntityDetail() {
   // Clear saved state and close Corporate Atlas entirely
   _previousView = null;
   if (typeof closeEntities === 'function') closeEntities();
+}
+
+// ── Issuer page panels: 13F ownership / financials / 8-K events / filings ────
+// Wired into showEntityOverlay only (not showEntityDetail) for this iteration
+// — pending UX review before extending to the Corporate Atlas galaxy path.
+
+function _issuerPanelSection(title, innerHtml) {
+  return `
+    <div style="margin:0 16px 16px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">${_esc(title)}</div>
+      ${innerHtml}
+    </div>`;
+}
+
+function _issuerPanelEmpty(message) {
+  return `<div style="color:var(--dim);font-size:11px">${_esc(message)}</div>`;
+}
+
+// unit is always one of 'USD' | 'USD/shares' | 'shares' in issuerperiodsummary
+function _fmtFinancialValue(value, unit) {
+  if (value == null) return '—';
+  if (unit === 'USD/shares') return '$' + value.toFixed(2);
+  if (unit === 'shares') {
+    const abs = Math.abs(value);
+    if (abs >= 1e9) return (value / 1e9).toFixed(2) + 'B sh';
+    if (abs >= 1e6) return (value / 1e6).toFixed(2) + 'M sh';
+    return value.toLocaleString();
+  }
+  const abs = Math.abs(value);
+  if (abs >= 1e9) return '$' + (value / 1e9).toFixed(2) + 'B';
+  if (abs >= 1e6) return '$' + (value / 1e6).toFixed(2) + 'M';
+  if (abs >= 1e3) return '$' + (value / 1e3).toFixed(2) + 'K';
+  return '$' + value.toFixed(2);
+}
+
+// net_margin is stored as a decimal fraction (0.05 == 5%), confirmed against live data
+function _fmtPercent(value) {
+  if (value == null) return null;
+  return (value * 100).toFixed(1) + '%';
+}
+
+function _issuerDocUrl(cik, accessionNumber, primaryDocument) {
+  const cikNum = parseInt(cik, 10);
+  const accNoDash = String(accessionNumber || '').replace(/-/g, '');
+  if (!cikNum || !accNoDash) return null;
+  if (primaryDocument) {
+    return `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNoDash}/${primaryDocument}`;
+  }
+  // No primary_document on hand (e.g. issuereventstream rows) — link to the filing's index folder
+  return `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNoDash}/`;
+}
+
+async function ent_loadIssuerPanels(entityId) {
+  if (!ENTITIES_API_URL || !entityId) return null;
+  try {
+    const res = await fetch(`${ENTITIES_API_URL}/api/entities/${entityId}/issuer-panels`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.error('[ma-entities] issuer-panels fetch error', e);
+    return null;
+  }
+}
+
+function ent_renderOwnership(data) {
+  const rows = data?.ownership ?? [];
+  if (!rows.length) {
+    return _issuerPanelSection('13F Ownership', _issuerPanelEmpty('No 13F ownership data available'));
+  }
+
+  const reportLabel = rows[0].report_period ? _esc(rows[0].report_period) : '';
+  const body = rows.map(r => {
+    const change = r.value_change;
+    const changeColor = change > 0 ? 'var(--green)' : change < 0 ? 'var(--red)' : 'var(--dim)';
+    const changeLabel = change != null
+      ? `${change > 0 ? '+' : ''}${_fmtFinancialValue(change, 'USD')}`
+      : '—';
+    const trackLabel = r.track ? _esc(r.track) : '';
+    // Same clickable-row pattern as mgr_renderHoldingsSection in ma-13f.js
+    const clickable = r.cik != null;
+    const trOpen = clickable
+      ? `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="mgr_openManagerPage('${_esc(r.cik)}')">`
+      : `<tr style="border-bottom:1px solid var(--border)">`;
+    const managerCell = clickable
+      ? `<span style="color:var(--blue)">${_esc(r.manager_name ?? r.cik ?? '—')}</span>`
+      : _esc(r.manager_name ?? r.cik ?? '—');
+    return `
+      ${trOpen}
+        <td style="padding:5px 8px;font-family:var(--mono);font-size:10px;color:var(--text2)">${managerCell}</td>
+        <td style="padding:5px 8px;font-size:11px;color:var(--text)">${_esc(r.issuer_name ?? '—')}</td>
+        <td style="padding:5px 8px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text);text-align:right">${_fmtFinancialValue(r.market_value, 'USD')}</td>
+        <td style="padding:5px 8px;font-family:var(--mono);font-size:10px;color:${changeColor};text-align:right">${changeLabel}</td>
+        <td style="padding:5px 8px;text-align:right">${trackLabel ? `<span class="ent-chip" style="color:var(--text2);border-color:var(--border2);background:var(--bg4)">${trackLabel}</span>` : ''}</td>
+      </tr>`;
+  }).join('');
+
+  const inner = `
+    <div style="font-size:10px;color:var(--dim);margin-bottom:8px">Top ${rows.length} holders${reportLabel ? ` · report period ${reportLabel}` : ''}</div>
+    <table style="border-collapse:collapse;width:100%">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:4px 8px;text-align:left;font-size:9px;color:var(--dim);text-transform:uppercase">Manager</th>
+          <th style="padding:4px 8px;text-align:left;font-size:9px;color:var(--dim);text-transform:uppercase">Issuer</th>
+          <th style="padding:4px 8px;text-align:right;font-size:9px;color:var(--dim);text-transform:uppercase">Market Value</th>
+          <th style="padding:4px 8px;text-align:right;font-size:9px;color:var(--dim);text-transform:uppercase">QoQ Change</th>
+          <th style="padding:4px 8px;text-align:right;font-size:9px;color:var(--dim);text-transform:uppercase">Track</th>
+        </tr>
+      </thead>
+      <tbody>${body}</tbody>
+    </table>`;
+
+  return _issuerPanelSection('13F Ownership', inner);
+}
+
+function ent_renderFinancials(data) {
+  const rows = data?.financials ?? [];
+  if (!rows.length) {
+    return _issuerPanelSection('Financials', _issuerPanelEmpty('No financial data available'));
+  }
+
+  // Pivot: one row per xbrl_tag with an annual and a quarterly column
+  // (issuerperiodsummary retains exactly one row per (cik, xbrl_tag, period_type))
+  const byTag = new Map();
+  rows.forEach(r => {
+    if (!byTag.has(r.xbrl_tag)) byTag.set(r.xbrl_tag, {});
+    byTag.get(r.xbrl_tag)[r.period_type] = r;
+  });
+
+  const body = Array.from(byTag.entries()).map(([tag, periods]) => {
+    const annual = periods.annual;
+    const quarterly = periods.quarterly;
+    const unit = (annual ?? quarterly)?.unit;
+    const annualVal = annual ? _fmtFinancialValue(annual.value, unit) : '—';
+    const quarterlyVal = quarterly ? _fmtFinancialValue(quarterly.value, unit) : '—';
+    const margin = _fmtPercent(annual?.net_margin ?? quarterly?.net_margin ?? null);
+    return `
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:5px 8px;font-size:11px;color:var(--text2)">${_esc(tag)}${margin ? `<div style="font-size:9px;color:var(--dim)">Net margin: ${margin}</div>` : ''}</td>
+        <td style="padding:5px 8px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text);text-align:right">${annualVal}${annual?.period_end ? `<div style="font-size:9px;color:var(--dim);font-weight:400">${_esc(annual.period_end)}</div>` : ''}</td>
+        <td style="padding:5px 8px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text);text-align:right">${quarterlyVal}${quarterly?.period_end ? `<div style="font-size:9px;color:var(--dim);font-weight:400">${_esc(quarterly.period_end)}</div>` : ''}</td>
+      </tr>`;
+  }).join('');
+
+  const inner = `
+    <table style="border-collapse:collapse;width:100%">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:4px 8px;text-align:left;font-size:9px;color:var(--dim);text-transform:uppercase">Metric</th>
+          <th style="padding:4px 8px;text-align:right;font-size:9px;color:var(--dim);text-transform:uppercase">Annual</th>
+          <th style="padding:4px 8px;text-align:right;font-size:9px;color:var(--dim);text-transform:uppercase">Quarterly</th>
+        </tr>
+      </thead>
+      <tbody>${body}</tbody>
+    </table>`;
+
+  return _issuerPanelSection('Financials', inner);
+}
+
+function ent_renderEvents(data) {
+  const rows = data?.events ?? [];
+  const cutoff = Date.now() - 365 * 86400000;
+  const hasRecent = rows.some(r => r.filed_date && new Date(r.filed_date).getTime() >= cutoff);
+
+  if (!rows.length || !hasRecent) {
+    return _issuerPanelSection('8-K Events', _issuerPanelEmpty('No 8-K events in the last 12 months'));
+  }
+
+  const body = rows.map(r => {
+    // issuereventstream has no primary_document, so we can't link to the
+    // specific filing document — link to this issuer's 8-K filing list instead.
+    const url = r.cik
+      ? `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(r.cik)}&type=8-K&dateb=&owner=include&count=10`
+      : null;
+    return `
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="font-family:var(--mono);font-size:9px;color:var(--dim);min-width:66px;flex-shrink:0;margin-top:1px">${_esc(r.filed_date ?? '—')}</span>
+        <span class="ent-chip" style="color:var(--blue);border-color:var(--blue-bd,var(--border2));background:var(--blue-bg,var(--bg4));flex-shrink:0">${_esc(r.item_code ?? '—')}</span>
+        <span style="font-size:11px;color:var(--text2);flex:1">${_esc(r.item_label ?? '—')}</span>
+        ${url ? `<a href="${_esc(url)}" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);flex-shrink:0">View filings →</a>` : ''}
+      </div>`;
+  }).join('');
+
+  return _issuerPanelSection('8-K Events', body);
+}
+
+function ent_renderFilings(data) {
+  const rows = data?.filings ?? [];
+  if (!rows.length) {
+    return _issuerPanelSection('Filing Timeline', _issuerPanelEmpty('No filings available'));
+  }
+
+  const body = rows.map(r => {
+    const directUrl = _issuerDocUrl(r.cik, r.accession_number, r.primary_document);
+    const proxyUrl = directUrl ? `${WORKER_FILINGS_URL}/api/filing-doc?url=${encodeURIComponent(directUrl)}` : null;
+    return `
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span class="ent-chip" style="color:var(--text2);border-color:var(--border2);background:var(--bg4);flex-shrink:0">${_esc(r.form_type ?? '—')}</span>
+        <span style="font-family:var(--mono);font-size:9px;color:var(--dim);min-width:66px;flex-shrink:0;margin-top:1px">${_esc(r.filed_date ?? '—')}</span>
+        <span style="font-size:10px;color:var(--muted);flex:1">${r.period_of_report ? `Period: ${_esc(r.period_of_report)}` : ''}</span>
+        ${proxyUrl ? `<a href="${_esc(proxyUrl)}" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);flex-shrink:0">View document →</a>` : ''}
+      </div>`;
+  }).join('');
+
+  return _issuerPanelSection('Filing Timeline', body);
+}
+
+async function ent_injectIssuerPanels(entityId) {
+  if (!entityId) return; // backward-compatible: no entity_id, no panels, overlay renders as before
+  const container = document.getElementById(`issuer-panels-section-${entityId}`);
+  if (!container) return;
+
+  const data = await ent_loadIssuerPanels(entityId);
+  if (!data) return; // fetch failed — leave container empty, rest of overlay is unaffected
+
+  container.innerHTML = [
+    ent_renderOwnership(data),
+    ent_renderFinancials(data),
+    ent_renderEvents(data),
+    ent_renderFilings(data)
+  ].join('');
 }
