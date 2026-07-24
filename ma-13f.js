@@ -5,6 +5,14 @@ const WORKER_FILINGS_URL = "https://meridian-filings.navinmv1981.workers.dev";
 
 let _holdingsData = [];
 
+// Shared stacking order for the Manager Page (ma-13f.js) and Entity overlay
+// (ma-entities.js). Navigation between them can go either direction — issuer
+// -> manager -> issuer -> ... — so whichever was opened most recently must
+// render on top regardless of type. A static z-index split only satisfies
+// one direction and buries the overlay on the reverse hop.
+let _atlasOverlayZ = 1500;
+function _nextAtlasOverlayZ() { return ++_atlasOverlayZ; }
+
 async function searchManager(name) {
   const resp = await fetch(`${WORKER_13F_URL}/api/13f-search?manager=${encodeURIComponent(name)}`);
   const data = await resp.json();
@@ -290,7 +298,7 @@ function mgr_injectPanel() {
   overlay.id = 'mgr-page-overlay';
   overlay.style.cssText = `
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: var(--bg, #0f1117); z-index: 2000; overflow-y: auto; display: none;
+    background: var(--bg, #0f1117); overflow-y: auto; display: none;
   `;
   document.body.appendChild(overlay);
 }
@@ -306,6 +314,7 @@ function mgr_renderShell(bodyHtml) {
 function mgr_openManagerPage(cik) {
   mgr_injectPanel();
   const overlay = document.getElementById('mgr-page-overlay');
+  overlay.style.zIndex = _nextAtlasOverlayZ();
   overlay.style.display = 'block';
   overlay.innerHTML = mgr_renderShell('<div class="rd-loading"><div class="rd-spinner"></div><br>Loading manager…</div>');
   document.body.style.overflow = 'hidden';

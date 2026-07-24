@@ -208,9 +208,21 @@ async function handleEntity(env, entityId) {
 }
 
 // GET /api/entities/:id/etf-exposure
+// Scoped to the latest report_month for this entity — same cross-section the
+// issuer-panels overlap query (below) uses for its etf_count. Without this
+// filter the query returned one row per (fund, month) it had ever appeared
+// in, so a fund held across multiple N-PORT periods was counted more than
+// once and inflated the "N ETFs hold this entity" total past the overlap
+// panel's distinct count for the same entity.
 async function handleEtfExposure(env, entityId) {
   const id = parseInt(entityId, 10);
   if (!Number.isInteger(id) || id <= 0) return err('Invalid entity_id', 400);
+
+  const monthRow = await env.DB.prepare(
+    `SELECT MAX(report_month) m FROM entity_exposure_monthly WHERE entity_id = ?`
+  ).bind(id).first();
+  const latestMonth = monthRow?.m ?? null;
+  if (!latestMonth) return json({ exposures: [] });
 
   const rows = await env.DB.prepare(`
     SELECT
@@ -222,10 +234,10 @@ async function handleEtfExposure(env, entityId) {
     FROM entity_exposure_monthly eem
     JOIN fund_entity_link fel ON eem.holder_entity_id = fel.entity_id
     LEFT JOIN entity_master em_fund ON fel.entity_id = em_fund.entity_id
-    WHERE eem.entity_id = ?
+    WHERE eem.entity_id = ? AND eem.report_month = ?
     ORDER BY eem.weight_sum DESC
     LIMIT 50
-  `).bind(id).all();
+  `).bind(id, latestMonth).all();
 
   return json({ exposures: rows.results ?? [] });
 }

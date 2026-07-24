@@ -1036,11 +1036,10 @@ async function showEntityOverlay(entityId, backLabel) {
   const existing = document.getElementById('entity-overlay');
   if (existing) existing.remove();
 
-  // Create overlay on top of ETF panel
-  // z-index must stay below mgr-page-overlay's 2000 (ma-13f.js) — that overlay
-  // is created once and only ever toggled via display, while this one is
-  // destroyed/recreated on every call, so equal z-index let DOM order (not
-  // z-index) decide precedence and could bury the Manager page on repeat opens.
+  // Create overlay on top of ETF panel (and possibly on top of an already-open
+  // Manager Page — mgr_openManagerPage() in ma-13f.js shares this same
+  // _nextAtlasOverlayZ() counter so whichever overlay opened most recently
+  // wins the stacking order, in either navigation direction).
   const overlay = document.createElement('div');
   overlay.id = 'entity-overlay';
   overlay.style.cssText = `
@@ -1048,10 +1047,10 @@ async function showEntityOverlay(entityId, backLabel) {
     top: 0; left: 0;
     width: 100vw; height: 100vh;
     background: var(--bg, #0f1117);
-    z-index: 1500;
     overflow-y: auto;
     padding: 0;
   `;
+  overlay.style.zIndex = _nextAtlasOverlayZ();
 
   // Loading state
   overlay.innerHTML = `
@@ -1155,12 +1154,22 @@ function _fmtFinancialValue(value, unit) {
 function _issuerDocUrl(cik, accessionNumber, primaryDocument) {
   const cikNum = parseInt(cik, 10);
   const accNoDash = String(accessionNumber || '').replace(/-/g, '');
+  if (!cikNum || !accNoDash || !primaryDocument) return null;
+  return `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNoDash}/${primaryDocument}`;
+}
+
+// No primary_document on hand (e.g. issuereventstream rows) — link straight to
+// SEC's own filing index page. This must NOT go through the meridian-filings
+// proxy: that proxy fetches a single document body, and pointed at a bare
+// accession folder it returns SEC's raw directory listing instead of a filing.
+function _issuerFilingIndexUrl(cik, accessionNumber) {
+  const cikNum = parseInt(cik, 10);
+  const accNoDash = String(accessionNumber || '').replace(/-/g, '');
   if (!cikNum || !accNoDash) return null;
-  if (primaryDocument) {
-    return `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNoDash}/${primaryDocument}`;
-  }
-  // No primary_document on hand (e.g. issuereventstream rows) — link to the filing's index folder
-  return `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNoDash}/`;
+  const accWithDash = accNoDash.length === 18
+    ? `${accNoDash.slice(0, 10)}-${accNoDash.slice(10, 12)}-${accNoDash.slice(12)}`
+    : accNoDash;
+  return `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNoDash}/${accWithDash}-index.htm`;
 }
 
 async function ent_loadIssuerPanels(entityId) {
@@ -1337,13 +1346,15 @@ function ent_renderFilings(data) {
 
   const body = rows.map(r => {
     const directUrl = _issuerDocUrl(r.cik, r.accession_number, r.primary_document);
-    const proxyUrl = directUrl ? `${WORKER_FILINGS_URL}/api/filing-doc?url=${encodeURIComponent(directUrl)}` : null;
+    const linkUrl = directUrl
+      ? `${WORKER_FILINGS_URL}/api/filing-doc?url=${encodeURIComponent(directUrl)}`
+      : _issuerFilingIndexUrl(r.cik, r.accession_number);
     return `
       <div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
         <span class="ent-chip" style="color:var(--text2);border-color:var(--border2);background:var(--bg4);flex-shrink:0">${_esc(r.form_type ?? '—')}</span>
         <span style="font-family:var(--mono);font-size:9px;color:var(--dim);min-width:66px;flex-shrink:0;margin-top:1px">${_esc(r.filed_date ?? '—')}</span>
         <span style="font-size:10px;color:var(--muted);flex:1">${r.period_of_report ? `Period: ${_esc(r.period_of_report)}` : ''}</span>
-        ${proxyUrl ? `<a href="${_esc(proxyUrl)}" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);flex-shrink:0">View document →</a>` : ''}
+        ${linkUrl ? `<a href="${_esc(linkUrl)}" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);flex-shrink:0">View document →</a>` : ''}
       </div>`;
   }).join('');
 
