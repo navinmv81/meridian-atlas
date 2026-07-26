@@ -831,7 +831,8 @@ ${entity.expiration_date ? `Effective: ${entity.expiration_date.slice(0,10)}.` :
       </div>
 
       <!-- Issuer panels: 13F ownership / financials / 8-K events / filing timeline -->
-      <!-- Populated by ent_injectIssuerPanels() — only called from showEntityOverlay today -->
+      <!-- Populated by ent_injectIssuerPanels() — called from both showEntityDetail
+           (Galaxy/Search entry points) and showEntityOverlay (ETF Holdings entry point) -->
       <div id="issuer-panels-section-${entity.entity_id}"></div>
 
       <!-- 13F section -->
@@ -902,6 +903,12 @@ async function showEntityDetail(entityId, breadcrumbLabel) {
 
   main.innerHTML = _buildEntityDetailHTML(entity, breadcrumbLabel, 'restoreEntityPreviousView()');
   _loadEntityExposureStrip(entityId, entity);
+
+  // Load Issuer page panels (13F ownership / financials / events / filings).
+  // Previously only wired into showEntityOverlay (the ETF-holdings click
+  // path) — Galaxy/Search entry points shared the same template placeholder
+  // but never called this, so the panels silently never populated for them.
+  ent_injectIssuerPanels(entityId);
 }
 
 async function _loadEntityExposureStrip(entityId, entity) {

@@ -288,19 +288,37 @@ async function handleExposure(env, entityId) {
 // try/catch so a problem with one panel degrades to an empty array
 // instead of failing the whole request.
 //
-// issuerfilingmaster has no entity_id column and entity_master has no cik
-// column, so there is no direct join from entity_id to issuerfilingmaster.
-// We resolve the issuer's cik via issuereventstream / issuerperiodsummary
-// instead — both are populated from the same per-issuer SEC backfill and
-// carry (cik, entity_id) together.
+// issuerfilingmaster has no entity_id column, so there is no direct join
+// from entity_id to issuerfilingmaster — resolve via entity_master.cik
+// (added Sprint 2, populated for 3,182 operating entities by name-match
+// against SEC's company_tickers_exchange.json).
+//
+// FIXED July 24, 2026: this previously only resolved cik via
+// issuereventstream/issuerperiodsummary — a chicken-and-egg gap, since
+// those are the two Filings-domain tables that don't cover every issuer
+// (issuereventstream: 2,884 issuers; issuerperiodsummary is derived from
+// financialfact_reported's 500-issuer Phase 1 set). Any issuer with zero
+// rows in both — despite having real, broader-coverage data in
+// issuerfilingmaster (3,182 issuers) sitting right there under its cik —
+// silently got an empty Filing Timeline. Confirmed on Danaher Corporation:
+// identity/ownership resolved fine, but Filing Timeline reported "No SEC
+// filings found" despite decades of real 10-K/10-Q/8-K history. The old
+// chain is kept as a fallback for any entity whose entity_master.cik
+// hasn't been backfilled yet but already has a resolvable cik in the
+// Filings-domain tables some other way.
 async function resolveIssuerCik(env, id) {
-  const row = await env.DB.prepare(`
+  const direct = await env.DB.prepare(
+    `SELECT cik FROM entity_master WHERE entity_id = ? AND cik IS NOT NULL`
+  ).bind(id).first();
+  if (direct && direct.cik) return direct.cik;
+
+  const viaFilings = await env.DB.prepare(`
     SELECT cik FROM issuereventstream WHERE entity_id = ?
     UNION
     SELECT cik FROM issuerperiodsummary WHERE entity_id = ?
     LIMIT 1
   `).bind(id, id).first();
-  return row ? row.cik : null;
+  return viaFilings ? viaFilings.cik : null;
 }
 
 async function handleIssuerPanels(env, entityId) {

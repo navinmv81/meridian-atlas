@@ -342,7 +342,7 @@ async function storeHoldings(db, series_id, ticker, reportMonth, fileDate, xml, 
 
   while (rowCursor < holdings.length && batchesUsed < MAX_BATCHES_PER_RUN) {
     const chunk = holdings.slice(rowCursor, rowCursor + D1_BATCH_SIZE);
-    await db.batch(
+    const batchResults = await db.batch(
       chunk.map(h =>
         db.prepare(`
           INSERT INTO fund_holdings_monthly
@@ -358,7 +358,15 @@ async function storeHoldings(db, series_id, ticker, reportMonth, fileDate, xml, 
         )
       )
     );
-    await incrementWriteCount(db, chunk.length);
+    // FIXED 2026-07-25: was incrementing by chunk.length (logical rows),
+    // not Cloudflare's actual billed rows_written. Confirmed empirically
+    // that D1 meters ~9 rows_written per logical row on this table (index
+    // maintenance + the snapshot_status update below), so the guard was
+    // comparing the wrong unit against DAILY_WRITE_LIMIT and never tripped
+    // until real usage was ~7x the free-tier daily cap. Sum the batch's own
+    // reported meta.rows_written instead — same unit the cap is defined in.
+    const realWritten = batchResults.reduce((sum, r) => sum + (r?.meta?.rows_written || 0), 0);
+    await incrementWriteCount(db, realWritten);
     rowCursor += chunk.length;
     batchesUsed++;
   }
@@ -367,11 +375,17 @@ async function storeHoldings(db, series_id, ticker, reportMonth, fileDate, xml, 
 
   if (done) {
     // All rows inserted — atomically mark complete. Only now does the API serve them.
-    await db.prepare(`
+    // FIXED 2026-07-25: this single UPDATE touches every holdings row for
+    // this ETF/month, so its rows_written is not negligible — confirmed via
+    // Cloudflare dashboard that this one statement accounted for ~102,480 of
+    // a day's rows_written across just 30 executions (~3,416/call), yet it
+    // was never counted toward the write guard at all. Now counted.
+    const markCompleteResult = await db.prepare(`
       UPDATE fund_holdings_monthly
       SET snapshot_status = 'complete'
       WHERE series_id = ? AND report_month = ?
     `).bind(series_id, reportMonth).run();
+    await incrementWriteCount(db, markCompleteResult?.meta?.rows_written || 0);
     console.log(`Stored all ${holdings.length} holdings for ${ticker} ${reportMonth}`);
 
     // AUM boundary check — downgrade sub-$200M ETFs after first successful ingestion

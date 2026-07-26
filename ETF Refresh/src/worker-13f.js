@@ -146,6 +146,25 @@ export default {
         ).bind(cik10).all();
 
         const filings = filingsRes.results || [];
+        const latestFiling = filings[0] || null;
+
+        // Position-level holdings are only seeded for the scoped manager set
+        // (Track A top 150 by AUM + Track B/C mega-filers + always-include —
+        // see Section 16.3 of the current-state doc), not the full 13F filer
+        // universe managermaster/filing13f cover. Scoped to the SPECIFIC
+        // latest accession_number, not just "any row ever for this cik" —
+        // a manager can be in-scope generally but not yet have this quarter's
+        // holdings backfilled (holding13f_normalized ingestion can lag behind
+        // filing13f, which is seeded from SEC submissions metadata directly).
+        // Checking cik alone would report has_holdings_data: true off an old
+        // quarter while the actual /api/13f-manager-holdings call for the
+        // latest accession_number returns nothing — an empty table with no
+        // explanation, worse than the gap this flag exists to close.
+        const holdingsScopeRow = latestFiling
+          ? await env.DB.prepare(
+              "SELECT 1 AS present FROM holding13f_normalized WHERE cik = ? AND accession_number = ? LIMIT 1"
+            ).bind(cik10, latestFiling.accession_number).first()
+          : null;
 
         return json({
           cik: cik10,
@@ -153,7 +172,8 @@ export default {
           normalized_name: identityRow ? identityRow.normalized_name : null,
           aliases: (aliasesRes.results || []).map(a => ({ alias: a.alias, source: a.source })),
           filings,
-          latest_filing: filings[0] || null
+          latest_filing: latestFiling,
+          has_holdings_data: !!holdingsScopeRow
         }, 200);
       }
 

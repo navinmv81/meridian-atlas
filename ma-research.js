@@ -41,7 +41,14 @@ async function res13FSearch() {
       body.innerHTML = '<div class="rd-none" style="margin-top:30px">No institutional filer found for ' + escapeRdHtml(mgr) + '.</div>';
       return;
     }
-    await loadFilingsForCIK(result.cik, result.name);
+    // Route into the entity-linked Manager Page (ma-13f.js) rather than the
+    // old raw-SEC-XML holdings modal. The Manager Page's identity + filing
+    // history come from D1 (managermaster/filing13f), which covers the full
+    // 13F filer universe, so this works for any manager search resolves —
+    // only the holdings section itself is scope-limited, and it says so
+    // honestly when it is (see has_holdings_data in worker-13f.js).
+    body.innerHTML = `<div style="padding:16px 18px;font-size:11px;color:var(--dim)">Opened ${escapeRdHtml(result.name || mgr)} in Manager Page.</div>`;
+    mgr_openManagerPage(result.cik);
   } catch (e) {
     body.innerHTML = `<div class="rd-none" style="margin-top:30px">Error fetching 13F for ${escapeRdHtml(mgr)}.</div>`;
   }

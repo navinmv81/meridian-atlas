@@ -3,7 +3,13 @@ main = "src/holdings-pipeline.js"
 compatibility_date = "2024-01-01"
 account_id = "ea36070477560935a68ad9110a2fd40b"
 
-# HOLD lifted 2026-06-14 — resuming at original schedule
+# HOLD lifted 2026-07-25 (second time) — re-enabled after fixing the
+# write guard in src/holdings-pipeline.js to track Cloudflare's actual
+# rows_written (confirmed empirically at ~9x the logical row count on this
+# table) instead of logical row counts. DAILY_WRITE_LIMIT=80,000 is now
+# measured in the same unit as the real free-tier cap. Verified via two
+# manual /run invocations + Cloudflare dashboard cross-check on 2026-07-25
+# before re-enabling.
 [triggers]
 crons = ["0 */2 * * *"]
 

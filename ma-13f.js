@@ -357,10 +357,42 @@ async function mgr_loadManager(cik) {
     return;
   }
 
+  // Position-level holdings are only tracked for a scoped manager set (see
+  // has_holdings_data comment in worker-13f.js). Rather than fetch
+  // /api/13f-manager-holdings and render a silently-empty table for managers
+  // outside that scope, say so plainly and link straight to the SEC filing.
+  if (!result.has_holdings_data) {
+    const filingUrl = mgr_secFilingIndexUrl(result.cik, latest.accession_number);
+    html += `
+      <div class="rd-none" style="margin-top:20px">
+        Position-level holdings aren't tracked for this manager. Meridian Atlas
+        currently tracks full holdings for the top ~150 managers by AUM plus a
+        set of named mega-filers — not the full 13F universe.
+        ${filingUrl ? `<div style="margin-top:8px"><a class="res-link" href="${escapeRdHtml(filingUrl)}" target="_blank" rel="noopener">View this filing on SEC EDGAR →</a></div>` : ''}
+      </div>`;
+    overlay.innerHTML = mgr_renderShell(html);
+    return;
+  }
+
   html += '<div id="mgr-holdings-section" style="margin-top:20px"><div class="rd-loading"><div class="rd-spinner"></div><br>Loading holdings…</div></div>';
   overlay.innerHTML = mgr_renderShell(html);
 
   mgr_loadHoldings(result.cik, latest.accession_number, latest.report_period, latest.filing_date);
+}
+
+// Direct SEC EDGAR filing-index URL — deliberately not routed through the
+// meridian-filings proxy, matching the Bug 1 fix in ma-entities.js
+// (_issuerFilingIndexUrl): the proxy is for fetching a single document body,
+// and pointed at a bare accession folder it returns SEC's raw directory
+// listing rather than the filing itself.
+function mgr_secFilingIndexUrl(cik, accessionNumber) {
+  const cikNum = parseInt(cik, 10);
+  const accNoDash = String(accessionNumber || '').replace(/-/g, '');
+  if (!cikNum || !accNoDash) return null;
+  const accWithDash = accNoDash.length === 18
+    ? `${accNoDash.slice(0, 10)}-${accNoDash.slice(10, 12)}-${accNoDash.slice(12)}`
+    : accNoDash;
+  return `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNoDash}/${accWithDash}-index.htm`;
 }
 
 function mgr_renderIdentityHeader(data) {
