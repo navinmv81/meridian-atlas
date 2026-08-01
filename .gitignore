@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# Cloudflare Workers local state
+.wrangler/
+
+# OS
+.DS_Store
+
+# secrets
+.env
+.env.*
+
+# 13F Seed — large scratch/bulk-data artifacts (per README: GLEIF dumps,
+# SEC bulk TSVs). None present in this snapshot currently, but excluded
+# defensively since these categories can exceed ~50MB.
+13F Seed/*.db
+13F Seed/*.db-shm
+13F Seed/*.db-wal
+13F Seed/*.zip
+13F Seed/*.csv
+13F Seed/2025_Q*/

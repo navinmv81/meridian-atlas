@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Meridian Atlas — August Sprint Control Board</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --panel-border: #232c38;
+    --text: #dbe4ee;
+    --text-dim: #8896a6;
+    --accent: #4fb3ff;
+    --green: #3ddc84;
+    --amber: #f5b942;
+    --red: #ff5d5d;
+    --purple: #b892ff;
+    --blue-grey: #6b7f99;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 32px 24px 64px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header { margin-bottom: 28px; }
+  h1 {
+    font-size: 22px;
+    margin: 0 0 4px;
+    letter-spacing: 0.2px;
+  }
+  .subtitle { color: var(--text-dim); font-size: 13px; }
+  .refresh-note {
+    margin-top: 10px; font-size: 11.5px; color: var(--text-dim);
+    background: rgba(107,127,153,0.08); border: 1px solid var(--panel-border);
+    border-radius: 6px; padding: 8px 12px;
+  }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin: 18px 0 28px;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+    padding: 4px 10px; border-radius: 20px;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+  }
+  .badge-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .s-blocked   { background: rgba(255,93,93,0.12); color: var(--red); border-color: rgba(255,93,93,0.35); }
+  .s-blocked .badge-dot { background: var(--red); }
+  .s-spec      { background: rgba(79,179,255,0.12); color: var(--accent); border-color: rgba(79,179,255,0.35); }
+  .s-spec .badge-dot { background: var(--accent); }
+  .s-implement { background: rgba(184,146,255,0.12); color: var(--purple); border-color: rgba(184,146,255,0.35); }
+  .s-implement .badge-dot { background: var(--purple); }
+  .s-review    { background: rgba(245,185,66,0.12); color: var(--amber); border-color: rgba(245,185,66,0.35); }
+  .s-review .badge-dot { background: var(--amber); }
+  .s-idea      { background: rgba(107,127,153,0.15); color: var(--blue-grey); border-color: rgba(107,127,153,0.4); }
+  .s-idea .badge-dot { background: var(--blue-grey); }
+  .s-closed    { background: rgba(61,220,132,0.12); color: var(--green); border-color: rgba(61,220,132,0.35); }
+  .s-closed .badge-dot { background: var(--green); }
+
+  .section-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-dim); margin: 32px 0 12px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 6px;
+  }
+
+  .recommend {
+    background: linear-gradient(135deg, rgba(79,179,255,0.10), rgba(184,146,255,0.06));
+    border: 1px solid rgba(79,179,255,0.35);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 8px;
+  }
+  .recommend .tag {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--accent); font-weight: 700; margin-bottom: 6px;
+  }
+  .recommend .title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .recommend .why { color: var(--text-dim); font-size: 13px; }
+
+  details.ticket {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  details.ticket[open] { border-color: rgba(79,179,255,0.3); }
+  summary.ticket-head {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+  }
+  summary.ticket-head::-webkit-details-marker { display: none; }
+  .th-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .th-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; color: var(--text-dim); flex-shrink: 0;
+  }
+  .th-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .th-chevron { color: var(--text-dim); font-size: 12px; flex-shrink: 0; transition: transform 0.15s; }
+  details[open] .th-chevron { transform: rotate(90deg); }
+
+  .ticket-body { padding: 4px 16px 18px; border-top: 1px solid var(--panel-border); }
+  .field { margin-top: 12px; }
+  .field-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--text-dim); margin-bottom: 3px; font-weight: 600;
+  }
+  .field-value { font-size: 13px; color: var(--text); }
+  .field-value ul { margin: 4px 0 0; padding-left: 18px; }
+  .field-value li { margin-bottom: 2px; }
+  .risk-item { color: #ffb4b4; }
+  .ok-item { color: #a8f0c6; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+
+  table.decisions {
+    width: 100%; border-collapse: collapse; font-size: 12.5px;
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; overflow: hidden;
+  }
+  table.decisions th, table.decisions td {
+    text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--panel-border);
+  }
+  table.decisions th { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  table.decisions tr:last-child td { border-bottom: none; }
+  .footer-note { color: var(--text-dim); font-size: 11.5px; margin-top: 28px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Meridian Atlas — August Sprint Control Board</h1>
+    <div class="subtitle">Snapshot as of 29 July 2026, 09:30 BST &nbsp;·&nbsp; Orchestrator-maintained &nbsp;·&nbsp; refresh this file after each meaningful stage change</div>
+    <div class="refresh-note">This is a static file, not a live dashboard — it doesn't auto-update. Regenerated manually whenever a ticket changes stage or a major decision lands. If it looks stale, ask the Orchestrator to refresh it, same as this update.</div>
+  </header>
+
+  <div class="legend">
+    <span class="badge s-idea"><span class="badge-dot"></span>Idea</span>
+    <span class="badge s-spec"><span class="badge-dot"></span>Product Spec</span>
+    <span class="badge s-review"><span class="badge-dot"></span>Review / Diagnostic</span>
+    <span class="badge s-implement"><span class="badge-dot"></span>Implement</span>
+    <span class="badge s-blocked"><span class="badge-dot"></span>Blocked</span>
+    <span class="badge s-closed"><span class="badge-dot"></span>Closed</span>
+  </div>
+
+  <div class="recommend">
+    <div class="tag">Recommended next</div>
+    <div class="title">MA-AUG-001 — begin meridian-entities-figi Worker scaffolding. In parallel: Founder + Architect decide entities-seed's re-enable cadence.</div>
+    <div class="why">entities-seed completed all four pipeline steps end-to-end for the first time on 29 July (verified via live wrangler tail + direct D1 query) — the gate condition for MA-AUG-001 is satisfied, and MA-AUG-001's own Worker has no cron trigger, so it isn't affected by the cadence question below. Separately, the Ops three-point check on re-enabling entities-seed's cron surfaced a real finding: its single verified run wrote an estimated ~61,400 rows in one invocation (31,934 issuer upserts + 29,470 queue inserts), well over the "under 50k per execution" guideline — and the schedule preserved in wrangler-entities-seed.toml's comment is daily ("0 3 * * *"), not the monthly cadence this board had assumed. Running that volume daily risks recreating the 100k+/day incident from 28 July. Recommend a weekly or monthly cadence instead of restoring the original daily schedule — needs explicit Founder + Architect sign-off before the toml is changed.</div>
+  </div>
+
+  <div class="section-label">Core Epics</div>
+
+  <details class="ticket" open>
+    <summary class="ticket-head">
+      <div class="th-left">
+        <span class="th-id">MA-AUG-001</span>
+        <span class="th-title">OpenFIGI entity-resolution upgrade</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge s-closed"><span class="badge-dot"></span>Backfill Complete</span>
+        <span class="th-chevron">▶</span>
+      </div>
+    </summary>
+    <div class="ticket-body">
+      <div class="field"><div class="field-label">Domain / Lane</div><div class="field-value">Entities</div></div>
+      <div class="field"><div class="field-label">Objective</div><div class="field-value">Raise instrument→issuer resolution beyond the original 43.9% coverage (23,963 of 54,562 instruments mapped) via OpenFIGI. Additive identity-layer enhancement only.</div></div>
+      <div class="field"><div class="field-label">Current status</div><div class="field-value"><strong>Full backfill complete, 29 July.</strong> instrument_entity_map: 23,963 → <strong>32,763</strong> (+8,800 openfigi_tier1 rows) — coverage now <strong>60.0%</strong> of 54,562 instruments, up from 43.9%. Ran across multiple sessions including a mid-run machine crash (fully recovered with zero data loss — ground-truth D1 counts before/after the crash matched exactly) and a root-cause fix along the way: the unmapped-instruments query had no way to record "asked OpenFIGI, didn't resolve," so it got permanently stuck re-querying the same batch once the easy matches ran out. Fixed by adding <code>openfigicache</code> (28,605 rows — every instrument ever considered, matched or not) and excluding cached instrument_keys from future runs. Backfill reached natural completion: last call returned considered:0 — no unmapped instruments with an ISIN/CUSIP remain.</div></div>
+      <div class="field"><div class="field-label">Touched assets</div><div class="field-value">meridian-entities-figi (live) · entities-seed.js (normalizeName exported for reuse) · openfigicache (new, 28,605 rows) · instrument_master (read) · instrument_entity_map (+8,800 openfigi_tier1 rows, now 32,763 total)</div></div>
+      <div class="field"><div class="field-label">Risks</div><div class="field-value"><ul>
+        <li class="risk-item"><strong>~19,805 instruments</strong> got a real OpenFIGI name match but no corresponding entity_master row — now permanently cached in openfigicache, cheaply re-matchable later (no new OpenFIGI calls needed) once entity_master gains more rows or the normalizeName() CORP/CORPORATION gap is fixed. Not urgent, but worth revisiting rather than assuming this ceiling is permanent.</li>
+        <li class="risk-item">Migration's row-count checkpoint is a SQL comment, not an enforced gate — every run's counts matched fine, but tighten if this migration pattern gets reused for a future CHECK-constraint change</li>
+        <li class="risk-item">instrument_master's cusip-only fallback path is not formally indexed (only cusip_issuer_6 is) — low risk at 54,562 rows</li>
+        <li class="risk-item">Match confidence is a fixed placeholder (70), not a modeled score</li>
+        <li class="risk-item">entity_master's fund-type count (290) exceeds the current 264 ETFs — likely historical drift, unrelated to this ticket</li>
+      </ul></div></div>
+      <div class="field"><div class="field-label">Approvals required</div><div class="field-value">None outstanding.</div></div>
+      <div class="field"><div class="field-label">Decisions made</div><div class="field-value">New Worker meridian-entities-figi, no Cron Trigger · OpenFIGI V3, explicit warning/error handling · free API key created · no auto-creation of entity_master rows from unmatched names · Founder approved 28 July, gated on MA-AUG-002 · 29 July — gate cleared, full build approved · 29 July — migration + deploy + first live batch, verified via wrangler tail · 29 July — openfigicache root-cause fix approved and deployed after a stuck-loop diagnostic · 29 July — full backfill run to completion across multiple sessions (21,000 then 30 total then 39 total calls), survived a mid-run machine crash with zero data loss, reached considered:0</div></div>
+      <div class="field"><div class="field-label">Next step</div><div class="field-value">Ticket's core objective (raise coverage via OpenFIGI) is done. Optional fast-follow: a cheap re-match pass against openfigicache's ~19,805 unmatched-but-cached rows once entity_master changes. Otherwise ready to close.</div></div>
+    </div>
+  </details>
+
+  <details class="ticket" open>
+    <summary class="ticket-head">
+      <div class="th-left">
+        <span class="th-id">MA-AUG-002</span>
+        <span class="th-title">Entity worker reactivation</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge s-review"><span class="badge-dot"></span>Verified — Cadence Decision Pending</span>
+        <span class="th-chevron">▶</span>
+      </div>
+    </summary>
+    <div class="ticket-body">
+      <div class="field"><div class="field-label">Domain / Lane</div><div class="field-value">Entities / Ops</div></div>
+      <div class="field"><div class="field-label">Objective</div><div class="field-value">Safely re-enable meridian-entities-seed and meridian-entities-enrich. meridian-entities-delta deferred to September.</div></div>
+      <div class="field"><div class="field-label">Current status</div><div class="field-value"><span class="ok-item">Code-level verification complete, 29 July.</span> Root cause of the multi-day ambiguous-verification saga found via live wrangler tail: seedIssuerEntities was erroring on Cloudflare's subrequest ceiling. Fixed via two changes (Steps 1/2's N+1 per-row SELECT loops replaced with bulk SELECT + in-memory Map; BATCH_SIZE raised 20→100), deployed, retested. <strong>All four pipeline steps completed successfully for the first time</strong>: 264 fund entities, 264 links, 44 managers, 264 relationships, 31,934 issuer entities, 29,470 queued for enrichment. Confirmed against production via direct D1 query. entities-enrich was already verified live on 29 July (guards + both phases correct). <strong>Remaining:</strong> the actual cron re-enable — Ops three-point check (below) surfaced a real cadence risk that needs a Founder/Architect decision before the toml files are changed.</div></div>
+      <div class="field"><div class="field-label">Touched assets</div><div class="field-value">entities-seed.js (N+1 fix, BATCH_SIZE, response handling) · entities-enrich.js · wrangler-entities-seed/enrich/delta.toml (Logs enabled; crons still empty — see below) · holdings-pipeline.js (comment) · wrangler-holdings.toml (cron → weekly)</div></div>
+      <div class="field"><div class="field-label">Ops three-point check — entities-seed cron re-enable</div><div class="field-value"><ul>
+        <li class="ok-item"><strong>1. Index audit — pass.</strong> seedIssuerEntities' holdings query is covered by idx_holdings_status_series_month; the new bulk entity_master lookups filter on the indexed type column. No full scans.</li>
+        <li class="risk-item"><strong>2. Single-execution read/write test — fails the "under 50k" guideline.</strong> Today's verified run wrote an estimated ~61,400 rows in one invocation (31,934 issuer upserts + 29,470 queue inserts, plus smaller Step 1/2 writes). checkWriteBudget() only checks the cumulative daily counter before starting — it does not cap a single invocation mid-run, the same class of gap already backlogged for holdings-pipeline.js (Fix 2).</li>
+        <li class="ok-item"><strong>3. Read/write budget declaration — documented</strong> in entities-seed.js's file header, now updated with real observed figures instead of estimates.</li>
+      </ul></div></div>
+      <div class="field"><div class="field-label">Cadence finding</div><div class="field-value">wrangler-entities-seed.toml's preserved comment shows the <em>original</em> schedule was <strong>daily</strong> ("0 3 * * *"), not monthly as this board had assumed. Running a ~61k-write invocation daily risks recreating the 28 July 100k+/day incident, especially stacking with holdings-pipeline and entities-enrich. Recommend weekly or monthly cadence instead of restoring the original schedule verbatim. Separately, entities-enrich's preserved comment shows <em>two</em> legacy triggers ("*/30 * * * *" and "50 * * * *") — likely redundant; worth consolidating to one given the Free plan's 5-cron account-wide ceiling.</div></div>
+      <div class="field"><div class="field-label">Risks</div><div class="field-value"><ul>
+        <li class="risk-item"><strong>New finding (29 July):</strong> entity_master has 290 fund-type rows against 264 current ETFs — likely historical drift (delisted ETFs or old normalization variants), not caused by today's fix. Worth a quick look, not urgent.</li>
+        <li class="risk-item"><strong>New finding (29 July):</strong> entity_master contains 4 "holding" and 1 "spv" type rows that entities-seed.js's classifyType() never produces — likely entities-enrich reclassifying off LEI legal-form data, not yet confirmed in that file's code.</li>
+        <li class="risk-item">entities-enrich's Phase 3 query read 11.11k rows for a LIMIT 45 (near-full-table scan) — logged to MA-AUG-004, not fixed.</li>
+        <li class="risk-item">Fix 2 (mid-loop write checkpoint in holdings-pipeline.js) still open — backlogged; entities-seed now has the same class of gap (see three-point check above)</li>
+        <li class="risk-item">normalizeName() CORP/CORPORATION duplicate-entity gap still unticketed</li>
+      </ul></div></div>
+      <div class="field"><div class="field-label">Approvals required</div><div class="field-value">Founder + Architect: entities-seed cadence (weekly/monthly recommended, not the original daily schedule) · Architect: entities-enrich dual-cron consolidation</div></div>
+      <div class="field"><div class="field-label">Decisions made</div><div class="field-value">28 July — Fix 1 (write-counter key-format mismatch) approved and deployed · Fix 2 backlogged · entities-delta deferred to September · meridian-holdings cadence emergency-changed to weekly · ticket held BLOCKED overnight · 29 July — budget reset confirmed clean, ticket unblocked · entities-enrich verification passed · entities-seed response-handling fix approved and deployed · N+1/BATCH_SIZE fix (root cause) approved, deployed, verified end-to-end · MA-AUG-001 gate condition declared met</div></div>
+      <div class="field"><div class="field-label">Next step</div><div class="field-value">Founder + Architect decide entities-seed's re-enable cadence; once set, deploy the cron change and this ticket closes</div></div>
+    </div>
+  </details>
+
+  <details class="ticket">
+    <summary class="ticket-head">
+      <div class="th-left">
+        <span class="th-id">MA-AUG-003</span>
+        <span class="th-title">Data completion and coverage expansion</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge s-implement"><span class="badge-dot"></span>In Progress — Chunked Backfill Running</span>
+        <span class="th-chevron">▶</span>
+      </div>
+    </summary>
+    <div class="ticket-body">
+      <div class="field"><div class="field-label">Domain / Lane</div><div class="field-value">Issuer / 13F (Equities)</div></div>
+      <div class="field"><div class="field-label">Objective</div><div class="field-value">Complete the remaining 3 Q1 2025 managerissuerpositionquarterly backfill chunks; extend financialfact_reported past the initial 500 issuers toward the remaining pool; refresh issuerperiodsummary as coverage grows.</div></div>
+      <div class="field"><div class="field-label">Current status</div><div class="field-value"><strong>financialfact_reported backfill underway, 31 July — 2 batches complete.</strong> seed-financialfact.js is a standalone Node script (real writes via D1 REST API, outside the Worker write-budget counter) with a self-imposed safe-daily-writes guard of ~13,000 rows. A dry run at offset=500 (no limit — covered the full remaining 3,550-issuer pool) projected 792,147 writes, ~61x over budget, so nothing was written from that pass. <strong>Batch 1:</strong> <code>--offset=500 --limit=150</code> → 159 issuers (150 + 9 priority), 1 failed, 13,495 fact rows written. Cloudflare's actual metered writes for this batch came in at <strong>34,600</strong> — a real ~2.56x index multiplier, lower than the 3x assumed for sizing. <strong>Batch 2:</strong> <code>--offset=650 --limit=135</code> → 144 issuers (135 + 9 priority), 0 failed, 12,370 fact rows written. <strong>Confirmed via Cloudflare dashboard: cumulative account-wide metered writes for the day = 76,040 of the 100,000 hard daily cap (76%).</strong> Working back, batch 2 alone metered ~41,440 writes for 12,370 logical rows — a ~3.35x multiplier, notably higher than batch 1's ~2.56x. <strong>The index-write multiplier is not stable batch-to-batch</strong> (observed range 2.56x–3.35x against the script's own 3x assumption) — future sizing should check the actual Cloudflare dashboard figure after each batch rather than trust a fixed multiplier. <strong>Held after batch 2</strong> pending the next UTC daily reset. <strong>Batch 3 (1 August, fresh daily budget):</strong> <code>--offset=785 --limit=135</code> → 144 issuers (135 + 9 priority), 0 failed, 11,320 fact rows written. Cloudflare dashboard confirmed ~32,000 metered writes for the day after this batch — a ~2.83x multiplier, within the previously observed 2.56x–3.35x range. <strong>Batch 4 (1 August, same day):</strong> <code>--offset=920 --limit=135</code> → 144 issuers (135 + 9 priority), 0 failed, 12,189 fact rows written. Cloudflare dashboard confirmed ~77,000 of 100,000 cap used after this batch — batch 4 alone metered ~45,000 writes for 12,189 rows, a ~3.69x multiplier, the highest yet (trend across 4 batches: 2.56x → 3.35x → 2.83x → 3.69x). <strong>Held after batch 4</strong> — only ~23,000 headroom remains today, the multiplier trend is not settling toward a predictable value (plausibly rising as financialfact_reported itself grows and index page maintenance gets costlier per insert), and 2 August is a Sunday — meridian-holdings' weekly cron will also compete for the same account-wide cap. Not enough safety margin to risk a 5th batch today. <strong>Cumulative across all 4 real batches: 573 issuers, 49,374 fact rows written.</strong> Remaining pool now ~2,986 issuers, next chunk starts at offset=1055 — resume only after checking the dashboard post-ETF-cron on 2 August. Index creation (idx_financialfact_cik_tag) is deliberately deferred until the full backfill completes.</div></div>
+      <div class="field"><div class="field-label">Touched assets</div><div class="field-value">managerissuerpositionquarterly (untouched this pass) · financialfact_reported (+49,374 rows across 4 batches, 31 July–1 August) · issuerperiodsummary (not yet refreshed)</div></div>
+      <div class="field"><div class="field-label">Risks</div><div class="field-value"><ul>
+        <li class="risk-item">D1 write-multiplier budget breach if increments aren't sized correctly — confirmed real risk: an unbounded dry run at offset=500 projected a 61x overshoot before this was caught</li>
+        <li class="risk-item">Incomplete data giving a false completeness signal on Issuer pages while the backfill is only ~4.5% through the remaining pool (159 of ~3,550)</li>
+        <li class="risk-item">seed-financialfact.js runs outside the Worker-based holdings_pipeline_state write counter — its own budget tracking is self-reported only, not enforced by a shared guard</li>
+        <li class="risk-item">Priority issuers (9) are re-fetched and re-considered on every batch regardless of offset — idempotent (INSERT OR IGNORE) so harmless to data, but adds redundant SEC fetch time per run</li>
+        <li class="risk-item"><strong>New finding (31 July, updated 1 August):</strong> the index-write multiplier is not just variable but trending upward across 4 batches (2.56x → 3.35x → 2.83x → 3.69x) — plausibly rising as financialfact_reported itself grows and index page maintenance gets costlier per insert. Sizing must be checked against the actual Cloudflare dashboard figure after every batch; the assumption of a fixed 3x is no longer reliable even as a ceiling.</li>
+      </ul></div></div>
+      <div class="field"><div class="field-label">Approvals required</div><div class="field-value">Founder (scope/sequencing) · Operations Lead (budget fit) — ongoing per-batch sizing approval until the pool is cleared</div></div>
+      <div class="field"><div class="field-label">Decisions made</div><div class="field-value">31 July — dry run at offset=500 (unbounded) showed 61x budget overshoot, held, no writes made · 31 July — real batch approved and run at offset=500/limit=150 given a fresh daily D1 budget (4 writes recorded before this run) and no concurrent cron pressure (ETF cron weekly, entities crons still frozen) · 31 July — batch 2 approved at offset=650/limit=135; Cloudflare dashboard confirmed cumulative 76,040 of 100,000 daily cap after both batches — held for the day, resume at offset=785 after next UTC reset · 1 August — batch 3 approved at offset=785/limit=135 on fresh daily budget; Cloudflare dashboard confirmed ~32,000 of 100,000 cap used, ~68,000 headroom remaining — cleared for a same-day batch 4 · 1 August — batch 4 run at offset=920/limit=135; dashboard confirmed ~77,000 of 100,000 used, multiplier hit a new high (3.69x) — held for the rest of the day given thin remaining headroom and Sunday's competing ETF cron</div></div>
+      <div class="field"><div class="field-label">Next step</div><div class="field-value">Hold financialfact batches until 2 August; check the Cloudflare dashboard after meridian-holdings' Sunday cron completes before sizing any further batch. At current pace (~135 issuers/batch, ~23 batches remaining) this is a multi-week backfill, not a this-week completion — treat as an ongoing daily/session task.</div></div>
+    </div>
+  </details>
+
+  <details class="ticket">
+    <summary class="ticket-head">
+      <div class="th-left">
+        <span class="th-id">MA-AUG-004</span>
+        <span class="th-title">Operational hardening and observability</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge s-spec"><span class="badge-dot"></span>Product Spec</span>
+        <span class="th-chevron">▶</span>
+      </div>
+    </summary>
+    <div class="ticket-body">
+      <div class="field"><div class="field-label">Domain / Lane</div><div class="field-value">Ops</div></div>
+      <div class="field"><div class="field-label">Objective</div><div class="field-value">Root-cause/fix the repeated ALTER TABLE behaviour in meridian-holdings, remove stale meridian-proxy routes, add lightweight alerting and a structured health review pack.</div></div>
+      <div class="field"><div class="field-label">Current status</div><div class="field-value">Formal issue bundle not yet scoped — but this ticket has accumulated three real backlog items from MA-AUG-002's diagnostic work so far.</div></div>
+      <div class="field"><div class="field-label">Touched assets</div><div class="field-value">meridian-holdings, meridian-proxy</div></div>
+      <div class="field"><div class="field-label">Risks</div><div class="field-value"><ul>
+        <li class="risk-item">Stale route removal without full superseded-endpoint verification</li>
+        <li class="risk-item">Schema-alter root cause may need Architect sign-off</li>
+      </ul></div></div>
+      <div class="field"><div class="field-label">Approvals required</div><div class="field-value">Founder (inclusion/priority) · Architect (routing change)</div></div>
+      <div class="field"><div class="field-label">Decisions made</div><div class="field-value">Three items now informally attached pending a formal scope pass: (1) mid-loop write checkpoint for holdings-pipeline.js, (2) meridian-holdings cadence permanence review, (3) entities-enrich Phase 3 full-table-scan fix</div></div>
+      <div class="field"><div class="field-label">Next step</div><div class="field-value">Operations Lead formally scopes the hardening package once MA-AUG-002 closes</div></div>
+    </div>
+  </details>
+
+  <div class="section-label">Sub-Items Surfaced This Sprint (not yet formally ticketed)</div>
+
+  <details class="ticket">
+    <summary class="ticket-head">
+      <div class="th-left">
+        <span class="th-id">FAST-FOLLOW</span>
+        <span class="th-title">normalizeName() CORP / CORPORATION suffix gap</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge s-implement"><span class="badge-dot"></span>Fixed — Deploy Pending</span>
+        <span class="th-chevron">▶</span>
+      </div>
+    </summary>
+    <div class="ticket-body">
+      <div class="field"><div class="field-label">Found during</div><div class="field-value">MA-AUG-002 Engineering diagnostic, 28 July</div></div>
+      <div class="field"><div class="field-label">Objective</div><div class="field-value">entities-seed.js's normalizeName() strips "CORP" but not "CORPORATION" — likely root cause of the previously "unidentified" Danaher-style duplicate-entity bug.</div></div>
+      <div class="field"><div class="field-label">Current status</div><div class="field-value"><strong>Fixed in source, 1 August.</strong> Added CORPORATION alongside CORP, and defensively INCORPORATED/LIMITED alongside INC/LTD (same class of gap, not yet confirmed to have caused a duplicate but cheap to close pre-emptively). Not yet deployed — meridian-entities-seed and meridian-entities-figi (which imports this exact function) both need redeploying to pick it up. Once live, the ~19,805 openfigicache rows flagged "matched, no entity_master row" (MA-AUG-001) become a cheap re-match candidate — some of that gap was likely this exact CORP/CORPORATION mismatch.</div></div>
+      <div class="field"><div class="field-label">Decisions made</div><div class="field-value">Kept out of MA-AUG-002's scope · 1 August — fix approved and written, folded in as a MA-AUG-003-adjacent fast-follow rather than a separate ticket number</div></div>
+      <div class="field"><div class="field-label">Next step</div><div class="field-value">Deploy meridian-entities-seed and meridian-entities-figi via Claude Code; then consider queuing the openfigicache re-match pass</div></div>
+    </div>
+  </details>
+
+  <details class="ticket">
+    <summary class="ticket-head">
+      <div class="th-left">
+        <span class="th-id">FAST-FOLLOW</span>
+        <span class="th-title">meridian-holdings cadence review (every 2h → weekly)</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge s-idea"><span class="badge-dot"></span>Unticketed</span>
+        <span class="th-chevron">▶</span>
+      </div>
+    </summary>
+    <div class="ticket-body">
+      <div class="field"><div class="field-label">Found during</div><div class="field-value">MA-AUG-002 write-budget incident, 28 July</div></div>
+      <div class="field"><div class="field-label">Objective</div><div class="field-value">meridian-holdings' cron changed directly in the Cloudflare dashboard from every 2 hours to weekly (Sun 04:00 UTC) as an emergency mitigation. wrangler-holdings.toml updated to match.</div></div>
+      <div class="field"><div class="field-label">Current status</div><div class="field-value">Live and matching source control. Not yet reviewed for product impact — slows ETF Phase B/C/D/E gate progression proportionally.</div></div>
+      <div class="field"><div class="field-label">Decisions made</div><div class="field-value">28 July — cadence changed by founder direct action, emergency mitigation, not yet reviewed as permanent</div></div>
+      <div class="field"><div class="field-label">Next step</div><div class="field-value">Architect + ETF Product Lead decide: permanent, or restore a faster schedule once write-guard fixes are fully verified</div></div>
+    </div>
+  </details>
+
+  <details class="ticket">
+    <summary class="ticket-head">
+      <div class="th-left">
+        <span class="th-id">FAST-FOLLOW</span>
+        <span class="th-title">entities-enrich Phase 3 full-table-scan on entity_master</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge s-idea"><span class="badge-dot"></span>Unticketed</span>
+        <span class="th-chevron">▶</span>
+      </div>
+    </summary>
+    <div class="ticket-body">
+      <div class="field"><div class="field-label">Found during</div><div class="field-value">MA-AUG-002 live verification test, 29 July</div></div>
+      <div class="field"><div class="field-label">Objective</div><div class="field-value">Phase 3's entity_master query read 11.11k rows to serve a LIMIT 45 — effectively a full table scan (entity_master is 11,111 rows), despite idx_entity_master_lei and idx_entity_master_type both existing. Compound WHERE clause likely defeats the query planner's index selection.</div></div>
+      <div class="field"><div class="field-label">Current status</div><div class="field-value">Harmless at current table size (11.11k reads is trivial against the 5M/day soft cap). Same query shape as the June 12 incident — needs fixing before long-term reliance at scale, not urgent today.</div></div>
+      <div class="field"><div class="field-label">Decisions made</div><div class="field-value">None yet — logged as a candidate for MA-AUG-004</div></div>
+      <div class="field"><div class="field-label">Next step</div><div class="field-value">EXPLAIN QUERY PLAN pass + likely a composite index, scoped alongside MA-AUG-004</div></div>
+    </div>
+  </details>
+
+  <details class="ticket">
+    <summary class="ticket-head">
+      <div class="th-left">
+        <span class="th-id">FAST-FOLLOW</span>
+        <span class="th-title">entity_master fund-count drift (290 vs 264 current ETFs)</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge s-idea"><span class="badge-dot"></span>Unticketed</span>
+        <span class="th-chevron">▶</span>
+      </div>
+    </summary>
+    <div class="ticket-body">
+      <div class="field"><div class="field-label">Found during</div><div class="field-value">MA-AUG-002 end-to-end verification, 29 July</div></div>
+      <div class="field"><div class="field-label">Objective</div><div class="field-value">Direct D1 query shows 290 entity_master rows of type='fund' against only 264 ETFs in etf_master. UNIQUE(normalized_name, type) rules out exact duplicates, so these are 26 distinct normalized names with no current matching ETF — likely delisted ETFs or old normalization variants from before this fix.</div></div>
+      <div class="field"><div class="field-label">Current status</div><div class="field-value">Observed, not investigated. Not caused by today's fix — pre-existing accumulation. Low urgency; worth a look before relying on fund-entity counts for reporting.</div></div>
+      <div class="field"><div class="field-label">Decisions made</div><div class="field-value">None yet</div></div>
+      <div class="field"><div class="field-label">Next step</div><div class="field-value">Entities Product Lead runs a diff of normalized fund names in entity_master vs. current etf_master to confirm the source of drift</div></div>
+    </div>
+  </details>
+
+  <details class="ticket">
+    <summary class="ticket-head">
+      <div class="th-left">
+        <span class="th-id">FAST-FOLLOW</span>
+        <span class="th-title">entity_master "holding" / "spv" types not produced by entities-seed.js</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge s-closed"><span class="badge-dot"></span>Resolved — Confirmed Benign</span>
+        <span class="th-chevron">▶</span>
+      </div>
+    </summary>
+    <div class="ticket-body">
+      <div class="field"><div class="field-label">Found during</div><div class="field-value">MA-AUG-002 end-to-end verification, 29 July</div></div>
+      <div class="field"><div class="field-label">Objective</div><div class="field-value">entity_master has 4 rows typed "holding" and 1 typed "spv". entities-seed.js's classifyType() only ever assigns fund, government, or operating — so something else is setting these, most likely entities-enrich.js reclassifying off LEI legal-form data. Not yet confirmed by reading that code path directly.</div></div>
+      <div class="field"><div class="field-label">Current status</div><div class="field-value"><strong>Confirmed via direct code read, 1 August.</strong> "holding" is intentional: entities-enrich.js's Level 2 GLEIF parent-chain lookup auto-creates a new entity_master row with a hardcoded <code>type='holding'</code> whenever it discovers a direct/ultimate parent LEI not already in the table (line ~244) — expected behaviour, not a bug. "spv" is NOT produced anywhere: grepped entities-seed.js, entities-enrich.js, and entities-figi.js for "spv"/"SPV" — zero matches across all three. entities-figi.js is confirmed read-only against entity_master (never inserts). The single spv row predates the current pipeline code and is legacy/manually-seeded data, unrelated to any active Worker.</div></div>
+      <div class="field"><div class="field-label">Decisions made</div><div class="field-value">1 August — resolved by code inspection, no D1 query needed; no fix required, both findings are benign</div></div>
+      <div class="field"><div class="field-label">Next step</div><div class="field-value">None — closed. If the single legacy "spv" row ever causes a real issue, it can be manually reclassified.</div></div>
+    </div>
+  </details>
+
+  <div class="section-label">Decisions Log</div>
+  <table class="decisions">
+    <tr><th>Date</th><th>Ticket</th><th>Decision</th><th>By</th></tr>
+    <tr><td>2026-07-26</td><td>MA-AUG-001</td><td>OpenFIGI approved as August feature source</td><td>Founder</td></tr>
+    <tr><td>2026-07-28</td><td>MA-AUG-002</td><td>Write-counter key-format mismatch (fix 1) approved and deployed</td><td>Founder</td></tr>
+    <tr><td>2026-07-28</td><td>MA-AUG-002 / 004</td><td>Mid-loop write checkpoint (fix 2) approved for August backlog</td><td>Founder</td></tr>
+    <tr><td>2026-07-28</td><td>MA-AUG-002</td><td>meridian-entities-delta activation deferred to September</td><td>Architect</td></tr>
+    <tr><td>2026-07-28</td><td>MA-AUG-002</td><td>meridian-holdings cron changed to weekly (emergency mitigation)</td><td>Founder</td></tr>
+    <tr><td>2026-07-28</td><td>MA-AUG-002</td><td>Ticket held BLOCKED until UTC reset</td><td>Founder</td></tr>
+    <tr><td>2026-07-28</td><td>MA-AUG-001</td><td>New Worker meridian-entities-figi approved, no Cron Trigger (account cron ceiling)</td><td>Architect</td></tr>
+    <tr><td>2026-07-28</td><td>MA-AUG-001</td><td>Full spec approved; implementation explicitly gated on MA-AUG-002 clearing</td><td>Founder</td></tr>
+    <tr><td>2026-07-29</td><td>MA-AUG-002</td><td>Budget reset confirmed clean (4 writes at 06:48 BST); ticket unblocked</td><td>Operations Lead</td></tr>
+    <tr><td>2026-07-29</td><td>MA-AUG-002</td><td>entities-enrich live verification passed — guards and both phases confirmed correct</td><td>Operations Lead</td></tr>
+    <tr><td>2026-07-29</td><td>MA-AUG-002</td><td>entities-seed /run response-handling fix approved and deployed</td><td>Founder</td></tr>
+    <tr><td>2026-07-29</td><td>MA-AUG-002</td><td>Root cause found via live wrangler tail: seedIssuerEntities hitting Cloudflare's subrequest ceiling</td><td>Engineering Lead</td></tr>
+    <tr><td>2026-07-29</td><td>MA-AUG-002</td><td>N+1 lookup removal + BATCH_SIZE 20→100 fix approved, deployed, verified end-to-end (all 4 steps complete for the first time)</td><td>Founder</td></tr>
+    <tr><td>2026-07-29</td><td>MA-AUG-002</td><td>Ops three-point check run on cron re-enable — single-invocation write volume (~61,400) fails the under-50k guideline; weekly/monthly cadence recommended over the original daily schedule</td><td>Operations Lead</td></tr>
+    <tr><td>2026-07-29</td><td>MA-AUG-001</td><td>Gate condition declared met; ticket unblocked, ready for Worker scaffolding</td><td>Architect</td></tr>
+    <tr><td>2026-07-29</td><td>MA-AUG-001</td><td>Corrected assumption that this was the first third-party API integration — FMP (DCF/quick-profile/dividends) already establishes the pattern in meridian-proxy; approved full build in one pass instead of staged scaffolding</td><td>Founder</td></tr>
+    <tr><td>2026-07-29</td><td>MA-AUG-001</td><td>meridian-entities-figi Worker + instrument_entity_map migration written; not yet deployed or run against production</td><td>Engineering Lead</td></tr>
+    <tr><td>2026-07-29</td><td>MA-AUG-001</td><td>Migration applied to production (23,963 → 23,963, verified), secret set, Worker deployed and first batch of 1000 instruments run — 611 new entity mappings written, verified via wrangler tail. Executed via Claude Code.</td><td>Founder / Claude Code</td></tr>
+    <tr><td>2026-07-29</td><td>MA-AUG-001</td><td>/run response fixed to include openFigiMatched (was log-only); noted for reconciliation, not an error</td><td>Engineering Lead</td></tr>
+    <tr><td>2026-07-31</td><td>MA-AUG-003</td><td>seed-financialfact.js dry run at offset=500 (unbounded) projected 792,147 writes vs. ~13,000 safe daily budget (~61x over) — held, no writes made</td><td>Operations Lead</td></tr>
+    <tr><td>2026-07-31</td><td>MA-AUG-003</td><td>Real batch approved at offset=500/limit=150 given fresh daily D1 budget and no concurrent cron pressure; 159 issuers processed, 13,495 fact rows written (~40,485 projected D1 writes, within the 80,000 guard)</td><td>Founder / Claude Code</td></tr>
+    <tr><td>2026-07-31</td><td>MA-AUG-003</td><td>Cloudflare stats confirmed actual metered writes for batch 1 (34,600) came in below the 3x projection — real multiplier ~2.56x; batch 2 approved at offset=650/limit=135, 144 issuers processed, 12,370 fact rows written, 0 failures. Holding for a stats check before any batch 3 today.</td><td>Founder / Claude Code</td></tr>
+    <tr><td>2026-08-01</td><td>MA-AUG-003</td><td>Batches 3 and 4 run (offset=785 and 920, limit=135 each); multiplier trend rose to a new high (3.69x). Held for the rest of the day given thin headroom and Sunday's competing ETF cron.</td><td>Founder / Claude Code</td></tr>
+    <tr><td>2026-08-01</td><td>FAST-FOLLOW</td><td>normalizeName() fixed to cover CORPORATION/INCORPORATED/LIMITED alongside CORP/INC/LTD; not yet deployed</td><td>Engineering Lead</td></tr>
+    <tr><td>2026-08-01</td><td>FAST-FOLLOW</td><td>entity_master "holding"/"spv" type mystery resolved by code inspection — "holding" is intentional (entities-enrich.js GLEIF parent auto-create), "spv" is legacy data unrelated to any active pipeline. Closed, no fix needed.</td><td>Engineering Lead</td></tr>
+    <tr><td>2026-08-01</td><td>Ops / Deploy Model</td><td>Clarified deploy cadence: Meridian Atlas Clean (v11) is confirmed as the intentional local base for all August work (superseding June/July Refresh); Worker deploys (wrangler) happen continuously as built and are already live regardless of git status. GitHub Pages push is a deliberate, batched action taken when the whole sprint is deploy-ready — not a per-change task, and not a bug that the folder currently has no GitHub remote. Reconciling with the June Refresh/Corporate Atlas repo (the one currently wired to Pages) is deferred to that sprint-deploy moment.</td><td>Founder</td></tr>
+  </table>
+
+  <div class="footer-note">Meridian Atlas — August Orchestrator · this file is a static snapshot, not a live connector view · regenerate after each meaningful stage change</div>
+
+</div>
+</body>
+</html>

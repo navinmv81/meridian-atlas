@@ -1,0 +1,22 @@
+name = "meridian-entities-enrich"
+main = "src/entities-enrich.js"
+compatibility_date = "2024-01-01"
+
+# Logs enabled MA-AUG-002, July 28 2026 — matches entities-seed; needed before
+# this Worker's cron is ever re-enabled given its incident history.
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meridian-etf"
+database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
+
+# HOLD lifted 2026-06-17 18:0X BST — root cause fixed (entities-seed.js
+# queue population + Phase 2 type guard), full fund data revert verified
+# HOLD 2026-07-03 — cron frozen. Commenting out [triggers] alone does NOT
+# clear existing Cloudflare schedules; crons = [] below is what actually
+# disables them. Original schedule preserved here for easy re-enable:
+# crons = ["*/30 * * * *", "50 * * * *"]
+[triggers]
+crons = []

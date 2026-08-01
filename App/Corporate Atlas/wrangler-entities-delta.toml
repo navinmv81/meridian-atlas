@@ -1,0 +1,18 @@
+name = "meridian-entities-delta"
+main = "src/entities-delta.js"
+compatibility_date = "2024-01-01"
+account_id = "ea36070477560935a68ad9110a2fd40b"
+
+# Logs enabled MA-AUG-002, July 28 2026 — matches entities-seed and -enrich,
+# applied for consistency ahead of eventual September activation.
+[observability]
+enabled = true
+
+# HOLD: not yet active — enable after ETF Phase 3 gate clears
+# [triggers]
+# crons = ["0 3 1 * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meridian-etf"
+database_id = "43e80149-5333-4917-b678-6a8218ca4f93"

@@ -1,0 +1,8 @@
+name = "meridian-entities-api"
+main = "src/entities-api.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meridian-etf"
+database_id = "43e80149-5333-4917-b678-6a8218ca4f93"

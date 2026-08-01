@@ -1,0 +1,14 @@
+name = "meridian-bootstrap"
+main = "src/bootstrap.js"
+compatibility_date = "2024-01-01"
+account_id = "ea36070477560935a68ad9110a2fd40b"
+
+# HOLD lifted 2026-06-14 — bootstrap cron reduced from */15 to every 4h
+# Original schedule was: */15 * * * *
+[triggers]
+crons = ["0 */4 * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meridian-etf"
+database_id = "43e80149-5333-4917-b678-6a8218ca4f93"

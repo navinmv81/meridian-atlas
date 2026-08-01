@@ -1,0 +1,3560 @@
+const CACHE_VERSION = "v4";
+
+export default {
+  async fetch(request, env, ctx) {
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Headers": "*"
+    };
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders });
+    }
+
+    const url = new URL(request.url);
+    const params = url.searchParams;
+
+    const directUrl = params.get("url");
+    const symbol = params.get("symbol");
+    const search = params.get("search");
+    const fundsymbol = params.get("fundsymbol");
+    const dcf = params.get("dcf");
+    const secfilings = params.get("secfilings");
+    const sec13f = params.get("sec13f"); // ← NEW: dedicated 13F/SEC route with correct User-Agent
+    const etflist = params.get("etflist") || url.pathname === "/api/etf-list";
+    const etfholdings = params.get("etfholdings") || (url.pathname === "/api/etf-holdings" ? params.get("symbol") : null);
+    const etfprospectus = params.get("etfprospectus") || (url.pathname === "/api/etf-prospectus" ? params.get("symbol") : null);
+
+    // SEC User-Agent — set SEC_USER_AGENT in Cloudflare Worker env vars, or uses default
+    const secUa =
+      (env && env.SEC_USER_AGENT) ||
+      "MeridianAtlas contact@meridianatlas.com";
+
+    try {
+
+      if (etflist) {
+        try {
+          const { results } = await env.DB.prepare(
+            `SELECT ticker, name, issuer, asset_class, index_name
+             FROM etf_master
+             ORDER BY ticker ASC`
+          ).all();
+
+          const etfs = results.map(row => ({
+            ticker:     row.ticker,
+            name:       row.name,
+            issuer:     row.issuer,
+            assetClass: row.asset_class,   // DB snake_case → response camelCase
+            index:      row.index_name     // DB index_name → response key 'index'
+          }));
+
+          return new Response(JSON.stringify(etfs), {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json'
+            }
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ error: 'Failed to load ETF list' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+      }
+
+      if (etfholdings) {
+        return await handleEtfHoldings(etfholdings, env, ctx, corsHeaders);
+      }
+
+      if (etfprospectus) {
+        return await handleEtfProspectus(etfprospectus, env, ctx, corsHeaders);
+      }
+
+      // ── NEW: dedicated SEC 13F proxy route ──
+      if (sec13f) {
+        return await handleSec13F(sec13f, secUa, corsHeaders);
+      }
+
+      if (secfilings) {
+        return await handleSecFilings(secfilings, env, corsHeaders, secUa); // ← secUa passed in
+      }
+
+      if (dcf) {
+        if (!env.FMP_API_KEY) {
+          return json({ error: "FMP_API_KEY not configured" }, 500, corsHeaders);
+        }
+
+        const allowedSymbols = new Set([
+          "AAPL","TSLA","AMZN","MSFT","NVDA","GOOGL","META","NFLX","JPM","V","BAC","PYPL","DIS","T","PFE","COST",
+          "INTC","KO","TGT","NKE","SPY","BA","BABA","XOM","WMT","GE","CSCO","VZ","JNJ","CVX","PLTR","SQ","SHOP",
+          "SBUX","SOFI","HOOD","RBLX","SNAP","AMD","UBER","FDX","ABBV","ETSY","MRNA","LMT","GM","F","LCID","CCL",
+          "DAL","UAL","AAL","TSM","SONY","ET","MRO","COIN","RIVN","RIOT","CPRX","VWO","SPYG","NOK","ROKU","VIAC",
+          "ATVI","BIDU","DOCU","ZM","PINS","TLRY","WBA","MGM","NIO","C","GS","WFC","ADBE","PEP","UNH","CARR","HCA",
+          "TWTR","BILI","SIRI","FUBO","RKT"
+        ]);
+
+        const sym = dcf.toUpperCase().trim();
+        if (!allowedSymbols.has(sym)) {
+          return json({ error: "Symbol not supported on current FMP plan", symbol: sym }, 400, corsHeaders);
+        }
+
+        const apiKey = env.FMP_API_KEY;
+
+        // Batch 5: Check edge cache before firing 8 FMP calls
+        const _dcfCkRead = new Request(`https://meridian-cache/dcf/${CACHE_VERSION}/${sym}`, { method: 'GET' });
+        const _dcfCkReadResult = await caches.default.match(_dcfCkRead);
+        if (_dcfCkReadResult) {
+          const cachedBody = await _dcfCkReadResult.text();
+          return new Response(cachedBody, { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+
+        const profileUrl = `https://financialmodelingprep.com/stable/profile?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const quoteUrl = `https://financialmodelingprep.com/stable/quote?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const incomeUrl = `https://financialmodelingprep.com/stable/income-statement?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const balanceUrl = `https://financialmodelingprep.com/stable/balance-sheet-statement?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const cashFlowUrl = `https://financialmodelingprep.com/stable/cash-flow-statement?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const dcfUrl = `https://financialmodelingprep.com/api/v3/discounted-cash-flow/${encodeURIComponent(sym)}?apikey=${encodeURIComponent(apiKey)}`;
+        const keyMetricsTtmUrl = `https://financialmodelingprep.com/stable/key-metrics-ttm?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const sharesFloatUrl = `https://financialmodelingprep.com/stable/shares-float-all?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+
+        const responses = await Promise.all([
+          fetch(profileUrl),
+          fetch(quoteUrl),
+          fetch(incomeUrl),
+          fetch(balanceUrl),
+          fetch(cashFlowUrl),
+          fetch(dcfUrl),
+          fetch(keyMetricsTtmUrl),
+          fetch(sharesFloatUrl)
+        ]);
+
+        const [
+          profileJson,
+          quoteJson,
+          incomeJson,
+          balanceJson,
+          cashFlowJson,
+          dcfJson,
+          keyMetricsTtmJson,
+          sharesFloatJson,
+        ] = await Promise.all(responses.map(r => safeJson(r)));
+
+        const p = first(profileJson);
+        const q = first(quoteJson);
+        const i = first(incomeJson);
+        const b = first(balanceJson);
+        const c = first(cashFlowJson);
+        const d = first(dcfJson);
+        const kt = first(keyMetricsTtmJson);
+
+        const sfa = Array.isArray(sharesFloatJson)
+          ? sharesFloatJson.find(row => String(row?.symbol || "").toUpperCase() === sym)
+          : null;
+
+        const allEmpty =
+          !p && !q && !i && !b && !c && !d && !kt && !sfa;
+
+        if (allEmpty) {
+          return json({
+            error: "Upstream FMP returned no usable data. Daily API quota may be exceeded.",
+            symbol: sym
+          }, 503, corsHeaders);
+        }
+
+        const currentPrice = pickNum(q?.price, d?.price);
+
+        const sfaOutstanding = pickNum(
+          sfa?.outstandingShares,
+          sfa?.sharesOutstanding
+        );
+
+        const sharesOutstanding = pickNum(
+          sfaOutstanding,
+          q?.sharesOutstanding,
+          p?.sharesOutstanding,
+          kt?.sharesOutstandingTTM,
+          kt?.sharesOutstanding,
+          d?.sharesOutstanding
+        );
+
+        let marketCap = null;
+        if (currentPrice && sharesOutstanding) {
+          marketCap = currentPrice * sharesOutstanding;
+        } else {
+          marketCap = pickNum(q?.marketCap, p?.mktCap);
+        }
+
+        let revenue = pickNum(
+          i?.revenue,
+          kt?.revenueTTM,
+          kt?.totalRevenueTTM
+        );
+
+        if (revenue === null) {
+          const evToRev = pickNum(
+            kt?.enterpriseValueOverRevenueTTM,
+            kt?.evToRevenueTTM,
+            d?.enterpriseValueOverRevenue
+          );
+          const enterpriseValue = pickNum(
+            kt?.enterpriseValue,
+            marketCap
+          );
+          if (evToRev && enterpriseValue) {
+            revenue = enterpriseValue / evToRev;
+          }
+        }
+
+        const ebitda = num(i?.ebitda);
+        const ebit = num(i?.operatingIncome);
+        const depreciation = num(c?.depreciationAndAmortization);
+        const capex = Math.abs(num(c?.capitalExpenditure) || 0);
+        const operatingCashFlow = num(c?.operatingCashFlow);
+
+        const cashAndShortTermInvestments = pickNum(
+          b?.cashAndShortTermInvestments,
+          b?.cashAndCashEquivalents,
+          b?.cash
+        );
+        const receivables = pickNum(
+          b?.netReceivables,
+          b?.accountsReceivables,
+          b?.receivables
+        );
+        const inventories = pickNum(b?.inventory, b?.inventories);
+        const payables = pickNum(b?.accountPayables, b?.payables);
+        const totalDebt = pickNum(b?.totalDebt, b?.longTermDebt);
+
+        const out = {
+          symbol: sym,
+          name: pick(p?.companyName, p?.name, sym),
+          currentPrice,
+          marketCap,
+          sharesOutstanding,
+          sharesSource: sfa ? `shares-float-all:${sfa.symbol}` : "quote/profile/metrics",
+          sharesDate: sfa?.date || null,
+          revenue,
+          fmpDCF: pickNum(d?.dcf, d?.DCF),
+          assumptions: {
+            revenueGrowthPct: 10.94,
+            ebitdaPct: revenue ? ((ebitda / revenue) * 100) : null,
+            depreciationAndAmortizationPct: revenue ? ((depreciation / revenue) * 100) : null,
+            cashAndShortTermInvestmentsPct: revenue ? ((cashAndShortTermInvestments / revenue) * 100) : null,
+            receivablesPct: revenue ? ((receivables / revenue) * 100) : null,
+            inventoriesPct: revenue ? ((inventories / revenue) * 100) : null,
+            payablePct: revenue ? ((payables / revenue) * 100) : null,
+            ebitPct: revenue ? ((ebit / revenue) * 100) : null,
+            capitalExpenditurePct: revenue ? ((capex / revenue) * 100) : null,
+            operatingCashFlowPct: revenue ? ((operatingCashFlow / revenue) * 100) : null,
+            taxRate: 15.00,
+            longTermGrowthRate: 2.5,
+            costOfDebt: 3.64,
+            costOfEquity: 9.51,
+            marketRiskPremium: 4.72,
+            beta: pickNum(q?.beta, p?.beta, 1),
+            riskFreeRate: 3.64,
+            totalDebt: totalDebt || 0,
+            cash: cashAndShortTermInvestments || 0
+          },
+          provider: "FMP",
+          lastUpdated: new Date().toISOString()
+        };
+        // Batch 5: cache DCF data for 30 minutes (financial statements rarely change intraday)
+        const dcfResponse = new Response(JSON.stringify(out), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "s-maxage=1800" }
+        });
+        const dcfCacheKey = new Request(`https://meridian-cache/dcf/${CACHE_VERSION}/${sym}`, { method: 'GET' });
+        if (ctx && ctx.waitUntil) ctx.waitUntil(caches.default.put(dcfCacheKey, dcfResponse.clone()));
+        return dcfResponse;
+      }
+
+      if (fundsymbol) {
+        if (!env.FMP_API_KEY) {
+          return json({ error: "FMP_API_KEY not configured" }, 500, corsHeaders);
+        }
+
+        const sym = fundsymbol.toUpperCase().trim();
+        const apiKey = env.FMP_API_KEY;
+
+        // Batch 5: Check edge cache before firing 10 FMP calls
+        const _fundCkRead = new Request(`https://meridian-cache/fundsymbol/${sym}`, { method: 'GET' });
+        const _fundCkReadResult = await caches.default.match(_fundCkRead);
+        if (_fundCkReadResult) {
+          const cachedBody = await _fundCkReadResult.text();
+          return new Response(cachedBody, { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+
+        const profileUrl = `https://financialmodelingprep.com/stable/profile?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const quoteUrl = `https://financialmodelingprep.com/stable/quote?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const ratiosTtmUrl = `https://financialmodelingprep.com/stable/ratios-ttm?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const keyMetricsTtmUrl = `https://financialmodelingprep.com/stable/key-metrics-ttm?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const ratiosUrl = `https://financialmodelingprep.com/stable/ratios?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const incomeUrl = `https://financialmodelingprep.com/stable/income-statement?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const balanceUrl = `https://financialmodelingprep.com/stable/balance-sheet-statement?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const priceTargetSummaryUrl = `https://financialmodelingprep.com/stable/price-target-summary?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const priceTargetConsensusUrl = `https://financialmodelingprep.com/stable/price-target-consensus?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+        const gradesUrl = `https://financialmodelingprep.com/stable/grades?symbol=${encodeURIComponent(sym)}&apikey=${encodeURIComponent(apiKey)}`;
+
+        const responses = await Promise.all([
+          fetch(profileUrl),
+          fetch(quoteUrl),
+          fetch(ratiosTtmUrl),
+          fetch(keyMetricsTtmUrl),
+          fetch(ratiosUrl),
+          fetch(incomeUrl),
+          fetch(balanceUrl),
+          fetch(priceTargetSummaryUrl),
+          fetch(priceTargetConsensusUrl),
+          fetch(gradesUrl)
+        ]);
+
+        const [
+          profileJson,
+          quoteJson,
+          ratiosTtmJson,
+          keyMetricsTtmJson,
+          ratiosJson,
+          incomeJson,
+          balanceJson,
+          priceTargetSummaryJson,
+          priceTargetConsensusJson,
+          gradesJson
+        ] = await Promise.all(responses.map(r => safeJson(r)));
+
+        const p = first(profileJson);
+        const q = first(quoteJson);
+        const rt = first(ratiosTtmJson);
+        const kt = first(keyMetricsTtmJson);
+        const r = first(ratiosJson);
+        const i = first(incomeJson);
+        const b = first(balanceJson);
+        const ts = first(priceTargetSummaryJson);
+        const tc = first(priceTargetConsensusJson);
+        const grades = Array.isArray(gradesJson) ? gradesJson : (gradesJson ? [gradesJson] : []);
+
+        if (!p && !q && !rt && !kt && !r && !i && !b && !ts && !tc && !grades.length) {
+          return json({ error: "No data returned from FMP", symbol: sym }, 404, corsHeaders);
+        }
+
+        const gradeBuckets = bucketGrades(grades.slice(0, 50));
+        const derivedRec = deriveRecommendation(gradeBuckets);
+
+        const out = {
+          symbol: pick(p?.symbol, q?.symbol, i?.symbol, sym),
+          name: pick(p?.companyName, p?.name, q?.name, sym),
+          currency: pick(q?.currency, p?.currency, i?.reportedCurrency, "USD"),
+          exchange: pick(q?.exchange, p?.exchangeShortName, p?.exchange, null),
+
+          sector: pick(p?.sector, null),
+          industry: pick(p?.industry, null),
+          description: pick(p?.description, null),
+          employees: num(p?.fullTimeEmployees),
+          website: pick(p?.website, null),
+          ceo: pick(p?.ceo, null),
+
+          price: num(q?.price),
+          pct: num(q?.changesPercentage),
+          chg: num(q?.change),
+          marketCap: pickNum(q?.marketCap, p?.mktCap),
+
+          peTrailing: pickNum(
+            rt?.priceToEarningsRatioTTM,
+            rt?.priceToEarningsRatio,
+            kt?.peRatioTTM,
+            kt?.priceToEarningsRatioTTM,
+            q?.pe,
+            r?.priceToEarningsRatio
+          ),
+          peForward: pickNum(
+            q?.forwardPE,
+            q?.forwardPe,
+            kt?.forwardPE,
+            kt?.forwardPe,
+            kt?.forwardPeRatio,
+            rt?.forwardPE,
+            rt?.forwardPe,
+            rt?.forwardPeRatio,
+            rt?.forwardPriceToEarningsRatio,
+            rt?.priceToEarningsRatioTTM,
+            q?.pe
+          ),
+          eps: pickNum(
+            rt?.netIncomePerShareTTM,
+            rt?.netIncomePerShare,
+            kt?.netIncomePerShareTTM,
+            kt?.netIncomePerShare,
+            q?.eps
+          ),
+          epsForward: pickNum(
+            q?.epsFuture,
+            q?.epsForward,
+            kt?.epsForward,
+            kt?.forwardEps,
+            rt?.epsForward,
+            rt?.forwardEps
+          ),
+          priceToBook: pickNum(
+            rt?.priceToBookRatioTTM,
+            rt?.priceToBookRatio,
+            kt?.priceToBookRatioTTM,
+            kt?.pbRatioTTM,
+            kt?.priceToBookRatio,
+            r?.priceToBookRatio
+          ),
+          evToRevenue: pickNum(
+            kt?.enterpriseValueOverRevenueTTM,
+            rt?.evToRevenueTTM,
+            (function() {
+              const mCap = pickNum(q?.marketCap, p?.mktCap);
+              const rev = pickNum(kt?.revenueTTM, i?.revenue);
+              return (mCap && rev && rev !== 0) ? (mCap / rev).toFixed(2) : null;
+            })()
+          ),
+          evToEbitda: pickNum(
+            rt?.enterpriseValueOverEBITDATTM,
+            rt?.evToEbitdaTTM,
+            rt?.enterpriseValueMultipleTTM,
+            rt?.enterpriseValueMultiple,
+            kt?.enterpriseValueOverEBITDATTM,
+            kt?.evToEbitdaTTM,
+            kt?.enterpriseValueMultipleTTM,
+            kt?.enterpriseValueMultiple,
+            r?.enterpriseValueMultiple,
+            r?.evToEbitdaTTM
+          ),
+
+          totalRevenue: pickNum(
+            kt?.revenueTTM,
+            kt?.totalRevenueTTM,
+            i?.revenue
+          ),
+          revenueGrowth: pickNum(
+            kt?.revenueGrowthTTM,
+            rt?.revenueGrowthTTM,
+            i?.revenueGrowth,
+            kt?.revenuePerShareGrowthTTM,
+            kt?.growthRevenueTTM,
+            (p?.lastDiv > 0 ? 0 : null)
+          ),
+          grossMargins: pickNum(
+            rt?.grossProfitMarginTTM,
+            rt?.grossProfitMargin,
+            r?.grossProfitMargin
+          ),
+          ebitdaMargins: pickNum(
+            rt?.ebitdaMarginTTM,
+            rt?.ebitdaMargin,
+            r?.ebitdaMargin
+          ),
+          profitMargin: pickNum(
+            rt?.netProfitMarginTTM,
+            rt?.netProfitMargin,
+            r?.netProfitMargin
+          ),
+          operatingMargins: pickNum(
+            rt?.operatingProfitMarginTTM,
+            rt?.operatingProfitMargin,
+            r?.operatingProfitMargin,
+            r?.ebitMargin
+          ),
+
+          roe: pickNum(
+            kt?.roeTTM,
+            kt?.returnOnEquityTTM,
+            rt?.returnOnEquityTTM,
+            r?.returnOnEquity,
+            r?.returnOnEquityRatio
+          ),
+          roa: pickNum(
+            kt?.roaTTM,
+            kt?.returnOnAssetsTTM,
+            rt?.returnOnAssetsTTM,
+            r?.returnOnAssets,
+            r?.returnOnAssetsRatio
+          ),
+
+          ebitda: pickNum(
+            i?.ebitda,
+            kt?.ebitdaTTM
+          ),
+          totalCash: pickNum(
+            b?.cashAndCashEquivalents,
+            b?.cash,
+            b?.cashAndShortTermInvestments
+          ),
+          totalDebt: pickNum(
+            b?.totalDebt,
+            b?.netDebt,
+            b?.longTermDebt
+          ),
+
+          debtToEquity: pickNum(
+            rt?.debtToEquityRatioTTM,
+            rt?.debtToEquityRatio,
+            kt?.debtToEquityTTM,
+            r?.debtToEquityRatio
+          ),
+          currentRatio: pickNum(
+            rt?.currentRatioTTM,
+            rt?.currentRatio,
+            kt?.currentRatioTTM,
+            r?.currentRatio
+          ),
+          quickRatio: pickNum(
+            rt?.quickRatioTTM,
+            rt?.quickRatio,
+            kt?.quickRatioTTM,
+            r?.quickRatio
+          ),
+
+          targetMean: (function() {
+            const primary = pickNum(ts?.targetMean, tc?.targetMean, ts?.priceTargetAverage, tc?.priceTargetAverage);
+            if (primary) return primary;
+            if (Array.isArray(grades) && grades.length > 0) {
+              const validGrades = grades.filter(g => num(g.priceTarget) > 0).slice(0, 10);
+              if (validGrades.length > 0) {
+                const sum = validGrades.reduce((acc, g) => acc + num(g.priceTarget), 0);
+                return Number((sum / validGrades.length).toFixed(2));
+              }
+            }
+            return null;
+          })(),
+
+          targetHigh: pickNum(ts?.targetHigh, tc?.targetHigh, ts?.priceTargetHigh),
+          targetLow: pickNum(ts?.targetLow, tc?.targetLow, ts?.priceTargetLow),
+
+          targetUpside: (function() {
+            const mean = pickNum(ts?.targetMean, tc?.targetMean, ts?.priceTargetAverage);
+            const recoveryMean = (Array.isArray(grades) && grades.length > 0)
+              ? grades.filter(g => num(g.priceTarget) > 0)[0]?.priceTarget
+              : null;
+            const finalMean = mean || recoveryMean;
+            const currentPrice = num(q?.price);
+            return (finalMean && currentPrice) ? (finalMean / currentPrice) - 1 : null;
+          })(),
+          recommendation: pick(
+            tc?.consensusRating,
+            ts?.consensusRating,
+            tc?.rating,
+            ts?.rating,
+            derivedRec
+          ),
+          analystCount: pickNum(
+            tc?.numberOfAnalysts,
+            tc?.analystCount,
+            tc?.analysts,
+            ts?.numberOfAnalysts,
+            ts?.analystCount,
+            grades.length || null
+          ),
+
+          strongBuy: gradeBuckets.strongBuy,
+          buy: gradeBuckets.buy,
+          hold: gradeBuckets.hold,
+          sell: gradeBuckets.sell,
+          strongSell: gradeBuckets.strongSell,
+
+          week52High: pickNum(q?.yearHigh, q?.fiftyTwoWeekHigh),
+          week52Low: pickNum(q?.yearLow, q?.fiftyTwoWeekLow),
+          beta: pickNum(
+            rt?.betaTTM,
+            rt?.beta,
+            kt?.beta,
+            p?.beta
+          ),
+          dividend: pickNum(
+            rt?.dividendYieldTTM,
+            rt?.dividendYield,
+            r?.dividendYield,
+            q?.lastDividend,
+            p?.lastDiv
+          ),
+
+          upgradeHistory: grades.slice(0, 20).map(g => ({
+            epochGradeDate: g?.gradingDate
+              ? new Date(g.gradingDate).getTime()
+              : (g?.date ? new Date(g.date).getTime() : null),
+            firm: pick(g?.gradingCompany, g?.company, g?.analystCompany, "Unknown"),
+            toGrade: pick(g?.newGrade, g?.grade, g?.rating, ""),
+            fromGrade: pick(g?.previousGrade, g?.oldGrade, ""),
+            action: mapAction(g?.action, g?.newGrade, g?.previousGrade)
+          })),
+
+          provider: "FMP",
+          lastUpdated: new Date().toISOString()
+        };
+
+        // Batch 5: cache fundsymbol response 30 min before returning
+        const fundResponse = new Response(JSON.stringify(out), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 's-maxage=1800' }
+        });
+        const fundCacheKey = new Request('https://meridian-cache/fundsymbol/' + sym, { method: 'GET' });
+        if (ctx && ctx.waitUntil) ctx.waitUntil(caches.default.put(fundCacheKey, fundResponse.clone()));
+        return fundResponse;
+      }
+
+      // Batch 4: Quick profile route — 1 FMP call, cached 1 hour at edge
+      const quickprofile = params.get("quickprofile");
+      if (quickprofile) {
+        if (!env.FMP_API_KEY) {
+          return json({ error: "FMP_API_KEY not configured" }, 500, corsHeaders);
+        }
+        const qSym = quickprofile.toUpperCase().trim();
+        if (!qSym || !/^[A-Z0-9.-]{1,12}$/.test(qSym)) {
+          return json({ error: "Invalid symbol" }, 400, corsHeaders);
+        }
+        // Check edge cache first (keyed by symbol)
+        const qpCacheKey = new Request(`https://meridian-cache/quickprofile/${qSym}`, { method: 'GET' });
+        const qpCached = await caches.default.match(qpCacheKey);
+        if (qpCached) {
+          const body = await qpCached.text();
+          return new Response(body, { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        // Fire single FMP profile call
+        const profileUrl = `https://financialmodelingprep.com/stable/profile?symbol=${encodeURIComponent(qSym)}&apikey=${encodeURIComponent(env.FMP_API_KEY)}`;
+        const profRes = await fetch(profileUrl);
+        const profData = await safeJson(profRes);
+        const p = Array.isArray(profData) ? profData[0] : (profData || null);
+        const out = {
+          symbol: qSym,
+          name: p?.companyName || p?.name || null,
+          sector: p?.sector || null,
+          industry: p?.industry || null,
+          exchange: p?.exchangeShortName || p?.exchange || null,
+          description: p?.description || null,
+          employees: p?.fullTimeEmployees ? Number(p.fullTimeEmployees) : null,
+          website: p?.website || null,
+          ceo: p?.ceo || null,
+          country: p?.country || null,
+          ipoDate: p?.ipoDate || null,
+          provider: "FMP"
+        };
+        const qpResponse = new Response(JSON.stringify(out), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "s-maxage=3600" }
+        });
+        if (ctx && ctx.waitUntil) ctx.waitUntil(caches.default.put(qpCacheKey, qpResponse.clone()));
+        return qpResponse;
+      }
+
+      // Batch 2: Dividend calendar route — 1 FMP call, cached 24h at edge
+      const ipos = params.get("ipos");
+      if (ipos) {
+        const apiKey = (env.FMP_API_KEY || "").trim();
+        if (!apiKey || apiKey === "undefined") {
+          return json({ error: "FMP_API_KEY not configured" }, 500, corsHeaders);
+        }
+        // Hits the stable endpoint requested by user
+        const ipoUrl = `https://financialmodelingprep.com/stable/ipos-calendar?apikey=${apiKey}`;
+        const res = await cachedFmpJson(ipoUrl, ctx, 86400); // 24h cache
+        const data = await safeJson(res);
+        return json(Array.isArray(data) ? data : [], res.status, corsHeaders);
+      }
+
+      if (search) {
+        const targetUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(search)}&lang=en-US&region=US`;
+        return await proxyText(targetUrl, corsHeaders, ctx);
+      }
+
+      if (symbol) {
+        const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=5m`;
+        return await proxyText(targetUrl, corsHeaders, ctx);
+      }
+
+      if (directUrl) {
+        let finalUrl = directUrl;
+        if (finalUrl.includes("financialmodelingprep.com") && !finalUrl.includes("apikey=")) {
+          const separator = finalUrl.includes("?") ? "&" : "?";
+          finalUrl += `${separator}apikey=${env.FMP_API_KEY}`;
+        }
+        // ← NEW: SEC URLs get the correct User-Agent via secProxyText
+        if (finalUrl.includes("sec.gov")) {
+          return await secProxyText(finalUrl, secUa, corsHeaders);
+        }
+        return await proxyText(finalUrl, corsHeaders, ctx);
+      }
+
+      return new Response("Not Found", { status: 404, headers: corsHeaders });
+
+    } catch (err) {
+      return new Response(err.message, { status: 500, headers: corsHeaders });
+    }
+  }
+};
+
+// ── NEW: Dedicated 13F/SEC proxy — correct User-Agent, only allows sec.gov ──
+async function handleSec13F(encodedUrl, secUa, corsHeaders) {
+  let targetUrl;
+  try {
+    targetUrl = decodeURIComponent(encodedUrl);
+  } catch {
+    return json({ error: "Invalid SEC URL encoding" }, 400, corsHeaders);
+  }
+  if (!targetUrl.includes("sec.gov")) {
+    return json({ error: "Only sec.gov URLs are permitted on this route" }, 403, corsHeaders);
+  }
+  const res = await secFetch(targetUrl, secUa);
+  const contentType = res.headers.get("Content-Type") || "application/json";
+  const body = await res.text();
+  return new Response(body, {
+    status: res.status,
+    headers: { ...corsHeaders, "Content-Type": contentType }
+  });
+}
+
+// ── NEW: SEC-specific proxyText — always sends correct SEC User-Agent ──
+async function secProxyText(targetUrl, secUa, corsHeaders) {
+  const response = await secFetch(targetUrl, secUa);
+  const data = await response.text();
+  const contentType = response.headers.get("Content-Type") || "application/json";
+  return new Response(data, {
+    status: response.status,
+    headers: { ...corsHeaders, "Content-Type": contentType }
+  });
+}
+
+/** SEC EDGAR: ticker -> company_tickers.json -> CIK -> submissions CIK##########.json */
+async function handleSecFilings(rawTicker, env, corsHeaders, secUa) { // ← secUa added
+  const ticker = (rawTicker || "").trim().toUpperCase();
+  if (!ticker || !/^[A-Z0-9.-]{1,12}$/.test(ticker)) {
+    return json({ error: "Invalid ticker symbol.", symbol: rawTicker }, 400, corsHeaders);
+  }
+
+  const ua = secUa || (env && env.SEC_USER_AGENT) || "MeridianAtlas contact@meridianatlas.com";
+
+  try {
+    const tickersJson = await fetchSecTickerRegistry(ua);
+
+    const cikNum = findCikFromTickerMap(tickersJson, ticker);
+    if (cikNum === null || !Number.isFinite(cikNum)) {
+      return json(
+        { error: `Ticker not found in SEC registry: ${ticker}`, symbol: ticker },
+        404,
+        corsHeaders
+      );
+    }
+
+    const cik10 = String(Math.trunc(cikNum)).padStart(10, "0");
+    const subUrl = `https://data.sec.gov/submissions/CIK${cik10}.json`;
+
+    const subRes = await secFetch(subUrl, ua);
+    if (!subRes.ok) {
+      const bodyPreview = await safeText(subRes);
+      return json(
+        {
+          error: "SEC submissions feed unavailable. Try again shortly.",
+          symbol: ticker,
+          cik: cik10,
+          status: subRes.status,
+          preview: bodyPreview.slice(0, 180)
+        },
+        502,
+        corsHeaders
+      );
+    }
+
+    const submissions = await subRes.json();
+    const numericCik = String(Math.trunc(cikNum));
+    const filings = normalizeRecentFilings(submissions, numericCik, 30);
+
+    return json(
+      {
+        symbol: ticker,
+        cik: cik10,
+        name: submissions.name || null,
+        filings,
+        provider: "SEC_EDGAR",
+        lastUpdated: new Date().toISOString()
+      },
+      200,
+      corsHeaders
+    );
+  } catch (err) {
+    return json(
+      { error: err.message || "SEC lookup failed.", symbol: ticker },
+      502,
+      corsHeaders
+    );
+  }
+}
+
+async function fetchSecTickerRegistry(userAgent) {
+  const urls = [
+    "https://www.sec.gov/files/company_tickers.json"
+  ];
+
+  let lastError = "Unknown SEC ticker registry error";
+
+  for (const url of urls) {
+    try {
+      const res = await secFetch(url, userAgent);
+      if (!res.ok) {
+        const preview = await safeText(res);
+        lastError = `Ticker registry HTTP ${res.status}: ${preview.slice(0, 120)}`;
+        continue;
+      }
+
+      const text = await res.text();
+      if (!text || !text.trim()) {
+        lastError = "Ticker registry returned empty body";
+        continue;
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (parseErr) {
+        lastError = `Ticker registry JSON parse failed: ${parseErr.message}. Preview: ${text.slice(0, 120)}`;
+      }
+    } catch (err) {
+      lastError = err.message || "SEC fetch failed";
+    }
+  }
+
+  throw new Error(`SEC ticker registry unavailable. ${lastError}`);
+}
+
+async function secFetch(url, userAgent) {
+  const ua = userAgent || "MeridianAtlas contact@meridianatlas.com";
+  return fetch(url, {
+    headers: {
+      "User-Agent": ua,
+      "Accept": "*/*",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache"
+    }
+  });
+}
+
+async function safeText(res) {
+  try {
+    return await res.text();
+  } catch {
+    return "";
+  }
+}
+
+function findCikFromTickerMap(mapJson, tickerUpper) {
+  if (!mapJson || typeof mapJson !== "object") return null;
+
+  for (const k of Object.keys(mapJson)) {
+    if (k === "fields" || k === "data") continue;
+    const row = mapJson[k];
+    if (row && typeof row === "object" && !Array.isArray(row)) {
+      const t = String(row.ticker || "").toUpperCase();
+      if (t === tickerUpper) {
+        const n = Number(row.cik_str);
+        return Number.isFinite(n) ? n : null;
+      }
+    }
+  }
+
+  const fields = mapJson.fields;
+  const data = mapJson.data;
+  if (Array.isArray(fields) && Array.isArray(data)) {
+    const ti = fields.indexOf("ticker");
+    const ci = fields.indexOf("cik_str");
+    if (ti >= 0 && ci >= 0) {
+      for (const row of data) {
+        if (!Array.isArray(row)) continue;
+        if (String(row[ti] || "").toUpperCase() === tickerUpper) {
+          const n = Number(row[ci]);
+          return Number.isFinite(n) ? n : null;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function normalizeRecentFilings(submissions, numericCikStr, limit) {
+  const recent = submissions && submissions.filings && submissions.filings.recent;
+  if (!recent || typeof recent !== "object") return [];
+
+  const accessionNumber = Array.isArray(recent.accessionNumber) ? recent.accessionNumber : [];
+  const form = Array.isArray(recent.form) ? recent.form : [];
+  const filingDate = Array.isArray(recent.filingDate) ? recent.filingDate : [];
+  const reportDate = Array.isArray(recent.reportDate) ? recent.reportDate : [];
+  const primaryDocument = Array.isArray(recent.primaryDocument) ? recent.primaryDocument : [];
+  const primaryDocDescription = Array.isArray(recent.primaryDocDescription)
+    ? recent.primaryDocDescription
+    : [];
+
+  const n = Math.max(accessionNumber.length, form.length);
+  const out = [];
+  const cap = Math.min(limit || 30, 50);
+
+  for (let i = 0; i < n && out.length < cap; i++) {
+    const acc = accessionNumber[i];
+    const frm = form[i] != null ? String(form[i]) : "";
+    if (!acc && !frm) continue;
+
+    const accClean = String(acc || "").replace(/-/g, "");
+    const prim = primaryDocument[i] ? String(primaryDocument[i]) : "";
+
+    let link = null;
+    if (accClean && prim) {
+      link = `https://www.sec.gov/Archives/edgar/data/${numericCikStr}/${accClean}/${prim}`;
+    } else if (acc) {
+      link = `https://www.sec.gov/cgi-bin/viewer?action=view&cik=${encodeURIComponent(
+        numericCikStr
+      )}&accession_number=${encodeURIComponent(String(acc))}&xbrl_type=v`;
+    }
+
+    out.push({
+      form: frm || "—",
+      filingDate: filingDate[i] != null ? String(filingDate[i]) : "",
+      reportDate: reportDate[i] != null ? String(reportDate[i]) : "",
+      accessionNumber: acc != null ? String(acc) : "",
+      primaryDocument: prim,
+      primaryDocDescription:
+        primaryDocDescription[i] != null ? String(primaryDocDescription[i]) : "",
+      link:
+        link ||
+        `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(
+          numericCikStr
+        )}&owner=exclude&count=40`
+    });
+  }
+
+  return out;
+}
+
+async function proxyText(targetUrl, corsHeaders, ctx) {
+  const isYahoo = targetUrl.includes("yahoo.com");
+
+  let parsedUrl;
+  try { 
+    parsedUrl = new URL(targetUrl); 
+  } catch(e) { 
+    return new Response("Invalid URL", {status:400, headers:corsHeaders}); 
+  }
+
+  if (isYahoo) {
+    const allowedHosts = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com', 'finance.yahoo.com', 'feeds.finance.yahoo.com', 'news.yahoo.com'];
+    if (!allowedHosts.includes(parsedUrl.hostname)) {
+      return new Response(JSON.stringify({ error: true, status: 403, type: 'hostname_not_allowed' }), { 
+        status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+      });
+    }
+
+    const cache = caches.default;
+    const cacheKey = new Request(parsedUrl.toString(), { method: 'GET' });
+    let response = await cache.match(cacheKey);
+
+    if (!response) {
+      try {
+        const headers = {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/json"
+        };
+        // Intentionally omitting Origin and Referer for Yahoo to avoid rate-limit tracking
+        response = await fetch(parsedUrl, { headers });
+
+        if (!response.ok) {
+          return new Response(JSON.stringify({ error: true, status: response.status }), {
+            status: response.status,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        response = new Response(response.body, response);
+        response.headers.set('Cache-Control', 's-maxage=60'); // 60-second edge cache
+        for (const [k, v] of Object.entries(corsHeaders)) {
+          response.headers.set(k, v);
+        }
+        
+        if (ctx && ctx.waitUntil) {
+          ctx.waitUntil(cache.put(cacheKey, response.clone()));
+        }
+      } catch (err) {
+        return new Response(JSON.stringify({ error: true, status: 502, type: 'proxy_fetch_failed' }), {
+          status: 502,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+    } else {
+      // Return cached response with CORS headers
+      response = new Response(response.body, response);
+      for (const [k, v] of Object.entries(corsHeaders)) {
+        response.headers.set(k, v);
+      }
+    }
+
+    return response;
+  }
+
+  // FMP or other non-Yahoo URLs
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Accept": "text/html,application/json"
+  };
+
+  const response = await fetch(targetUrl, { headers });
+  const data = await response.text();
+  const contentType = response.headers.get("Content-Type") || "text/plain";
+
+  return new Response(data, {
+    status: response.status,
+    headers: { ...corsHeaders, "Content-Type": contentType }
+  });
+}
+
+// Batch 5: Reusable edge-cache wrapper for FMP routes
+async function cachedFmpJson(url, ctx, ttlSeconds = 1800) {
+  const cache = caches.default;
+  const cacheKey = new Request(url, { method: 'GET' });
+  let cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "application/json"
+    }
+  });
+  if (!res.ok) return res; // pass through errors uncached
+
+  const response = new Response(res.body, res);
+  response.headers.set('Cache-Control', `s-maxage=${ttlSeconds}`);
+  if (ctx && ctx.waitUntil) ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  return response;
+}
+
+async function safeJson(resp) {
+  try {
+    return await resp.json();
+  } catch {
+    return null;
+  }
+}
+
+function first(v) {
+  if (Array.isArray(v)) return v[0] || null;
+  return v || null;
+}
+
+function json(obj, status, corsHeaders) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" }
+  });
+}
+
+function num(v) {
+  if (v === null || v === undefined || v === "" || v === "None") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function pick(...vals) {
+  for (const v of vals) {
+    if (v !== null && v !== undefined && v !== "") return v;
+  }
+  return null;
+}
+
+function pickNum(...vals) {
+  for (const v of vals) {
+    const n = num(v);
+    if (n !== null) return n;
+  }
+  return null;
+}
+
+function normalizeGradeText(v) {
+  return String(v || "").trim().toLowerCase();
+}
+
+function classifyGrade(v) {
+  const s = normalizeGradeText(v);
+  if (!s) return "hold";
+  if (s.includes("strong buy")) return "strongBuy";
+  if (s === "buy" || s.includes("overweight") || s.includes("outperform") || s.includes("accumulate")) return "buy";
+  if (s.includes("hold") || s.includes("neutral") || s.includes("market perform") || s.includes("equal weight") || s.includes("sector perform")) return "hold";
+  if (s.includes("underperform") || s === "sell" || s.includes("underweight") || s.includes("reduce")) return "sell";
+  if (s.includes("strong sell")) return "strongSell";
+  return "hold";
+}
+
+function bucketGrades(grades) {
+  const out = { strongBuy: 0, buy: 0, hold: 0, sell: 0, strongSell: 0 };
+  for (const g of grades) {
+    const key = classifyGrade(g?.newGrade || g?.grade || g?.rating);
+    out[key] += 1;
+  }
+  return out;
+}
+
+function deriveRecommendation(b) {
+  const total = (b.strongBuy || 0) + (b.buy || 0) + (b.hold || 0) + (b.sell || 0) + (b.strongSell || 0);
+  if (!total) return null;
+
+  const score =
+    ((b.strongBuy || 0) * 1 +
+     (b.buy || 0) * 2 +
+     (b.hold || 0) * 3 +
+     (b.sell || 0) * 4 +
+     (b.strongSell || 0) * 5) / total;
+
+  if (score < 1.5) return "STRONG BUY";
+  if (score < 2.5) return "BUY";
+  if (score < 3.5) return "HOLD";
+  if (score < 4.5) return "SELL";
+  return "STRONG SELL";
+}
+
+function mapAction(action, newGrade, previousGrade) {
+  const a = normalizeGradeText(action);
+  const ng = normalizeGradeText(newGrade);
+  const pg = normalizeGradeText(previousGrade);
+
+  if (a.includes("upgrade")) return "UP";
+  if (a.includes("downgrade")) return "DOWN";
+  if (a.includes("init")) return "INIT";
+  if (a.includes("reiterate") || a.includes("maintain")) return "MAIN";
+
+  if (pg && ng) {
+    const order = {
+      "strong buy": 1,
+      "buy": 2,
+      "overweight": 2,
+      "outperform": 2,
+      "accumulate": 2,
+      "hold": 3,
+      "neutral": 3,
+      "market perform": 3,
+      "equal weight": 3,
+      "sell": 4,
+      "underperform": 4,
+      "underweight": 4,
+      "strong sell": 5
+    };
+
+    const pScore = order[pg] ?? 3;
+    const nScore = order[ng] ?? 3;
+
+    if (nScore < pScore) return "UP";
+    if (nScore > pScore) return "DOWN";
+    return "MAIN";
+  }
+
+  return "MAIN";
+}
+
+// ── NEW: ETF Holdings Integration Helpers ──
+
+// handleEtfList removed — /api/etf-list now queries D1 directly (Phase 0 migration)
+
+async function handleEtfHoldings(ticker, env, ctx, corsHeaders) {
+  const symbol = ticker.toUpperCase().trim();
+  const etf = etfMap.etfs.find(e => e.ticker === symbol);
+
+  if (!etf) {
+    return json({ error: "UNKNOWN_ETF", message: "ETF not found in N-PORT mapping." }, 404, corsHeaders);
+  }
+
+  if (etf.series_id === null) {
+    return json({ error: "NO_NPORT", message: "This ETF does not file Form N-PORT (grantor trust/UIT or similar)." }, 400, corsHeaders);
+  }
+
+  const cache = caches.default;
+  const cacheKey = new Request(`https://meridian-cache/etf-holdings/${CACHE_VERSION}/${symbol}`, { method: 'GET' });
+  let cachedResponse = await cache.match(cacheKey);
+  if (cachedResponse) {
+    return new Response(cachedResponse.body, {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  const secUa = (env && env.SEC_USER_AGENT) || "MeridianAtlas contact@meridianatlas.com";
+
+  try {
+    const eftsUrl = `https://efts.sec.gov/LATEST/search-index?q="${etf.series_id}"&forms=NPORT-P`;
+    const searchRes = await fetch(eftsUrl, {
+      headers: {
+        "User-Agent": secUa,
+        "Accept": "application/json"
+      }
+    });
+
+    if (!searchRes.ok) {
+      return json({
+        error: "FETCH_ERROR",
+        message: `SEC EFTS search failed with HTTP ${searchRes.status}`,
+        details: `Unable to search filing history for series ${etf.series_id}`
+      }, 502, corsHeaders);
+    }
+
+    const searchData = await searchRes.json();
+    const hits = searchData?.hits?.hits;
+    if (!hits || hits.length === 0) {
+      return json({
+        error: "FETCH_ERROR",
+        message: "No N-PORT filings found for this ETF.",
+        details: `EFTS search returned zero hits for series ${etf.series_id}`
+      }, 502, corsHeaders);
+    }
+
+    hits.sort((a, b) => {
+      const dateA = new Date(a._source.period_ending || a._source.file_date || 0);
+      const dateB = new Date(b._source.period_ending || b._source.file_date || 0);
+      return dateB - dateA;
+    });
+
+    const latest = hits[0];
+    const adsh = latest._source.adsh;
+    const periodEnding = latest._source.period_ending || latest._source.period || "Unknown";
+    const fileDate = latest._source.file_date || latest._source.filing_date || "Unknown";
+
+    if (!adsh) {
+      return json({
+        error: "FETCH_ERROR",
+        message: "Unable to identify accession number for latest N-PORT filing.",
+        details: "Latest hit lacks the adsh field."
+      }, 502, corsHeaders);
+    }
+
+    const strippedCik = etf.cik.replace(/^0+/, "");
+    const strippedAdsh = adsh.replace(/-/g, "");
+    const xmlUrl = `https://www.sec.gov/Archives/edgar/data/${strippedCik}/${strippedAdsh}/primary_doc.xml`;
+
+    const xmlRes = await fetch(xmlUrl, {
+      headers: {
+        "User-Agent": secUa,
+        "Accept": "application/xml, text/xml"
+      }
+    });
+
+    if (!xmlRes.ok) {
+      return json({
+        error: "FETCH_ERROR",
+        message: `SEC XML fetch failed with HTTP ${xmlRes.status}`,
+        details: `Failed to download primary document from ${xmlUrl}`
+      }, 502, corsHeaders);
+    }
+
+    const xmlText = await xmlRes.text();
+    const { holdings, fundInfo, sectorBreakdown } = parseNPortXML(xmlText, symbol);
+
+    if (holdings.length === 0) {
+      return json({
+        error: "FETCH_ERROR",
+        message: "Parsed 0 holdings from N-PORT XML.",
+        details: "XML parsing succeeded but no <invstOrSec> elements were extracted."
+      }, 502, corsHeaders);
+    }
+
+    holdings.sort((a, b) => b.weight_pct - a.weight_pct);
+
+    const resultObj = {
+      ticker: symbol,
+      name: etf.name,
+      period_ending: periodEnding,
+      file_date: fileDate,
+      holdings,
+      fundInfo,
+      sectorBreakdown
+    };
+
+    const outResponse = new Response(JSON.stringify(resultObj), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "Cache-Control": "s-maxage=86400"
+      }
+    });
+
+    if (ctx && ctx.waitUntil) {
+      ctx.waitUntil(cache.put(cacheKey, outResponse.clone()));
+    }
+
+    return outResponse;
+  } catch (err) {
+    return json({
+      error: "FETCH_ERROR",
+      message: "An unexpected error occurred while fetching holdings.",
+      details: err.message
+    }, 502, corsHeaders);
+  }
+}
+
+async function handleEtfProspectus(ticker, env, ctx, corsHeaders) {
+  const symbol = ticker.toUpperCase().trim();
+  const etf = etfMap.etfs.find(e => e.ticker === symbol);
+
+  if (!etf || !etf.cik) {
+    return json({ url: null }, 200, corsHeaders);
+  }
+
+  const cache = caches.default;
+  const cacheKey = new Request(`https://meridian-cache/etf-prospectus/${CACHE_VERSION}/${symbol}`, { method: 'GET' });
+  let cachedResponse = await cache.match(cacheKey);
+  if (cachedResponse) {
+    return new Response(cachedResponse.body, {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  const secUa = (env && env.SEC_USER_AGENT) || "MeridianAtlas contact@meridianatlas.com";
+
+  try {
+    const cik = etf.cik;
+    const paddedCik = cik.replace(/^0+/, "").padStart(10, "0");
+    const subUrl = `https://data.sec.gov/submissions/CIK${paddedCik}.json`;
+    
+    const searchRes = await fetch(subUrl, {
+      headers: {
+        "User-Agent": secUa,
+        "Accept": "application/json"
+      }
+    });
+
+    if (!searchRes.ok) {
+      return json({ url: null }, 200, corsHeaders);
+    }
+
+    const searchData = await searchRes.json();
+    const recent = searchData?.filings?.recent;
+    if (!recent || !Array.isArray(recent.form)) {
+      return json({ url: null }, 200, corsHeaders);
+    }
+
+    const idx = recent.form.indexOf("485BPOS");
+    if (idx === -1) {
+      return json({ url: null }, 200, corsHeaders);
+    }
+
+    const accessionNumber = recent.accessionNumber[idx];
+    const primaryDocument = recent.primaryDocument[idx];
+
+    if (!accessionNumber || !primaryDocument) {
+      return json({ url: null }, 200, corsHeaders);
+    }
+
+    const accessionNoDashes = accessionNumber.replace(/-/g, "");
+    const strippedCik = cik.replace(/^0+/, "");
+    const url = `https://www.sec.gov/Archives/edgar/data/${strippedCik}/${accessionNoDashes}/${primaryDocument}`;
+
+    const resultObj = { url };
+    const outResponse = new Response(JSON.stringify(resultObj), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "Cache-Control": "public, s-maxage=604800"
+      }
+    });
+
+    if (ctx && ctx.waitUntil) {
+      ctx.waitUntil(cache.put(cacheKey, outResponse.clone()));
+    }
+
+    return outResponse;
+  } catch (err) {
+    return json({ url: null }, 200, corsHeaders);
+  }
+}
+
+function parseNPortXML(xmlText, symbol) {
+  const holdings = [];
+  const regexInvstOrSec = /<(?:\w+:)?invstOrSec(?:\s+[^>]*)?>([\s\S]*?)<\/ Maryland-Port \/? invstOrSec>|<(?:\w+:)?invstOrSec(?:\s+[^>]*)?>([\s\S]*?)<\/(?:\w+:)?invstOrSec>/gi;
+  const regexInvstOrSecClean = /<(?:\w+:)?invstOrSec(?:\s+[^>]*)?>([\s\S]*?)<\/(?:\w+:)?invstOrSec>/gi;
+
+  const getTagValue = (block, tagName) => {
+    // Highly robust backslash-free regex constructors to prevent transpiler/minification escaping issues.
+    // [a-zA-Z0-9_-] matches word characters and hyphens for optional namespace prefixes like "nport:"
+    // [ \t\r\n] matches tag whitespaces
+    // [^] matches any character including newlines (safer replacement for [\s\S])
+    const rx = new RegExp("<(?:[a-zA-Z0-9_-]+:)?" + tagName + "([ \\t\\r\\n]+[^>]*)?>([^]*?)</(?:[a-zA-Z0-9_-]+:)?" + tagName + ">", "i");
+    const m = block.match(rx);
+    if (m) {
+      const inner = m[2].trim();
+      if (inner) return inner;
+      const attrMatch = m[1] && m[1].match(/value\s*=\s*["']([^"']+)["']/i);
+      if (attrMatch) return attrMatch[1];
+      return "";
+    }
+
+    const rxSelf = new RegExp("<(?:[a-zA-Z0-9_-]+:)?" + tagName + "([ \\t\\r\\n]+[^>]*?)/?>", "i");
+    const mSelf = block.match(rxSelf);
+    if (mSelf && mSelf[1]) {
+      const attrMatch = mSelf[1].match(/value\s*=\s*["']([^"']+)["']/i);
+      if (attrMatch) return attrMatch[1];
+    }
+
+    return null;
+  };
+
+  const decodeHTMLEntities = (str) => {
+    if (!str) return "";
+    return str
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#039;/g, "'");
+  };
+
+  // Feature 1: Extract fundInfo from <genInfo> block (supporting namespace prefixes and optional attributes)
+  const genInfoMatch = xmlText.match(/<(?:\w+:)?genInfo(?:\s+[^>]*)?>([\s\S]*?)<\/(?:\w+:)?genInfo>/i);
+  const genInfoBlock = genInfoMatch ? genInfoMatch[1] : xmlText;
+
+  // fundInfo block contains netAssets, navPerShr, shrOutstanding in real N-PORT XML
+  const fundInfoMatch = xmlText.match(/<(?:\w+:)?fundInfo(?:\s+[^>]*)?>([\s\S]*?)<\/(?:\w+:)?fundInfo>/i);
+  const fundInfoBlock = fundInfoMatch ? fundInfoMatch[1] : '';
+
+  // Extract seriesLevelInfo block for lookup priority chain
+  const seriesLevelInfoMatch = xmlText.match(/<(?:\w+:)?seriesLevelInfo(?:\s+[^>]*)?>([\s\S]*?)<\/(?:\w+:)?seriesLevelInfo>/i);
+  const seriesLevelInfoBlock = seriesLevelInfoMatch ? seriesLevelInfoMatch[1] : '';
+
+  // Extract all <classInfo> blocks from the XML
+  const classInfoRegex = /<(?:\w+:)?classInfo(?:\s+[^>]*)?>([\s\S]*?)<\/(?:\w+:)?classInfo>/gi;
+  const classInfoBlocks = [];
+  let classMatch;
+  while ((classMatch = classInfoRegex.exec(xmlText)) !== null) {
+    classInfoBlocks.push(classMatch[1]);
+  }
+
+  // Find matching class block by ticker symbol, otherwise fallback to first classInfo block
+  let matchedClassBlock = null;
+  const firstClassBlock = classInfoBlocks[0] || null;
+
+  if (symbol && classInfoBlocks.length > 0) {
+    const upperSymbol = symbol.toUpperCase().trim();
+    for (const block of classInfoBlocks) {
+      const classTicker = getTagValue(block, "ticker");
+      if (classTicker && classTicker.toUpperCase().trim() === upperSymbol) {
+        matchedClassBlock = block;
+        break;
+      }
+    }
+  }
+
+  const chosenClassBlock = matchedClassBlock || firstClassBlock;
+
+  // Extract classId or classDesig to identify which class it is
+  let classId = null;
+  let classDesig = null;
+  if (chosenClassBlock) {
+    classId = getTagValue(chosenClassBlock, "classId");
+    classDesig = getTagValue(chosenClassBlock, "classDesig");
+  }
+
+  const regName = decodeHTMLEntities(getTagValue(genInfoBlock, "regName") || "");
+  const totAssetsStr = (fundInfoBlock ? getTagValue(fundInfoBlock, "totAssets") : null)
+    ?? getTagValue(genInfoBlock, "totAssets");
+  const totAssets = totAssetsStr ? parseFloat(totAssetsStr) : null;
+  const netAssetsStr = (fundInfoBlock ? getTagValue(fundInfoBlock, "netAssets") : null)
+    ?? getTagValue(genInfoBlock, "netAssets");
+  const netAssets = netAssetsStr ? parseFloat(netAssetsStr) : null;
+
+  // Helper search priority chain function for navPerShr and shrOutstanding
+  const getFieldWithFallback = (fieldName) => {
+    // 1. seriesLevelInfo block
+    if (seriesLevelInfoBlock) {
+      const val = getTagValue(seriesLevelInfoBlock, fieldName);
+      if (val !== null && val !== "") return val;
+    }
+    // 2. Matching classInfo block by ticker symbol
+    if (matchedClassBlock) {
+      const val = getTagValue(matchedClassBlock, fieldName);
+      if (val !== null && val !== "") return val;
+    }
+    // 3. First classInfo block (fallback for multi-class funds)
+    if (firstClassBlock) {
+      const val = getTagValue(firstClassBlock, fieldName);
+      if (val !== null && val !== "") return val;
+    }
+    // 4. fundInfo block
+    if (fundInfoBlock) {
+      const val = getTagValue(fundInfoBlock, fieldName);
+      if (val !== null && val !== "") return val;
+    }
+    // 5. genInfo block
+    if (genInfoBlock) {
+      const val = getTagValue(genInfoBlock, fieldName);
+      if (val !== null && val !== "") return val;
+    }
+    // 6. Full XML document scan
+    const fullXmlVal = getTagValue(xmlText, fieldName);
+    if (fullXmlVal !== null && fullXmlVal !== "") return fullXmlVal;
+
+    return null;
+  };
+
+  const navPerShrStr = getFieldWithFallback("navPerShr");
+  const shrOutstandingStr = getFieldWithFallback("shrOutstanding");
+
+  let navPerShr = (navPerShrStr !== null && !isNaN(parseFloat(navPerShrStr))) ? parseFloat(navPerShrStr) : null;
+  let shrOutstanding = (shrOutstandingStr !== null && !isNaN(parseFloat(shrOutstandingStr))) ? parseFloat(shrOutstandingStr) : null;
+
+  // Step 2 — Derive the missing value if only one is present and netAssets is available
+  if (navPerShr && netAssets && !shrOutstanding) {
+    shrOutstanding = netAssets / navPerShr;
+  }
+  if (shrOutstanding && netAssets && !navPerShr) {
+    navPerShr = netAssets / shrOutstanding;
+  }
+
+  const repPdEnd = getTagValue(genInfoBlock, "repPdEnd") || "";
+
+  const fundInfo = {
+    regName,
+    repPdEnd
+  };
+  if (totAssets !== null && !isNaN(totAssets)) {
+    fundInfo.totAssets = totAssets;
+  }
+  if (netAssets !== null && !isNaN(netAssets)) {
+    fundInfo.netAssets = netAssets;
+  }
+  if (navPerShr !== null && !isNaN(navPerShr)) {
+    fundInfo.navPerShr = navPerShr;
+  }
+  if (shrOutstanding !== null && !isNaN(shrOutstanding)) {
+    fundInfo.shrOutstanding = shrOutstanding;
+  }
+
+  let match;
+  while ((match = regexInvstOrSecClean.exec(xmlText)) !== null) {
+    const block = match[1];
+
+    const rawName = getTagValue(block, "name") || getTagValue(block, "title");
+    const name = decodeHTMLEntities(rawName || "Unknown Security");
+
+    // Identifiers are nested inside <identifiers> block
+    // ticker may not exist — many filers only provide ISIN or CUSIP
+    const identifiersMatch = block.match(/<(?:[a-zA-Z0-9_-]+:)?identifiers(?:\s+[^>]*)?>([\s\S]*?)<\/(?:[a-zA-Z0-9_-]+:)?identifiers>/i);
+    const identBlock = identifiersMatch ? identifiersMatch[1] : block;
+
+    const ticker = getTagValue(identBlock, "ticker");
+    const cusip = getTagValue(identBlock, "cusip") || getTagValue(block, "cusip");
+    const isin = getTagValue(identBlock, "isin");
+
+    const balanceStr = getTagValue(block, "balance");
+    const valUSDStr = getTagValue(block, "valUSD");
+    const pctValStr = getTagValue(block, "pctVal");
+
+    const shares = balanceStr ? parseFloat(balanceStr) : null;
+    const value_usd = valUSDStr ? parseFloat(valUSDStr) : null;
+    const weight_pct = pctValStr ? parseFloat(pctValStr) : null;
+
+    // Use ticker if present; otherwise null (bond/no-ticker holdings stay null)
+    let finalSymbol = null;
+    if (ticker) {
+      finalSymbol = decodeHTMLEntities(ticker).toUpperCase();
+    }
+
+    // Feature 3: Extract assetCat
+    const assetCatRaw = getTagValue(block, "assetCat");
+    const assetCat = assetCatRaw ? assetCatRaw.trim().toUpperCase() : "";
+
+    // Feature 4: Bond holdings enrichment
+    let couponKind = null;
+    let annualizedRte = null;
+    let maturityDat = null;
+    let yieldVal = null;
+
+    if (assetCat !== "EC") {
+      const ck = getTagValue(block, "couponKind");
+      if (ck) {
+        couponKind = decodeHTMLEntities(ck).trim() || null;
+      }
+      const ar = getTagValue(block, "annualizedRte");
+      if (ar !== null && ar !== "") {
+        annualizedRte = parseFloat(ar);
+      }
+      const md = getTagValue(block, "maturityDat");
+      if (md) {
+        maturityDat = decodeHTMLEntities(md).trim() || null;
+      }
+      const yv = getTagValue(block, "yieldVal");
+      if (yv !== null && yv !== "") {
+        yieldVal = parseFloat(yv);
+      }
+    }
+
+    holdings.push({
+      symbol: finalSymbol,
+      name,
+      cusip: cusip ? decodeHTMLEntities(cusip) : null,
+      isin: isin ? decodeHTMLEntities(isin) : null,
+      shares: Number.isFinite(shares) ? shares : 0,
+      value_usd: Number.isFinite(value_usd) ? value_usd : 0,
+      weight_pct: Number.isFinite(weight_pct) ? weight_pct : 0,
+      assetCat: assetCat || null,
+      couponKind,
+      annualizedRte: Number.isFinite(annualizedRte) ? annualizedRte : null,
+      maturityDat,
+      yieldVal: Number.isFinite(yieldVal) ? yieldVal : null
+    });
+  }
+
+  // Feature 3: Aggregate sector breakdown
+  const buckets = {
+    "Equity": { weight: 0, count: 0 },
+    "US Govt": { weight: 0, count: 0 },
+    "Corp Bond": { weight: 0, count: 0 },
+    "MBS": { weight: 0, count: 0 },
+    "Cash": { weight: 0, count: 0 },
+    "Other": { weight: 0, count: 0 }
+  };
+
+  let totalWeight = 0;
+  for (const h of holdings) {
+    const cat = h.assetCat || "";
+    let label = "Other";
+    if (cat === "EC") {
+      label = "Equity";
+    } else if (cat === "UST" || cat === "USTB") {
+      label = "US Govt";
+    } else if (cat === "DBT" || cat === "CORP") {
+      label = "Corp Bond";
+    } else if (cat === "MBS" || cat === "ABS") {
+      label = "MBS";
+    } else if (cat === "CASH" || cat === "MM") {
+      label = "Cash";
+    }
+    buckets[label].weight += h.weight_pct;
+    buckets[label].count += 1;
+    totalWeight += h.weight_pct;
+  }
+
+  const sectorBreakdown = [];
+  const labels = ["Equity", "US Govt", "Corp Bond", "MBS", "Cash", "Other"];
+  let sumPct = 0;
+
+  labels.forEach(label => {
+    const b = buckets[label];
+    let pct = 0;
+    if (totalWeight > 0) {
+      pct = (b.weight / totalWeight) * 100;
+    }
+    sectorBreakdown.push({
+      label,
+      pct: parseFloat(pct.toFixed(4)),
+      count: b.count
+    });
+    sumPct += pct;
+  });
+
+  if (sumPct > 0) {
+    let diff = 100 - sumPct;
+    let maxIdx = 0;
+    for (let i = 1; i < sectorBreakdown.length; i++) {
+      if (sectorBreakdown[i].pct > sectorBreakdown[maxIdx].pct) {
+        maxIdx = i;
+      }
+    }
+    sectorBreakdown[maxIdx].pct = parseFloat((sectorBreakdown[maxIdx].pct + diff).toFixed(4));
+  } else {
+    const otherBucket = sectorBreakdown.find(b => b.label === "Other");
+    if (otherBucket) {
+      otherBucket.pct = 100;
+    }
+  }
+
+  return { holdings, fundInfo, sectorBreakdown };
+}
+
+const etfMap = {
+  "_meta": {
+    "description": "Top 200 most-traded US ETFs with SEC EDGAR identifiers for N-PORT querying",
+    "fields": {
+      "ticker": "Market ticker symbol",
+      "cik": "SEC EDGAR Central Index Key (10-digit, zero-padded) — the parent registrant/trust",
+      "series_id": "SEC EDGAR Series ID for the specific fund (used in NPORT-P queries). Null for grantor trusts and commodity ETPs that file under the 1934 Act, not the 1940 Act, and therefore do not have series IDs or file N-PORT."
+    },
+    "notes": [
+      "Grantor trusts (GLD, IAU, SLV, GDX, PDBC, USO, UNG, DBO, etc.) are registered under the Securities Act of 1933, not the Investment Company Act of 1940. They do NOT file N-PORT and have no series_id. Their CIK points directly to the trust entity.",
+      "All other ETFs are registered investment companies under the 1940 Act. Their CIK is the parent trust/fund complex; series_id identifies the individual fund series within that complex.",
+      "N-PORT EDGAR query pattern: https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik}&type=NPORT-P&dateb=&owner=include&count=40",
+      "Series-level N-PORT query: https://efts.sec.gov/LATEST/search-index?q=%22{series_id}%22&forms=NPORT-P",
+      "Sources: SEC EDGAR company_tickers_mf.json, EDGAR filing index pages, N-CSRS/NPORT-P filing headers (verified May 2026)"
+    ],
+    "generated": "2026-05-17",
+    "source_verified_via": "SEC EDGAR EDGAR company_tickers_mf.json + filing index pages"
+  },
+  "etfs": [
+    {
+      "ticker": "SPY",
+      "name": "SPDR S&P 500 ETF Trust",
+      "issuer": "State Street",
+      "cik": "0000884394",
+      "series_id": null,
+      "notes": "Grantor trust (Unit Investment Trust), not a 1940 Act fund. No N-PORT. Files annual report on Form 10-K. CIK is the trust itself."
+    },
+    {
+      "ticker": "IVV",
+      "name": "iShares Core S&P 500 ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004310"
+    },
+    {
+      "ticker": "VOO",
+      "name": "Vanguard S&P 500 ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000002839"
+    },
+    {
+      "ticker": "QQQ",
+      "name": "Invesco QQQ Trust Series 1",
+      "issuer": "Invesco",
+      "cik": "0001067839",
+      "series_id": null,
+      "notes": "Unit Investment Trust under the 1940 Act (UIT). Files annual reports but does NOT file N-PORT. CIK is the trust itself."
+    },
+    {
+      "ticker": "VTI",
+      "name": "Vanguard Total Stock Market ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000002848"
+    },
+    {
+      "ticker": "IWM",
+      "name": "iShares Russell 2000 ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004344"
+    },
+    {
+      "ticker": "GLD",
+      "name": "SPDR Gold Shares",
+      "issuer": "World Gold Council / State Street",
+      "cik": "0001222333",
+      "series_id": null,
+      "notes": "Grantor trust under the 1933 Act. No N-PORT filing. CIK is the trust itself."
+    },
+    {
+      "ticker": "TLT",
+      "name": "iShares 20+ Year Treasury Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004360"
+    },
+    {
+      "ticker": "LQD",
+      "name": "iShares iBoxx $ Investment Grade Corporate Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004361"
+    },
+    {
+      "ticker": "HYG",
+      "name": "iShares iBoxx $ High Yield Corporate Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000016772"
+    },
+    {
+      "ticker": "EEM",
+      "name": "iShares MSCI Emerging Markets ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004266"
+    },
+    {
+      "ticker": "EFA",
+      "name": "iShares MSCI EAFE ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0001100663",
+      "series_id": "S000004351"
+    },
+    {
+      "ticker": "XLF",
+      "name": "Financial Select Sector SPDR Fund",
+      "issuer": "State Street / Select Sector SPDR Trust",
+      "cik": "0001064641",
+      "series_id": "S000006411"
+    },
+    {
+      "ticker": "XLE",
+      "name": "Energy Select Sector SPDR Fund",
+      "issuer": "State Street / Select Sector SPDR Trust",
+      "cik": "0001064641",
+      "series_id": "S000006410"
+    },
+    {
+      "ticker": "XLK",
+      "name": "Technology Select Sector SPDR Fund",
+      "issuer": "State Street / Select Sector SPDR Trust",
+      "cik": "0001064641",
+      "series_id": "S000006415"
+    },
+    {
+      "ticker": "XLV",
+      "name": "Health Care Select Sector SPDR Fund",
+      "issuer": "State Street / Select Sector SPDR Trust",
+      "cik": "0001064641",
+      "series_id": "S000006412"
+    },
+    {
+      "ticker": "XLU",
+      "name": "Utilities Select Sector SPDR Fund",
+      "issuer": "State Street / Select Sector SPDR Trust",
+      "cik": "0001064641",
+      "series_id": "S000006416"
+    },
+    {
+      "ticker": "XLI",
+      "name": "Industrial Select Sector SPDR Fund",
+      "issuer": "State Street / Select Sector SPDR Trust",
+      "cik": "0001064641",
+      "series_id": "S000006413"
+    },
+    {
+      "ticker": "XLP",
+      "name": "Consumer Staples Select Sector SPDR Fund",
+      "issuer": "State Street / Select Sector SPDR Trust",
+      "cik": "0001064641",
+      "series_id": "S000006409"
+    },
+    {
+      "ticker": "XLY",
+      "name": "Consumer Discretionary Select Sector SPDR Fund",
+      "issuer": "State Street / Select Sector SPDR Trust",
+      "cik": "0001064641",
+      "series_id": "S000006408"
+    },
+    {
+      "ticker": "XLB",
+      "name": "Materials Select Sector SPDR Fund",
+      "issuer": "State Street / Select Sector SPDR Trust",
+      "cik": "0001064641",
+      "series_id": "S000006414"
+    },
+    {
+      "ticker": "XLRE",
+      "name": "Real Estate Select Sector SPDR Fund",
+      "issuer": "State Street / Select Sector SPDR Trust",
+      "cik": "0001064641",
+      "series_id": "S000051152"
+    },
+    {
+      "ticker": "XLC",
+      "name": "Communication Services Select Sector SPDR Fund",
+      "issuer": "State Street / Select Sector SPDR Trust",
+      "cik": "0001064641",
+      "series_id": "S000062095"
+    },
+    {
+      "ticker": "VUG",
+      "name": "Vanguard Growth ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000002842"
+    },
+    {
+      "ticker": "VTV",
+      "name": "Vanguard Value ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000002840"
+    },
+    {
+      "ticker": "VB",
+      "name": "Vanguard Small-Cap ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000002845"
+    },
+    {
+      "ticker": "VO",
+      "name": "Vanguard Mid-Cap ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000002844"
+    },
+    {
+      "ticker": "VXF",
+      "name": "Vanguard Extended Market ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000002841"
+    },
+    {
+      "ticker": "VBR",
+      "name": "Vanguard Small-Cap Value ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000002847"
+    },
+    {
+      "ticker": "VBK",
+      "name": "Vanguard Small-Cap Growth ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000002846"
+    },
+    {
+      "ticker": "VV",
+      "name": "Vanguard Large-Cap ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000002843"
+    },
+    {
+      "ticker": "VOT",
+      "name": "Vanguard Mid-Cap Growth ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000012756"
+    },
+    {
+      "ticker": "VOE",
+      "name": "Vanguard Mid-Cap Value ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000036405",
+      "series_id": "S000012757"
+    },
+    {
+      "ticker": "IBB",
+      "name": "iShares Biotechnology ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004350"
+    },
+    {
+      "ticker": "SOXX",
+      "name": "iShares Semiconductor ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004354"
+    },
+    {
+      "ticker": "ITOT",
+      "name": "iShares Core S&P Total U.S. Stock Market ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004317"
+    },
+    {
+      "ticker": "IWR",
+      "name": "iShares Russell Mid-Cap ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004338"
+    },
+    {
+      "ticker": "IWP",
+      "name": "iShares Russell Mid-Cap Growth ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004336"
+    },
+    {
+      "ticker": "IWN",
+      "name": "iShares Russell 2000 Value ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004342"
+    },
+    {
+      "ticker": "IWO",
+      "name": "iShares Russell 2000 Growth ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004343"
+    },
+    {
+      "ticker": "IJH",
+      "name": "iShares Core S&P Mid-Cap ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004307"
+    },
+    {
+      "ticker": "IJR",
+      "name": "iShares Core S&P Small-Cap ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004313"
+    },
+    {
+      "ticker": "IJK",
+      "name": "iShares S&P Mid-Cap 400 Growth ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004308"
+    },
+    {
+      "ticker": "IJJ",
+      "name": "iShares S&P Mid-Cap 400 Value ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004309"
+    },
+    {
+      "ticker": "IJT",
+      "name": "iShares S&P Small-Cap 600 Growth ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004314"
+    },
+    {
+      "ticker": "IGV",
+      "name": "iShares Expanded Tech-Software Sector ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004355"
+    },
+    {
+      "ticker": "IGM",
+      "name": "iShares Expanded Tech Sector ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004352"
+    },
+    {
+      "ticker": "IWC",
+      "name": "iShares Micro-Cap ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004439"
+    },
+    {
+      "ticker": "SMMD",
+      "name": "iShares Russell 2500 ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000057567"
+    },
+    {
+      "ticker": "MCHI",
+      "name": "iShares MSCI China ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000031717"
+    },
+    {
+      "ticker": "INDA",
+      "name": "iShares MSCI India ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000034702"
+    },
+    {
+      "ticker": "EWU",
+      "name": "iShares MSCI United Kingdom ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000046586"
+    },
+    {
+      "ticker": "EPU",
+      "name": "iShares MSCI Peru and Global Exposure ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000024426"
+    },
+    {
+      "ticker": "EIDO",
+      "name": "iShares MSCI Indonesia ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000028553"
+    },
+    {
+      "ticker": "ENZL",
+      "name": "iShares MSCI New Zealand ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000028554"
+    },
+    {
+      "ticker": "EPOL",
+      "name": "iShares MSCI Poland ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000028556"
+    },
+    {
+      "ticker": "EWZS",
+      "name": "iShares MSCI Brazil Small-Cap ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000028677"
+    },
+    {
+      "ticker": "EPHE",
+      "name": "iShares MSCI Philippines ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000028735"
+    },
+    {
+      "ticker": "ESGD",
+      "name": "iShares ESG Aware MSCI EAFE ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000054185"
+    },
+    {
+      "ticker": "QAT",
+      "name": "iShares MSCI Qatar ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000045074"
+    },
+    {
+      "ticker": "EWJ",
+      "name": "iShares MSCI Japan ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004249"
+    },
+    {
+      "ticker": "EWZ",
+      "name": "iShares MSCI Brazil ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004264"
+    },
+    {
+      "ticker": "EWG",
+      "name": "iShares MSCI Germany ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004269"
+    },
+    {
+      "ticker": "EWC",
+      "name": "iShares MSCI Canada ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004265"
+    },
+    {
+      "ticker": "EWT",
+      "name": "iShares MSCI Taiwan ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004261"
+    },
+    {
+      "ticker": "EWH",
+      "name": "iShares MSCI Hong Kong ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004247"
+    },
+    {
+      "ticker": "EWA",
+      "name": "iShares MSCI Australia ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004246"
+    },
+    {
+      "ticker": "EWY",
+      "name": "iShares MSCI South Korea ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004258"
+    },
+    {
+      "ticker": "EWQ",
+      "name": "iShares MSCI France ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004267"
+    },
+    {
+      "ticker": "EWP",
+      "name": "iShares MSCI Spain ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004256"
+    },
+    {
+      "ticker": "EWI",
+      "name": "iShares MSCI Italy ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004248"
+    },
+    {
+      "ticker": "ACWI",
+      "name": "iShares MSCI ACWI ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0001100663",
+      "series_id": "S000021461"
+    },
+    {
+      "ticker": "IEMG",
+      "name": "iShares Core MSCI Emerging Markets ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000038923"
+    },
+    {
+      "ticker": "IAU",
+      "name": "iShares Gold Trust",
+      "issuer": "BlackRock / iShares Delaware Trust Sponsor LLC",
+      "cik": "0001278028",
+      "series_id": null,
+      "notes": "Grantor trust under the 1933 Act. No N-PORT. CIK is the trust itself."
+    },
+    {
+      "ticker": "SLV",
+      "name": "iShares Silver Trust",
+      "issuer": "BlackRock / iShares Delaware Trust Sponsor LLC",
+      "cik": "0001330568",
+      "series_id": null,
+      "notes": "Grantor trust under the 1933 Act. No N-PORT. CIK is the trust itself."
+    },
+    {
+      "ticker": "AGG",
+      "name": "iShares Core U.S. Aggregate Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004362"
+    },
+    {
+      "ticker": "SHY",
+      "name": "iShares 1-3 Year Treasury Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004357"
+    },
+    {
+      "ticker": "IEF",
+      "name": "iShares 7-10 Year Treasury Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004358"
+    },
+    {
+      "ticker": "SHV",
+      "name": "iShares Short Treasury Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000013694"
+    },
+    {
+      "ticker": "MUB",
+      "name": "iShares National Muni Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000018861"
+    },
+    {
+      "ticker": "MBB",
+      "name": "iShares MBS ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000013702"
+    },
+    {
+      "ticker": "PFF",
+      "name": "iShares Preferred Stock & Income Securities ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000013499"
+    },
+    {
+      "ticker": "IGSB",
+      "name": "iShares 1-5 Year Investment Grade Corporate Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000013697"
+    },
+    {
+      "ticker": "IGIB",
+      "name": "iShares 5-10 Year Investment Grade Corporate Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000013698"
+    },
+    {
+      "ticker": "IGLB",
+      "name": "iShares 10+ Year Investment Grade Corporate Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000026651"
+    },
+    {
+      "ticker": "SRLN",
+      "name": "SPDR Blackstone Senior Loan ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001516212",
+      "series_id": "S000033064"
+    },
+    {
+      "ticker": "SPYD",
+      "name": "SPDR Portfolio S&P 500 High Dividend ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000050968"
+    },
+    {
+      "ticker": "SPTL",
+      "name": "SPDR Portfolio Long Term Treasury ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000017329"
+    },
+    {
+      "ticker": "SPYV",
+      "name": "SPDR Portfolio S&P 500 Value ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000006985"
+    },
+    {
+      "ticker": "SPYX",
+      "name": "SPDR S&P 500 Fossil Fuel Reserves Free ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000051701"
+    },
+    {
+      "ticker": "MDY",
+      "name": "SPDR S&P MidCap 400 ETF Trust",
+      "issuer": "State Street",
+      "cik": "0000916132",
+      "series_id": null,
+      "notes": "Unit Investment Trust (UIT). No N-PORT. CIK is the trust itself."
+    },
+    {
+      "ticker": "DIA",
+      "name": "SPDR Dow Jones Industrial Average ETF Trust",
+      "issuer": "State Street",
+      "cik": "0001041014",
+      "series_id": null,
+      "notes": "Unit Investment Trust (UIT). No N-PORT. CIK is the trust itself."
+    },
+    {
+      "ticker": "VNQ",
+      "name": "Vanguard Real Estate ETF",
+      "issuer": "Vanguard / Vanguard Specialized Funds",
+      "cik": "0000734383",
+      "series_id": "S000002924"
+    },
+    {
+      "ticker": "VWO",
+      "name": "Vanguard FTSE Emerging Markets ETF",
+      "issuer": "Vanguard / Vanguard International Equity Index Funds",
+      "cik": "0000857489",
+      "series_id": "S000005786"
+    },
+    {
+      "ticker": "VXUS",
+      "name": "Vanguard Total International Stock ETF",
+      "issuer": "Vanguard / Vanguard Total International Stock Index Fund",
+      "cik": "0000736054",
+      "series_id": "S000002932"
+    },
+    {
+      "ticker": "VEA",
+      "name": "Vanguard FTSE Developed Markets ETF",
+      "issuer": "Vanguard / Vanguard Tax-Managed Funds",
+      "cik": "0000923202",
+      "series_id": "S000004386"
+    },
+    {
+      "ticker": "BND",
+      "name": "Vanguard Total Bond Market ETF",
+      "issuer": "Vanguard / Vanguard Bond Index Funds",
+      "cik": "0000794105",
+      "series_id": "S000002564"
+    },
+    {
+      "ticker": "BNDX",
+      "name": "Vanguard Total International Bond ETF",
+      "issuer": "Vanguard / Vanguard Bond Index Funds",
+      "cik": "0001532203",
+      "series_id": "S000035729"
+    },
+    {
+      "ticker": "BSV",
+      "name": "Vanguard Short-Term Bond ETF",
+      "issuer": "Vanguard / Vanguard Bond Index Funds",
+      "cik": "0000794105",
+      "series_id": "S000002563"
+    },
+    {
+      "ticker": "BIV",
+      "name": "Vanguard Intermediate-Term Bond ETF",
+      "issuer": "Vanguard / Vanguard Bond Index Funds",
+      "cik": "0000794105",
+      "series_id": "S000002561"
+    },
+    {
+      "ticker": "BLV",
+      "name": "Vanguard Long-Term Bond ETF",
+      "issuer": "Vanguard / Vanguard Bond Index Funds",
+      "cik": "0000794105",
+      "series_id": "S000002562"
+    },
+    {
+      "ticker": "VCIT",
+      "name": "Vanguard Intermediate-Term Corporate Bond ETF",
+      "issuer": "Vanguard / Vanguard Bond Index Funds",
+      "cik": "0001021882",
+      "series_id": "S000026863"
+    },
+    {
+      "ticker": "VCSH",
+      "name": "Vanguard Short-Term Corporate Bond ETF",
+      "issuer": "Vanguard / Vanguard Bond Index Funds",
+      "cik": "0001021882",
+      "series_id": "S000026862"
+    },
+    {
+      "ticker": "VGSH",
+      "name": "Vanguard Short-Term Treasury ETF",
+      "issuer": "Vanguard / Vanguard Bond Index Funds",
+      "cik": "0001021882",
+      "series_id": "S000026859"
+    },
+    {
+      "ticker": "VGIT",
+      "name": "Vanguard Intermediate-Term Treasury ETF",
+      "issuer": "Vanguard / Vanguard Bond Index Funds",
+      "cik": "0001021882",
+      "series_id": "S000026860"
+    },
+    {
+      "ticker": "VGLT",
+      "name": "Vanguard Long-Term Treasury ETF",
+      "issuer": "Vanguard / Vanguard Bond Index Funds",
+      "cik": "0001021882",
+      "series_id": "S000026861"
+    },
+    {
+      "ticker": "VTIP",
+      "name": "Vanguard Short-Term Inflation-Protected Securities ETF",
+      "issuer": "Vanguard / Vanguard Bond Index Funds",
+      "cik": "0000836906",
+      "series_id": "S000038501"
+    },
+    {
+      "ticker": "VNQI",
+      "name": "Vanguard Global ex-U.S. Real Estate ETF",
+      "issuer": "Vanguard / Vanguard Specialized Funds",
+      "cik": "0000857489",
+      "series_id": "S000030007"
+    },
+    {
+      "ticker": "VIG",
+      "name": "Vanguard Dividend Appreciation ETF",
+      "issuer": "Vanguard / Vanguard Whitehall Funds",
+      "cik": "0000734383",
+      "series_id": "S000011322"
+    },
+    {
+      "ticker": "VYD",
+      "name": "Vanguard High Dividend Yield ETF",
+      "issuer": "Vanguard / Vanguard Whitehall Funds",
+      "cik": "0000052848",
+      "series_id": "S000015197"
+    },
+    {
+      "ticker": "MGK",
+      "name": "Vanguard Mega Cap Growth ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000052848",
+      "series_id": "S000019700"
+    },
+    {
+      "ticker": "MGV",
+      "name": "Vanguard Mega Cap Value ETF",
+      "issuer": "Vanguard / Vanguard Index Funds",
+      "cik": "0000052848",
+      "series_id": "S000019699"
+    },
+    {
+      "ticker": "SCHB",
+      "name": "Schwab U.S. Broad Market ETF",
+      "issuer": "Charles Schwab / Schwab Strategic Trust",
+      "cik": "0001454889",
+      "series_id": "S000026631"
+    },
+    {
+      "ticker": "SCHX",
+      "name": "Schwab U.S. Large-Cap ETF",
+      "issuer": "Charles Schwab / Schwab Strategic Trust",
+      "cik": "0001454889",
+      "series_id": "S000026632"
+    },
+    {
+      "ticker": "SCHF",
+      "name": "Schwab International Equity ETF",
+      "issuer": "Charles Schwab / Schwab Strategic Trust",
+      "cik": "0001454889",
+      "series_id": "S000026637"
+    },
+    {
+      "ticker": "SCHE",
+      "name": "Schwab Emerging Markets Equity ETF",
+      "issuer": "Charles Schwab / Schwab Strategic Trust",
+      "cik": "0001454889",
+      "series_id": "S000026639"
+    },
+    {
+      "ticker": "SCHD",
+      "name": "Schwab U.S. Dividend Equity ETF",
+      "issuer": "Charles Schwab / Schwab Strategic Trust",
+      "cik": "0001454889",
+      "series_id": "S000034163"
+    },
+    {
+      "ticker": "SCHG",
+      "name": "Schwab U.S. Large-Cap Growth ETF",
+      "issuer": "Charles Schwab / Schwab Strategic Trust",
+      "cik": "0001454889",
+      "series_id": "S000026633"
+    },
+    {
+      "ticker": "SCHV",
+      "name": "Schwab U.S. Large-Cap Value ETF",
+      "issuer": "Charles Schwab / Schwab Strategic Trust",
+      "cik": "0001454889",
+      "series_id": "S000026634"
+    },
+    {
+      "ticker": "SCHA",
+      "name": "Schwab U.S. Small-Cap ETF",
+      "issuer": "Charles Schwab / Schwab Strategic Trust",
+      "cik": "0001454889",
+      "series_id": "S000026636"
+    },
+    {
+      "ticker": "SCHM",
+      "name": "Schwab U.S. Mid-Cap ETF",
+      "issuer": "Charles Schwab / Schwab Strategic Trust",
+      "cik": "0001454889",
+      "series_id": "S000026635"
+    },
+    {
+      "ticker": "SCHP",
+      "name": "Schwab U.S. TIPS ETF",
+      "issuer": "Charles Schwab / Schwab Strategic Trust",
+      "cik": "0001454889",
+      "series_id": "S000029407"
+    },
+    {
+      "ticker": "SCHI",
+      "name": "Schwab 5-10 Year Corporate Bond ETF",
+      "issuer": "Charles Schwab / Schwab Strategic Trust",
+      "cik": "0001454889",
+      "series_id": "S000066661"
+    },
+    {
+      "ticker": "GDX",
+      "name": "VanEck Gold Miners ETF",
+      "issuer": "VanEck / VanEck ETF Trust",
+      "cik": "0001137360",
+      "series_id": "S000009191"
+    },
+    {
+      "ticker": "GDXJ",
+      "name": "VanEck Junior Gold Miners ETF",
+      "issuer": "VanEck / VanEck ETF Trust",
+      "cik": "0001137360",
+      "series_id": "S000026955"
+    },
+    {
+      "ticker": "SMH",
+      "name": "VanEck Semiconductor ETF",
+      "issuer": "VanEck / VanEck ETF Trust",
+      "cik": "0001137360",
+      "series_id": "S000034411"
+    },
+    {
+      "ticker": "OIH",
+      "name": "VanEck Oil Services ETF",
+      "issuer": "VanEck / VanEck ETF Trust",
+      "cik": "0001137360",
+      "series_id": "S000034408"
+    },
+    {
+      "ticker": "MSOS",
+      "name": "AdvisorShares Pure US Cannabis ETF",
+      "issuer": "AdvisorShares / AdvisorShares Trust",
+      "cik": "0001408970",
+      "series_id": "S000066948"
+    },
+    {
+      "ticker": "ARKK",
+      "name": "ARK Innovation ETF",
+      "issuer": "ARK / ARK ETF Trust",
+      "cik": "0001579982",
+      "series_id": "S000042977"
+    },
+    {
+      "ticker": "ARKG",
+      "name": "ARK Genomic Revolution ETF",
+      "issuer": "ARK / ARK ETF Trust",
+      "cik": "0001579982",
+      "series_id": "S000042975"
+    },
+    {
+      "ticker": "ARKW",
+      "name": "ARK Next Generation Internet ETF",
+      "issuer": "ARK / ARK ETF Trust",
+      "cik": "0001579982",
+      "series_id": "S000042978"
+    },
+    {
+      "ticker": "ARKF",
+      "name": "ARK Fintech Innovation ETF",
+      "issuer": "ARK / ARK ETF Trust",
+      "cik": "0001579982",
+      "series_id": "S000064752"
+    },
+    {
+      "ticker": "ARKQ",
+      "name": "ARK Autonomous Technology & Robotics ETF",
+      "issuer": "ARK / ARK ETF Trust",
+      "cik": "0001579982",
+      "series_id": "S000042976"
+    },
+    {
+      "ticker": "TQQQ",
+      "name": "ProShares UltraPro QQQ",
+      "issuer": "ProShares / ProShares Trust",
+      "cik": "0001174610",
+      "series_id": "S000024908"
+    },
+    {
+      "ticker": "SQQQ",
+      "name": "ProShares UltraPro Short QQQ",
+      "issuer": "ProShares / ProShares Trust",
+      "cik": "0001174610",
+      "series_id": "S000024909"
+    },
+    {
+      "ticker": "UPRO",
+      "name": "ProShares UltraPro S&P 500",
+      "issuer": "ProShares / ProShares Trust",
+      "cik": "0001174610",
+      "series_id": "S000024919"
+    },
+    {
+      "ticker": "SPXS",
+      "name": "Direxion Daily S&P 500 Bear 3X Shares",
+      "issuer": "Direxion / Direxion Shares ETF Trust",
+      "cik": "0001424958",
+      "series_id": "S000022765"
+    },
+    {
+      "ticker": "SPXL",
+      "name": "Direxion Daily S&P 500 Bull 3X Shares",
+      "issuer": "Direxion / Direxion Shares ETF Trust",
+      "cik": "0001424958",
+      "series_id": "S000022767"
+    },
+    {
+      "ticker": "SOXL",
+      "name": "Direxion Daily Semiconductor Bull 3X Shares",
+      "issuer": "Direxion / Direxion Shares ETF Trust",
+      "cik": "0001424958",
+      "series_id": "S000027920"
+    },
+    {
+      "ticker": "SOXS",
+      "name": "Direxion Daily Semiconductor Bear 3X Shares",
+      "issuer": "Direxion / Direxion Shares ETF Trust",
+      "cik": "0001424958",
+      "series_id": "S000027921"
+    },
+    {
+      "ticker": "TNA",
+      "name": "Direxion Daily Small Cap Bull 3X Shares",
+      "issuer": "Direxion / Direxion Shares ETF Trust",
+      "cik": "0001424958",
+      "series_id": "S000022786"
+    },
+    {
+      "ticker": "TZA",
+      "name": "Direxion Daily Small Cap Bear 3X Shares",
+      "issuer": "Direxion / Direxion Shares ETF Trust",
+      "cik": "0001424958",
+      "series_id": "S000022770"
+    },
+    {
+      "ticker": "FAS",
+      "name": "Direxion Daily Financial Bull 3X Shares",
+      "issuer": "Direxion / Direxion Shares ETF Trust",
+      "cik": "0001424958",
+      "series_id": "S000022761"
+    },
+    {
+      "ticker": "FAZ",
+      "name": "Direxion Daily Financial Bear 3X Shares",
+      "issuer": "Direxion / Direxion Shares ETF Trust",
+      "cik": "0001424958",
+      "series_id": "S000022781"
+    },
+    {
+      "ticker": "LABU",
+      "name": "Direxion Daily S&P Biotech Bull 3X Shares",
+      "issuer": "Direxion / Direxion Shares ETF Trust",
+      "cik": "0001424958",
+      "series_id": "S000049373"
+    },
+    {
+      "ticker": "LABD",
+      "name": "Direxion Daily S&P Biotech Bear 3X Shares",
+      "issuer": "Direxion / Direxion Shares ETF Trust",
+      "cik": "0001424958",
+      "series_id": "S000049374"
+    },
+    {
+      "ticker": "UVXY",
+      "name": "ProShares Ultra VIX Short-Term Futures ETF",
+      "issuer": "ProShares / ProShares Trust",
+      "cik": "0001174922",
+      "series_id": "S000033198"
+    },
+    {
+      "ticker": "SVXY",
+      "name": "ProShares Short VIX Short-Term Futures ETF",
+      "issuer": "ProShares / ProShares Trust",
+      "cik": "0001174922",
+      "series_id": "S000033197"
+    },
+    {
+      "ticker": "USO",
+      "name": "United States Oil Fund LP",
+      "issuer": "USCF Investments",
+      "cik": "0001327977",
+      "series_id": null,
+      "notes": "Commodity partnership (LP), not a 1940 Act fund. No N-PORT. CIK is the LP itself."
+    },
+    {
+      "ticker": "UNG",
+      "name": "United States Natural Gas Fund LP",
+      "issuer": "USCF Investments",
+      "cik": "0001359838",
+      "series_id": null,
+      "notes": "Commodity partnership (LP), not a 1940 Act fund. No N-PORT. CIK is the LP itself."
+    },
+    {
+      "ticker": "PDBC",
+      "name": "Invesco Optimum Yield Diversified Commodity Strategy No K-1 ETF",
+      "issuer": "Invesco / Invesco Exchange-Traded Fund Trust II",
+      "cik": "0001595386",
+      "series_id": "S000044509"
+    },
+    {
+      "ticker": "DBO",
+      "name": "Invesco DB Oil Fund",
+      "issuer": "Invesco / DB Commodity Services LLC",
+      "cik": "0001383312",
+      "series_id": null,
+      "notes": "Commodity limited partnership. No N-PORT. CIK is the fund entity."
+    },
+    {
+      "ticker": "IBIT",
+      "name": "iShares Bitcoin Trust ETF",
+      "issuer": "BlackRock / iShares Bitcoin Trust ETF",
+      "cik": "0001980994",
+      "series_id": null,
+      "notes": "Commodity trust (Bitcoin ETP) under the 1933 Act. No N-PORT. CIK is the trust itself."
+    },
+    {
+      "ticker": "FBTC",
+      "name": "Fidelity Wise Origin Bitcoin Fund",
+      "issuer": "Fidelity",
+      "cik": "0001980176",
+      "series_id": null,
+      "notes": "Commodity trust (Bitcoin ETP) under the 1933 Act. No N-PORT. CIK is the trust itself."
+    },
+    {
+      "ticker": "BITB",
+      "name": "Bitwise Bitcoin ETF",
+      "issuer": "Bitwise",
+      "cik": "0001980245",
+      "series_id": null,
+      "notes": "Commodity trust (Bitcoin ETP) under the 1933 Act. No N-PORT. CIK is the trust itself."
+    },
+    {
+      "ticker": "EZBC",
+      "name": "Franklin Bitcoin ETF",
+      "issuer": "Franklin Templeton",
+      "cik": "0001980242",
+      "series_id": null,
+      "notes": "Commodity trust (Bitcoin ETP) under the 1933 Act. No N-PORT. CIK is the trust itself."
+    },
+    {
+      "ticker": "ETHA",
+      "name": "iShares Ethereum Trust ETF",
+      "issuer": "BlackRock",
+      "cik": "0002027633",
+      "series_id": null,
+      "notes": "Commodity trust (Ethereum ETP) under the 1933 Act. No N-PORT. CIK is the trust itself."
+    },
+    {
+      "ticker": "FETH",
+      "name": "Fidelity Ethereum Fund",
+      "issuer": "Fidelity",
+      "cik": "0002024173",
+      "series_id": null,
+      "notes": "Commodity trust (Ethereum ETP) under the 1933 Act. No N-PORT. CIK is the trust itself."
+    },
+    {
+      "ticker": "CIBR",
+      "name": "First Trust NASDAQ Cybersecurity ETF",
+      "issuer": "First Trust / First Trust Exchange-Traded Fund VI",
+      "cik": "0001364608",
+      "series_id": "S000050385"
+    },
+    {
+      "ticker": "FDN",
+      "name": "First Trust Dow Jones Internet Index Fund",
+      "issuer": "First Trust / First Trust Exchange-Traded Fund II",
+      "cik": "0001329377",
+      "series_id": "S000012479"
+    },
+    {
+      "ticker": "FTEC",
+      "name": "Fidelity MSCI Information Technology Index ETF",
+      "issuer": "Fidelity / Fidelity Covington Trust",
+      "cik": "0000945908",
+      "series_id": "S000042577"
+    },
+    {
+      "ticker": "FHLC",
+      "name": "Fidelity MSCI Health Care Index ETF",
+      "issuer": "Fidelity / Fidelity Covington Trust",
+      "cik": "0000945908",
+      "series_id": "S000042575"
+    },
+    {
+      "ticker": "FIDU",
+      "name": "Fidelity MSCI Industrials Index ETF",
+      "issuer": "Fidelity / Fidelity Covington Trust",
+      "cik": "0000945908",
+      "series_id": "S000042576"
+    },
+    {
+      "ticker": "FNCL",
+      "name": "Fidelity MSCI Financials Index ETF",
+      "issuer": "Fidelity / Fidelity Covington Trust",
+      "cik": "0000945908",
+      "series_id": "S000042574"
+    },
+    {
+      "ticker": "FENY",
+      "name": "Fidelity MSCI Energy Index ETF",
+      "issuer": "Fidelity / Fidelity Covington Trust",
+      "cik": "0000945908",
+      "series_id": "S000042573"
+    },
+    {
+      "ticker": "ONEQ",
+      "name": "Fidelity Nasdaq Composite Index ETF",
+      "issuer": "Fidelity / Fidelity Commonwealth Trust",
+      "cik": "0000205323",
+      "series_id": "S000006011"
+    },
+    {
+      "ticker": "IVW",
+      "name": "iShares S&P 500 Growth ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004311"
+    },
+    {
+      "ticker": "IVE",
+      "name": "iShares S&P 500 Value ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004312"
+    },
+    {
+      "ticker": "QUAL",
+      "name": "iShares MSCI USA Quality Factor ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000041444"
+    },
+    {
+      "ticker": "SIZE",
+      "name": "iShares MSCI USA Size Factor ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000040204"
+    },
+    {
+      "ticker": "MTUM",
+      "name": "iShares MSCI USA Momentum Factor ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000040316"
+    },
+    {
+      "ticker": "VLUE",
+      "name": "iShares MSCI USA Value Factor ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000040205"
+    },
+    {
+      "ticker": "USMV",
+      "name": "iShares MSCI USA Min Vol Factor ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000031838"
+    },
+    {
+      "ticker": "DGRO",
+      "name": "iShares Core Dividend Growth ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000045648"
+    },
+    {
+      "ticker": "HDV",
+      "name": "iShares Core High Dividend ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000031844"
+    },
+    {
+      "ticker": "DVY",
+      "name": "iShares Select Dividend ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004334"
+    },
+    {
+      "ticker": "SDY",
+      "name": "SPDR S&P Dividend ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000006981"
+    },
+    {
+      "ticker": "DGRW",
+      "name": "WisdomTree U.S. Quality Dividend Growth Fund",
+      "issuer": "WisdomTree / WisdomTree Trust",
+      "cik": "0001350487",
+      "series_id": "S000040816"
+    },
+    {
+      "ticker": "DLN",
+      "name": "WisdomTree U.S. LargeCap Dividend Fund",
+      "issuer": "WisdomTree / WisdomTree Trust",
+      "cik": "0001350487",
+      "series_id": "S000012392"
+    },
+    {
+      "ticker": "EZU",
+      "name": "iShares MSCI Eurozone ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000004268"
+    },
+    {
+      "ticker": "VGK",
+      "name": "Vanguard FTSE Europe ETF",
+      "issuer": "Vanguard / Vanguard International Equity Index Funds",
+      "cik": "0000857489",
+      "series_id": "S000005787"
+    },
+    {
+      "ticker": "VPL",
+      "name": "Vanguard FTSE Pacific ETF",
+      "issuer": "Vanguard / Vanguard International Equity Index Funds",
+      "cik": "0000857489",
+      "series_id": "S000005788"
+    },
+    {
+      "ticker": "VSS",
+      "name": "Vanguard FTSE All-World ex-US Small-Cap ETF",
+      "issuer": "Vanguard / Vanguard International Equity Index Funds",
+      "cik": "0000857489",
+      "series_id": "S000025074"
+    },
+    {
+      "ticker": "TIP",
+      "name": "iShares TIPS Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004363"
+    },
+    {
+      "ticker": "GOVT",
+      "name": "iShares U.S. Treasury Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000035919"
+    },
+    {
+      "ticker": "EMB",
+      "name": "iShares JP Morgan USD Emerging Markets Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000019798"
+    },
+    {
+      "ticker": "JNK",
+      "name": "SPDR Bloomberg High Yield Bond ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000019669"
+    },
+    {
+      "ticker": "XAR",
+      "name": "SPDR S&P Aerospace & Defense ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000012318"
+    },
+    {
+      "ticker": "XME",
+      "name": "SPDR S&P Metals & Mining ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000012333"
+    },
+    {
+      "ticker": "XOP",
+      "name": "SPDR S&P Oil & Gas Exploration & Production ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000012319"
+    },
+    {
+      "ticker": "XRT",
+      "name": "SPDR S&P Retail ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000012322"
+    },
+    {
+      "ticker": "XHB",
+      "name": "SPDR S&P Homebuilders ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000010019"
+    },
+    {
+      "ticker": "KRE",
+      "name": "SPDR S&P Regional Banking ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000012325"
+    },
+    {
+      "ticker": "KBE",
+      "name": "SPDR S&P Bank ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000006977"
+    },
+    {
+      "ticker": "XES",
+      "name": "SPDR S&P Oil & Gas Equipment & Services ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000012334"
+    },
+    {
+      "ticker": "SPEM",
+      "name": "SPDR Portfolio Emerging Markets ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001168164",
+      "series_id": "S000014048"
+    },
+    {
+      "ticker": "SPDW",
+      "name": "SPDR Portfolio Developed World ex-US ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001168164",
+      "series_id": "S000014038"
+    },
+    {
+      "ticker": "BIL",
+      "name": "SPDR Bloomberg 1-3 Month T-Bill ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000017326"
+    },
+    {
+      "ticker": "SGOV",
+      "name": "iShares 0-3 Month Treasury Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000068768"
+    },
+    {
+      "ticker": "BOXX",
+      "name": "Alpha Architect 1-3 Month Box ETF",
+      "issuer": "Alpha Architect / Empowered Funds LLC",
+      "cik": "0001592900",
+      "series_id": "S000077497"
+    },
+    {
+      "ticker": "CALF",
+      "name": "Pacer US Small Cap Cash Cows 100 ETF",
+      "issuer": "Pacer / Pacer Funds Trust",
+      "cik": "0001616668",
+      "series_id": "S000055468"
+    },
+    {
+      "ticker": "COWZ",
+      "name": "Pacer US Cash Cows 100 ETF",
+      "issuer": "Pacer / Pacer Funds Trust",
+      "cik": "0001616668",
+      "series_id": "S000055466"
+    },
+    {
+      "ticker": "AVUV",
+      "name": "Avantis U.S. Small Cap Value ETF",
+      "issuer": "Avantis / American Century ETF Trust",
+      "cik": "0001710607",
+      "series_id": "S000066459"
+    },
+    {
+      "ticker": "AVDV",
+      "name": "Avantis International Small Cap Value ETF",
+      "issuer": "Avantis / American Century ETF Trust",
+      "cik": "0001710607",
+      "series_id": "S000066457"
+    },
+    {
+      "ticker": "AVEM",
+      "name": "Avantis Emerging Markets Equity ETF",
+      "issuer": "Avantis / American Century ETF Trust",
+      "cik": "0001710607",
+      "series_id": "S000066454"
+    },
+    {
+      "ticker": "DFAC",
+      "name": "Dimensional U.S. Core Equity 2 ETF",
+      "issuer": "Dimensional / Dimensional ETF Trust",
+      "cik": "0001816125",
+      "series_id": "S000070903"
+    },
+    {
+      "ticker": "DFAU",
+      "name": "Dimensional US Equity ETF",
+      "issuer": "Dimensional / Dimensional ETF Trust",
+      "cik": "0001816125",
+      "series_id": "S000069432"
+    },
+    {
+      "ticker": "DFAI",
+      "name": "Dimensional International Core Equity Market ETF",
+      "issuer": "Dimensional / Dimensional ETF Trust",
+      "cik": "0001816125",
+      "series_id": "S000069433"
+    },
+    {
+      "ticker": "DFAE",
+      "name": "Dimensional Emerging Core Equity Market ETF",
+      "issuer": "Dimensional / Dimensional ETF Trust",
+      "cik": "0001816125",
+      "series_id": "S000069434"
+    },
+    {
+      "ticker": "PAVE",
+      "name": "Global X U.S. Infrastructure Development ETF",
+      "issuer": "Global X / Global X Funds",
+      "cik": "0001432353",
+      "series_id": "S000056509"
+    },
+    {
+      "ticker": "CLOU",
+      "name": "Global X Cloud Computing ETF",
+      "issuer": "Global X / Global X Funds",
+      "cik": "0001432353",
+      "series_id": "S000065121"
+    },
+    {
+      "ticker": "BOTZ",
+      "name": "Global X Robotics & Artificial Intelligence ETF",
+      "issuer": "Global X / Global X Funds",
+      "cik": "0001432353",
+      "series_id": "S000054693"
+    },
+    {
+      "ticker": "AMLP",
+      "name": "Alerian MLP ETF",
+      "issuer": "SS&C ALPS / ALPS ETF Trust",
+      "cik": "0001414040",
+      "series_id": "S000029786"
+    },
+    {
+      "ticker": "IYR",
+      "name": "iShares U.S. Real Estate ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004328"
+    },
+    {
+      "ticker": "IYW",
+      "name": "iShares U.S. Technology ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004329"
+    },
+    {
+      "ticker": "IYH",
+      "name": "iShares U.S. Healthcare ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004324"
+    },
+    {
+      "ticker": "IYF",
+      "name": "iShares U.S. Financials ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004323"
+    },
+    {
+      "ticker": "IYE",
+      "name": "iShares U.S. Energy ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004321"
+    },
+    {
+      "ticker": "JEPI",
+      "name": "JPMorgan Equity Premium Income ETF",
+      "issuer": "J.P. Morgan / JPMorgan Exchange-Traded Fund Trust",
+      "cik": "0001485894",
+      "series_id": "S000068402"
+    },
+    {
+      "ticker": "JEPQ",
+      "name": "JPMorgan Nasdaq Equity Premium Income ETF",
+      "issuer": "J.P. Morgan / JPMorgan Exchange-Traded Fund Trust",
+      "cik": "0001485894",
+      "series_id": "S000076132"
+    },
+    {
+      "ticker": "JPST",
+      "name": "JPMorgan Ultra-Short Income ETF",
+      "issuer": "J.P. Morgan / JPMorgan Exchange-Traded Fund Trust",
+      "cik": "0001485894",
+      "series_id": "S000054790"
+    },
+    {
+      "ticker": "JMST",
+      "name": "JPMorgan Ultra-Short Municipal Income ETF",
+      "issuer": "J.P. Morgan / JPMorgan Exchange-Traded Fund Trust",
+      "cik": "0001485894",
+      "series_id": "S000063269"
+    },
+    {
+      "ticker": "MINT",
+      "name": "PIMCO Enhanced Short Maturity Active ETF",
+      "issuer": "PIMCO / PIMCO ETF Trust",
+      "cik": "0001450011",
+      "series_id": "S000026751"
+    },
+    {
+      "ticker": "HYD",
+      "name": "VanEck High Yield Muni ETF",
+      "issuer": "VanEck / VanEck ETF Trust",
+      "cik": "0001137360",
+      "series_id": "S000019193"
+    },
+    {
+      "ticker": "MUB",
+      "name": "iShares National Muni Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000018861"
+    },
+    {
+      "ticker": "SHYG",
+      "name": "iShares 0-5 Year High Yield Corporate Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000042353"
+    },
+    {
+      "ticker": "SJNK",
+      "name": "SPDR Bloomberg Short Term High Yield Bond ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000036414"
+    },
+    {
+      "ticker": "NEAR",
+      "name": "BlackRock Short Maturity Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001524513",
+      "series_id": "S000037042"
+    },
+    {
+      "ticker": "SLQD",
+      "name": "iShares 0-5 Year Investment Grade Corporate Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000042354"
+    },
+    {
+      "ticker": "STIP",
+      "name": "iShares 0-5 Year TIPS Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000030481"
+    },
+    {
+      "ticker": "FLOT",
+      "name": "iShares Floating Rate Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000033136"
+    },
+    {
+      "ticker": "IGOV",
+      "name": "iShares International Treasury Bond ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000023614"
+    },
+    {
+      "ticker": "BKLN",
+      "name": "Invesco Senior Loan ETF",
+      "issuer": "Invesco / Invesco Exchange-Traded Fund Trust",
+      "cik": "0001378872",
+      "series_id": "S000031053"
+    },
+    {
+      "ticker": "EEMV",
+      "name": "iShares MSCI Emerging Markets Min Vol Factor ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0000930667",
+      "series_id": "S000032497"
+    },
+    {
+      "ticker": "EFAV",
+      "name": "iShares MSCI EAFE Min Vol Factor ETF",
+      "issuer": "BlackRock / iShares, Inc.",
+      "cik": "0001100663",
+      "series_id": "S000031837"
+    },
+    {
+      "ticker": "IYT",
+      "name": "iShares Transportation Average ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000004331"
+    },
+    {
+      "ticker": "IAI",
+      "name": "iShares U.S. Broker-Dealers & Securities Exchanges ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000009420"
+    },
+    {
+      "ticker": "IAK",
+      "name": "iShares U.S. Insurance ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000009421"
+    },
+    {
+      "ticker": "IHI",
+      "name": "iShares U.S. Medical Devices ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000009419"
+    },
+    {
+      "ticker": "IHF",
+      "name": "iShares U.S. Healthcare Providers ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000009418"
+    },
+    {
+      "ticker": "PPH",
+      "name": "VanEck Pharmaceutical ETF",
+      "issuer": "VanEck / VanEck ETF Trust",
+      "cik": "0001137360",
+      "series_id": "S000034409"
+    },
+    {
+      "ticker": "PEJ",
+      "name": "Invesco Dynamic Leisure and Entertainment ETF",
+      "issuer": "Invesco / Invesco Exchange-Traded Fund Trust",
+      "cik": "0001209466",
+      "series_id": "S000003028"
+    },
+    {
+      "ticker": "QQQM",
+      "name": "Invesco NASDAQ 100 ETF",
+      "issuer": "Invesco / Invesco Exchange-Traded Fund Trust II",
+      "cik": "0001378872",
+      "series_id": "S000069448"
+    },
+    {
+      "ticker": "RSP",
+      "name": "Invesco S&P 500 Equal Weight ETF",
+      "issuer": "Invesco / Invesco Exchange-Traded Fund Trust II",
+      "cik": "0001209466",
+      "series_id": "S000060812"
+    },
+    {
+      "ticker": "RYT",
+      "name": "Invesco S&P 500 Equal Weight Technology ETF",
+      "issuer": "Invesco / Invesco Exchange-Traded Fund Trust II",
+      "cik": "0001482921",
+      "series_id": "S000009076"
+    },
+    {
+      "ticker": "RYF",
+      "name": "Invesco S&P 500 Equal Weight Financials ETF",
+      "issuer": "Invesco / Invesco Exchange-Traded Fund Trust II",
+      "cik": "0001482921",
+      "series_id": "S000009072"
+    },
+    {
+      "ticker": "RYH",
+      "name": "Invesco S&P 500 Equal Weight Health Care ETF",
+      "issuer": "Invesco / Invesco Exchange-Traded Fund Trust II",
+      "cik": "0001482921",
+      "series_id": "S000009075"
+    },
+    {
+      "ticker": "SPLG",
+      "name": "SPDR Portfolio S&P 500 ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000006987"
+    },
+    {
+      "ticker": "SPAB",
+      "name": "SPDR Portfolio Aggregate Bond ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000017334"
+    },
+    {
+      "ticker": "SPSB",
+      "name": "SPDR Portfolio Short Term Corporate Bond ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000019666"
+    },
+    {
+      "ticker": "SPIB",
+      "name": "SPDR Portfolio Intermediate Term Corporate Bond ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000022923"
+    },
+    {
+      "ticker": "SPTS",
+      "name": "SPDR Portfolio Short Term Treasury ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000019665"
+    },
+    {
+      "ticker": "SPTI",
+      "name": "SPDR Portfolio Intermediate Term Treasury ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000017328"
+    },
+    {
+      "ticker": "GNR",
+      "name": "SPDR S&P Global Natural Resources ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001168164",
+      "series_id": "S000030037"
+    },
+    {
+      "ticker": "ICLN",
+      "name": "iShares Global Clean Energy ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000022498"
+    },
+    {
+      "ticker": "TAN",
+      "name": "Invesco Solar ETF",
+      "issuer": "Invesco / Invesco Exchange-Traded Fund Trust",
+      "cik": "0001378872",
+      "series_id": "S000060822"
+    },
+    {
+      "ticker": "FAN",
+      "name": "First Trust Global Wind Energy ETF",
+      "issuer": "First Trust / First Trust Exchange-Traded Fund IV",
+      "cik": "0001364608",
+      "series_id": "S000022933"
+    },
+    {
+      "ticker": "CNRG",
+      "name": "SPDR S&P Kensho Clean Power ETF",
+      "issuer": "State Street / SPDR Series Trust",
+      "cik": "0001064642",
+      "series_id": "S000063360"
+    },
+    {
+      "ticker": "LIT",
+      "name": "Global X Lithium & Battery Tech ETF",
+      "issuer": "Global X / Global X Funds",
+      "cik": "0001432353",
+      "series_id": "S000029441"
+    },
+    {
+      "ticker": "REMX",
+      "name": "VanEck Rare Earth and Strategic Metals ETF",
+      "issuer": "VanEck / VanEck ETF Trust",
+      "cik": "0001137360",
+      "series_id": "S000030045"
+    },
+    {
+      "ticker": "IYLD",
+      "name": "iShares Morningstar Multi-Asset Income ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000036830"
+    },
+    {
+      "ticker": "AOA",
+      "name": "iShares Core Aggressive Allocation ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000023588"
+    },
+    {
+      "ticker": "AOM",
+      "name": "iShares Core Moderate Allocation ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000023586"
+    },
+    {
+      "ticker": "AOK",
+      "name": "iShares Core Conservative Allocation ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000023585"
+    },
+    {
+      "ticker": "AOR",
+      "name": "iShares Core Growth Allocation ETF",
+      "issuer": "BlackRock / iShares Trust",
+      "cik": "0001100663",
+      "series_id": "S000023587"
+    }
+  ]
+};
