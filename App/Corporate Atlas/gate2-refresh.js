@@ -7,7 +7,13 @@
 
 const ACCOUNT_ID  = 'ea36070477560935a68ad9110a2fd40b';
 const DATABASE_ID = '43e80149-5333-4917-b678-6a8218ca4f93';
-const OAUTH_TOKEN = '***REMOVED-CF-TOKEN-MA-AUG-004***';
+const OAUTH_TOKEN = process.env.CF_API_TOKEN;
+if (!OAUTH_TOKEN) {
+  console.error('Error: CF_API_TOKEN environment variable not set.');
+  console.error('Run: export CF_API_TOKEN=$(wrangler whoami --json | ...)');
+  console.error('Or obtain a fresh token via: wrangler login');
+  process.exit(1);
+}
 const BATCH_SIZE  = 10;  // rows per INSERT VALUES call
 const PAGE_SIZE   = 5000;
 const D1_URL      = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/d1/database/${DATABASE_ID}/query`;
