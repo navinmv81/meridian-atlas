@@ -830,6 +830,12 @@ ${entity.expiration_date ? `Effective: ${entity.expiration_date.slice(0,10)}.` :
         <div style="color:var(--dim);font-size:11px">Loading exposure data…</div>
       </div>
 
+      <!-- Linked Instruments strip -->
+      <div style="margin:0 16px 16px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)" id="linked-instruments-section-${entity.entity_id}">
+        <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Linked Instruments</div>
+        <div style="color:var(--dim);font-size:11px">Loading linked instruments…</div>
+      </div>
+
       <!-- Issuer panels: 13F ownership / financials / 8-K events / filing timeline -->
       <!-- Populated by ent_injectIssuerPanels() — called from both showEntityDetail
            (Galaxy/Search entry points) and showEntityOverlay (ETF Holdings entry point) -->
@@ -903,6 +909,7 @@ async function showEntityDetail(entityId, breadcrumbLabel) {
 
   main.innerHTML = _buildEntityDetailHTML(entity, breadcrumbLabel, 'restoreEntityPreviousView()');
   _loadEntityExposureStrip(entityId, entity);
+  _loadLinkedInstruments(entityId);
 
   // Load Issuer page panels (13F ownership / financials / events / filings).
   // Previously only wired into showEntityOverlay (the ETF-holdings click
@@ -1004,6 +1011,101 @@ function _showAllEtfExposure(entityId) {
   `;
 }
 
+// Source badge for instrument_entity_map.source — differentiates the
+// higher-confidence OpenFIGI match from the identifier-based tier-1 matches
+// (cusip_tier1/isin_tier1) and the lowest-confidence heuristic match.
+function _instrumentSourceBadge(source) {
+  const map = {
+    openfigi_tier1: { label: 'OpenFIGI', color: '#4A9EFF' },
+    cusip_tier1:    { label: 'CUSIP',    color: '#2D9C75' },
+    isin_tier1:     { label: 'ISIN',     color: '#2D9C75' },
+    heuristic:      { label: 'Heuristic', color: '#D99C3D' }
+  };
+  const c = map[source] || { label: source ?? '—', color: '#666' };
+  return `<span style="border:1px solid ${c.color}40;background:${c.color}18;color:${c.color};border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700;letter-spacing:.03em;flex-shrink:0">${_esc(c.label)}</span>`;
+}
+
+function _instrumentRowHtml(r) {
+  // Distinguishing identifier — this is the whole point of the row.
+  // Same-name entries (e.g. dozens of Microsoft bond issuances) are only
+  // ever told apart by their actual ISIN/CUSIP value, not by name or source.
+  const identifier = r.isin
+    ? `ISIN ${_esc(r.isin)}`
+    : (r.cusip ? `CUSIP ${_esc(r.cusip)}` : 'No identifier on file');
+
+  const assetTag = r.asset_cat
+    ? `<span style="font-family:var(--mono);font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;flex-shrink:0;white-space:nowrap">${_esc(r.asset_cat)}</span>`
+    : '';
+
+  return `
+    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(r.security_name ?? '—')}${r.security_ticker ? ` <span style="font-family:var(--mono);color:var(--dim)">(${_esc(r.security_ticker)})</span>` : ''}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:1px">${identifier}</div>
+      </div>
+      ${assetTag}
+      ${_instrumentSourceBadge(r.source)}
+    </div>`;
+}
+
+async function _loadLinkedInstruments(entityId) {
+  const section = document.getElementById(`linked-instruments-section-${entityId}`);
+  if (!section) return;
+
+  let instruments = [];
+  try {
+    const res = await fetch(`${ENTITIES_API_URL}/api/entities/${entityId}/instruments`);
+    if (res.ok) {
+      const data = await res.json();
+      instruments = data.instruments ?? [];
+    }
+  } catch (e) {
+    console.error('[ma-entities] instruments fetch error', e);
+  }
+
+  if (!instruments.length) {
+    section.innerHTML = `
+      <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">Linked Instruments</div>
+      <div style="color:var(--dim);font-size:11px">No linked instruments</div>
+    `;
+    return;
+  }
+
+  const total = instruments.length;
+  const top10 = instruments.slice(0, 10);
+  const rows = top10.map(_instrumentRowHtml).join('');
+
+  const showAllBtn = total > 10
+    ? `<button onclick="_showAllLinkedInstruments(${entityId})" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:4px 10px;border-radius:var(--r);cursor:pointer">Show all ${total} instruments ↓</button>`
+    : '';
+
+  section.innerHTML = `
+    <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">
+      Linked Instruments · <span style="font-weight:400;text-transform:none;letter-spacing:0">${total} matched instrument${total !== 1 ? 's' : ''}</span>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:8px">${rows}</div>
+    ${showAllBtn}
+  `;
+
+  // Stash full list for "Show all" expansion
+  section._allInstruments = instruments;
+}
+
+function _showAllLinkedInstruments(entityId) {
+  const section = document.getElementById(`linked-instruments-section-${entityId}`);
+  if (!section || !section._allInstruments) return;
+
+  const instruments = section._allInstruments;
+  const rows = instruments.map(_instrumentRowHtml).join('');
+
+  section.innerHTML = `
+    <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">
+      Linked Instruments · <span style="font-weight:400;text-transform:none;letter-spacing:0">${instruments.length} matched instrument${instruments.length !== 1 ? 's' : ''}</span>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:8px">${rows}</div>
+  `;
+}
+
 function _detailError(message, backLabel, backHandler) {
   backLabel   = backLabel   || 'Galaxy';
   backHandler = backHandler || 'restoreEntityPreviousView()';
@@ -1087,6 +1189,7 @@ async function showEntityOverlay(entityId, backLabel) {
 
     // Load ETF exposure strip asynchronously
     _loadEntityExposureStrip(entityId, entity);
+    _loadLinkedInstruments(entityId);
 
     // Load Issuer page panels (13F ownership / financials / events / filings)
     ent_injectIssuerPanels(entityId);
