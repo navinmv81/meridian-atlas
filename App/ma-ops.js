@@ -679,20 +679,32 @@ function ops_renderEventTimeline(events) {
 
 // --- Drift, Budget Risk, OpenFIGI Status (one combined tab) ---------------
 
+// MA-AUG-006, 2 August 2026 — Workers whose cron firing history is worth a
+// live glance. Kept short and explicit rather than deriving from anywhere
+// else, since this list controls real API calls against Cloudflare's GraphQL
+// Analytics — see ops-api.js's TRACKED_SCRIPTS for the enforced allowlist.
+const OPS_CRON_SCRIPTS = ['meridian-holdings', 'meridian-entities-seed', 'meridian-entities-enrich'];
+
 async function ops_loadDriftTab() {
   const container = document.getElementById('ops-tab-drift');
   if (!container) return;
   container.innerHTML = `<div style="color:${OPS_COLORS.textDim};padding:20px;">Loading…</div>`;
 
-  const [driftRes, budgetRes, figiRes] = await Promise.all([
+  const [driftRes, budgetRes, figiRes, cfD1Res, ...cfInvocationResults] = await Promise.all([
     data_opsGet('/api/ops/drift'),
     data_opsGet('/api/ops/budget-risk'),
-    data_opsGet('/api/ops/openfigi-status')
+    data_opsGet('/api/ops/openfigi-status'),
+    data_opsGet('/api/ops/cf/d1-today'),
+    ...OPS_CRON_SCRIPTS.map(s => data_opsGet(`/api/ops/cf/invocations?script=${encodeURIComponent(s)}`))
   ]);
 
   const driftHtml = ops_renderDriftPanel(driftRes.ok ? driftRes.data : null);
   const budgetHtml = ops_renderBudgetRisk(budgetRes.ok ? budgetRes.data : null);
   const figiHtml = ops_renderOpenFigiStatus(figiRes.ok ? figiRes.data : null);
+  const cfHtml = ops_renderLiveCfMetrics(
+    cfD1Res.ok ? cfD1Res.data : null,
+    OPS_CRON_SCRIPTS.map((s, i) => ({ script: s, data: cfInvocationResults[i].ok ? cfInvocationResults[i].data : null }))
+  );
 
   container.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -701,9 +713,42 @@ async function ops_loadDriftTab() {
         border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;">Refresh</button>
     </div>
     ${budgetHtml}
+    ${cfHtml}
     ${driftHtml}
     ${figiHtml}
   `;
+}
+
+// MA-AUG-006: live Cloudflare-metered numbers (real, authoritative) shown
+// alongside the app's own self-reported writes_today_ counter above — the 2
+// August incident showed these two can diverge (real per-run multiplier
+// ranged 2.56x-3.69x against assumptions), so surfacing both side by side,
+// not replacing one with the other, is deliberate.
+function ops_renderLiveCfMetrics(d1Data, invocations) {
+  const d1Html = d1Data
+    ? `<div style="font-family:var(--mono, monospace);font-size:22px;font-weight:700;">${d1Data.rowsWritten.toLocaleString()} <span style="font-size:13px;color:${OPS_COLORS.textDim};">of ${d1Data.daily_cap.toLocaleString()} rows written today (${d1Data.pct_of_cap}%) — Cloudflare-metered, account-wide</span></div>
+       <div style="font-size:11px;color:${OPS_COLORS.textDim};margin-top:4px;">${d1Data.rowsRead.toLocaleString()} rows read · ${d1Data.writeQueries.toLocaleString()} write queries · ${d1Data.readQueries.toLocaleString()} read queries</div>`
+    : `<div style="color:${OPS_COLORS.red};font-size:13px;">Live D1 metrics unavailable — check CF_ANALYTICS_TOKEN is set and the query's field names are verified (see ops-api.js).</div>`;
+
+  const rows = invocations.map(({ script, data }) => {
+    if (!data) return `<div style="padding:8px 0;border-bottom:1px solid #1c2028;font-size:12px;color:${OPS_COLORS.red};">${_escapeHtml(script)} — failed to load</div>`;
+    const last = data.cron_invocations[data.cron_invocations.length - 1];
+    const flag = data.matches_cron_only
+      ? `<span style="color:${OPS_COLORS.green};">cron-only ✓</span>`
+      : `<span style="color:${OPS_COLORS.red};">mismatch — ${data.all_trigger_invocation_count} total vs ${data.cron_invocation_count} cron-only</span>`;
+    return `
+      <div style="padding:8px 0;border-bottom:1px solid #1c2028;font-size:12px;">
+        <strong>${_escapeHtml(script)}</strong> — ${data.cron_invocation_count} invocation(s) today, ${flag}
+        ${last ? `<br/><span style="color:${OPS_COLORS.textDim};">last: ${_escapeHtml(last.datetime)} · cron "${_escapeHtml(last.cron)}" · ${_escapeHtml(last.status)}</span>` : ''}
+      </div>`;
+  }).join('');
+
+  return `
+    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;">
+      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">Live Cloudflare Metrics (MA-AUG-006)</div>
+      ${d1Html}
+      <div style="margin-top:16px;">${rows}</div>
+    </div>`;
 }
 
 function ops_renderDriftPanel(data) {

@@ -242,6 +242,35 @@ async function handleEtfExposure(env, entityId) {
   return json({ exposures: rows.results ?? [] });
 }
 
+// GET /api/entities/:id/instruments
+// Read-only: instrument identifiers matched to this entity via
+// instrument_entity_map (OpenFIGI / CUSIP tier-1 / ISIN tier-1 / heuristic),
+// joined to instrument_master on instrument_key for name/ticker display.
+async function handleInstruments(env, entityId) {
+  const id = parseInt(entityId, 10);
+  if (!Number.isInteger(id) || id <= 0) return err('Invalid entity_id', 400);
+
+  const rows = await env.DB.prepare(`
+    SELECT
+      im.instrument_key,
+      im.security_name,
+      im.security_ticker,
+      im.isin,
+      im.cusip,
+      im.asset_cat,
+      im.country,
+      iem.source,
+      iem.confidence
+    FROM instrument_entity_map iem
+    JOIN instrument_master im ON im.instrument_key = iem.instrument_key
+    WHERE iem.entity_id = ?
+    ORDER BY im.asset_cat, im.security_name, iem.source
+    LIMIT 75
+  `).bind(id).all();
+
+  return json({ instruments: rows.results ?? [] });
+}
+
 // GET /api/entities/isin/:isin
 async function handleIsinLookup(env, isin) {
   if (!isin || isin.length < 6) return err('Invalid ISIN', 400);
@@ -492,6 +521,9 @@ export default {
 
       const etfExposureMatch = path.match(/^\/api\/entities\/(\d+)\/etf-exposure$/);
       if (etfExposureMatch) return await handleEtfExposure(env, etfExposureMatch[1]);
+
+      const instrumentsMatch = path.match(/^\/api\/entities\/(\d+)\/instruments$/);
+      if (instrumentsMatch) return await handleInstruments(env, instrumentsMatch[1]);
 
       const issuerPanelsMatch = path.match(/^\/api\/entities\/(\d+)\/issuer-panels$/);
       if (issuerPanelsMatch) return await handleIssuerPanels(env, issuerPanelsMatch[1]);

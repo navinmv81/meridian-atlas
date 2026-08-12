@@ -339,10 +339,26 @@ async function mgr_loadManager(cik) {
 
   const filings = result.filings || [];
   if (!filings.length) {
-    overlay.innerHTML = mgr_renderShell(
-      mgr_renderIdentityHeader(result) +
-      '<div class="rd-none" style="margin-top:20px">No 13F filings found for this manager</div>'
-    );
+    // BUG FIX (2026-08-12, Nav): "No 13F filings found for this manager" was
+    // shown for BOTH (a) a manager genuinely on record with zero 13F-HR
+    // filings, and (b) a CIK not in managermaster at all — result.manager_name
+    // null, identity header falling back to a bare "CIK ..." — which usually
+    // means /api/13f-search resolved to the wrong filer (see the 13f-search
+    // fix in worker-13f.js), not that the real manager has no 13F history.
+    // Same honesty split as has_holdings_data below: distinguish "known
+    // registry gap" from "not what you searched for" instead of one message
+    // that reads the same either way.
+    const notInRegistry = !result.manager_name;
+    const registryMsg = notInRegistry
+      ? `<div class="rd-none" style="margin-top:20px">
+           This CIK isn't in Meridian's tracked 13F manager registry. If this
+           doesn't look like the manager you searched for, the name search
+           likely matched the wrong filer rather than this manager having no
+           13F history.
+           <div style="margin-top:8px"><a class="res-link" href="${escapeRdHtml(mgr_secEdgarCompanySearchUrl(result.cik))}" target="_blank" rel="noopener">Look up this CIK on SEC EDGAR →</a></div>
+         </div>`
+      : '<div class="rd-none" style="margin-top:20px">No 13F filings found for this manager</div>';
+    overlay.innerHTML = mgr_renderShell(mgr_renderIdentityHeader(result) + registryMsg);
     return;
   }
 
@@ -393,6 +409,15 @@ function mgr_secFilingIndexUrl(cik, accessionNumber) {
     ? `${accNoDash.slice(0, 10)}-${accNoDash.slice(10, 12)}-${accNoDash.slice(12)}`
     : accNoDash;
   return `https://www.sec.gov/Archives/edgar/data/${cikNum}/${accNoDash}/${accWithDash}-index.htm`;
+}
+
+// SEC EDGAR's company-filings browser for a bare CIK with no accession
+// number in hand yet — used by the "not in registry" empty state above,
+// where there's no specific filing to link to, only the CIK itself.
+function mgr_secEdgarCompanySearchUrl(cik) {
+  const cikNum = parseInt(cik, 10);
+  if (!cikNum) return 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany';
+  return `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cikNum}&type=13F&dateb=&owner=include&count=40`;
 }
 
 function mgr_renderIdentityHeader(data) {

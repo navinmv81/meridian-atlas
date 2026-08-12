@@ -12,7 +12,14 @@ binding = "DB"
 database_name = "meridian-etf"
 database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
 
-# HOLD 2026-07-04 — cron frozen for budget conservation during Sprint 2 13F seeding.
-# Original schedule preserved here for re-enable: crons = ["0 3 * * *"]
+# RE-ENABLED 2026-08-01 — MA-AUG-002 cadence decision, Founder-approved.
+# Was frozen 2026-07-04 for budget conservation during Sprint 2 13F seeding
+# (original daily schedule was crons = ["0 3 * * *"]). Changed from daily to
+# weekly, Monday 04:00 UTC — one day after meridian-holdings' Sunday 04:00
+# UTC run, so this Worker reads freshly updated holdings data and the two
+# large operations don't stack on the same account-wide write cap. Paired
+# with a tightened pre-flight write-budget guard in entities-seed.js
+# (requires 65,000 headroom, not just "under 60,000 used") since this now
+# runs unattended.
 [triggers]
-crons = []
+crons = ["0 4 * * 1"]

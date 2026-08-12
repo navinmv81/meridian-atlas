@@ -9,7 +9,9 @@ const D1_BATCH_SIZE = 100;
 
 // Free tier Workers: 50 subrequests per invocation (covers fetch + D1 calls combined).
 // Per-ETF overhead: ~2 fetch (EFTS + XML) + ~4 D1 checks + ~2 D1 writes = ~8 subrequests.
-// Fixed invocation overhead: ~5 (ALTER TABLE, SELECTs, state writes).
+// Fixed invocation overhead: ~4 (SELECTs, state writes) — reduced from ~5 8
+// August 2026 after removing the redundant per-invocation ALTER TABLE
+// (MA-AUG-004 root-cause fix, see runHoldingsPipeline() above).
 // That leaves ~37 batch slots per ETF per invocation = 3,700 rows max.
 // Using 35 as a safe margin — covers AGG (13,186 rows) in 4 cron cycles (~8 h).
 const MAX_BATCHES_PER_RUN = 35;
@@ -52,14 +54,24 @@ export default {
 
 async function runHoldingsPipeline(env) {
   const db = env.DB;
+
+  // Emergency stop — checked first, before any other work. See checkHold() above.
+  if (await checkHold(db)) {
+    console.log('holdings-pipeline: hold_all_jobs is set — skipping run.');
+    return;
+  }
+
   const startTime = new Date().toISOString();
 
-  // A1: Ensure snapshot_status column exists (idempotent — fails silently if already present)
-  try {
-    await db.prepare(
-      `ALTER TABLE fund_holdings_monthly ADD COLUMN snapshot_status TEXT DEFAULT 'complete'`
-    ).run();
-  } catch (_) { /* column already exists — safe to ignore */ }
+  // REMOVED 8 August 2026 (MA-AUG-004 root-cause fix): this Worker ran an
+  // unconditional `ALTER TABLE ... ADD COLUMN snapshot_status` on every single
+  // invocation (scheduled and /run), relying on the try/catch to silently
+  // swallow the "duplicate column" error after the column's first successful
+  // add. The column has been live since then and is now tracked properly in
+  // migrations/a1-a4-upgrade.sql (line 8) — this runtime ALTER TABLE was pure
+  // redundant defensive code, not the real mechanism, and had been a no-op
+  // costing one wasted subrequest/write-attempt on every invocation since.
+  // Verified via a read-only SELECT against the live column before removal.
 
   await setPipelineState(db, 'last_full_run', startTime);
 
@@ -85,14 +97,17 @@ async function runHoldingsPipeline(env) {
   console.log(`Holdings pipeline: processing ETFs ${offset}–${offset + batch.length} of ${total}`);
 
   // Invocation-level write guard — skip if daily budget already approached
-  // BACKLOG (MA-AUG-002, July 28 2026, fix 2 — deferred to August backlog):
-  // this check only runs once per ETF, before it starts. A single large
-  // ETF's full insert loop in storeHoldings() (up to 35 batches x ~9x
-  // multiplier, ~31,500 real rows_written) has no guard checkpoint inside
-  // it, so one big ETF can carry the day's total well past DAILY_WRITE_LIMIT
-  // before the next ETF's pre-check ever fires. Needs a mid-loop checkpoint,
-  // not just a once-per-ETF one. Not fixed here — Architect review requested
-  // before touching the core ingestion loop.
+  // FIXED 2 August 2026 (Fix 2 / MA-AUG-004, Architect review completed):
+  // this check alone only ran once per ETF, before it starts, which was the
+  // gap flagged here since 28 July — a single large ETF's full insert loop
+  // in storeHoldings() (up to 35 batches x ~9x multiplier, ~31,500 real
+  // rows_written) had no checkpoint inside it, so one big ETF could carry
+  // the day's total well past DAILY_WRITE_LIMIT before the next ETF's
+  // pre-check ever fired. storeHoldings()'s own insert loop now checks the
+  // real running total after every batch (via incrementWriteCount()'s
+  // returned value) and breaks early if the limit is hit — see that
+  // function for the actual mid-loop checkpoint. This outer check remains
+  // as the cheap first line of defense before even starting a new ETF.
   const todayWrites = await getTodayWriteCount(db);
   if (todayWrites >= DAILY_WRITE_LIMIT) {
     console.log(
@@ -374,9 +389,32 @@ async function storeHoldings(db, series_id, ticker, reportMonth, fileDate, xml, 
     // until real usage was ~7x the free-tier daily cap. Sum the batch's own
     // reported meta.rows_written instead — same unit the cap is defined in.
     const realWritten = batchResults.reduce((sum, r) => sum + (r?.meta?.rows_written || 0), 0);
-    await incrementWriteCount(db, realWritten);
+    const runningTotal = await incrementWriteCount(db, realWritten);
     rowCursor += chunk.length;
     batchesUsed++;
+
+    // FIXED 2 August 2026 (Fix 2 / MA-AUG-004): mid-loop write checkpoint —
+    // the two existing guards (once per batch-of-ETFs, once per ETF) only
+    // check headroom BEFORE a large ETF's insert loop starts. A single large
+    // ETF (e.g. AGG, 13,186 rows) can still carry the day's total well past
+    // DAILY_WRITE_LIMIT inside this while loop before either outer guard
+    // ever runs again. Using the real ground-truth runningTotal returned by
+    // incrementWriteCount() (same D1-metered meta.rows_written this file
+    // already fixed once before, not an estimate) — stop immediately if the
+    // limit is hit, leaving rowCursor short of holdings.length so the
+    // existing done/nextOffset/offsetKey resume path (below) picks this
+    // exact position back up next invocation. No data loss, no duplicate
+    // inserts — this is the same resumable mechanism already used when
+    // MAX_BATCHES_PER_RUN is hit, just triggered by a real budget check
+    // instead of a fixed batch count.
+    if (runningTotal >= DAILY_WRITE_LIMIT) {
+      console.log(
+        `[holdings-pipeline] Daily write limit reached mid-run (${runningTotal}/${DAILY_WRITE_LIMIT}) ` +
+        `after batch ${batchesUsed} for ${ticker} ${reportMonth} — stopping at row ${rowCursor} of ` +
+        `${holdings.length}. Will resume from this offset next invocation.`
+      );
+      break;
+    }
   }
 
   const done = rowCursor >= holdings.length;
@@ -565,11 +603,32 @@ async function incrementWriteCount(db, count) {
   const today = new Date().toISOString().slice(0, 10);
   const key = WRITE_COUNTER_PREFIX + today;
   const current = await getTodayWriteCount(db);
+  const newTotal = current + count;
   await db.prepare(
     `INSERT INTO holdings_pipeline_state (key, value)
      VALUES (?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`
-  ).bind(key, String(current + count)).run();
+  ).bind(key, String(newTotal)).run();
+  // FIXED 2 August 2026 (Fix 2 / MA-AUG-004, Architect review completed):
+  // returns the post-increment running total so callers can check it
+  // immediately without a second read — see storeHoldings()'s insert loop
+  // below, the mid-loop checkpoint this was added for.
+  return newTotal;
+}
+
+// FIXED 3 August 2026 (MA-AUG-002 follow-up, safety-net audit): this Worker
+// never had a hold_all_jobs kill switch — a real, pre-existing gap found
+// while double-checking every D1-writing pipeline before resuming work after
+// the 2 August incident. holdings-pipeline.js has the largest observed write
+// multiplier of any pipeline (~9x on fund_holdings_monthly) and runs
+// autonomously on a weekly cron, so of everything audited, this was the
+// worst place to be missing the same emergency stop entities-seed.js,
+// entities-enrich.js, and entities-figi.js already had.
+async function checkHold(db) {
+  const row = await db.prepare(
+    `SELECT value FROM holdings_pipeline_state WHERE key = 'hold_all_jobs'`
+  ).first();
+  return row?.value === 'true';
 }
 
 // ── Universe changes pre-computation ─────────────────────────────────────────

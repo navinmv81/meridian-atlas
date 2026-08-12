@@ -46,7 +46,14 @@
 //   entities-seed's cron re-enable failed. Batched via env.DB.batch() at
 //   WRITE_BATCH_SIZE=100 (up to ~20 batch() calls total). Guarded by the
 //   same shared checkWriteBudget()/checkHold() pattern as every other
-//   pipeline.
+//   pipeline. FIXED 5 August 2026: runInBatches() previously ran these
+//   writes without ever calling incrementWriteCount(), so they were
+//   invisible to the shared holdings_pipeline_state counter other
+//   pipelines rely on for their own pre-flight checks — now tracks real
+//   meta.rows_written and stops mid-run if the daily cap is hit, same
+//   pattern as entities-seed.js/holdings-pipeline.js (though this Worker's
+//   ~2000-row realistic ceiling per invocation means the mid-run stop is
+//   mostly a consistency measure, not a likely real trigger).
 // OpenFIGI calls/invocation: ceil(BATCH_SIZE / OPENFIGI_CHUNK) = 10 POSTs of
 //   100 identifiers each, paced 250ms apart — comfortably inside OpenFIGI's
 //   25 req/6sec with-key limit.
@@ -62,6 +69,7 @@ const BATCH_SIZE = 1000;      // instruments considered per /run call
 const OPENFIGI_CHUNK = 100;   // identifiers per OpenFIGI POST (with API key)
 const WRITE_BATCH_SIZE = 100; // statements per env.DB.batch() call
 const OPENFIGI_PACING_MS = 250;
+const DAILY_CAP = 100000; // account-wide D1 daily write cap (soft), shared across all Workers
 // Confidence is fixed, not yet scored — this Worker matches OpenFIGI's
 // returned name against an existing entity_master row by normalized name,
 // which is weaker than a hard CUSIP/ISIN join (cusip_tier1/isin_tier1 use
@@ -81,14 +89,24 @@ function chunk(arr, size) {
 async function checkWriteBudget(env) {
   // Shared daily counter with every other pipeline (holdings-pipeline.js,
   // entities-seed.js, entities-enrich.js) — same key format (dashes kept).
+  //
+  // TIGHTENED 5 August 2026 (MA-AUG-004 safety-net audit follow-up): moved
+  // from "used >= 60,000" to entities-seed.js's headroom-based pattern. This
+  // Worker's own documented worst case is ~2,000 logical rows per
+  // invocation (BATCH_SIZE=1000 instruments, up to 1000 instrument_entity_map
+  // + 1000 openfigicache rows) — 10,000 headroom is a generously-padded
+  // margin against that, accounting for the D1 write-multiplier effect
+  // observed elsewhere in this project (2x-4x logical rows).
+  const REQUIRED_HEADROOM = 10000;
   const today = new Date().toISOString().slice(0, 10);
   const key = `writes_today_${today}`;
   const row = await env.DB.prepare(
     `SELECT value FROM holdings_pipeline_state WHERE key = ?`
   ).bind(key).first();
   const writesToday = parseInt(row?.value ?? '0', 10);
-  if (writesToday >= 60000) {
-    console.log(`[entities-figi] Write budget reached (${writesToday} today). Skipping.`);
+  const headroom = DAILY_CAP - writesToday;
+  if (headroom < REQUIRED_HEADROOM) {
+    console.log(`[entities-figi] Insufficient write headroom (${headroom} remaining, need ${REQUIRED_HEADROOM}; ${writesToday} used today). Skipping.`);
     return false;
   }
   return true;
@@ -101,11 +119,48 @@ async function checkHold(env) {
   return row?.value === 'true';
 }
 
-async function runInBatches(env, statements) {
+// FIXED 5 August 2026 (MA-AUG-004 safety-net audit follow-up): this Worker's
+// writes were previously invisible to the shared holdings_pipeline_state
+// counter — runInBatches() ran env.DB.batch() but never called
+// incrementWriteCount(), unlike every other pipeline. Mirrors the exact
+// real-rows_written + mid-loop-stop pattern used in entities-seed.js and
+// holdings-pipeline.js. Lower urgency than those two since this Worker has
+// no Cron Trigger (on-request only), but still a real gap before any manual
+// bulk trigger.
+async function incrementWriteCount(env, count) {
+  const today = new Date().toISOString().slice(0, 10);
+  const key = `writes_today_${today}`;
+  const row = await env.DB.prepare(
+    `SELECT value FROM holdings_pipeline_state WHERE key = ?`
+  ).bind(key).first();
+  const current = parseInt(row?.value ?? '0', 10);
+  const newTotal = current + count;
+  await env.DB.prepare(`
+    INSERT INTO holdings_pipeline_state (key, value)
+    VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `).bind(key, String(newTotal)).run();
+  return newTotal;
+}
+
+async function runInBatches(env, statements, label) {
+  let written = 0;
   for (let i = 0; i < statements.length; i += WRITE_BATCH_SIZE) {
     const batch = statements.slice(i, i + WRITE_BATCH_SIZE);
-    await env.DB.batch(batch);
+    const results = await env.DB.batch(batch);
+    const realWritten = results.reduce((sum, r) => sum + (r?.meta?.rows_written || 0), 0);
+    written += realWritten;
+    const runningTotal = await incrementWriteCount(env, realWritten);
+    if (runningTotal >= DAILY_CAP) {
+      console.log(
+        `[entities-figi] Daily write limit reached mid-run (${runningTotal}/${DAILY_CAP}) ` +
+        `during ${label ?? 'batch'} at statement ${Math.min(i + WRITE_BATCH_SIZE, statements.length)} of ` +
+        `${statements.length}. Stopping remaining statements.`
+      );
+      return { completed: false, written };
+    }
   }
+  return { completed: true, written };
 }
 
 async function callOpenFigi(jobs, apiKey) {
@@ -231,8 +286,12 @@ async function resolveInstruments(env) {
     );
   }
 
-  await runInBatches(env, inserts);
-  await runInBatches(env, cacheUpserts);
+  const insertsResult = await runInBatches(env, inserts, 'instrument_entity_map inserts');
+  if (insertsResult.completed) {
+    await runInBatches(env, cacheUpserts, 'openfigicache upserts');
+  } else {
+    console.log('[entities-figi] Skipping openfigicache upserts this invocation — daily cap hit during instrument_entity_map inserts.');
+  }
 
   const openFigiMatched = rows.length - noOpenFigiMatch;
   console.log(`[entities-figi] Considered ${rows.length} · OpenFIGI matched ${openFigiMatched} · resolved to existing entity ${matched} · no OpenFIGI match ${noOpenFigiMatch} · matched name not in entity_master ${noExistingEntity}`);
@@ -247,9 +306,102 @@ async function resolveInstruments(env) {
   return { considered: rows.length, openFigiMatched, matched, noOpenFigiMatch, noExistingEntity };
 }
 
+// ADDED 5 August 2026 (FAST-FOLLOW: openfigicache re-match pass, unlocked by
+// the normalizeName() CORP/CORPORATION fix). openfigicache accumulates every
+// instrument ever considered by resolveInstruments() above — has_warning=0
+// AND matched_entity_id IS NULL means OpenFIGI returned a name but no
+// entity_master row matched it AT THE TIME it was cached (~19,805 rows as of
+// 1 August). Since normalizeName() has since changed, the cached
+// normalized_name column may now be stale — this re-derives it fresh from
+// the cached figi_name/figi_ticker rather than trusting the old value, so
+// fixes to normalizeName() are actually picked up. Zero new OpenFIGI calls —
+// pure D1 read + candidate lookup + write, using the exact same
+// checkHold()/checkWriteBudget()/runInBatches() safety pattern as
+// resolveInstruments(). On a match, both instrument_entity_map AND
+// openfigicache.matched_entity_id/normalized_name are updated, so the cache
+// stays accurate for any future re-match pass.
+async function rematchOpenFigiCache(env, limit) {
+  const candidates = await env.DB.prepare(`
+    SELECT instrument_key, figi_name, figi_ticker
+    FROM openfigicache
+    WHERE has_warning = 0
+      AND matched_entity_id IS NULL
+      AND (figi_name IS NOT NULL OR figi_ticker IS NOT NULL)
+    LIMIT ?
+  `).bind(limit).all();
+
+  const rows = candidates.results;
+  if (rows.length === 0) {
+    console.log('[entities-figi] rematch: no remaining unmatched-but-cached candidates.');
+    return { considered: 0, newlyMatched: 0 };
+  }
+
+  const candidateNames = new Set();
+  const perInstrumentName = new Map();
+  for (const row of rows) {
+    const matchName = row.figi_name || row.figi_ticker;
+    if (!matchName) continue;
+    const normalized = normalizeName(matchName);
+    perInstrumentName.set(row.instrument_key, normalized);
+    candidateNames.add(normalized);
+  }
+
+  let entityIdByName = new Map();
+  if (candidateNames.size > 0) {
+    for (const names of chunk([...candidateNames], 100)) {
+      const placeholders = names.map(() => '?').join(',');
+      const found = await env.DB.prepare(
+        `SELECT entity_id, normalized_name FROM entity_master WHERE normalized_name IN (${placeholders})`
+      ).bind(...names).all();
+      for (const r of found.results) entityIdByName.set(r.normalized_name, r.entity_id);
+    }
+  }
+
+  const inserts = [];
+  const cacheUpdates = [];
+  let newlyMatched = 0;
+  for (const row of rows) {
+    const normalized = perInstrumentName.get(row.instrument_key);
+    const entityId = normalized ? entityIdByName.get(normalized) : null;
+    if (!entityId) continue; // still no match — leave cache as-is, don't touch it
+    newlyMatched++;
+    // FIXED 5 August 2026 (live test failure): instrument_entity_map.source has a
+    // CHECK constraint limited to 'cusip_tier1'/'isin_tier1'/'heuristic'/
+    // 'openfigi_tier1' — 'openfigi_tier1_rematch' isn't in it and every insert
+    // failed SQLITE_CONSTRAINT_CHECK. Reusing 'openfigi_tier1' rather than
+    // migrating the constraint (SQLite requires recreating the whole table to
+    // change a CHECK constraint) — this is genuinely the same matching method
+    // and confidence tier as the original pass, just applied later.
+    inserts.push(
+      env.DB.prepare(`
+        INSERT INTO instrument_entity_map (instrument_key, entity_id, source, confidence)
+        VALUES (?, ?, 'openfigi_tier1', ?)
+        ON CONFLICT(instrument_key) DO NOTHING
+      `).bind(row.instrument_key, entityId, MATCH_CONFIDENCE)
+    );
+    cacheUpdates.push(
+      env.DB.prepare(`
+        UPDATE openfigicache SET matched_entity_id = ?, normalized_name = ?
+        WHERE instrument_key = ?
+      `).bind(entityId, normalized, row.instrument_key)
+    );
+  }
+
+  const insertsResult = await runInBatches(env, inserts, 'rematch instrument_entity_map inserts');
+  if (insertsResult.completed) {
+    await runInBatches(env, cacheUpdates, 'rematch openfigicache updates');
+  } else {
+    console.log('[entities-figi] rematch: skipping openfigicache updates this invocation — daily cap hit during instrument_entity_map inserts.');
+  }
+
+  console.log(`[entities-figi] rematch: considered ${rows.length} · newly matched ${newlyMatched}`);
+  return { considered: rows.length, newlyMatched };
+}
+
 export default {
   async fetch(request, env, ctx) {
-    if (new URL(request.url).pathname !== '/run') {
+    const path = new URL(request.url).pathname;
+    if (path !== '/run' && path !== '/rematch') {
       return new Response('Not found', { status: 404 });
     }
     if (await checkHold(env)) {
@@ -263,6 +415,21 @@ export default {
         status: 429,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+    if (path === '/rematch') {
+      try {
+        const limit = Math.min(parseInt(new URL(request.url).searchParams.get('limit') || '1000', 10), 5000);
+        const summary = await rematchOpenFigiCache(env, limit);
+        return new Response(JSON.stringify({ ok: true, ...summary }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        console.log(`[entities-figi] rematch ERROR: ${err.message}`);
+        return new Response(JSON.stringify({ ok: false, error: err.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
     if (!env.OPENFIGI_API_KEY) {
       console.log('[entities-figi] Warning: OPENFIGI_API_KEY not set — calls will run unauthenticated (OpenFIGI docs suggest 5-10 jobs/request without a key, not the 100/request this Worker is sized for). Set it via wrangler secret put before relying on this.');

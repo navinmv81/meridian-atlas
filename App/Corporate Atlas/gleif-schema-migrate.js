@@ -1,6 +1,15 @@
 #!/usr/bin/env node
 // Phase 3: Schema migration on D1
 // Run each ALTER TABLE individually, catch duplicate column errors silently.
+//
+// NOTE (5 August 2026): this is a one-time migration script, already run
+// against production — kept as-is as a historical record, not a live
+// reference. The entity_master indexes it creates below (idx_entity_master_
+// status/_jurisdiction/_direct_parent/_ultimate_parent/_match_source) are
+// now also listed in migrations/corporate-atlas-v1.sql, which is the
+// canonical source of truth for entity_master's current index set going
+// forward. Don't edit the index list here expecting it to reflect anywhere
+// else — update corporate-atlas-v1.sql instead.
 
 const { execSync } = require('child_process');
 const path = require('path');
