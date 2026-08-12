@@ -161,3 +161,34 @@ window.fmtMoney = fmtMoney;
 window.fmtPct = fmtPct;
 window.safeText = safeText;
 window.escapeRdHtml = escapeRdHtml;
+
+// --- meridian-ops wrappers (added 30 July 2026, August Operating Layer) ---
+// The documented rule ("no inline fetch() in modules — route through
+// data.js") predates this codebase's actual practice: ma-ops.js and
+// ma-13f.js both call fetch() directly against their own Worker URL
+// constants today. That existing pattern is left alone. These two functions
+// are the first real enforcement of the rule for new dashboard code —
+// ma-ops.js's new Sprint Board / Release Ledger / Events / Drift views call
+// these instead of fetching directly.
+const OPS_WORKER_BASE = 'https://meridian-ops.navinmv1981.workers.dev';
+
+async function data_opsGet(path) {
+  return fetchWithTimeout(`${OPS_WORKER_BASE}${path}`);
+}
+
+async function data_opsPost(path, body) {
+  try {
+    const r = await fetch(`${OPS_WORKER_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await r.json().catch(() => null);
+    return { ok: r.ok, status: r.status, data };
+  } catch (e) {
+    return { ok: false, status: 0, error: e.message, data: null };
+  }
+}
+
+window.data_opsGet = data_opsGet;
+window.data_opsPost = data_opsPost;

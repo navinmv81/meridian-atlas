@@ -1585,9 +1585,15 @@ function secDisplayTrim(v) {
 }
  
 /** EDGAR issuer filings via Worker (ticker → CIK → submissions); returns { ok, error?, companyName?, filings } */
+// RESTORED 9 August 2026 (regression fix): the old meridian-proxy /?secfilings=
+// route was deleted 5 August (MA-AUG-004) with the intent to migrate this to
+// meridian-filings (see WORKER_FILINGS_URL, declared in ma-13f.js and already
+// used by ma-13f.js/ma-entities.js), but the migration was never finished here
+// — this call was left pointed at the now-dead route. Now uses meridian-filings'
+// new /api/issuer-filings route (added alongside this fix).
 async function fetchSECFilings(sym) {
   const t = sym.trim().toUpperCase();
-  const url = `${MY_WORKER_URL}/?secfilings=${encodeURIComponent(t)}`;
+  const url = `${WORKER_FILINGS_URL}/api/issuer-filings?ticker=${encodeURIComponent(t)}`;
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(25000) });
     let data = null;

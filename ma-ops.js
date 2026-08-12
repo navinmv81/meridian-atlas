@@ -179,7 +179,16 @@ function _renderOpsPanel(data) {
       </tr>`;
   }).join('');
 
-  panel.innerHTML = `
+  // CHANGED 30 July 2026 (August Operating Layer): this used to target
+  // `panel` (the whole #ops-panel element) directly. Now targets the
+  // #ops-tab-health sub-container instead, since #ops-panel now also hosts
+  // the persistent tab bar and the 4 new tab containers (Sprint Board,
+  // Release Ledger, Events, Drift) — see ops_renderTabBar() below. Nothing
+  // about the rendered health-tab content or logic below changed, only
+  // where it gets written to.
+  const healthContainer = document.getElementById('ops-tab-health') || panel;
+
+  healthContainer.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
       <div style="font-size:20px;font-weight:700;letter-spacing:0.05em;color:${OPS_COLORS.teal};">
         MERIDIAN ATLAS — OPS
@@ -348,6 +357,11 @@ async function openOps(opts) {
       padding:32px 40px;font-family:system-ui,-apple-system,sans-serif;color:${OPS_COLORS.text};`;
     document.body.appendChild(panel);
 
+    // ADDED 30 July 2026 (August Operating Layer): persistent tab chrome —
+    // built once at panel creation, survives every _renderOpsPanel() refresh
+    // because that function now only touches #ops-tab-health's innerHTML.
+    ops_renderTabBar();
+
     if (!_opsPollTimer) {
       _opsPollTimer = setInterval(() => openOps({ skipCreate: true }), OPS_POLL_MS);
     }
@@ -359,7 +373,8 @@ async function openOps(opts) {
     const data = await res.json();
     _renderOpsPanel(data);
   } catch (err) {
-    panel.innerHTML = `
+    const healthContainer = document.getElementById('ops-tab-health') || panel;
+    healthContainer.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
         <div style="font-size:20px;font-weight:700;color:${OPS_COLORS.teal};">MERIDIAN ATLAS — OPS</div>
         <button id="ops-close-btn" style="background:none;border:none;color:${OPS_COLORS.textDim};
@@ -379,4 +394,402 @@ function closeOps() {
     clearInterval(_opsPollTimer);
     _opsPollTimer = null;
   }
+}
+
+// ============================================================
+// August Operating Layer — Sprint Board / Release Ledger / Events / Drift
+// Added 30 July 2026. All new top-level functions below are ops_-prefixed
+// (unlike this file's original, unprefixed functions) per the naming
+// convention adopted after the _freshnessBadge collision incident
+// (Current State v11, Section 7.4) — new code follows the safer pattern,
+// existing code is left untouched.
+//
+// All network calls route through ma-data.js's data_opsGet/data_opsPost,
+// per the August Operating Layer Blueprint's decision to actually enforce
+// the "no inline fetch() in modules" rule for new dashboard code (the
+// existing openOps() above still calls fetch() directly against
+// OPS_API_URL — that's left alone, not retrofitted).
+// ============================================================
+
+const OPS_TABS = [
+  { id: 'health', label: 'System Health' },
+  { id: 'sprint', label: 'Sprint Board' },
+  { id: 'release', label: 'Release Ledger' },
+  { id: 'events', label: 'Events' },
+  { id: 'drift', label: 'Drift & Budget' }
+];
+
+const OPS_STAGE_COLORS = {
+  IDEA: OPS_COLORS.grey, PRODUCT_SPEC: OPS_COLORS.teal, ARCH_REVIEW: OPS_COLORS.amber,
+  UX_REVIEW: OPS_COLORS.amber, ENG_DIAGNOSTIC: OPS_COLORS.amber, FOUNDER_APPROVAL: OPS_COLORS.amber,
+  ENG_IMPLEMENT: OPS_COLORS.teal, OPS_RELEASE_REVIEW: OPS_COLORS.amber, RELEASE_READY: OPS_COLORS.green,
+  CLOSED: OPS_COLORS.green, BLOCKED: OPS_COLORS.red
+};
+
+function ops_renderTabBar() {
+  const panel = document.getElementById('ops-panel');
+  if (!panel || document.getElementById('ops-tab-bar')) return; // idempotent — build once
+
+  const bar = document.createElement('div');
+  bar.id = 'ops-tab-bar';
+  bar.style.cssText = 'display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid #1c2028;padding-bottom:0;';
+  bar.innerHTML = OPS_TABS.map(t => `
+    <button class="ops-tab-btn" data-ops-tab="${t.id}" style="background:none;border:none;
+      color:${OPS_COLORS.textDim};font-size:13px;font-weight:600;padding:10px 16px;cursor:pointer;
+      border-bottom:2px solid transparent;">${_escapeHtml(t.label)}</button>
+  `).join('');
+
+  const contentWrap = document.createElement('div');
+  contentWrap.id = 'ops-tab-content';
+  OPS_TABS.forEach(t => {
+    const div = document.createElement('div');
+    div.id = `ops-tab-${t.id}`;
+    div.style.display = 'none';
+    contentWrap.appendChild(div);
+  });
+
+  panel.insertBefore(contentWrap, panel.firstChild);
+  panel.insertBefore(bar, panel.firstChild);
+
+  bar.querySelectorAll('.ops-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => ops_switchTab(btn.dataset.opsTab));
+  });
+
+  const lastTab = localStorage.getItem('ops_last_tab') || 'health';
+  ops_switchTab(lastTab);
+}
+
+function ops_switchTab(tabName) {
+  OPS_TABS.forEach(t => {
+    const el = document.getElementById(`ops-tab-${t.id}`);
+    if (el) el.style.display = t.id === tabName ? 'block' : 'none';
+  });
+  document.querySelectorAll('.ops-tab-btn').forEach(btn => {
+    const active = btn.dataset.opsTab === tabName;
+    btn.style.color = active ? OPS_COLORS.teal : OPS_COLORS.textDim;
+    btn.style.borderBottomColor = active ? OPS_COLORS.teal : 'transparent';
+  });
+  localStorage.setItem('ops_last_tab', tabName);
+
+  if (tabName === 'sprint') ops_loadSprintBoard();
+  else if (tabName === 'release') ops_loadReleaseLedger();
+  else if (tabName === 'events') ops_loadEventTimeline();
+  else if (tabName === 'drift') ops_loadDriftTab();
+}
+
+// --- Sprint Board --------------------------------------------------------
+
+async function ops_loadSprintBoard() {
+  const container = document.getElementById('ops-tab-sprint');
+  if (!container) return;
+  container.innerHTML = `<div style="color:${OPS_COLORS.textDim};padding:20px;">Loading sprint board…</div>`;
+
+  const res = await data_opsGet('/api/ops/sprint-board');
+  if (!res.ok) {
+    container.innerHTML = `<div style="color:${OPS_COLORS.red};padding:20px;">Failed to load sprint board: ${_escapeHtml(res.error || res.status)}</div>`;
+    return;
+  }
+  ops_renderSprintBoard(res.data.items || []);
+}
+
+function ops_renderSprintBoard(items) {
+  const container = document.getElementById('ops-tab-sprint');
+  if (!container) return;
+
+  const cards = items.map(t => {
+    const stageColor = OPS_STAGE_COLORS[t.stage] || OPS_COLORS.grey;
+    return `
+      <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:18px 20px;margin-bottom:12px;border-left:3px solid ${stageColor};">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+          <div>
+            <div style="font-family:var(--mono, monospace);font-size:11px;color:${OPS_COLORS.textDim};">${_escapeHtml(t.ticket_id)} · ${_escapeHtml(t.domain)} · ${_escapeHtml(t.owner_role)}</div>
+            <div style="font-size:15px;font-weight:600;margin-top:4px;">${_escapeHtml(t.title)}</div>
+          </div>
+          <span style="font-size:11px;font-weight:700;color:${stageColor};white-space:nowrap;">${_escapeHtml(t.stage)}</span>
+        </div>
+        ${t.next_step ? `<div style="margin-top:8px;font-size:13px;color:${OPS_COLORS.text};">Next: ${_escapeHtml(t.next_step)}</div>` : ''}
+        ${t.blocker ? `<div style="margin-top:4px;font-size:13px;color:${OPS_COLORS.red};">Blocker: ${_escapeHtml(t.blocker)}</div>` : ''}
+        ${t.approval_needed ? `<div style="margin-top:4px;font-size:12px;color:${OPS_COLORS.amber};">Approval needed: ${_escapeHtml(t.approval_needed)}</div>` : ''}
+        <div style="margin-top:10px;">
+          <button onclick="ops_changeTicketStage('${_escapeHtml(t.ticket_id)}')" style="background:none;border:1px solid #2a3038;
+            color:${OPS_COLORS.textDim};border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;">Change stage</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;">Sprint Board — ${items.length} tickets</div>
+      <button onclick="ops_loadSprintBoard()" style="background:${OPS_COLORS.teal};color:#0a0c10;border:none;
+        border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;">Refresh</button>
+    </div>
+    ${cards || `<div style="color:${OPS_COLORS.textDim};padding:20px;">No tickets yet.</div>`}
+  `;
+}
+
+async function ops_changeTicketStage(ticketId) {
+  const validStages = ['IDEA', 'PRODUCT_SPEC', 'ARCH_REVIEW', 'UX_REVIEW', 'ENG_DIAGNOSTIC',
+    'FOUNDER_APPROVAL', 'ENG_IMPLEMENT', 'OPS_RELEASE_REVIEW', 'RELEASE_READY', 'CLOSED', 'BLOCKED'];
+  const newStage = prompt(`New stage for ${ticketId}?\nValid values: ${validStages.join(', ')}`);
+  if (!newStage) return;
+  if (!validStages.includes(newStage.toUpperCase())) {
+    alert('Not a valid stage value — no change made.');
+    return;
+  }
+  const nextStep = prompt('Next step (optional):') || undefined;
+  const blocker = newStage.toUpperCase() === 'BLOCKED' ? (prompt('Blocker reason:') || undefined) : undefined;
+
+  const res = await data_opsPost(`/api/ops/sprint-board/${encodeURIComponent(ticketId)}/stage`, {
+    stage: newStage.toUpperCase(),
+    actor_role: 'Founder',
+    next_step: nextStep,
+    blocker: blocker
+  });
+
+  if (!res.ok) {
+    alert(`Failed to change stage: ${res.data?.error || res.status}`);
+    return;
+  }
+  ops_loadSprintBoard();
+}
+
+// --- Release Ledger -------------------------------------------------------
+
+async function ops_loadReleaseLedger() {
+  const container = document.getElementById('ops-tab-release');
+  if (!container) return;
+  container.innerHTML = `<div style="color:${OPS_COLORS.textDim};padding:20px;">Loading release ledger…</div>`;
+
+  const res = await data_opsGet('/api/ops/release-ledger');
+  if (!res.ok) {
+    container.innerHTML = `<div style="color:${OPS_COLORS.red};padding:20px;">Failed to load release ledger: ${_escapeHtml(res.error || res.status)}</div>`;
+    return;
+  }
+  ops_renderReleaseLedger(res.data.items || []);
+}
+
+function ops_renderReleaseLedger(items) {
+  const container = document.getElementById('ops-tab-release');
+  if (!container) return;
+
+  const statusColor = s => ({
+    NOT_READY: OPS_COLORS.grey, READY: OPS_COLORS.teal, DEPLOYING: OPS_COLORS.amber,
+    DEPLOYED: OPS_COLORS.teal, VERIFIED: OPS_COLORS.green, ROLLED_BACK: OPS_COLORS.red
+  }[s] || OPS_COLORS.grey);
+
+  const rows = items.map(r => `
+    <tr>
+      <td style="padding:10px 14px;font-family:var(--mono, monospace);font-size:12px;">${_escapeHtml(r.release_id)}</td>
+      <td style="padding:10px 14px;font-size:13px;">${_escapeHtml(r.change_summary)}</td>
+      <td style="padding:10px 14px;font-size:11px;">D1: ${_escapeHtml(r.d1_migration_status)}<br/>Worker: ${_escapeHtml(r.worker_deploy_status)}<br/>Frontend: ${_escapeHtml(r.frontend_push_status)}</td>
+      <td style="padding:10px 14px;"><span style="color:${statusColor(r.status)};font-weight:700;font-size:12px;">${_escapeHtml(r.status)}</span></td>
+      <td style="padding:10px 14px;">
+        <button onclick="ops_recordReleaseEvent('${_escapeHtml(r.release_id)}')" style="background:none;border:1px solid #2a3038;
+          color:${OPS_COLORS.textDim};border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;">Record event</button>
+      </td>
+    </tr>`).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;">Release Ledger — ${items.length} releases</div>
+      <button onclick="ops_loadReleaseLedger()" style="background:${OPS_COLORS.teal};color:#0a0c10;border:none;
+        border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;">Refresh</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;background:${OPS_COLORS.bg2};border-radius:10px;overflow:hidden;">
+      <thead><tr style="border-bottom:1px solid #1c2028;">
+        <th style="text-align:left;padding:8px 14px;color:${OPS_COLORS.textDim};font-size:10px;text-transform:uppercase;">Release</th>
+        <th style="text-align:left;padding:8px 14px;color:${OPS_COLORS.textDim};font-size:10px;text-transform:uppercase;">Summary</th>
+        <th style="text-align:left;padding:8px 14px;color:${OPS_COLORS.textDim};font-size:10px;text-transform:uppercase;">Deploy status</th>
+        <th style="text-align:left;padding:8px 14px;color:${OPS_COLORS.textDim};font-size:10px;text-transform:uppercase;">Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody>${rows || `<tr><td colspan="5" style="padding:20px;color:${OPS_COLORS.textDim};">No releases yet.</td></tr>`}</tbody>
+    </table>
+  `;
+}
+
+async function ops_recordReleaseEvent(releaseId) {
+  const validEvents = ['build_started', 'build_completed', 'worker_deployed', 'frontend_pushed',
+    'migration_applied', 'verification_passed', 'verification_failed', 'release_closed', 'release_rolled_back'];
+  const eventType = prompt(`Event type for ${releaseId}?\nValid values: ${validEvents.join(', ')}`);
+  if (!eventType) return;
+  if (!validEvents.includes(eventType)) {
+    alert('Not a valid event type — no change made.');
+    return;
+  }
+  const payload = {};
+  if (eventType === 'build_started') {
+    payload.target = prompt('Target — "worker" or "frontend"?') || 'worker';
+  }
+  if (eventType === 'release_rolled_back') {
+    payload.reason = prompt('Rollback reason (required):') || 'no reason given';
+  }
+
+  const res = await data_opsPost(`/api/ops/release-ledger/${encodeURIComponent(releaseId)}/event`, {
+    event_type: eventType,
+    actor_role: 'Founder',
+    payload
+  });
+
+  if (!res.ok) {
+    alert(`Failed to record event: ${res.data?.error || res.status}`);
+    return;
+  }
+  ops_loadReleaseLedger();
+}
+
+// --- Event Timeline --------------------------------------------------------
+
+async function ops_loadEventTimeline() {
+  const container = document.getElementById('ops-tab-events');
+  if (!container) return;
+  container.innerHTML = `<div style="color:${OPS_COLORS.textDim};padding:20px;">Loading events…</div>`;
+
+  const res = await data_opsGet('/api/ops/events?limit=100');
+  if (!res.ok) {
+    container.innerHTML = `<div style="color:${OPS_COLORS.red};padding:20px;">Failed to load events: ${_escapeHtml(res.error || res.status)}</div>`;
+    return;
+  }
+  ops_renderEventTimeline(res.data.events || []);
+}
+
+function ops_renderEventTimeline(events) {
+  const container = document.getElementById('ops-tab-events');
+  if (!container) return;
+
+  const rows = events.map(e => `
+    <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid #1c2028;">
+      <div style="font-family:var(--mono, monospace);font-size:11px;color:${OPS_COLORS.textDim};white-space:nowrap;">${_escapeHtml(_timeAgo(e.created_at))}</div>
+      <div style="font-size:12px;font-weight:700;color:${OPS_COLORS.teal};white-space:nowrap;">${_escapeHtml(e.event_type)}</div>
+      <div style="font-size:12px;color:${OPS_COLORS.textDim};white-space:nowrap;">${_escapeHtml(e.ticket_id || e.release_id || '—')}</div>
+      <div style="font-size:12px;color:${OPS_COLORS.text};flex:1;">${_escapeHtml(e.actor_role)}</div>
+    </div>`).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;">Event Timeline — last ${events.length}</div>
+      <button onclick="ops_loadEventTimeline()" style="background:${OPS_COLORS.teal};color:#0a0c10;border:none;
+        border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;">Refresh</button>
+    </div>
+    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:8px 20px;">
+      ${rows || `<div style="color:${OPS_COLORS.textDim};padding:20px 0;">No events recorded yet.</div>`}
+    </div>
+  `;
+}
+
+// --- Drift, Budget Risk, OpenFIGI Status (one combined tab) ---------------
+
+// MA-AUG-006, 2 August 2026 — Workers whose cron firing history is worth a
+// live glance. Kept short and explicit rather than deriving from anywhere
+// else, since this list controls real API calls against Cloudflare's GraphQL
+// Analytics — see ops-api.js's TRACKED_SCRIPTS for the enforced allowlist.
+const OPS_CRON_SCRIPTS = ['meridian-holdings', 'meridian-entities-seed', 'meridian-entities-enrich'];
+
+async function ops_loadDriftTab() {
+  const container = document.getElementById('ops-tab-drift');
+  if (!container) return;
+  container.innerHTML = `<div style="color:${OPS_COLORS.textDim};padding:20px;">Loading…</div>`;
+
+  const [driftRes, budgetRes, figiRes, cfD1Res, ...cfInvocationResults] = await Promise.all([
+    data_opsGet('/api/ops/drift'),
+    data_opsGet('/api/ops/budget-risk'),
+    data_opsGet('/api/ops/openfigi-status'),
+    data_opsGet('/api/ops/cf/d1-today'),
+    ...OPS_CRON_SCRIPTS.map(s => data_opsGet(`/api/ops/cf/invocations?script=${encodeURIComponent(s)}`))
+  ]);
+
+  const driftHtml = ops_renderDriftPanel(driftRes.ok ? driftRes.data : null);
+  const budgetHtml = ops_renderBudgetRisk(budgetRes.ok ? budgetRes.data : null);
+  const figiHtml = ops_renderOpenFigiStatus(figiRes.ok ? figiRes.data : null);
+  const cfHtml = ops_renderLiveCfMetrics(
+    cfD1Res.ok ? cfD1Res.data : null,
+    OPS_CRON_SCRIPTS.map((s, i) => ({ script: s, data: cfInvocationResults[i].ok ? cfInvocationResults[i].data : null }))
+  );
+
+  container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;">Drift & Budget</div>
+      <button onclick="ops_loadDriftTab()" style="background:${OPS_COLORS.teal};color:#0a0c10;border:none;
+        border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;">Refresh</button>
+    </div>
+    ${budgetHtml}
+    ${cfHtml}
+    ${driftHtml}
+    ${figiHtml}
+  `;
+}
+
+// MA-AUG-006: live Cloudflare-metered numbers (real, authoritative) shown
+// alongside the app's own self-reported writes_today_ counter above — the 2
+// August incident showed these two can diverge (real per-run multiplier
+// ranged 2.56x-3.69x against assumptions), so surfacing both side by side,
+// not replacing one with the other, is deliberate.
+function ops_renderLiveCfMetrics(d1Data, invocations) {
+  const d1Html = d1Data
+    ? `<div style="font-family:var(--mono, monospace);font-size:22px;font-weight:700;">${d1Data.rowsWritten.toLocaleString()} <span style="font-size:13px;color:${OPS_COLORS.textDim};">of ${d1Data.daily_cap.toLocaleString()} rows written today (${d1Data.pct_of_cap}%) — Cloudflare-metered, account-wide</span></div>
+       <div style="font-size:11px;color:${OPS_COLORS.textDim};margin-top:4px;">${d1Data.rowsRead.toLocaleString()} rows read · ${d1Data.writeQueries.toLocaleString()} write queries · ${d1Data.readQueries.toLocaleString()} read queries</div>`
+    : `<div style="color:${OPS_COLORS.red};font-size:13px;">Live D1 metrics unavailable — check CF_ANALYTICS_TOKEN is set and the query's field names are verified (see ops-api.js).</div>`;
+
+  const rows = invocations.map(({ script, data }) => {
+    if (!data) return `<div style="padding:8px 0;border-bottom:1px solid #1c2028;font-size:12px;color:${OPS_COLORS.red};">${_escapeHtml(script)} — failed to load</div>`;
+    const last = data.cron_invocations[data.cron_invocations.length - 1];
+    const flag = data.matches_cron_only
+      ? `<span style="color:${OPS_COLORS.green};">cron-only ✓</span>`
+      : `<span style="color:${OPS_COLORS.red};">mismatch — ${data.all_trigger_invocation_count} total vs ${data.cron_invocation_count} cron-only</span>`;
+    return `
+      <div style="padding:8px 0;border-bottom:1px solid #1c2028;font-size:12px;">
+        <strong>${_escapeHtml(script)}</strong> — ${data.cron_invocation_count} invocation(s) today, ${flag}
+        ${last ? `<br/><span style="color:${OPS_COLORS.textDim};">last: ${_escapeHtml(last.datetime)} · cron "${_escapeHtml(last.cron)}" · ${_escapeHtml(last.status)}</span>` : ''}
+      </div>`;
+  }).join('');
+
+  return `
+    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;">
+      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">Live Cloudflare Metrics (MA-AUG-006)</div>
+      ${d1Html}
+      <div style="margin-top:16px;">${rows}</div>
+    </div>`;
+}
+
+function ops_renderDriftPanel(data) {
+  if (!data) return `<div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;color:${OPS_COLORS.red};">Failed to load drift check.</div>`;
+  const rows = (data.drift || []).map(d => `
+    <div style="padding:10px 0;border-bottom:1px solid #1c2028;font-size:13px;">
+      <strong>${_escapeHtml(d.release_id)}</strong> — ${_escapeHtml(d.change_summary)}<br/>
+      <span style="color:${OPS_COLORS.textDim};font-size:11px;">Worker: ${_escapeHtml(d.worker_deploy_status)} · Frontend: ${_escapeHtml(d.frontend_push_status)}</span>
+    </div>`).join('');
+
+  return `
+    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;">
+      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">
+        Deployment Drift ${data.has_drift ? `<span style="color:${OPS_COLORS.red};">— ${data.drift.length} found</span>` : `<span style="color:${OPS_COLORS.green};">— none</span>`}
+      </div>
+      ${rows || `<div style="color:${OPS_COLORS.textDim};font-size:13px;">Worker deploys and frontend pushes are in sync across every tracked release.</div>`}
+    </div>`;
+}
+
+function ops_renderBudgetRisk(data) {
+  if (!data) return `<div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;color:${OPS_COLORS.red};">Failed to load budget risk.</div>`;
+  const gaugeSvg = _svgGauge(data.writes_today, data.daily_limit, data.daily_limit * 0.9);
+  return `
+    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;display:flex;align-items:center;gap:24px;">
+      <div>${gaugeSvg}</div>
+      <div>
+        <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Shared D1 Write Budget Today</div>
+        <div style="font-family:var(--mono, monospace);font-size:22px;font-weight:700;">${data.writes_today.toLocaleString()} <span style="font-size:13px;color:${OPS_COLORS.textDim};">of ${data.daily_limit.toLocaleString()} (${data.pct}%)</span></div>
+      </div>
+    </div>`;
+}
+
+function ops_renderOpenFigiStatus(data) {
+  if (!data) return `<div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;color:${OPS_COLORS.red};">Failed to load OpenFIGI status.</div>`;
+  return `
+    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;">
+      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">Instrument → Entity Resolution</div>
+      <div style="display:flex;gap:32px;flex-wrap:wrap;">
+        <div><div style="font-family:var(--mono, monospace);font-size:20px;">${data.coverage_pct}%</div><div style="font-size:11px;color:${OPS_COLORS.textDim};">Coverage (${data.instrument_entity_map_total.toLocaleString()} / ${data.instrument_master_total.toLocaleString()})</div></div>
+        <div><div style="font-family:var(--mono, monospace);font-size:20px;">${data.openfigicache_total.toLocaleString()}</div><div style="font-size:11px;color:${OPS_COLORS.textDim};">Instruments checked (cached)</div></div>
+        <div><div style="font-family:var(--mono, monospace);font-size:20px;">${data.openfigi_matched_no_entity.toLocaleString()}</div><div style="font-size:11px;color:${OPS_COLORS.textDim};">Matched, no entity yet — cheap re-match candidates</div></div>
+      </div>
+    </div>`;
 }
