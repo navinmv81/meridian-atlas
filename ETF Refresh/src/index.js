@@ -1,5 +1,21 @@
 const CACHE_VERSION = "v9";
 
+// RESTORED 9 August 2026 (regression fix — the 5 August MA-AUG-004 stale-route
+// cleanup audited ma-*.js files for callers of the removed directUrl passthrough
+// but missed index.html's own inline <script> block, where pfetch() — the
+// shared helper behind loadNews()/loadChartTab() in ma-market.js, fetchSym()
+// in ma-data.js, and fetchFund() in ma-modal.js — builds
+// `${MY_WORKER_URL}/?url=...`). Deliberately NOT the old generic open
+// passthrough (that was a real SSRF-style concern, correctly removed): any
+// hostname outside this list is rejected before proxyText() ever runs, so
+// proxyText()'s unrestricted non-Yahoo fallback branch (still used by the
+// FMP-backed routes below) is never reachable through this param. Scoped to
+// exactly what pfetch()'s callers request today — feeds.finance.yahoo.com
+// (RSS news) and query2.finance.yahoo.com (chart/quote data) — narrower than
+// proxyText()'s own internal allowedHosts (which also covers query1/finance/
+// news.yahoo.com for the /search and /symbol routes further down).
+const PFETCH_ALLOWED_HOSTS = ['feeds.finance.yahoo.com', 'query2.finance.yahoo.com'];
+
 /**
  * Builds meta.freshness and meta.coverage for a single ETF.
  * No additional D1 queries — all inputs come from fields already fetched.
@@ -49,12 +65,10 @@ export default {
     const url = new URL(request.url);
     const params = url.searchParams;
 
-    const directUrl = params.get("url");
     const symbol = params.get("symbol");
     const search = params.get("search");
     const fundsymbol = params.get("fundsymbol");
     const dcf = params.get("dcf");
-    const secfilings = params.get("secfilings");
     const etflist = params.get("etflist") || url.pathname === "/api/etf-list";
     const etfholdings = params.get("etfholdings") || (url.pathname === "/api/etf-holdings" ? params.get("symbol") : null);
     const etfprospectus = params.get("etfprospectus") || (url.pathname === "/api/etf-prospectus" ? params.get("symbol") : null);
@@ -147,30 +161,11 @@ export default {
         });
       }
 
-      if (url.pathname === '/api/etf-bootstrap-status') {
-        const [stateRows, countRow] = await Promise.all([
-          env.DB.prepare(`SELECT key, value FROM edgar_bootstrap_state`).all(),
-          env.DB.prepare(`SELECT COUNT(*) as n FROM etf_master`).first()
-        ]);
-        const s = Object.fromEntries(
-          (stateRows.results || []).map(r => [r.key, r.value])
-        );
-        const total = parseInt(s.total_ciks_discovered || '0', 10);
-        const offset = parseInt(s.cik_offset || '0', 10);
-        return new Response(JSON.stringify({
-          status: s.status,
-          cik_offset: offset,
-          total_ciks_discovered: total,
-          etfs_added: parseInt(s.etfs_added || '0', 10),
-          etf_master_count: countRow?.n || 0,
-          last_run: s.last_run,
-          pct_complete: total > 0
-            ? parseFloat(((offset / total) * 100).toFixed(1))
-            : 0
-        }), {
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
-      }
+      // REMOVED 5 August 2026 (stale-route cleanup, MA-AUG-004): /api/etf-bootstrap-status
+      // handler removed — confirmed via repo-wide search to have no caller anywhere
+      // (frontend or otherwise), and confirmed with the Founder that it isn't used
+      // manually either. edgar_bootstrap_state/etf_master are untouched; only this
+      // dead route was removed.
 
       if (etflist) {
         try {
@@ -1011,38 +1006,12 @@ export default {
         });
       }
 
-      // GET /api/phase-readiness
-      // Returns cached phase readiness state. Never runs live aggregation.
-      if (url.pathname === '/api/phase-readiness' && request.method === 'GET') {
-        const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6 hours
-
-        const cached = await env.DB.prepare(
-          `SELECT value FROM holdings_pipeline_state WHERE key = 'phase_readiness_cache'`
-        ).first();
-
-        if (!cached?.value) {
-          return new Response(JSON.stringify({
-            status: 'not_yet_computed',
-            stale: false,
-            pipeline: null,
-            phases: null,
-            computedAt: null
-          }), {
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-
-        const payload = JSON.parse(cached.value);
-
-        if (payload.computedAt) {
-          const ageMs = Date.now() - new Date(payload.computedAt).getTime();
-          payload.stale = ageMs > STALE_THRESHOLD_MS;
-        }
-
-        return new Response(JSON.stringify(payload), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-      }
+      // REMOVED 5 August 2026 (stale-route cleanup, MA-AUG-004): /api/phase-readiness
+      // handler removed — confirmed no caller anywhere in the codebase, and confirmed
+      // with the Founder it isn't used manually either. holdings-pipeline.js still
+      // writes phase_readiness_cache into holdings_pipeline_state — that write logic
+      // is untouched, deliberately out of scope here; it's just no longer readable
+      // via this dead API route.
 
       if (url.pathname === '/api/13f-search') {
         const manager = (params.get('manager') || '').trim();
@@ -1135,9 +1104,13 @@ export default {
         return await handleEtfProspectus(etfprospectus, env, ctx, corsHeaders);
       }
 
-      if (secfilings) {
-        return await handleSecFilings(secfilings, env, corsHeaders, secUa); // ← secUa passed in
-      }
+      // REMOVED 5 August 2026 (stale-route cleanup, MA-AUG-004): the secfilings
+      // param/handler removed — SEC filing fetching now goes through the dedicated
+      // meridian-filings Worker (ma-13f.js/ma-entities.js's WORKER_FILINGS_URL), not
+      // this one. Confirmed no caller anywhere in the codebase, and confirmed with
+      // the Founder it isn't used manually either. handleSecFilings() and
+      // fetchSecTickerRegistry() below are removed too since this was their only
+      // caller.
 
       if (dcf) {
         if (!env.FMP_API_KEY) {
@@ -1723,17 +1696,32 @@ export default {
         return await proxyText(targetUrl, corsHeaders, ctx);
       }
 
+      // REMOVED 5 August 2026 (stale-route cleanup, MA-AUG-004): the directUrl
+      // generic passthrough (params.get("url")) removed — confirmed no caller
+      // anywhere in the codebase (the frontend's equivalent generic-URL passthrough
+      // now goes through the dedicated meridian-filings Worker's /api/filing-doc,
+      // not this one), and confirmed with the Founder it isn't used manually
+      // either. proxyText()/secProxyText() are untouched — still used by the
+      // search/symbol routes above.
+      //
+      // RESTORED 9 August 2026 (regression fix — see PFETCH_ALLOWED_HOSTS comment
+      // at top of file): the "confirmed no caller anywhere in the codebase" check
+      // above missed pfetch() in index.html's inline <script> block. Re-added as a
+      // hostname-gated route, not the old open passthrough.
+      const directUrl = params.get("url");
       if (directUrl) {
-        let finalUrl = directUrl;
-        if (finalUrl.includes("financialmodelingprep.com") && !finalUrl.includes("apikey=")) {
-          const separator = finalUrl.includes("?") ? "&" : "?";
-          finalUrl += `${separator}apikey=${env.FMP_API_KEY}`;
+        let parsedDirectUrl;
+        try {
+          parsedDirectUrl = new URL(directUrl);
+        } catch (e) {
+          return new Response("Invalid URL", { status: 400, headers: corsHeaders });
         }
-        // ← NEW: SEC URLs get the correct User-Agent via secProxyText
-        if (finalUrl.includes("sec.gov")) {
-          return await secProxyText(finalUrl, secUa, corsHeaders);
+        if (!PFETCH_ALLOWED_HOSTS.includes(parsedDirectUrl.hostname)) {
+          return new Response(JSON.stringify({ error: true, status: 403, type: 'hostname_not_allowed' }), {
+            status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
         }
-        return await proxyText(finalUrl, corsHeaders, ctx);
+        return await proxyText(directUrl, corsHeaders, ctx);
       }
 
       return new Response("Not Found", { status: 404, headers: corsHeaders });
@@ -1755,105 +1743,11 @@ async function secProxyText(targetUrl, secUa, corsHeaders) {
   });
 }
 
-/** SEC EDGAR: ticker -> company_tickers.json -> CIK -> submissions CIK##########.json */
-async function handleSecFilings(rawTicker, env, corsHeaders, secUa) { // ← secUa added
-  const ticker = (rawTicker || "").trim().toUpperCase();
-  if (!ticker || !/^[A-Z0-9.-]{1,12}$/.test(ticker)) {
-    return json({ error: "Invalid ticker symbol.", symbol: rawTicker }, 400, corsHeaders);
-  }
-
-  const ua = secUa || (env && env.SEC_USER_AGENT) || "MeridianAtlas contact@meridianatlas.com";
-
-  try {
-    const tickersJson = await fetchSecTickerRegistry(ua);
-
-    const cikNum = findCikFromTickerMap(tickersJson, ticker);
-    if (cikNum === null || !Number.isFinite(cikNum)) {
-      return json(
-        { error: `Ticker not found in SEC registry: ${ticker}`, symbol: ticker },
-        404,
-        corsHeaders
-      );
-    }
-
-    const cik10 = String(Math.trunc(cikNum)).padStart(10, "0");
-    const subUrl = `https://data.sec.gov/submissions/CIK${cik10}.json`;
-
-    const subRes = await secFetch(subUrl, ua);
-    if (!subRes.ok) {
-      const bodyPreview = await safeText(subRes);
-      return json(
-        {
-          error: "SEC submissions feed unavailable. Try again shortly.",
-          symbol: ticker,
-          cik: cik10,
-          status: subRes.status,
-          preview: bodyPreview.slice(0, 180)
-        },
-        502,
-        corsHeaders
-      );
-    }
-
-    const submissions = await subRes.json();
-    const numericCik = String(Math.trunc(cikNum));
-    const filings = normalizeRecentFilings(submissions, numericCik, 30);
-
-    return json(
-      {
-        symbol: ticker,
-        cik: cik10,
-        name: submissions.name || null,
-        filings,
-        provider: "SEC_EDGAR",
-        lastUpdated: new Date().toISOString()
-      },
-      200,
-      corsHeaders
-    );
-  } catch (err) {
-    return json(
-      { error: err.message || "SEC lookup failed.", symbol: ticker },
-      502,
-      corsHeaders
-    );
-  }
-}
-
-async function fetchSecTickerRegistry(userAgent) {
-  const urls = [
-    "https://www.sec.gov/files/company_tickers.json"
-  ];
-
-  let lastError = "Unknown SEC ticker registry error";
-
-  for (const url of urls) {
-    try {
-      const res = await secFetch(url, userAgent);
-      if (!res.ok) {
-        const preview = await safeText(res);
-        lastError = `Ticker registry HTTP ${res.status}: ${preview.slice(0, 120)}`;
-        continue;
-      }
-
-      const text = await res.text();
-      if (!text || !text.trim()) {
-        lastError = "Ticker registry returned empty body";
-        continue;
-      }
-
-      try {
-        return JSON.parse(text);
-      } catch (parseErr) {
-        lastError = `Ticker registry JSON parse failed: ${parseErr.message}. Preview: ${text.slice(0, 120)}`;
-      }
-    } catch (err) {
-      lastError = err.message || "SEC fetch failed";
-    }
-  }
-
-  throw new Error(`SEC ticker registry unavailable. ${lastError}`);
-}
+// REMOVED 5 August 2026 (stale-route cleanup, MA-AUG-004): handleSecFilings(),
+// fetchSecTickerRegistry(), and findCikFromTickerMap() removed — all three were
+// only reachable via the now-removed secfilings route (see above). secFetch(),
+// normalizeRecentFilings(), and safeText() below are untouched — still shared
+// by the active /api/13f-search and /api/13f-filings routes.
 
 async function secFetch(url, userAgent) {
   const ua = userAgent || "MeridianAtlas contact@meridianatlas.com";
@@ -1874,40 +1768,6 @@ async function safeText(res) {
   } catch {
     return "";
   }
-}
-
-function findCikFromTickerMap(mapJson, tickerUpper) {
-  if (!mapJson || typeof mapJson !== "object") return null;
-
-  for (const k of Object.keys(mapJson)) {
-    if (k === "fields" || k === "data") continue;
-    const row = mapJson[k];
-    if (row && typeof row === "object" && !Array.isArray(row)) {
-      const t = String(row.ticker || "").toUpperCase();
-      if (t === tickerUpper) {
-        const n = Number(row.cik_str);
-        return Number.isFinite(n) ? n : null;
-      }
-    }
-  }
-
-  const fields = mapJson.fields;
-  const data = mapJson.data;
-  if (Array.isArray(fields) && Array.isArray(data)) {
-    const ti = fields.indexOf("ticker");
-    const ci = fields.indexOf("cik_str");
-    if (ti >= 0 && ci >= 0) {
-      for (const row of data) {
-        if (!Array.isArray(row)) continue;
-        if (String(row[ti] || "").toUpperCase() === tickerUpper) {
-          const n = Number(row[ci]);
-          return Number.isFinite(n) ? n : null;
-        }
-      }
-    }
-  }
-
-  return null;
 }
 
 function findCikFromTickerMapByName(mapJson, managerUpper) {

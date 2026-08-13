@@ -97,6 +97,38 @@ CREATE TABLE IF NOT EXISTS entity_enrichment_queue (
 CREATE INDEX IF NOT EXISTS idx_entity_master_type       ON entity_master(type);
 CREATE INDEX IF NOT EXISTS idx_entity_master_lei        ON entity_master(lei);
 CREATE INDEX IF NOT EXISTS idx_entity_master_normalized ON entity_master(normalized_name);
+
+-- Consolidated here 5 August 2026 (FAST-FOLLOW, index-source-fragmentation
+-- cleanup): these 5 were previously only defined in gleif-schema-migrate.js
+-- (a one-time Phase 3 migration script, already run against production —
+-- left as-is, not modified, since it's a historical record of what
+-- executed). All 8 idx_entity_master_* indexes are already live on the
+-- database; this addition just makes this file the single accurate source
+-- of truth for entity_master's index set going forward, so future changes
+-- aren't scattered across two files.
+CREATE INDEX IF NOT EXISTS idx_entity_master_status         ON entity_master(entity_status);
+CREATE INDEX IF NOT EXISTS idx_entity_master_jurisdiction    ON entity_master(legal_jurisdiction);
+CREATE INDEX IF NOT EXISTS idx_entity_master_direct_parent   ON entity_master(direct_parent_lei);
+CREATE INDEX IF NOT EXISTS idx_entity_master_ultimate_parent ON entity_master(ultimate_parent_lei);
+CREATE INDEX IF NOT EXISTS idx_entity_master_match_source    ON entity_master(match_source);
+
+-- Partial covering index for entities-enrich.js Phase 3 (runPhase3()) —
+-- FAST-FOLLOW, 5 August 2026. Diagnostics found that query's WHERE clause
+-- (lei IS NOT NULL AND type != 'fund' AND (lei_status IS NULL OR
+-- (direct_parent_lei/ultimate_parent_lei/direct_parent_exception all NULL)))
+-- fell back to a plain SCAN entity_master — none of the single-column
+-- idx_entity_master_* indexes (here or in gleif-schema-migrate.js, which
+-- adds idx_entity_master_status/_jurisdiction/_direct_parent/
+-- _ultimate_parent/_match_source separately) covered the compound
+-- predicate. lei IS NOT NULL is the genuinely selective part (17.8% of
+-- 34,958 rows at the time this was added); type != 'fund' is nearly
+-- non-selective (99.2% pass it) and not worth indexing directly, hence the
+-- WHERE-scoped partial index rather than a full one. Verified via EXPLAIN
+-- QUERY PLAN to flip the plan to
+-- "SEARCH entity_master USING INDEX idx_entity_master_phase3 (lei>?)".
+CREATE INDEX IF NOT EXISTS idx_entity_master_phase3
+ON entity_master(lei, type, lei_status, direct_parent_lei, ultimate_parent_lei, direct_parent_exception)
+WHERE lei IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_entity_rel_child         ON entity_relationships(child_entity_id);
 CREATE INDEX IF NOT EXISTS idx_entity_rel_parent        ON entity_relationships(parent_entity_id);
 CREATE INDEX IF NOT EXISTS idx_instrument_isin          ON instrument_master(isin);

@@ -1,8 +1,62 @@
 // meridian-entities-enrich
 // Enriches entity_master with LEI data and parent relationships via GLEIF public API.
-// Phase 1 (*/10 * * * *): populate isin_hint for operating entities — D1 only, 0 subrequests
-// Phase 2 (50 * * * *):   GLEIF ISIN search for entities with isin_hint but no LEI
-// Phase 3 (50 * * * *, even hours): fetch LEI detail + Level 2 parent relationships
+// Dispatcher (see scheduled() below) routes purely on getMinutes() at
+// invocation time, not on which cron string fired: mins<50 -> Phase 1 only;
+// mins>=50 -> Phase 2 then Phase 3, always together (no separate even-hours
+// gate exists in code despite an earlier version of this comment implying
+// one — corrected 1 August 2026, MA-AUG-002 cadence decision).
+// Phase 1: populate isin_hint for operating entities — D1 only, 0 subrequests
+// Phase 2: GLEIF ISIN search for entities with isin_hint but no LEI
+// Phase 3: fetch LEI detail + Level 2 parent relationships
+// Cron (re-enabled 1 August 2026): crons = ["0 6 * * *", "50 6 * * *"] —
+// daily, down from the original 72 invocations/day (*/30 + hourly). See
+// wrangler-entities-enrich.toml for the full reasoning.
+//
+// SAFETY (added MA-AUG-002, July 28 2026 — Ops diagnostic): this Worker previously
+// had no write-budget guard and no manual kill switch, unlike its siblings
+// (entities-seed.js has checkWriteBudget(); entities-delta.js has checkHold()).
+// Both are added below, reading the same shared holdings_pipeline_state keys.
+
+const DAILY_CAP = 100000; // account-wide D1 daily write cap (soft), shared across all Workers — replaces the old ENRICH_WRITE_LIMIT, 5 August 2026
+
+async function checkWriteBudget(env) {
+  // FIXED MA-AUG-002, July 28 2026: aligned to holdings-pipeline.js's key
+  // format (dashes kept) — same bug as entities-seed.js had, fixed there
+  // at the same time. See that file's comment for the full explanation.
+  //
+  // TIGHTENED 5 August 2026 (MA-AUG-004 safety-net audit follow-up): moved
+  // from "used >= 60,000" to entities-seed.js's headroom-based pattern —
+  // the old form only guaranteed 40,000 of headroom, not a stated safety
+  // margin against this Worker's own worst case. Unlike entities-seed.js's
+  // well-documented ~61,400-row empirical worst case, this Worker's real
+  // per-invocation ceiling hasn't been measured at scale yet (Phase 1 is
+  // bounded to 100 rows, Phase 2/3 to 45 GLEIF-bound entities each with a
+  // handful of writes apiece — realistically low hundreds of logical rows,
+  // nowhere near entities-seed's bulk-insert volume). 5,000 headroom is a
+  // reasoned, generously-padded estimate, not an empirically-verified
+  // ceiling like entities-seed's 65,000 — revisit once this Worker's real
+  // write volume is observed at its first few live cadence runs.
+  const REQUIRED_HEADROOM = 5000;
+  const today = new Date().toISOString().slice(0, 10);
+  const key = `writes_today_${today}`;
+  const row = await env.DB.prepare(
+    `SELECT value FROM holdings_pipeline_state WHERE key = ?`
+  ).bind(key).first();
+  const writesToday = parseInt(row?.value ?? '0', 10);
+  const headroom = DAILY_CAP - writesToday;
+  if (headroom < REQUIRED_HEADROOM) {
+    console.log(`[entities-enrich] Insufficient write headroom (${headroom} remaining, need ${REQUIRED_HEADROOM}; ${writesToday} used today). Skipping.`);
+    return false;
+  }
+  return true;
+}
+
+async function checkHold(env) {
+  const row = await env.DB.prepare(
+    `SELECT value FROM holdings_pipeline_state WHERE key = 'hold_all_jobs'`
+  ).first();
+  return row?.value === 'true';
+}
 
 // ── Phase 1 — ISIN Population ─────────────────────────────────────────────────
 
@@ -277,6 +331,12 @@ export default {
   async scheduled(event, env, ctx) {
     console.log('[entities-enrich] Cron started');
 
+    if (await checkHold(env)) {
+      console.log('[entities-enrich] hold_all_jobs = true — exiting immediately');
+      return;
+    }
+    if (!(await checkWriteBudget(env))) return;
+
     const mins = new Date().getMinutes();
     const hour = new Date().getHours();
 
@@ -290,9 +350,27 @@ export default {
     console.log('[entities-enrich] Cron complete');
   },
 
+  // NOTE: unlike entities-seed.js's /run handler (which checks the guard inside
+  // ctx.waitUntil and always responds ok:true regardless of outcome), this checks
+  // synchronously first so the HTTP response honestly reflects whether the run
+  // actually executed or was blocked — useful for manual diagnostic testing.
+  // Flagging this as a deliberate deviation; worth backporting to entities-seed.js
+  // as a fast-follow if you want consistent behavior across both Workers.
   async fetch(request, env, ctx) {
     if (new URL(request.url).pathname !== '/run') {
       return new Response('Not found', { status: 404 });
+    }
+    if (await checkHold(env)) {
+      return new Response(JSON.stringify({ ok: false, message: 'hold_all_jobs is active' }), {
+        status: 423,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    if (!(await checkWriteBudget(env))) {
+      return new Response(JSON.stringify({ ok: false, message: 'Daily write budget reached' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
     const mins = new Date().getMinutes();
     const hour = new Date().getHours();
@@ -302,7 +380,7 @@ export default {
       } else {
         await runPhase2(env);
         await runPhase3(env);
-}
+      }
     })());
     return new Response(JSON.stringify({ ok: true, message: 'Enrichment triggered' }), {
       headers: { 'Content-Type': 'application/json' }

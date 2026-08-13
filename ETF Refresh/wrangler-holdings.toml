@@ -10,8 +10,15 @@ account_id = "ea36070477560935a68ad9110a2fd40b"
 # measured in the same unit as the real free-tier cap. Verified via two
 # manual /run invocations + Cloudflare dashboard cross-check on 2026-07-25
 # before re-enabling.
+#
+# CADENCE CHANGED 2026-07-28 — every-2-hours (0 */2 * * *) produced 100k+
+# rows_written in a single day despite the 80k guard (see MA-AUG-002 audit
+# trail — guard-failure diagnostic in progress). Changed directly in the
+# Cloudflare dashboard first; this file updated to match afterward.
+# Emergency mitigation, not yet reviewed by Architect/ETF Product Lead as
+# a permanent cadence.
 [triggers]
-crons = ["0 */2 * * *"]
+crons = ["0 4 * * 0"]
 
 [[d1_databases]]
 binding = "DB"

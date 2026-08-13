@@ -2,16 +2,27 @@ name = "meridian-entities-enrich"
 main = "src/entities-enrich.js"
 compatibility_date = "2024-01-01"
 
+# Logs enabled MA-AUG-002, July 28 2026 — matches entities-seed; needed before
+# this Worker's cron is ever re-enabled given its incident history.
+[observability]
+enabled = true
+
 [[d1_databases]]
 binding = "DB"
 database_name = "meridian-etf"
 database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
 
-# HOLD lifted 2026-06-17 18:0X BST — root cause fixed (entities-seed.js
-# queue population + Phase 2 type guard), full fund data revert verified
-# HOLD 2026-07-03 — cron frozen. Commenting out [triggers] alone does NOT
-# clear existing Cloudflare schedules; crons = [] below is what actually
-# disables them. Original schedule preserved here for easy re-enable:
-# crons = ["*/30 * * * *", "50 * * * *"]
+# RE-ENABLED 2026-08-01 — MA-AUG-002 cadence decision, Founder-approved.
+# Was frozen 2026-07-03 (root cause fixed 2026-06-17: entities-seed.js queue
+# population + Phase 2 type guard). Original schedule was crons = ["*/30 * * * *",
+# "50 * * * *"] — 72 invocations/day combined (48x Phase 1, 24x Phase 2+3).
+# NOTE: this Worker's scheduled() dispatcher routes by getMinutes() at
+# invocation time (mins<50 -> Phase 1, mins>=50 -> Phase 2+3), NOT by which
+# cron string fired — so it genuinely needs two distinct trigger times, one
+# landing under :50 and one at/after :50, or Phase 2/3 (the actual GLEIF
+# enrichment) never runs. Cut down to 2 invocations/day total on first
+# re-enable rather than the original 72: 06:00 UTC (Phase 1) and 06:50 UTC
+# (Phase 2+3), both after entities-seed's Monday 04:00 UTC run so the queue
+# has fresh entries to work from, and clear of the shared write cap window.
 [triggers]
-crons = []
+crons = ["0 6 * * *", "50 6 * * *"]

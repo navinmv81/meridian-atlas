@@ -38,10 +38,47 @@ export default {
 
     try {
       // ── /api/13f-search ──────────────────────────────────────────────────
+      // BUG FIX (2026-08-12, Nav): searching "Appaloosa" resolved to CIK
+      // 0001713936 ("Epstein & White Financial LLC") — a totally unrelated
+      // filer — while the real Appaloosa entities (0001656456 "Appaloosa LP",
+      // 0001006438 "Appaloosa Management LP") sat unused in the SEC response's
+      // own alternatives list. Root cause: this route resolved names purely
+      // via SEC's EFTS *full-text* search (efts.sec.gov/LATEST/search-index),
+      // which ranks by document-text relevance, not company-name match — any
+      // 13F-HR that merely *mentions* "Appaloosa" in its text can outrank the
+      // actual Appaloosa filings. Confirmed systemic, not a one-off: a spot
+      // check of 8 well-known managers found EFTS also mis-resolved
+      // "Bridgewater" (top hit: unrelated "Harding Loevner LP", real filer
+      // not even in the top-5 alternatives) and "Point72" (top hit: a foreign
+      // subsidiary "Point72 Italy, S.r.l." instead of the primary US filer).
+      //
+      // Fix: managermaster/manageraliases (13F Seed/seed-managermaster.js) is
+      // seeded as a comprehensive filer *registry* (every SUBMISSIONTYPE, not
+      // a holdings filter), so it's checked FIRST via ranked name matching —
+      // cheaper and far more reliable than round-tripping to SEC for data we
+      // already hold. SEC EFTS is now only a fallback for names genuinely
+      // absent from our registry.
       if (url.pathname === "/api/13f-search") {
         const manager = (params.get("manager") || "").trim();
         if (!manager) return json({ error: "manager required" }, 400);
 
+        if (env.DB) {
+          const localMatch = await searchLocalManagerRegistry(env.DB, manager);
+          if (localMatch) {
+            return json({
+              manager_query: manager,
+              cik: localMatch.top.cik,
+              name: localMatch.top.name,
+              ticker: null,
+              alternatives: localMatch.alternatives,
+              source: "meridian_registry"
+            }, 200);
+          }
+        }
+
+        // Fallback: SEC EFTS full-text search. Kept only for names with zero
+        // match in our own registry — see the fix comment above for why this
+        // endpoint alone is unreliable for name→CIK resolution.
         const searchUrl =
           `https://efts.sec.gov/LATEST/search-index?q=%22${encodeURIComponent(manager)}%22&forms=13F-HR`;
 
@@ -93,7 +130,8 @@ export default {
           cik: top.cik,
           name: top.name,
           ticker: null,
-          alternatives: candidates.slice(1, 5)
+          alternatives: candidates.slice(1, 5),
+          source: "sec_efts_fallback"
         }, 200);
       }
 
@@ -223,6 +261,132 @@ function json(obj, status) {
     status,
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
   });
+}
+
+// Mirrors normalizeName() in 13F Seed/seed-managermaster.js exactly — same
+// lowercase/strip-punctuation/collapse-whitespace transform used to build
+// managermaster.normalized_name and manageraliases.alias_normalized, so a
+// query normalized here lines up with what's actually stored.
+function normalizeManagerName(name) {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Escapes LIKE wildcard characters in user input so a literal "%" or "_" in
+// a searched manager name can't widen the match beyond intent.
+function escapeLikeInput(s) {
+  return s.replace(/[\\%_]/g, ch => "\\" + ch);
+}
+
+// Ranked name lookup against Meridian's own manager registry
+// (managermaster + manageraliases) — checked before ever calling out to SEC.
+// That registry is seeded as a comprehensive 13F filer list (every
+// SUBMISSIONTYPE, not a holdings filter — see 13F Seed/seed-managermaster.js),
+// so a name search here is resolving against actual company names, unlike
+// SEC EFTS's full-text document search (see the /api/13f-search fix comment).
+//
+// Ranking: exact normalized-name match first, then prefix match, then
+// substring match — same tiering applied to alias matches, so an alias hit
+// never outranks a better primary-name hit for a different manager.
+//
+// Ties within a tier are broken by reported AUM (filing13f.value_total,
+// latest report_period), NOT by name length. An earlier version of this fix
+// used shortest-name-wins, which looked reasonable on "Appaloosa" but broke
+// on manager families with many name-alike entities: "Bridgewater" resolved
+// to "Bridgewater Advisors Inc." ($1.5B AUM) over the actual firm everyone
+// means, "Bridgewater Associates, LP" ($27B AUM) — shorter name, wrong
+// company. Same failure on "Point72": tiny shell subsidiaries like
+// "Point72 (DIFC) Ltd" (no reported holdings) out-ranked the real US filer,
+// "Point72 Asset Management, L.P." ($89B AUM), for having a shorter name.
+// AUM is a direct, already-seeded signal of which same-named entity is the
+// one a manager-name search actually means; name length isn't.
+async function searchLocalManagerRegistry(db, rawQuery) {
+  const norm = normalizeManagerName(rawQuery);
+  if (!norm) return null;
+  const escaped = escapeLikeInput(norm);
+  const likePattern = `%${escaped}%`;
+
+  const [nameRows, aliasRows] = await Promise.all([
+    db.prepare(`
+      SELECT cik, manager_name,
+        CASE
+          WHEN normalized_name = ?1 THEN 0
+          WHEN normalized_name LIKE ?2 || '%' ESCAPE '\\' THEN 1
+          ELSE 2
+        END AS match_rank
+      FROM managermaster
+      WHERE normalized_name LIKE ?3 ESCAPE '\\'
+      ORDER BY match_rank ASC, length(normalized_name) ASC
+      LIMIT 15
+    `).bind(norm, escaped, likePattern).all(),
+    db.prepare(`
+      SELECT m.cik, m.manager_name,
+        CASE
+          WHEN a.alias_normalized = ?1 THEN 0
+          WHEN a.alias_normalized LIKE ?2 || '%' ESCAPE '\\' THEN 1
+          ELSE 2
+        END AS match_rank
+      FROM manageraliases a
+      JOIN managermaster m ON m.cik = a.cik
+      WHERE a.alias_normalized LIKE ?3 ESCAPE '\\'
+      ORDER BY match_rank ASC, length(a.alias_normalized) ASC
+      LIMIT 15
+    `).bind(norm, escaped, likePattern).all()
+  ]);
+
+  const byCik = new Map();
+  for (const r of [...(nameRows.results || []), ...(aliasRows.results || [])]) {
+    const existing = byCik.get(r.cik);
+    if (!existing || r.match_rank < existing.match_rank) {
+      byCik.set(r.cik, { cik: r.cik, name: r.manager_name, match_rank: r.match_rank });
+    }
+  }
+  if (!byCik.size) return null;
+
+  const aumByCik = await latestValueTotalsByCik(db, Array.from(byCik.keys()));
+
+  const ranked = Array.from(byCik.values()).sort((a, b) =>
+    a.match_rank - b.match_rank ||
+    (aumByCik.get(b.cik) || -1) - (aumByCik.get(a.cik) || -1) ||
+    (a.name || "").length - (b.name || "").length
+  );
+  const top = ranked[0];
+  return {
+    top: { cik: top.cik, name: top.name },
+    alternatives: ranked.slice(1, 5).map(r => ({ cik: r.cik, name: r.name }))
+  };
+}
+
+// Latest reported value_total (AUM, in filing13f) per CIK, for a bounded set
+// of candidate CIKs — one flat query rather than a per-cik correlated
+// subquery, since filing13f has no index on cik yet (see the KNOWN GAP note
+// at the top of this file); grouping the "pick latest report_period's value"
+// logic in JS avoids re-scanning filing13f once per candidate.
+async function latestValueTotalsByCik(db, ciks) {
+  const out = new Map();
+  if (!ciks.length) return out;
+
+  const placeholders = ciks.map((_, i) => `?${i + 1}`).join(",");
+  const rows = await db.prepare(`
+    SELECT cik, report_period, value_total
+    FROM filing13f
+    WHERE cik IN (${placeholders})
+  `).bind(...ciks).all();
+
+  const latestPeriodByCik = new Map();
+  for (const r of rows.results || []) {
+    const prevPeriod = latestPeriodByCik.get(r.cik);
+    if (!prevPeriod || (r.report_period || "") > prevPeriod) {
+      latestPeriodByCik.set(r.cik, r.report_period || "");
+      out.set(r.cik, typeof r.value_total === "number" ? r.value_total : -1);
+    }
+  }
+  return out;
 }
 
 // Enforces a 150ms minimum gap between SEC fetches to stay within the

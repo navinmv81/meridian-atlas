@@ -7,6 +7,14 @@ const path = require('path');
 
 const ACCOUNT_ID = 'ea36070477560935a68ad9110a2fd40b';
 const DB_ID = '43e80149-5333-4917-b678-6a8218ca4f93';
+// SANITIZED 13 August 2026 (consolidation onto corporate-atlas-v4-deploy-clean):
+// this file carried a hardcoded Cloudflare API token — the same pre-scrub
+// pattern MA-AUG-004 (5 August) removed from the rest of Corporate Atlas/,
+// but this copy (recovered from July Refresh) predated that fix and was never
+// touched by it. The hardcoded token was tested against Cloudflare's
+// /user/tokens/verify endpoint and confirmed already invalid/dead — no live
+// credential was exposed — but replaced with the same env-var pattern used
+// everywhere else in this codebase rather than leaving a dead secret in source.
 const TOKEN = process.env.CF_API_TOKEN;
 if (!TOKEN) {
   console.error('Error: CF_API_TOKEN environment variable not set.');

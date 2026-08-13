@@ -1,0 +1,20 @@
+name = "meridian-entities-figi"
+main = "src/entities-figi.js"
+compatibility_date = "2024-01-01"
+
+# No [triggers] section — on-request only by design (MA-AUG-001 ARCH_REVIEW,
+# 28 July 2026), not a temporary hold like the other three Workers' crons=[].
+# Free plan caps Cron Triggers at 5 per account; this Worker deliberately
+# doesn't use one of those slots. Trigger it manually via curl /run, or
+# schedule an external call if a cadence is ever wanted later.
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meridian-etf"
+database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
+
+# Set before first use:
+#   npx wrangler secret put OPENFIGI_API_KEY --config wrangler-entities-figi.toml

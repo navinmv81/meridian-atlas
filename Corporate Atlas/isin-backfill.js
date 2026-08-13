@@ -9,7 +9,13 @@ const path = require('path');
 
 const ACCOUNT_ID   = 'ea36070477560935a68ad9110a2fd40b';
 const DATABASE_ID  = '43e80149-5333-4917-b678-6a8218ca4f93';
-const OAUTH_TOKEN  = 'cfoat_PIier3yr3MMx8FUGAAeV8Ddd0bkM0eBVGu_vakm0DW4.FnBToiNc9nl4xUXpZlPeHAifKg_ODtBDH0nzjgK5Ul8';
+const OAUTH_TOKEN = process.env.CF_API_TOKEN;
+if (!OAUTH_TOKEN) {
+  console.error('Error: CF_API_TOKEN environment variable not set.');
+  console.error('Run: export CF_API_TOKEN=$(wrangler whoami --json | ...)');
+  console.error('Or obtain a fresh token via: wrangler login');
+  process.exit(1);
+}
 const GLEIF_DB     = path.join(__dirname, 'gleif_local.db');
 const D1_URL       = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/d1/database/${DATABASE_ID}/query`;
 const BATCH_SIZE   = 50;

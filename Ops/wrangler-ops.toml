@@ -1,0 +1,23 @@
+name = "meridian-ops"
+main = "src/ops-api.js"
+compatibility_date = "2024-01-01"
+
+# No [triggers] section — on-request only by design (August Operating Layer
+# Blueprint, Section 5). This is a human-driven dashboard backend, not a
+# pipeline, so it doesn't need one of the account's 5 Cron Trigger slots.
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meridian-etf"
+database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
+
+# MA-AUG-006, 2 August 2026 — live Cloudflare metrics routes (/api/ops/cf/*).
+# CF_ACCOUNT_TAG is an identifier, not a credential — plain var is correct
+# here, not a secret. CF_ANALYTICS_TOKEN (the actual credential, Account >
+# Account Analytics > Read scope) is set separately via `wrangler secret put`
+# — never put a real token value in this file.
+[vars]
+CF_ACCOUNT_TAG = "ea36070477560935a68ad9110a2fd40b"

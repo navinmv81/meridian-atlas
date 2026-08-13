@@ -7,7 +7,13 @@ const fs = require('fs');
 
 const ACCOUNT_ID = 'ea36070477560935a68ad9110a2fd40b';
 const DB_ID      = '43e80149-5333-4917-b678-6a8218ca4f93';
-const TOKEN      = 'cfoat_HVS_rkYvk2AvKqXf30EnpSslkrNxoKtf_KK0sNJYwc0.BtGIjJa7B8_RniktWWwFWsJL1i3eVnNlkBlcx3Xf0m4';
+const TOKEN = process.env.CF_API_TOKEN;
+if (!TOKEN) {
+  console.error('Error: CF_API_TOKEN environment variable not set.');
+  console.error('Run: export CF_API_TOKEN=$(wrangler whoami --json | ...)');
+  console.error('Or obtain a fresh token via: wrangler login');
+  process.exit(1);
+}
 const API_BASE   = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/d1/database/${DB_ID}`;
 const BATCH_SIZE = 50;
 
