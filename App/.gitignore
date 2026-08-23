@@ -9,3 +9,12 @@ node_modules/
 *.db-shm
 *.db-wal
 *.csv
+
+# MA-SEP-003 — FIRDS weekly seed runtime state (not source, machine-local)
+Corporate Atlas/.firds-seed-paused
+Corporate Atlas/logs/
+
+# MA-SEP-003 — diagnostic-only downloaded/extracted FIRDS files (not source;
+# *.zip above already covers the zip, this covers the extracted XML)
+Corporate Atlas/migrations/DLTINS_*.xml
+Corporate Atlas/migrations/FULINS_*.xml

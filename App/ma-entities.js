@@ -703,9 +703,21 @@ function _truncate(s, max) {
 
 let _previousView = null;
 
-function _buildEntityDetailHTML(entity, backLabel, backHandler) {
+function _buildEntityDetailHTML(entity, backLabel, backHandler, parents, children) {
   backLabel   = backLabel   || 'Galaxy';
   backHandler = backHandler || 'restoreEntityPreviousView()';
+  parents     = parents  ?? [];
+  children    = children ?? [];
+
+  // MA-SEP-004: this template is shared by two entry points with different
+  // containers — showEntityDetail (main entities-panel) and showEntityOverlay
+  // (a fixed full-screen overlay div). A click-through needs to navigate
+  // within whichever one is actually on screen; calling showEntityDetail
+  // from inside the overlay would render into the panel underneath instead
+  // of updating the overlay, leaving the old overlay stuck on top. backHandler
+  // already tells us which context this render is for, so reuse that signal
+  // rather than adding a new parameter.
+  const navFn = backHandler === 'closeEntityOverlay()' ? 'showEntityOverlay' : 'showEntityDetail';
 
   function _statusBadge(status) {
     if (!status) return '';
@@ -719,11 +731,72 @@ function _buildEntityDetailHTML(entity, backLabel, backHandler) {
     return `<span style="border:1px solid ${col}40;background:${col}18;color:${col};border-radius:3px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:.05em">${_esc(leiStatus)}</span>`;
   }
 
+  // MA-SEP-004 Requirement 1: entity_master's direct_parent_lei/
+  // ultimate_parent_lei are name/LEI text only (no entity_id column) — the
+  // only place that resolves them to a real entity_id is /graph's `parents`
+  // array (joined through entity_relationships). Match on LEI against
+  // whatever /graph returned for this entity; a parent whose LEI isn't
+  // findable there (e.g. an un-enriched GLEIF exception, or a parent that
+  // simply isn't itself in entity_master) stays plain, non-clickable text —
+  // per Requirement 1's acceptance criteria, do not invent a fake link.
+  function _resolveParentEntityId(lei) {
+    if (!lei) return null;
+    const match = parents.find(p => p.lei === lei);
+    return match ? match.entity_id : null;
+  }
+
   function _ownershipRow(name, lei, exception) {
-    if (name) return `<strong>${_esc(name)}</strong>${lei ? `<br><span style="font-family:var(--mono);font-size:9px;color:var(--dim)">${_esc(lei)}</span>` : ''}`;
+    if (name) {
+      const resolvedId = _resolveParentEntityId(lei);
+      const nameHtml = resolvedId
+        ? `<span class="ent-bc-item" style="font-weight:700" onclick="${navFn}(${resolvedId})">${_esc(name)}</span>`
+        : `<strong>${_esc(name)}</strong>`;
+      return `${nameHtml}${lei ? `<br><span style="font-family:var(--mono);font-size:9px;color:var(--dim)">${_esc(lei)}</span>` : ''}`;
+    }
     if (exception) return `<span style="color:var(--dim)">None reported</span><br><span style="color:var(--muted);font-size:10px">Reason: ${_esc(exception)}</span>`;
     return '<span style="color:var(--dim)">Not reported</span>';
   }
+
+  // MA-SEP-004 Requirement 2/3: one group of clickable rows (Subsidiaries or
+  // Managed Funds), capped with an accurate "+N more" — N is the group's
+  // true remaining count, not a guess, since /graph's children query
+  // (entities-api.js) now returns up to 200 real rows instead of an
+  // arbitrary/truncated 20 (see that query's own comment for why).
+  function _childGroup(label, rows, cap) {
+    if (!rows.length) return '';
+    const shown = rows.slice(0, cap);
+    const overflow = rows.length - shown.length;
+    const rowsHtml = shown.map(r => `
+      <div class="ent-bc-item" style="display:block;padding:5px 0;border-bottom:1px solid var(--border)" onclick="${navFn}(${r.entity_id})">
+        <div style="font-weight:600;color:var(--text)">${_esc(r.name)}</div>
+        ${r.country ? `<div style="font-size:9px;color:var(--dim)">${_esc(r.country)}</div>` : ''}
+      </div>
+    `).join('');
+    return `
+      <div style="margin-bottom:12px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">${_esc(label)} (${rows.length})</div>
+        ${rowsHtml}
+        ${overflow > 0 ? `<div style="font-size:10px;color:var(--muted);padding:6px 0 2px">+${overflow} more</div>` : ''}
+      </div>
+    `;
+  }
+
+  // Cap of 12 per group: pending real fan-out data (MA-SEP-004 First Step 1,
+  // confirmed live 2026-08-22) — highest real case is 96 fund_manager
+  // children (BlackRock/iShares Trust), well within the Spec's recommended
+  // 10-15 starting range; legal_parent counts are currently far lower (0-2
+  // per entity across all of entity_master today).
+  const CHILD_GROUP_CAP = 12;
+  const subsidiaries = children.filter(c => c.relationship_type === 'legal_parent');
+  const managedFunds  = children.filter(c => c.relationship_type === 'fund_manager');
+  const childrenSectionHtml = (subsidiaries.length || managedFunds.length)
+    ? `
+      <div style="margin:0 16px 16px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-size:11px;color:var(--text2);line-height:1.5">
+        <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Children</div>
+        ${_childGroup('Subsidiaries', subsidiaries, CHILD_GROUP_CAP)}
+        ${_childGroup('Managed Funds', managedFunds, CHILD_GROUP_CAP)}
+      </div>`
+    : '';
 
   const gleifUrl = entity.lei ? `https://search.gleif.org/#/record/${entity.lei}` : null;
   const edgarSearchUrl = entity.legal_name
@@ -824,6 +897,9 @@ ${entity.expiration_date ? `Effective: ${entity.expiration_date.slice(0,10)}.` :
         </div>
       </div>
 
+      <!-- Children (Subsidiaries / Managed Funds) — MA-SEP-004, hidden entirely when empty -->
+      ${childrenSectionHtml}
+
       <!-- ETF Exposure strip -->
       <div style="margin:0 16px 16px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)" id="etf-exposure-section-${entity.entity_id}">
         <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">ETF Exposure</div>
@@ -907,7 +983,26 @@ async function showEntityDetail(entityId, breadcrumbLabel) {
     return;
   }
 
-  main.innerHTML = _buildEntityDetailHTML(entity, breadcrumbLabel, 'restoreEntityPreviousView()');
+  // MA-SEP-004: /graph is the only endpoint that resolves parent/child
+  // relationships to entity_ids (entity.direct_parent_lei/ultimate_parent_lei
+  // are name/LEI text only — no entity_id on entity_master itself). Fetched
+  // separately from the entity itself, non-fatally: a /graph hiccup should
+  // degrade to plain-text ownership rows and no Children section, not break
+  // the page (same resilience posture as the exposure/instruments/issuer
+  // strips below, which already load independently).
+  let parents = [], children = [];
+  try {
+    const graphRes = await fetch(`${ENTITIES_API_URL}/api/entities/${entityId}/graph`);
+    if (graphRes.ok) {
+      const graphData = await graphRes.json();
+      parents = graphData.parents ?? [];
+      children = graphData.children ?? [];
+    }
+  } catch (e) {
+    console.error('[ma-entities] showEntityDetail /graph fetch error (non-fatal)', e);
+  }
+
+  main.innerHTML = _buildEntityDetailHTML(entity, breadcrumbLabel, 'restoreEntityPreviousView()', parents, children);
   _loadEntityExposureStrip(entityId, entity);
   _loadLinkedInstruments(entityId);
 
@@ -1180,7 +1275,22 @@ async function showEntityOverlay(entityId, backLabel) {
     const data = await res.json();
     const entity = data.entity || data;
 
-    overlay.innerHTML = _buildEntityDetailHTML(entity, backLabel, 'closeEntityOverlay()');
+    // MA-SEP-004: same non-fatal /graph fetch as showEntityDetail, so the
+    // ETF Holdings entry point gets the same clickable Ownership Chain /
+    // Children behavior, not a silently degraded version of it.
+    let parents = [], children = [];
+    try {
+      const graphRes = await fetch(`${ENTITIES_API_URL}/api/entities/${entityId}/graph`);
+      if (graphRes.ok) {
+        const graphData = await graphRes.json();
+        parents = graphData.parents ?? [];
+        children = graphData.children ?? [];
+      }
+    } catch (e) {
+      console.error('[ma-entities] showEntityOverlay /graph fetch error (non-fatal)', e);
+    }
+
+    overlay.innerHTML = _buildEntityDetailHTML(entity, backLabel, 'closeEntityOverlay()', parents, children);
 
     const backBtn = overlay.querySelector('.entity-overlay-back');
     if (backBtn) {

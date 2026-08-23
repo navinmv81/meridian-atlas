@@ -8,6 +8,16 @@
 // - Only UPDATEs entity_master rows that already exist (matched by LEI).
 // - Honors hold_all_jobs kill switch in holdings_pipeline_state.
 
+// MA-SEP-001, 16 August 2026: this file previously computed its own inline
+// normalized_name (`parentName.toUpperCase().trim().replace(/\s+/g, ' ')`)
+// for GLEIF parent (type='holding') inserts — no suffix-stripping, no
+// punctuation-stripping at all, identical to the same gap in
+// entities-enrich.js. Now importing the same shared function
+// entities-figi.js and entities-enrich.js use (see entities-seed.js's
+// normalizeName() comment, MA-AUG-001) so all insert paths agree on one
+// normalization scheme.
+import { normalizeName } from './entities-seed.js';
+
 const DELTA_URL = 'https://leilookup.gleif.org/api/v2/filedownload/deltafiles/LastMonth';
 const BATCH_SIZE = 50;
 
@@ -224,7 +234,7 @@ async function refreshParentExceptions(env) {
           if (parentResp.ok) {
             const parentDetail = await parentResp.json();
             const parentName = parentDetail.data?.attributes?.entity?.legalName?.name ?? parentLei;
-            const parentNorm = parentName.toUpperCase().trim().replace(/\s+/g, ' ');
+            const parentNorm = normalizeName(parentName); // MA-SEP-001: was an inline, suffix/punctuation-naive fold
             const parentCountry = parentDetail.data?.attributes?.entity?.legalAddress?.country ?? null;
 
             await env.DB.prepare(`

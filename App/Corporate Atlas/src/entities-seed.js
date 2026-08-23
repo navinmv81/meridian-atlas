@@ -87,19 +87,30 @@ function isCashFund(name) {
 // Exported (MA-AUG-001, 29 July 2026) so entities-figi.js can import the
 // exact same normalization logic rather than re-implementing it — avoids a
 // repeat of a fix landing in one file and not its sibling.
+//
+// FIXED (MA-SEP-001, 16 August 2026): punctuation stripping used to run
+// AFTER the suffix-strip regex. The suffix regex only matches a contiguous
+// token ("NV", "SA", "BV", ...) with at most one trailing dot — it never
+// matched a dotted abbreviation like "N.V." or "S.A." (the dot sits INSIDE
+// the token, not just after it). Net effect: "CureVac NV" stripped its
+// suffix and normalized to "CUREVAC", while "CureVac N.V." never matched the
+// suffix regex at all, only had its dots removed afterward, and normalized
+// to "CUREVAC NV" — two different normalized_name values for the same
+// company, defeating the UNIQUE(normalized_name, type) constraint. Full-scope
+// audit (MA-SEP-001) found this live-reproducible pattern behind ~718 of the
+// duplicate entity_master rows cleaned up in that packet (Adyen, Spotify,
+// Qiagen, Repsol, Iberdrola, and others besides the originally-known CureVac
+// pair). Reordering so punctuation is stripped FIRST means "N.V." and "NV"
+// both reduce to "NV" before the suffix regex ever runs, so both variants
+// now collapse to the same normalized_name.
 export function normalizeName(name) {
   return name
     .toUpperCase()
     .trim()
-    // FAST-FOLLOW fix (1 August 2026): CORPORATION was missing from this list —
-    // only the CORP abbreviation matched, so "Danaher Corporation" and
-    // "Danaher Corp" normalized to different keys and split into duplicate
-    // entity_master rows. Same risk exists for INCORPORATED/LIMITED (only
-    // INC/LTD were covered); added defensively since they're the same class
-    // of bug, not yet confirmed to have caused a duplicate in production.
-    .replace(/\s+(INC\.?|INCORPORATED|CORP\.?|CORPORATION|LTD\.?|LIMITED|LLC\.?|PLC\.?|NV|AG|SA|SAS|GMBH|BV|SE|HOLDING|HOLDINGS|GROUP|CO\.?|COMPANY|TRUST|ETF|FUND|FUNDS)\.?\s*$/i, '')
     .replace(/[,\.]/g, '')
     .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\s+(INC|INCORPORATED|CORP|CORPORATION|LTD|LIMITED|LLC|PLC|NV|AG|SA|SAS|GMBH|BV|SE|HOLDING|HOLDINGS|GROUP|CO|COMPANY|TRUST|ETF|FUND|FUNDS)\s*$/i, '')
     .trim();
 }
 

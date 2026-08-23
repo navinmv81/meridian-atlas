@@ -1,0 +1,50 @@
+# RETIRED 2026-08-22 (MA-SEP-003 v2, "recurring local job" architecture).
+# The `meridian-firds` Worker deployment was undeployed and the
+# FIRDS_PROGRESS KV namespace below was deleted this session — both
+# confirmed gone via `wrangler deployments list` / `wrangler kv namespace
+# list`. The chunked/resumable Worker approach this config describes proved
+# viable-then-not at real scale (see claude/MA-SEP-003_Escalation_CPU_
+# Wall.md) and was superseded by a daily-delta-Worker design (also
+# rejected, claude/MA-SEP-003_Escalation_Delta_File_Size.md) and finally by
+# a weekly local job (App/Corporate Atlas/firds-local-seed.mjs +
+# scripts/firds-seed-*.sh — claude/MA-SEP-003_Change_Request_Local_Weekly_
+# Job.md). This file is kept only as historical record of the retired
+# Worker's config — do NOT re-deploy from it without first re-checking
+# whether the KV namespace/D1 binding IDs below are still valid (the KV
+# namespace referenced here no longer exists). `src/firds.js`'s parsing/
+# CFI-filter/linkage functions are still live and imported directly by
+# firds-local-seed.mjs — only the Worker `export default { fetch }` wrapper
+# in that file is now dead code.
+
+name = "meridian-firds"
+main = "src/firds.js"
+compatibility_date = "2024-01-01"
+
+# Matches entities-seed/-enrich/-delta — enabled ahead of eventual
+# September activation.
+[observability]
+enabled = true
+
+# HOLD: cron not enabled — MA-SEP-003 Build Brief "New Prerequisite" section.
+# Blocked on (1) confirming the account's actual plan tier and (2) real
+# observed subrequest counts for entities-enrich's recent invocations, both
+# needed before entities-enrich's cron consolidation (which frees the slot
+# this cron needs — Free plan caps Cron Triggers at 5/account, already at
+# 5/5) can safely proceed. Until that clears and the standard three-point
+# check passes, this Worker is invoked manually via /run only.
+# [triggers]
+# crons = ["0 5 * * 0"]  # weekly, Sunday — after FULINS publishes (~09:00 CET)
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meridian-etf"
+database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
+
+# Progress-tracking state for the chunked/resumable ingest pass (current
+# file, resume record-index, cumulative stats). Not a D1 table — the Build
+# Brief's "Do not do" section caps schema changes at the single
+# firds_instrument_reference table — and not holdings_pipeline_state
+# (ETF-domain, off-limits to this packet under any circumstance).
+[[kv_namespaces]]
+binding = "FIRDS_PROGRESS"
+id = "1c140ae01122419fbfcf482fa66604de"

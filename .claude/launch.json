@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "corporate-atlas-static",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-l", "8791", "App"],
+      "port": 8791
+    }
+  ]
+}

@@ -17,6 +17,18 @@
 // (entities-seed.js has checkWriteBudget(); entities-delta.js has checkHold()).
 // Both are added below, reading the same shared holdings_pipeline_state keys.
 
+// MA-SEP-001, 16 August 2026: this file previously computed its own inline
+// normalized_name (`parentName.toUpperCase().trim().replace(/\s+/g, ' ')`)
+// for GLEIF parent (type='holding') inserts — no suffix-stripping, no
+// punctuation-stripping at all. A dotted legal name like "Danaher Corp." or
+// "Adyen N.V." would keep its punctuation and suffix verbatim in
+// normalized_name, guaranteeing a mismatch against any entity_master row for
+// the same company seeded via entities-seed.js's normalizeName(). Now
+// importing the same shared function entities-figi.js already uses (see that
+// file's comment, MA-AUG-001) so all three insert paths agree on one
+// normalization scheme.
+import { normalizeName } from './entities-seed.js';
+
 const DAILY_CAP = 100000; // account-wide D1 daily write cap (soft), shared across all Workers — replaces the old ENRICH_WRITE_LIMIT, 5 August 2026
 
 async function checkWriteBudget(env) {
@@ -260,7 +272,7 @@ async function runPhase3(env) {
           if (parentResp.ok) {
             const parentDetail = await parentResp.json();
             const parentName = parentDetail.data?.attributes?.entity?.legalName?.name ?? parentLei;
-            const parentNorm = parentName.toUpperCase().trim().replace(/\s+/g, ' ');
+            const parentNorm = normalizeName(parentName); // MA-SEP-001: was an inline, suffix/punctuation-naive fold
             const parentCountry = parentDetail.data?.attributes?.entity?.legalAddress?.country ?? null;
 
             await env.DB.prepare(`

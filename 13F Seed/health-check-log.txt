@@ -1,17 +1,7 @@
-node:internal/bootstrap/switches/does_own_process_state:142
-    cachedCwd = rawMethods.cwd();
-                           ^
+◇ injected env (2) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
 
-Error: EPERM: process.cwd failed with error operation not permitted, uv_cwd
-    at process.wrappedCwd [as cwd] (node:internal/bootstrap/switches/does_own_process_state:142:28)
-    at node:path:1236:24
-    at Object.resolve (node:path:1270:19)
-    at resolveMainPath (node:internal/modules/run_main:35:36)
-    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:146:20)
-    at node:internal/main/run_main_module:33:47 {
-  errno: -1,
-  code: 'EPERM',
-  syscall: 'uv_cwd'
-}
+=== Meridian Atlas pipeline health check — 2026-08-22T17:15:00.083Z ===
+  hold_all_jobs = false
+  D1 headroom: 79631/100000 remaining (20.4% used today)
 
-Node.js v24.14.1
+All clear — no notification sent (by design, to keep this low-noise).

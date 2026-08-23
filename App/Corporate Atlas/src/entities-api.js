@@ -77,13 +77,34 @@ async function handleGraph(env, entityId) {
     WHERE er.child_entity_id = ?
   `).bind(id).all();
 
-  // Children (limit 20)
+  // Children — MA-SEP-004: added ORDER BY (was previously unordered, so the
+  // old LIMIT 20 returned an arbitrary 20, not a meaningful top 20).
+  // legal_parent (Subsidiaries) sorts first and alphabetically — no
+  // "importance" signal exists for subsidiaries, per Spec Requirement 4.
+  // fund_manager (Managed Funds) sorts by etf_holding_count DESC — confirmed
+  // live (2026-08-22) to be the meaningfully-populated/varying importance
+  // column on entity_master for fund-type entities (isin_match_count was
+  // checked too but is low-variance by comparison).
+  //
+  // LIMIT bumped 20 -> 200 in the same change: real fan-out for
+  // BlackRock/iShares Trust (entity_id 273) is 96 fund_manager children,
+  // already exceeding the old LIMIT 20 today — the frontend's own
+  // per-group display cap (MA-SEP-004, ma-entities.js) needs the TRUE
+  // total to show an accurate "+N more", which is impossible if this query
+  // silently truncates below that first. 200 is comfortable headroom above
+  // the highest real count found (96) while staying a trivial single
+  // indexed-lookup read (see MA-SEP-004 three-point check). Not a "shape"
+  // change — same columns returned, just a larger, ordered row count.
   const children = await env.DB.prepare(`
     SELECT er.relationship_type, em.entity_id, em.name, em.type, em.lei, em.country
     FROM entity_relationships er
     JOIN entity_master em ON em.entity_id = er.child_entity_id
     WHERE er.parent_entity_id = ?
-    LIMIT 20
+    ORDER BY
+      CASE er.relationship_type WHEN 'legal_parent' THEN 0 ELSE 1 END,
+      CASE WHEN er.relationship_type = 'legal_parent' THEN em.name END ASC,
+      CASE WHEN er.relationship_type = 'fund_manager' THEN em.etf_holding_count END DESC
+    LIMIT 200
   `).bind(id).all();
 
   // South arc: top holders (if operating/government/holding) or top holdings (if fund)
