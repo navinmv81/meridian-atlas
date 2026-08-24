@@ -217,7 +217,16 @@ async function refreshParentExceptions(env) {
       const resp = await fetch(`${GLEIF_BASE}/lei-records/${entity.lei}`);
       if (!resp.ok) continue;
       const detail = await resp.json();
-      const relationships = detail.relationships ?? {};
+      // MA-SEP-009: one-line path correction matching entities-enrich.js's
+      // runPhase3 fix — GLEIF's real response nests relationships under
+      // `data.relationships`, not top-level `detail.relationships` (this
+      // function's copy of the same bug, confirmed live this session; see
+      // Sprint Board MA-SEP-009 notes). Scoped as a one-line fix only, not
+      // the full links.lei-record follow-up-fetch logic Phase 3 also
+      // needed — this function is confirmed unreachable today (cron HOLD,
+      // /run doesn't call it), so the deeper fix is deferred to whenever
+      // Phase 5 actually unfreezes this Worker, not done speculatively now.
+      const relationships = detail.data?.relationships ?? {};
       const directParentRel = relationships['direct-parent'];
 
       if (directParentRel?.data) {

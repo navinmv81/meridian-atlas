@@ -136,9 +136,14 @@ async function runPhase2(env) {
 
   if (!entities.results.length) {
     console.log('[entities-enrich] Phase 2: nothing to enrich');
-    return;
+    return { matched: 0, subrequests: 0 };
   }
 
+  // MA-SEP-009: same real fetch-count instrumentation as Phase 3 (see that
+  // function's comment) — Phase 2 and Phase 3 run in the same invocation
+  // when mins>=50, so the dispatcher needs both counts to report a real
+  // combined total against the Free-plan 50/invocation ceiling.
+  let subrequestCount = 0;
   let matched = 0;
   for (const entity of entities.results) {
     try {
@@ -148,6 +153,7 @@ async function runPhase2(env) {
 
       const url = `${GLEIF_BASE}/lei-records?filter%5Bisin%5D=${entity.isin_hint}&page%5Bsize%5D=5`;
       const resp = await fetch(url);
+      subrequestCount++;
 
       if (!resp.ok) throw new Error(`GLEIF HTTP ${resp.status}`);
 
@@ -192,7 +198,8 @@ async function runPhase2(env) {
     }
   }
 
-  console.log(`[entities-enrich] Phase 2: matched ${matched} of ${entities.results.length}`);
+  console.log(`[entities-enrich] Phase 2: matched ${matched} of ${entities.results.length}, ${subrequestCount} GLEIF subrequests`);
+  return { matched, subrequests: subrequestCount };
 }
 
 // ── Phase 3 — GLEIF Detail + Parents ─────────────────────────────────────────
@@ -200,6 +207,40 @@ async function runPhase2(env) {
 async function runPhase3(env) {
   const BATCH = 45;
   const GLEIF_BASE = 'https://api.gleif.org/api/v1';
+  // MA-SEP-009: real fetch-count instrumentation. Cloudflare Workers expose
+  // no programmatic "subrequests remaining" API — the only way to get a
+  // real number for the Free-plan 50/invocation ceiling risk (flagged
+  // MA-SEP-003, still open) is to count fetch() calls ourselves. Persisted
+  // to holdings_pipeline_state at the end (see bottom of this function) so
+  // it's readable after a fire-and-forget /run invocation completes, same
+  // pattern entities-delta.js already uses for its own run summary.
+  let subrequestCount = 0;
+
+  // MA-SEP-009: in-loop subrequest checkpoint, mirroring the per-item guard
+  // pattern already used in holdings-pipeline.js (checks its own running
+  // total before starting each new ETF, not just via an outer batch-size
+  // constant). Founder decision: BATCH itself stays 45 — this checkpoint is
+  // the actual safety mechanism, not the batch size.
+  //
+  // Threshold reasoning: each entity can cost up to 3 fetches (1 self detail
+  // + up to 2 relationship-resolve follow-ups, direct-parent and
+  // ultimate-parent). Checking "before starting a new entity" bounds the
+  // true worst case to (threshold - 1) + 3. A live bounded-batch test this
+  // session (45 entities, real GLEIF data) measured 50 combined subrequests
+  // — exactly at the Free-plan cap with zero margin — and a follow-up check
+  // found 3 of those 45 entities produced no database write at all,
+  // consistent with (though not conclusively proven to be) a request
+  // failing silently inside the existing try/catch before writing anything;
+  // no historical Cloudflare log access was available to confirm the exact
+  // cause (wrangler only offers live tail, not retroactive log query).
+  // Given that real uncertainty, this threshold is set well below the
+  // minimum "45 + 3 = 47 was probably fine" calculation: stopping at 40
+  // bounds the true worst case to 39 + 3 = 43, a full 7-subrequest margin
+  // below 50 — enough to absorb one undercounted call from exactly the kind
+  // of silent failure Step 1 could not rule out, not just the nominal
+  // per-entity ceiling.
+  const SUBREQUEST_CHECKPOINT = 40;
+  let deferredCount = 0;
 
   const entities = await env.DB.prepare(`
     SELECT entity_id, name, lei, type, lei_status
@@ -219,12 +260,23 @@ async function runPhase3(env) {
 
   if (!entities.results.length) {
     console.log('[entities-enrich] Phase 3: nothing to detail');
-    return;
+    return { processed: 0, subrequests: 0 };
   }
 
   for (const entity of entities.results) {
+    // MA-SEP-009 checkpoint: stop starting NEW entities once we're at the
+    // threshold — remaining entities are simply not touched this
+    // invocation, so they stay untouched in entity_master and will match
+    // Phase 3's own WHERE clause again next run (queued, not dropped).
+    if (subrequestCount >= SUBREQUEST_CHECKPOINT) {
+      deferredCount = entities.results.length - (entities.results.indexOf(entity));
+      console.log(`[entities-enrich] Phase 3: subrequest checkpoint hit (${subrequestCount}/${SUBREQUEST_CHECKPOINT}) — deferring remaining ${deferredCount} entities to next invocation.`);
+      break;
+    }
+
     try {
       const resp = await fetch(`${GLEIF_BASE}/lei-records/${entity.lei}`);
+      subrequestCount++;
       if (!resp.ok) throw new Error(`GLEIF detail HTTP ${resp.status}`);
 
       const detail = await resp.json();
@@ -249,18 +301,53 @@ async function runPhase3(env) {
         continue; // funds use fund_manager relationship, not GLEIF parent chain
       }
 
-      // Level 2 parent relationships
-      const relationships = detail.relationships ?? {};
+      // Level 2 parent relationships.
+      //
+      // MA-SEP-009 FIX (root-caused this session, see Sprint Board MA-SEP-009
+      // notes for full live-GLEIF evidence): two compounding bugs made this
+      // block unconditionally dead code since it was written.
+      //
+      // Bug 1: `detail.relationships` reads the WRONG top-level path. GLEIF's
+      // real lei-records/{lei} response is a JSON:API resource object — the
+      // relationships live at `detail.data.relationships`, not
+      // `detail.relationships` (confirmed live: a real response's top-level
+      // keys are only [meta, data]). The old code always got `{}` here.
+      const relationships = detail.data?.relationships ?? {};
       let directParentWritten = false;
       const directParentRel = relationships['direct-parent'];
-      const directParentException = directParentRel?.meta?.exception
-        ?? (directParentRel === undefined ? 'NO_LINK_DECLARED' : null);
+      // Bug 1 continued: GLEIF doesn't embed a `meta.exception` string on a
+      // "no relationship declared" object either — it provides a
+      // `links['reporting-exception']` URL instead (confirmed live). We
+      // don't follow that URL for the human-readable reason text — it would
+      // cost a subrequest for a field nothing currently displays — a
+      // generic marker carries the same information the UI has ever shown.
+      const directParentException = (directParentRel && directParentRel.links?.['lei-record'])
+        ? null
+        : 'NO_LINK_DECLARED';
       for (const [relType, relData] of [
         ['direct-parent', relationships['direct-parent']],
         ['ultimate-parent', relationships['ultimate-parent']]
       ]) {
-        if (!relData?.data) continue;
-        const parentLei = relData.data.id;
+        // Bug 2: even reading the right path, GLEIF does not embed a
+        // resource identifier (`data.id`) on these relationship objects —
+        // only a `links['lei-record']` URL to a separate resource that must
+        // be fetched (confirmed live against Barclays Bank UK PLC and our
+        // own entity_master row for HSBC USA INC, entity_id 3331 — GLEIF's
+        // real answer for HSBC USA's direct parent is HSBC NORTH AMERICA
+        // HOLDINGS INC., LEI 213800JCL1FHBQK3M654, which the old code could
+        // never reach). Following this link returns the parent's FULL
+        // lei-record detail in one response — reused below as
+        // resolvedParentDetail, so creating a new parent entity costs no
+        // *additional* fetch beyond this one (it replaces, not adds to, the
+        // old separate "fetch full parent detail" call).
+        const relLink = relData?.links?.['lei-record'];
+        if (!relLink) continue;
+
+        const relResp = await fetch(relLink);
+        subrequestCount++;
+        if (!relResp.ok) continue;
+        const resolvedParentDetail = await relResp.json();
+        const parentLei = resolvedParentDetail.data?.id;
         if (!parentLei) continue;
 
         let parent = await env.DB.prepare(
@@ -268,25 +355,21 @@ async function runPhase3(env) {
         ).bind(parentLei).first();
 
         if (!parent) {
-          const parentResp = await fetch(`${GLEIF_BASE}/lei-records/${parentLei}`);
-          if (parentResp.ok) {
-            const parentDetail = await parentResp.json();
-            const parentName = parentDetail.data?.attributes?.entity?.legalName?.name ?? parentLei;
-            const parentNorm = normalizeName(parentName); // MA-SEP-001: was an inline, suffix/punctuation-naive fold
-            const parentCountry = parentDetail.data?.attributes?.entity?.legalAddress?.country ?? null;
+          const parentName = resolvedParentDetail.data?.attributes?.entity?.legalName?.name ?? parentLei;
+          const parentNorm = normalizeName(parentName); // MA-SEP-001: was an inline, suffix/punctuation-naive fold
+          const parentCountry = resolvedParentDetail.data?.attributes?.entity?.legalAddress?.country ?? null;
 
-            await env.DB.prepare(`
-              INSERT INTO entity_master (name, normalized_name, type, lei, lei_status, country)
-              VALUES (?, ?, 'holding', ?, 'ACTIVE', ?)
-              ON CONFLICT(normalized_name, type) DO UPDATE SET
-                lei = excluded.lei,
-                updated_at = CURRENT_TIMESTAMP
-            `).bind(parentName, parentNorm, parentLei, parentCountry).run();
+          await env.DB.prepare(`
+            INSERT INTO entity_master (name, normalized_name, type, lei, lei_status, country)
+            VALUES (?, ?, 'holding', ?, 'ACTIVE', ?)
+            ON CONFLICT(normalized_name, type) DO UPDATE SET
+              lei = excluded.lei,
+              updated_at = CURRENT_TIMESTAMP
+          `).bind(parentName, parentNorm, parentLei, parentCountry).run();
 
-            parent = await env.DB.prepare(
-              `SELECT entity_id, lei, name FROM entity_master WHERE lei = ?`
-            ).bind(parentLei).first();
-          }
+          parent = await env.DB.prepare(
+            `SELECT entity_id, lei, name FROM entity_master WHERE lei = ?`
+          ).bind(parentLei).first();
         }
 
         if (parent) {
@@ -334,7 +417,41 @@ async function runPhase3(env) {
     }
   }
 
-  console.log(`[entities-enrich] Phase 3: processed ${entities.results.length} entities`);
+  const attemptedCount = entities.results.length - deferredCount;
+  console.log(`[entities-enrich] Phase 3: selected ${entities.results.length}, attempted ${attemptedCount}, deferred ${deferredCount} (checkpoint), ${subrequestCount} GLEIF subrequests`);
+
+  // MA-SEP-009: persist the real subrequest count so it's readable after a
+  // fire-and-forget /run invocation completes (the HTTP response itself
+  // returns before this async work finishes — see fetch() handler below).
+  // Same holdings_pipeline_state pattern entities-delta.js already uses.
+  await env.DB.prepare(`
+    INSERT OR REPLACE INTO holdings_pipeline_state (key, value)
+    VALUES ('enrich_phase3_last_run_subrequests', ?)
+  `).bind(String(subrequestCount)).run();
+  await env.DB.prepare(`
+    INSERT OR REPLACE INTO holdings_pipeline_state (key, value)
+    VALUES ('enrich_phase3_last_run_entities', ?)
+  `).bind(String(attemptedCount)).run();
+  await env.DB.prepare(`
+    INSERT OR REPLACE INTO holdings_pipeline_state (key, value)
+    VALUES ('enrich_phase3_last_run_deferred', ?)
+  `).bind(String(deferredCount)).run();
+
+  return { processed: attemptedCount, deferred: deferredCount, subrequests: subrequestCount };
+}
+
+// MA-SEP-009: combine Phase 2 + Phase 3's real subrequest counts (they run
+// together in the same invocation when mins>=50) into one persisted total —
+// this is the number that actually matters against the Free-plan
+// 50/invocation ceiling, not either phase's count in isolation.
+async function persistCombinedSubrequestCount(env, phase2Result, phase3Result) {
+  const combined = (phase2Result?.subrequests ?? 0) + (phase3Result?.subrequests ?? 0);
+  console.log(`[entities-enrich] Combined Phase 2+3 subrequests this invocation: ${combined} (Phase 2: ${phase2Result?.subrequests ?? 0}, Phase 3: ${phase3Result?.subrequests ?? 0})`);
+  await env.DB.prepare(`
+    INSERT OR REPLACE INTO holdings_pipeline_state (key, value)
+    VALUES ('enrich_combined_last_invocation_subrequests', ?)
+  `).bind(String(combined)).run();
+  return combined;
 }
 
 // ── Cron dispatcher ───────────────────────────────────────────────────────────
@@ -355,8 +472,9 @@ export default {
     if (mins < 50) {
       await runPhase1(env);
     } else {
-      await runPhase2(env);
-      await runPhase3(env);
+      const phase2Result = await runPhase2(env);
+      const phase3Result = await runPhase3(env);
+      await persistCombinedSubrequestCount(env, phase2Result, phase3Result);
     }
 
     console.log('[entities-enrich] Cron complete');
@@ -390,8 +508,9 @@ export default {
       if (mins < 50) {
         await runPhase1(env);
       } else {
-        await runPhase2(env);
-        await runPhase3(env);
+        const phase2Result = await runPhase2(env);
+        const phase3Result = await runPhase3(env);
+        await persistCombinedSubrequestCount(env, phase2Result, phase3Result);
       }
     })());
     return new Response(JSON.stringify({ ok: true, message: 'Enrichment triggered' }), {
