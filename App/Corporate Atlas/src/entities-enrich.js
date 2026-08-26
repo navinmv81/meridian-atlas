@@ -222,24 +222,35 @@ async function runPhase3(env) {
   // constant). Founder decision: BATCH itself stays 45 — this checkpoint is
   // the actual safety mechanism, not the batch size.
   //
-  // Threshold reasoning: each entity can cost up to 3 fetches (1 self detail
-  // + up to 2 relationship-resolve follow-ups, direct-parent and
-  // ultimate-parent). Checking "before starting a new entity" bounds the
-  // true worst case to (threshold - 1) + 3. A live bounded-batch test this
-  // session (45 entities, real GLEIF data) measured 50 combined subrequests
-  // — exactly at the Free-plan cap with zero margin — and a follow-up check
-  // found 3 of those 45 entities produced no database write at all,
-  // consistent with (though not conclusively proven to be) a request
-  // failing silently inside the existing try/catch before writing anything;
-  // no historical Cloudflare log access was available to confirm the exact
-  // cause (wrangler only offers live tail, not retroactive log query).
-  // Given that real uncertainty, this threshold is set well below the
-  // minimum "45 + 3 = 47 was probably fine" calculation: stopping at 40
-  // bounds the true worst case to 39 + 3 = 43, a full 7-subrequest margin
-  // below 50 — enough to absorb one undercounted call from exactly the kind
-  // of silent failure Step 1 could not rule out, not just the nominal
-  // per-entity ceiling.
-  const SUBREQUEST_CHECKPOINT = 40;
+  // Threshold reasoning (revised 2026-08-24, raised from the original 40):
+  // each entity can cost up to 3 fetches (1 self detail + up to 2
+  // relationship-resolve follow-ups, direct-parent and ultimate-parent).
+  // The check runs BEFORE starting a new entity, so the last entity allowed
+  // to start has subrequestCount <= threshold-1, and can add up to 3 more —
+  // true worst-case final count = (threshold - 1) + 3 = threshold + 2.
+  // (Correcting an arithmetic slip in this comment's original version,
+  // which said "39 + 3 = 43" for threshold=40 — the right answer is 40+2=42;
+  // the number actually deployed was still safe, just under-stated by 1.)
+  //
+  // The original threshold (40, worst-case 42, an 8-subrequest margin) was
+  // set deliberately conservative because a checkpoint trip's real-world
+  // consequence was unproven. It's since been live-verified as a clean
+  // defer-and-requeue with no data loss (hardening test + a follow-up
+  // parallel check confirmed a deferred/zero-write entity simply re-matches
+  // Phase 3's own WHERE clause next cycle — see Sprint Board MA-SEP-009).
+  // With that risk retired, Founder decision: less margin is no longer
+  // buying anything worth the throughput cost, so raise toward the
+  // worst-case-safe ceiling — but not all the way to it. threshold=48 would
+  // be the mathematical max (worst-case exactly 50, zero margin); this
+  // session's Step 1 also found real, still-unresolved evidence that this
+  // counter can UNDERCOUNT if a fetch() call itself throws (a genuine
+  // "Too many subrequests" from the platform, as opposed to an ordinary
+  // HTTP error status, doesn't reach the subrequestCount++ line) — a
+  // different risk than throughput cost, not addressed by proving defer is
+  // safe. 44 keeps a real 4-subrequest margin (worst-case 46) against that
+  // specific residual unknown, while recovering nearly all the throughput
+  // the original 40 was leaving on the table.
+  const SUBREQUEST_CHECKPOINT = 44;
   let deferredCount = 0;
 
   const entities = await env.DB.prepare(`
