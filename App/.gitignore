@@ -14,6 +14,9 @@ node_modules/
 Corporate Atlas/.firds-seed-paused
 Corporate Atlas/logs/
 
+# MA-SEP-010 — entities-enrich-boost runtime state (not source, machine-local)
+Corporate Atlas/.entities-enrich-boost-paused
+
 # MA-SEP-003 — diagnostic-only downloaded/extracted FIRDS files (not source;
 # *.zip above already covers the zip, this covers the extracted XML)
 Corporate Atlas/migrations/DLTINS_*.xml

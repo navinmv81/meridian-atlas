@@ -17,6 +17,22 @@
 // (entities-seed.js has checkWriteBudget(); entities-delta.js has checkHold()).
 // Both are added below, reading the same shared holdings_pipeline_state keys.
 
+// MA-SEP-010, 27 August 2026: /run previously had zero authentication (Known
+// Issue 22.13) — any client that knew this Worker's URL could trigger a live
+// production enrichment run. Added a shared-secret header check (see fetch()
+// below) gating /run specifically. scheduled() — the Cron Trigger path — is
+// a separate entry point that never goes through fetch() at all, so the
+// existing cron-triggered invocation is unaffected by design, not by an
+// explicit bypass; confirmed by live testing, not assumed (see Sprint Board
+// MA-SEP-010). Secret is bound as RUN_AUTH_SECRET via `wrangler secret put
+// RUN_AUTH_SECRET --config wrangler-entities-enrich.toml` — never committed,
+// never in this file or any .toml. This same deploy also adds GLEIF
+// response-status/latency logging to Phase 2/3's existing fetch() calls
+// (additive only — no change to dispatch logic, SUBREQUEST_CHECKPOINT, or
+// BATCH) so a local LaunchAgent invoking /run at additional times/day
+// (App/Corporate Atlas/scripts/entities-enrich-boost-*.sh) can be monitored
+// for GLEIF rate-limiting via `wrangler tail` without guessing.
+
 // MA-SEP-001, 16 August 2026: this file previously computed its own inline
 // normalized_name (`parentName.toUpperCase().trim().replace(/\s+/g, ' ')`)
 // for GLEIF parent (type='holding') inserts — no suffix-stripping, no
@@ -152,7 +168,10 @@ async function runPhase2(env) {
       ).bind(entity.entity_id).run();
 
       const url = `${GLEIF_BASE}/lei-records?filter%5Bisin%5D=${entity.isin_hint}&page%5Bsize%5D=5`;
+      // MA-SEP-010: status/latency logging only — no change to control flow.
+      const gleifStart = Date.now();
       const resp = await fetch(url);
+      console.log(`[entities-enrich][gleif] phase2 isin-search status=${resp.status} latency_ms=${Date.now() - gleifStart}`);
       subrequestCount++;
 
       if (!resp.ok) throw new Error(`GLEIF HTTP ${resp.status}`);
@@ -286,7 +305,10 @@ async function runPhase3(env) {
     }
 
     try {
+      // MA-SEP-010: status/latency logging only — no change to control flow.
+      const gleifStart = Date.now();
       const resp = await fetch(`${GLEIF_BASE}/lei-records/${entity.lei}`);
+      console.log(`[entities-enrich][gleif] phase3 self-detail status=${resp.status} latency_ms=${Date.now() - gleifStart}`);
       subrequestCount++;
       if (!resp.ok) throw new Error(`GLEIF detail HTTP ${resp.status}`);
 
@@ -354,7 +376,10 @@ async function runPhase3(env) {
         const relLink = relData?.links?.['lei-record'];
         if (!relLink) continue;
 
+        // MA-SEP-010: status/latency logging only — no change to control flow.
+        const relStart = Date.now();
         const relResp = await fetch(relLink);
+        console.log(`[entities-enrich][gleif] phase3 ${relType} status=${relResp.status} latency_ms=${Date.now() - relStart}`);
         subrequestCount++;
         if (!relResp.ok) continue;
         const resolvedParentDetail = await relResp.json();
@@ -501,6 +526,20 @@ export default {
     if (new URL(request.url).pathname !== '/run') {
       return new Response('Not found', { status: 404 });
     }
+
+    // MA-SEP-010 (closes Known Issue 22.13): shared-secret header check,
+    // checked before hold/budget so an unauthenticated caller learns nothing
+    // about either. `!env.RUN_AUTH_SECRET` fails closed if the secret binding
+    // is ever missing (misconfigured deploy), rather than two undefined
+    // values comparing equal and letting an unauthenticated call through.
+    const providedSecret = request.headers.get('X-Enrich-Run-Secret');
+    if (!env.RUN_AUTH_SECRET || providedSecret !== env.RUN_AUTH_SECRET) {
+      return new Response(JSON.stringify({ ok: false, message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     if (await checkHold(env)) {
       return new Response(JSON.stringify({ ok: false, message: 'hold_all_jobs is active' }), {
         status: 423,

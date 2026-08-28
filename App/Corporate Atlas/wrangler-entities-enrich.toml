@@ -12,6 +12,13 @@ binding = "DB"
 database_name = "meridian-etf"
 database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
 
+# MA-SEP-010, 27 August 2026: this Worker also has a RUN_AUTH_SECRET binding
+# (closes Known Issue 22.13 — /run previously had zero authentication). Set
+# via `wrangler secret put RUN_AUTH_SECRET --config wrangler-entities-enrich.toml`
+# — intentionally not declared here; secrets never live in a committed file.
+# The local value this Worker's secret was set to is kept in
+# App/Corporate Atlas/.env.entities-enrich-run (gitignored, not this file).
+
 # RE-ENABLED 2026-08-01 — MA-AUG-002 cadence decision, Founder-approved.
 # Was frozen 2026-07-03 (root cause fixed 2026-06-17: entities-seed.js queue
 # population + Phase 2 type guard). Original schedule was crons = ["*/30 * * * *",
