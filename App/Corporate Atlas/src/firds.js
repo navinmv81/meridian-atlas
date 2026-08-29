@@ -232,24 +232,62 @@ export async function ingestRecords(env, rawRecords, publicationDate, sourceFile
   // bare 'YYYY-MM-DD' date; SQLite text comparison treats a same-day date string as "less
   // than" its own timestamp extension, so `last_updated_at < publication_date` as literally
   // specced would evaluate on a type mismatch, not the intended condition. publication_date
-  // vs publication_date is apples-to-apples and directly answers the actual question: does
-  // this row reflect an older FIRDS file than the one being ingested right now? INSERT OR
-  // IGNORE above already guarantees the row exists before this UPDATE runs. Safe to run
-  // unconditionally every pass — a no-op (WHERE matches nothing) for every ISIN whose file
-  // hasn't advanced, consistent with this script's existing "safe to just re-run" design.
-  // Does not touch first_seen_at, so history is preserved exactly as the Spec intended.
+  // vs publication_date is apples-to-apples and directly answers "does this row reflect an
+  // older FIRDS file than the one being ingested right now?" INSERT OR IGNORE above already
+  // guarantees the row exists before this UPDATE runs. Does not touch first_seen_at, so
+  // history is preserved exactly as the Spec intended.
+  //
+  // Content-diff guard added 2026-08-29, after this fix's first live-test (run against the
+  // real 2026-08-29 FULINS_C file, 18,404 records) surfaced a real problem with the
+  // publication_date-only WHERE above: it rewrote 18,371 of 18,404 rows — virtually the
+  // entire previously-seen table — because publication_date always advances week over week
+  // regardless of whether any instrument's actual reference data changed. That's "touch
+  // every previously-seen row every week," not "refresh only stale rows" — the distinction
+  // the original Known Issue 22.8 symptom (a silently-unapplied LEI change) actually needed.
+  // Added an explicit content-diff clause so the UPDATE only fires when at least one tracked
+  // field genuinely differs from what's stored; publication_date/source_file/last_updated_at
+  // (the "last confirmed in" columns, per their own schema comment) still only advance on a
+  // real change. Uses IS NOT rather than != so nullable fields (trading_venue_mic,
+  // first_trade_date) compare correctly — != against NULL is neither true nor false in
+  // SQLite and would silently skip rows where only a NULL-valued field changed.
   const refreshStmts = records.map(r => env.DB.prepare(`
     UPDATE firds_instrument_reference
     SET lei = ?, cfi_code = ?, full_name = ?, short_name = ?, notional_currency = ?,
         trading_venue_mic = ?, first_trade_date = ?, publication_date = ?, source_file = ?,
         last_updated_at = datetime('now')
-    WHERE isin = ? AND publication_date < ?
-  `).bind(r.lei, r.cfi, r.fullName, r.shortName, r.currency, r.mic, r.firstTradeDate, publicationDate, sourceFile, r.isin, publicationDate));
-  let firdsRefRefreshed = 0;
+    WHERE isin = ?
+      AND publication_date < ?
+      AND (lei IS NOT ? OR cfi_code IS NOT ? OR full_name IS NOT ? OR short_name IS NOT ?
+           OR notional_currency IS NOT ? OR trading_venue_mic IS NOT ? OR first_trade_date IS NOT ?)
+  `).bind(
+    r.lei, r.cfi, r.fullName, r.shortName, r.currency, r.mic, r.firstTradeDate, publicationDate, sourceFile,
+    r.isin, publicationDate,
+    r.lei, r.cfi, r.fullName, r.shortName, r.currency, r.mic, r.firstTradeDate
+  ));
   for (const batch of chunkArray(refreshStmts, firdsRef)) {
-    const results = await env.DB.batch(batch);
-    firdsRefRefreshed += results.reduce((s, r) => s + (r?.meta?.changes || 0), 0);
+    await env.DB.batch(batch);
   }
+
+  // Real refresh count — meta.changes is not trustworthy here (this project's own
+  // "meta.changes lesson," confirmed recurring in this exact spot 2026-08-29: the local-
+  // seed script's D1 shim always returns changes:0 for every batch statement, by design —
+  // see firds-local-seed.mjs's D1.batch(), which explicitly defers to a real before/after
+  // count instead). Counting real evidence instead, after the UPDATE pass above completes:
+  // a row was genuinely refreshed this run if it now carries this run's source_file and
+  // publication_date (both are only ever written by the INSERT above or the UPDATE above,
+  // both scoped to this exact ingest call) AND first_seen_at != last_updated_at, which rules
+  // out rows the INSERT above just created (a freshly-inserted row gets the same
+  // datetime('now') value in both columns; a row the UPDATE above touches keeps its
+  // original, earlier first_seen_at while last_updated_at is freshly bumped). INSERT-created
+  // and UPDATE-refreshed rows are mutually exclusive within one ingest call — the UPDATE's
+  // own WHERE requires publication_date < the incoming value, which a row just inserted with
+  // today's publication_date can never satisfy. This is the same technique already used to
+  // manually verify the 2026-08-29 live-test's real number (18,371) before this fix existed.
+  const { results: refreshCountResults } = await env.DB.prepare(`
+    SELECT COUNT(*) as n FROM firds_instrument_reference
+    WHERE source_file = ? AND publication_date = ? AND first_seen_at != last_updated_at
+  `).bind(sourceFile, publicationDate).all();
+  const firdsRefRefreshed = refreshCountResults?.[0]?.n ?? 0;
 
   // 2) Entity linkage — resolve/create entity_master rows for issuer LEIs
   const { leiToEntityId, created: entityMasterCreated } = await resolveEntitiesForLeis(env, records.map(r => r.lei), entityMaster);
