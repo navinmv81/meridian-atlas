@@ -264,29 +264,34 @@ export async function ingestRecords(env, rawRecords, publicationDate, sourceFile
     r.isin, publicationDate,
     r.lei, r.cfi, r.fullName, r.shortName, r.currency, r.mic, r.firstTradeDate
   ));
+  // Real refresh count, take 2 — meta.changes is not trustworthy here (this project's own
+  // "meta.changes lesson"; see the local-seed script's D1 shim, which always returns
+  // changes:0 by design). The first fix (this same spot, commit a994844) counted rows
+  // matching this run's source_file + publication_date + first_seen_at != last_updated_at
+  // — live-tested 2026-08-29 and found broken in a new way: source_file/publication_date
+  // identify a *file*, not a *run*, so re-processing an already-ingested file (a no-op,
+  // correctly 0 real writes) still echoed that file's full historical refresh count
+  // (18,371) forever, because those columns' values persist unchanged from whichever past
+  // run actually wrote them. Fixed by scoping to an actual run boundary instead: capture
+  // D1's own clock (not the local machine's — avoids any clock-skew risk between this
+  // script's host and Cloudflare's edge) immediately before the UPDATE pass runs, then
+  // count only rows whose last_updated_at is at or after that marker. first_seen_at !=
+  // last_updated_at still excludes fresh INSERTs (see the reasoning above — INSERT-created
+  // and UPDATE-refreshed rows are mutually exclusive within one ingest call, since the
+  // UPDATE's own WHERE requires publication_date < the incoming value). Re-running the same
+  // file now correctly reports 0 refreshed, because nothing gets a new last_updated_at when
+  // nothing actually changed.
+  const { results: nowResults } = await env.DB.prepare(`SELECT datetime('now') as now`).all();
+  const refreshRunStartedAt = nowResults?.[0]?.now;
+
   for (const batch of chunkArray(refreshStmts, firdsRef)) {
     await env.DB.batch(batch);
   }
 
-  // Real refresh count — meta.changes is not trustworthy here (this project's own
-  // "meta.changes lesson," confirmed recurring in this exact spot 2026-08-29: the local-
-  // seed script's D1 shim always returns changes:0 for every batch statement, by design —
-  // see firds-local-seed.mjs's D1.batch(), which explicitly defers to a real before/after
-  // count instead). Counting real evidence instead, after the UPDATE pass above completes:
-  // a row was genuinely refreshed this run if it now carries this run's source_file and
-  // publication_date (both are only ever written by the INSERT above or the UPDATE above,
-  // both scoped to this exact ingest call) AND first_seen_at != last_updated_at, which rules
-  // out rows the INSERT above just created (a freshly-inserted row gets the same
-  // datetime('now') value in both columns; a row the UPDATE above touches keeps its
-  // original, earlier first_seen_at while last_updated_at is freshly bumped). INSERT-created
-  // and UPDATE-refreshed rows are mutually exclusive within one ingest call — the UPDATE's
-  // own WHERE requires publication_date < the incoming value, which a row just inserted with
-  // today's publication_date can never satisfy. This is the same technique already used to
-  // manually verify the 2026-08-29 live-test's real number (18,371) before this fix existed.
   const { results: refreshCountResults } = await env.DB.prepare(`
     SELECT COUNT(*) as n FROM firds_instrument_reference
-    WHERE source_file = ? AND publication_date = ? AND first_seen_at != last_updated_at
-  `).bind(sourceFile, publicationDate).all();
+    WHERE last_updated_at >= ? AND first_seen_at != last_updated_at
+  `).bind(refreshRunStartedAt).all();
   const firdsRefRefreshed = refreshCountResults?.[0]?.n ?? 0;
 
   // 2) Entity linkage — resolve/create entity_master rows for issuer LEIs
