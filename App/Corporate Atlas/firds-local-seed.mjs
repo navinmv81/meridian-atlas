@@ -165,7 +165,7 @@ async function main() {
   console.log(`Found ${files.length} part(s) for publication_date ${files[0].publicationDate}:`);
   for (const f of files) console.log(`  ${f.fileName}`);
 
-  const totals = { recordsFiltered: 0, nonCSkipped: 0, firdsRefWritten: 0, entityMasterCreated: 0, isinMapWritten: 0, instrumentWritten: 0 };
+  const totals = { recordsFiltered: 0, nonCSkipped: 0, firdsRefWritten: 0, firdsRefRefreshed: 0, entityMasterCreated: 0, isinMapWritten: 0, instrumentWritten: 0 };
 
   for (const file of files) {
     console.log(`\n--- ${file.fileName} ---`);
@@ -224,7 +224,12 @@ async function main() {
     deltaParts.push(`${t}:${delta >= 0 ? '+' : ''}${delta}`);
   }
 
-  appendRunLog('success', deltaParts.join(' '));
+  // Known Issue 22.8 fix (MA-SEP-007): refresh count doesn't show up in the
+  // COUNT(*) deltas above (an UPDATE never changes row count) so it needs its
+  // own explicit log line or a fixed LEI-change would silently vanish from the
+  // run record the same way the original gap did.
+  console.log(`\n  firds_instrument_reference rows refreshed (existing ISIN, changed data): ${totals.firdsRefRefreshed}`);
+  appendRunLog('success', deltaParts.join(' ') + ` firds_ref_refreshed:${totals.firdsRefRefreshed}`);
   console.log('\nDone.');
 }
 

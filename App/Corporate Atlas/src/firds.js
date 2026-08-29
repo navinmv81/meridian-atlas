@@ -217,6 +217,40 @@ export async function ingestRecords(env, rawRecords, publicationDate, sourceFile
     firdsRefWritten += results.reduce((s, r) => s + (r?.meta?.changes || 0), 0);
   }
 
+  // 1b) firds_instrument_reference refresh pass — Known Issue 22.8 fix (MA-SEP-007,
+  // 2026-08-28). INSERT OR IGNORE above is a no-op for any ISIN already on file, so an
+  // issuer LEI change (or any other field change) between weekly files was never applied
+  // to the existing row — only entity_isin_map got a *new* row for the new LEI, producing
+  // a second live mapping for the same ISIN. See MA-SEP-003_Spec.md's "Retention" section,
+  // which specced exactly this refresh path but never had it built (confirmed missing
+  // 2026-08-22 when the 2026-08-15/2026-08-22 file pair produced this symptom for 3 real
+  // ISINs — US77926X2962, US92189L1035, US92647X7562).
+  //
+  // Deliberately compares the row's own stored publication_date to the incoming
+  // publication_date — NOT last_updated_at, as the Spec's prose literally said.
+  // last_updated_at is a full 'YYYY-MM-DD HH:MM:SS' timestamp and publication_date is a
+  // bare 'YYYY-MM-DD' date; SQLite text comparison treats a same-day date string as "less
+  // than" its own timestamp extension, so `last_updated_at < publication_date` as literally
+  // specced would evaluate on a type mismatch, not the intended condition. publication_date
+  // vs publication_date is apples-to-apples and directly answers the actual question: does
+  // this row reflect an older FIRDS file than the one being ingested right now? INSERT OR
+  // IGNORE above already guarantees the row exists before this UPDATE runs. Safe to run
+  // unconditionally every pass — a no-op (WHERE matches nothing) for every ISIN whose file
+  // hasn't advanced, consistent with this script's existing "safe to just re-run" design.
+  // Does not touch first_seen_at, so history is preserved exactly as the Spec intended.
+  const refreshStmts = records.map(r => env.DB.prepare(`
+    UPDATE firds_instrument_reference
+    SET lei = ?, cfi_code = ?, full_name = ?, short_name = ?, notional_currency = ?,
+        trading_venue_mic = ?, first_trade_date = ?, publication_date = ?, source_file = ?,
+        last_updated_at = datetime('now')
+    WHERE isin = ? AND publication_date < ?
+  `).bind(r.lei, r.cfi, r.fullName, r.shortName, r.currency, r.mic, r.firstTradeDate, publicationDate, sourceFile, r.isin, publicationDate));
+  let firdsRefRefreshed = 0;
+  for (const batch of chunkArray(refreshStmts, firdsRef)) {
+    const results = await env.DB.batch(batch);
+    firdsRefRefreshed += results.reduce((s, r) => s + (r?.meta?.changes || 0), 0);
+  }
+
   // 2) Entity linkage — resolve/create entity_master rows for issuer LEIs
   const { leiToEntityId, created: entityMasterCreated } = await resolveEntitiesForLeis(env, records.map(r => r.lei), entityMaster);
 
@@ -255,6 +289,7 @@ export async function ingestRecords(env, rawRecords, publicationDate, sourceFile
     recordsFiltered: records.length,
     nonCSkipped: nonC.length,
     firdsRefWritten,
+    firdsRefRefreshed,
     entityMasterCreated,
     isinMapWritten,
     instrumentWritten
