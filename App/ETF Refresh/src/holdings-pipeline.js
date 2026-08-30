@@ -38,6 +38,21 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/run') {
+      // Known Issue 22.18 fix (2026-08-30 Known Issue 22.12 review): shared-secret
+      // header check, checked before any hold/budget logic so an unauthenticated
+      // caller learns nothing about either — same pattern as entities-enrich's
+      // RUN_AUTH_SECRET (MA-SEP-010, Known Issue 22.13), distinct secret/header
+      // name so the two Workers' secrets are never interchangeable.
+      // `!env.HOLDINGS_RUN_AUTH_SECRET` fails closed if the binding is ever
+      // missing (misconfigured deploy), rather than two undefined values
+      // comparing equal and letting an unauthenticated call through.
+      const providedSecret = request.headers.get('X-Holdings-Run-Secret');
+      if (!env.HOLDINGS_RUN_AUTH_SECRET || providedSecret !== env.HOLDINGS_RUN_AUTH_SECRET) {
+        return new Response(JSON.stringify({ ok: false, message: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       ctx.waitUntil(runHoldingsPipeline(env));
       return new Response(JSON.stringify({ ok: true, message: 'Pipeline triggered' }), {
         headers: { 'Content-Type': 'application/json' }
@@ -419,7 +434,38 @@ async function storeHoldings(db, series_id, ticker, reportMonth, fileDate, xml, 
 
   const done = rowCursor >= holdings.length;
 
+  // Known Issue 22.19 fix (2026-08-30 Known Issue 22.12 review): pre-check before
+  // the mark-complete UPDATE, not just an after-the-fact count.
+  //
+  // ACTUAL FAILURE MODE (diagnosed this session, not just flagged): `done` is
+  // computed purely from rowCursor vs holdings.length — it has no idea whether
+  // the mid-loop budget checkpoint above just fired on this exact last batch.
+  // When an ETF/month's FINAL insert batch (the one that makes rowCursor reach
+  // holdings.length) is also the batch whose runningTotal crosses
+  // DAILY_WRITE_LIMIT, the `if (runningTotal >= DAILY_WRITE_LIMIT) break;` above
+  // fires, but `done` still evaluates true (rowCursor already reached the end),
+  // so this UPDATE — which was never itself budget-checked, only counted after
+  // — ran unconditionally immediately after the guard had just signaled the
+  // day's budget was exhausted. This is the concrete mechanism, not a guess:
+  // the guard's granularity is per-100-row-insert-batch, but this one
+  // all-rows-at-once UPDATE sits entirely outside that granularity.
+  //
+  // Fix: check real current budget before issuing the UPDATE. If already at/over
+  // limit, defer — return done:false with the same rowCursor (already at
+  // holdings.length), so the resume path re-enters this exact function next cron
+  // cycle, skips the insert while loop entirely (rowCursor is already at the
+  // end), and retries just this mark-complete step once budget resets.
   if (done) {
+    const writesBeforeMarkComplete = await getTodayWriteCount(db);
+    if (writesBeforeMarkComplete >= DAILY_WRITE_LIMIT) {
+      console.log(
+        `[holdings-pipeline] Deferring mark-complete for ${ticker} ${reportMonth} — ` +
+        `${writesBeforeMarkComplete}/${DAILY_WRITE_LIMIT} writes today, all ${holdings.length} ` +
+        `rows already inserted but snapshot_status stays NULL until budget resets.`
+      );
+      return { done: false, nextOffset: rowCursor };
+    }
+
     // All rows inserted — atomically mark complete. Only now does the API serve them.
     // FIXED 2026-07-25: this single UPDATE touches every holdings row for
     // this ETF/month, so its rows_written is not negligible — confirmed via

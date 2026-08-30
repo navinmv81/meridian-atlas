@@ -48,9 +48,36 @@ async function d1q(sql, params = []) {
   return json.result?.[0]?.results ?? [];
 }
 
-// Execute a chunk of INSERT statements as one multi-row INSERT (one HTTP call per chunk)
+// Known Issue 22.20 fix (2026-08-30 Known Issue 22.12 review): same D1 REST
+// endpoint as d1q, but also returns real meta.rows_written — the D1 HTTP API
+// returns the same meta shape as the Workers Binding API (confirmed live,
+// 2026-08-30: a 7-row multi-row INSERT via this exact endpoint/shape reported
+// meta.changes:7 but meta.rows_written:50 — a ~7x multiplier on this table,
+// this project's own "meta.changes lesson" recurring here too). d1q/d1run
+// above discard meta entirely and are kept for calls that don't need to be
+// budget-counted (reads, and the snapshot-header INSERT/DELETE below, which
+// the main pipeline's storeHoldings() doesn't count either — kept symmetric
+// with that, not adding new rigor beyond what the Worker itself does).
+async function d1qMeta(sql, params = []) {
+  const res = await fetch(D1_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OAUTH_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ sql, params })
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(`D1 error: ${JSON.stringify(json.errors)}`);
+  return json.result?.[0]?.meta ?? {};
+}
+
+// Execute a chunk of INSERT statements as one multi-row INSERT (one HTTP call per chunk).
+// Returns the real rows_written for this chunk (Known Issue 22.20 fix — was previously
+// uncounted at this call site; caller used to add chunk.length, a logical row count,
+// instead of this real metered value).
 async function d1batch(statements) {
-  if (statements.length === 0) return;
+  if (statements.length === 0) return 0;
   // All rows in a chunk target the same table with the same columns.
   // Build: INSERT INTO table (cols) VALUES (?,?,...), (?,?,...), ...
   const first = statements[0].sql;
@@ -59,11 +86,19 @@ async function d1batch(statements) {
   const rowPlaceholder = first.slice(valuesIdx + 6).trim();         // "(?,?,?,...,?)"
   const multiSql = `${insertPrefix} VALUES ${statements.map(() => rowPlaceholder).join(', ')}`;
   const allParams = statements.flatMap(s => s.params);
-  await d1q(multiSql, allParams);
+  const meta = await d1qMeta(multiSql, allParams);
+  return meta?.rows_written || 0;
 }
 
 async function d1run(sql, params = []) {
   await d1q(sql, params);
+}
+
+// Known Issue 22.20 fix: same as d1run, but returns real rows_written for callers
+// that need to count this write against the shared write-budget counter.
+async function d1runMeta(sql, params = []) {
+  const meta = await d1qMeta(sql, params);
+  return meta?.rows_written || 0;
 }
 
 // ── Write count helpers ───────────────────────────────────────────────────────
@@ -223,7 +258,33 @@ async function ingestEtf(etf) {
       const storedCount   = storedRows[0]?.n || 0;
       const expectedCount = existing[0]?.holdings_count || 0;
       if (expectedCount > 0 && storedCount >= expectedCount) {
-        console.log(`  ${ticker} ${reportMonth}: already complete (${storedCount} rows) — skipping`);
+        // Known Issue 22.20 fix: this script has no persisted resume-offset key
+        // (unlike holdings-pipeline.js's offset_{ticker}_{month} state), so a
+        // deferred mark-complete (see below, and the guard note there) must be
+        // detected here on the next run, not silently skipped forever — all
+        // rows can be present with snapshot_status still NULL if a prior run's
+        // budget guard deferred the mark-complete UPDATE after finishing inserts.
+        const nullStatusRows = await d1q(
+          `SELECT COUNT(*) as n FROM fund_holdings_monthly WHERE series_id = ? AND report_month = ? AND snapshot_status IS NULL`,
+          [series_id, reportMonth]
+        );
+        const nullCount = nullStatusRows[0]?.n || 0;
+        if (nullCount === 0) {
+          console.log(`  ${ticker} ${reportMonth}: already complete (${storedCount} rows) — skipping`);
+          continue;
+        }
+        console.log(`  ${ticker} ${reportMonth}: ${storedCount} rows already present, mark-complete was deferred — finishing that step now`);
+        const writesBeforeMarkComplete = await getTodayWriteCount();
+        if (writesBeforeMarkComplete >= WRITE_ABORT_LIMIT) {
+          console.log(`  DEFERRED (still): ${writesBeforeMarkComplete}/${WRITE_ABORT_LIMIT} writes today — re-run again after budget resets`);
+          continue;
+        }
+        const deferredMarkCompleteWritten = await d1runMeta(
+          `UPDATE fund_holdings_monthly SET snapshot_status = 'complete' WHERE series_id = ? AND report_month = ?`,
+          [series_id, reportMonth]
+        );
+        await incrementWriteCount(deferredMarkCompleteWritten);
+        console.log(`  ${ticker} ${reportMonth}: marked complete (deferred step finished)`);
         continue;
       }
     }
@@ -296,8 +357,14 @@ async function ingestEtf(etf) {
         ]
       }));
 
-      await d1batch(statements);
-      const newTotal = await incrementWriteCount(chunk.length);
+      // Known Issue 22.20 fix: count the real D1-metered rows_written for this
+      // batch, not chunk.length (a logical row count) — chunk.length under-
+      // counted by ~7x against this table's real multiplier (confirmed live,
+      // 2026-08-30: see d1batch's comment), silently letting this script's
+      // true write cost go unrepresented in the shared writes_today_* counter
+      // the main pipeline's guard also reads.
+      const realWritten = await d1batch(statements);
+      const newTotal = await incrementWriteCount(realWritten);
       rowCursor += chunk.length;
       totalWritten += chunk.length;
 
@@ -307,11 +374,30 @@ async function ingestEtf(etf) {
       }
     }
 
+    // Known Issue 22.20 fix: same pre-check as holdings-pipeline.js's Known
+    // Issue 22.19 fix — this UPDATE touches every row for this ETF/month (not
+    // negligible) and was previously not budget-checked or counted at all here
+    // (unlike the main pipeline, which at least counted it after the fact).
+    // Check real current budget before issuing it; defer if already at/over
+    // the abort limit so a re-run of this script picks the mark-complete step
+    // back up (existing check further up skips straight to it once holdings
+    // are already fully inserted).
+    const writesBeforeMarkComplete = await getTodayWriteCount();
+    if (writesBeforeMarkComplete >= WRITE_ABORT_LIMIT) {
+      console.log(
+        `  DEFERRED: ${ticker} ${reportMonth} — all ${holdings.length} rows inserted but ` +
+        `mark-complete deferred (${writesBeforeMarkComplete}/${WRITE_ABORT_LIMIT} writes today). ` +
+        `Re-run this script after budget resets to mark it complete.`
+      );
+      return totalWritten;
+    }
+
     // Mark complete — same pattern as pipeline: only now does the API serve rows
-    await d1run(
+    const markCompleteWritten = await d1runMeta(
       `UPDATE fund_holdings_monthly SET snapshot_status = 'complete' WHERE series_id = ? AND report_month = ?`,
       [series_id, reportMonth]
     );
+    await incrementWriteCount(markCompleteWritten);
 
     // AUM downgrade check (same logic as pipeline)
     if (netAssets > 0 && netAssets < 200_000_000) {

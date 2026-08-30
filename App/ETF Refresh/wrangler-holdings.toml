@@ -15,10 +15,37 @@ account_id = "ea36070477560935a68ad9110a2fd40b"
 # rows_written in a single day despite the 80k guard (see MA-AUG-002 audit
 # trail — guard-failure diagnostic in progress). Changed directly in the
 # Cloudflare dashboard first; this file updated to match afterward.
-# Emergency mitigation, not yet reviewed by Architect/ETF Product Lead as
-# a permanent cadence.
+#
+# REVIEWED 2026-08-30 (Known Issue 22.12, Architect/ETF Product Lead) — this
+# weekly Sunday cadence is now the reviewed, permanent architecture, not an
+# emergency mitigation. Findings: the qualifying ETF universe (has_nport=1,
+# series_id set, coverage_status='deep') has been flat at 237 since a single
+# 2026-06-01 seed event — it cannot grow on its own. The apparent
+# week-over-week climb in real rows_written (28,106 -> 60,304 -> 74,778 ->
+# 98,651 across 2026-08-02 through 2026-08-23) was batch-composition
+# variance while a fixed PIPELINE_BATCH_SIZE=20 works through the 237-ETF
+# backlog (etf_offset stood at 233/237 as of 2026-08-30) — not accelerating
+# growth, and not sustained: the very next Sunday (2026-08-30) came back
+# down to 81,454, right at the guard's expected ceiling. The existing
+# 3-layer write guard (outer/per-ETF/mid-loop-per-100-rows, all measured in
+# real rows_written) is confirmed working. Full detail:
+# claude/Known_Issue_22.12_Review.md. Three guard gaps found during this
+# review (unauthenticated /run, an uncounted mark-complete UPDATE, and
+# catchup-script.js's write-guard unit mismatch) are tracked and closed
+# separately as Known Issues 22.18/22.19/22.20 — see src/holdings-pipeline.js
+# and catchup-script.js for their fixes.
+# CORRECTED 2026-08-30: this file previously read "0 4 * * 0" (numeric Sunday),
+# which Cloudflare's Cron Triggers API rejected outright on this session's
+# deploy ("invalid cron string", code 10100) — a pre-existing file/live drift,
+# not something this session introduced. The LIVE trigger, set directly via
+# the dashboard on 2026-07-28 and confirmed unmodified by this session's
+# failed sync attempt (checked via the schedules API before touching
+# anything further), has always been "0 4 * * sun" (named day). Same
+# schedule, same effect (Sunday 04:00 UTC) — corrected here only so this file
+# matches what's actually live and so future deploys don't hit the same
+# rejection. Not a change to the reviewed cadence.
 [triggers]
-crons = ["0 4 * * 0"]
+crons = ["0 4 * * sun"]
 
 [[d1_databases]]
 binding = "DB"
