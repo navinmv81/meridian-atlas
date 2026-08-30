@@ -5,8 +5,12 @@
 const CORS = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  // GET/POST/PUT added for MA-SEP-012b's secret-gated /admin/exceptions routes below.
+  // Not exposed anywhere in the terminal UI (no navigation entry in index.html or any
+  // ma-*.js file — verified) and every request still requires the shared-secret header
+  // regardless of CORS; this only affects browser preflight for direct/manual calls.
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Exceptions-Secret',
 };
 
 function json(data, status = 200) {
@@ -512,6 +516,131 @@ async function handleIssuerPanels(env, entityId) {
   return json({ ownership, financials, events, filings, overlap });
 }
 
+// ── MA-SEP-012b: entity_merge_exceptions admin surface ─────────────────────────
+// Internal-only, Founder-facing — not linked from index.html or any ma-*.js file
+// (verified: grep found no reference to /admin/exceptions outside this block).
+// Every route below checks the shared secret before touching the database at all,
+// mirroring entities-enrich's /run auth (Known Issue 22.13's fix) exactly:
+// `!env.ADMIN_EXCEPTIONS_SECRET` fails closed if the binding is ever missing,
+// rather than two undefined values comparing equal and letting an
+// unauthenticated caller through.
+function checkAdminExceptionsAuth(request, env) {
+  const provided = request.headers.get('X-Admin-Exceptions-Secret');
+  return !!env.ADMIN_EXCEPTIONS_SECRET && provided === env.ADMIN_EXCEPTIONS_SECRET;
+}
+
+// GET /admin/exceptions — list all rows
+async function handleListExceptions(env) {
+  const rows = await env.DB.prepare(
+    `SELECT id, lei, entity_id_a, entity_id_b, decision, reason, corporate_action_note, decided_by, decided_at
+     FROM entity_merge_exceptions ORDER BY id`
+  ).all();
+  return json({ results: rows.results });
+}
+
+// POST /admin/exceptions — add a new exception
+async function handleAddException(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return err('Invalid JSON body', 400);
+  }
+
+  const { lei, entity_id_a, entity_id_b, decision, reason, corporate_action_note, decided_by } = body;
+
+  const idA = parseInt(entity_id_a, 10);
+  const idB = parseInt(entity_id_b, 10);
+  if (!Number.isInteger(idA) || idA <= 0) return err('entity_id_a must be a positive integer', 400);
+  if (!Number.isInteger(idB) || idB <= 0) return err('entity_id_b must be a positive integer', 400);
+  if (decision !== 'do_not_merge' && decision !== 'always_merge') {
+    return err(`decision must be 'do_not_merge' or 'always_merge'`, 400);
+  }
+  if (!decided_by || typeof decided_by !== 'string' || !decided_by.trim()) {
+    return err('decided_by is required', 400);
+  }
+
+  // Confirm both entity_ids are real, live entity_master rows — same "do not guess/
+  // assume" discipline this project applies everywhere else to entity_id references.
+  const entityCheck = await env.DB.prepare(
+    `SELECT COUNT(*) as n FROM entity_master WHERE entity_id IN (?, ?)`
+  ).bind(idA, idB).first();
+  if ((entityCheck?.n ?? 0) < (idA === idB ? 1 : 2)) {
+    return err('entity_id_a and/or entity_id_b do not exist in entity_master', 400);
+  }
+
+  const result = await env.DB.prepare(
+    `INSERT INTO entity_merge_exceptions
+       (lei, entity_id_a, entity_id_b, decision, reason, corporate_action_note, decided_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    lei || null, idA, idB, decision,
+    reason || null, corporate_action_note || null, decided_by.trim()
+  ).run();
+
+  const created = await env.DB.prepare(
+    `SELECT id, lei, entity_id_a, entity_id_b, decision, reason, corporate_action_note, decided_by, decided_at
+     FROM entity_merge_exceptions WHERE id = ?`
+  ).bind(result.meta.last_row_id).first();
+
+  return json({ result: created }, 201);
+}
+
+// PUT /admin/exceptions/:id — edit an existing exception
+async function handleEditException(request, env, idParam) {
+  const id = parseInt(idParam, 10);
+  if (!Number.isInteger(id) || id <= 0) return err('Invalid exception id', 400);
+
+  const existing = await env.DB.prepare(
+    `SELECT id FROM entity_merge_exceptions WHERE id = ?`
+  ).bind(id).first();
+  if (!existing) return err('Exception not found', 404);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return err('Invalid JSON body', 400);
+  }
+
+  const editable = ['lei', 'entity_id_a', 'entity_id_b', 'decision', 'reason', 'corporate_action_note', 'decided_by'];
+  const sets = [];
+  const params = [];
+
+  for (const col of editable) {
+    if (!(col in body)) continue;
+    if (col === 'entity_id_a' || col === 'entity_id_b') {
+      const v = parseInt(body[col], 10);
+      if (!Number.isInteger(v) || v <= 0) return err(`${col} must be a positive integer`, 400);
+      sets.push(`${col} = ?`);
+      params.push(v);
+    } else if (col === 'decision') {
+      if (body.decision !== 'do_not_merge' && body.decision !== 'always_merge') {
+        return err(`decision must be 'do_not_merge' or 'always_merge'`, 400);
+      }
+      sets.push('decision = ?');
+      params.push(body.decision);
+    } else {
+      sets.push(`${col} = ?`);
+      params.push(body[col] === '' ? null : body[col]);
+    }
+  }
+
+  if (sets.length === 0) return err('No editable fields provided', 400);
+
+  params.push(id);
+  await env.DB.prepare(
+    `UPDATE entity_merge_exceptions SET ${sets.join(', ')} WHERE id = ?`
+  ).bind(...params).run();
+
+  const updated = await env.DB.prepare(
+    `SELECT id, lei, entity_id_a, entity_id_b, decision, reason, corporate_action_note, decided_by, decided_at
+     FROM entity_merge_exceptions WHERE id = ?`
+  ).bind(id).first();
+
+  return json({ result: updated });
+}
+
 export default {
   async fetch(request, env, ctx) {
     // Preflight
@@ -551,6 +680,21 @@ export default {
 
       const exposureMatch = path.match(/^\/api\/entities\/(\d+)\/exposure$/);
       if (exposureMatch) return await handleExposure(env, exposureMatch[1]);
+
+      // MA-SEP-012b: /admin/exceptions — secret checked before any query, for all
+      // three routes and both HTTP verbs, per the Build Brief's explicit requirement.
+      if (path === '/admin/exceptions') {
+        if (!checkAdminExceptionsAuth(request, env)) return err('Unauthorized', 401);
+        if (request.method === 'GET')  return await handleListExceptions(env);
+        if (request.method === 'POST') return await handleAddException(request, env);
+        return err('Method not allowed', 405);
+      }
+      const exceptionEditMatch = path.match(/^\/admin\/exceptions\/(\d+)$/);
+      if (exceptionEditMatch) {
+        if (!checkAdminExceptionsAuth(request, env)) return err('Unauthorized', 401);
+        if (request.method === 'PUT') return await handleEditException(request, env, exceptionEditMatch[1]);
+        return err('Method not allowed', 405);
+      }
 
       return err('Not found', 404);
 
