@@ -21,3 +21,4 @@ Corporate Atlas/.entities-enrich-boost-paused
 # *.zip above already covers the zip, this covers the extracted XML)
 Corporate Atlas/migrations/DLTINS_*.xml
 Corporate Atlas/migrations/FULINS_*.xml
+Corporate Atlas/entity-exceptions-snapshot.html
