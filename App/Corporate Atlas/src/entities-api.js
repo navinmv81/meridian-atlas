@@ -229,7 +229,33 @@ async function handleEntity(env, entityId) {
     fund_manager = mgr ? { entity_id: mgr.entity_id, name: mgr.name, lei: mgr.lei ?? null } : null;
   }
 
-  return json({ entity: { ...entity, ...(entity.type === 'fund' ? { fund_manager } : {}) } });
+  // MA-SEP-014 (Known Issue 22.25 part 2): FIRDS directory-tier detection.
+  // firds.js's ingestRecords() is the ONLY writer that stamps
+  // entity_isin_map.match_source = 'firds_direct' (confirmed live —
+  // gleif-seed.js/isin-backfill.js both write 'isin_direct' instead) so
+  // that value alone is a reliable, exclusive origin marker — no new
+  // column needed. Joined to firds_instrument_reference (PK'd on isin, so
+  // this is a single indexed lookup, same indexes MA-SEP-003 already
+  // created) for the "as of {date}" timestamp; a directory-tier fund can
+  // carry more than one FIRDS-sourced ISIN (e.g. accumulating/distributing
+  // share classes), so this takes the most recent publication_date rather
+  // than an arbitrary row.
+  const firdsRow = await env.DB.prepare(`
+    SELECT MAX(fir.publication_date) AS as_of
+    FROM entity_isin_map eim
+    JOIN firds_instrument_reference fir ON fir.isin = eim.isin
+    WHERE eim.entity_id = ? AND eim.match_source = 'firds_direct'
+  `).bind(id).first();
+  const firds_directory_tier = !!firdsRow?.as_of;
+
+  return json({
+    entity: {
+      ...entity,
+      ...(entity.type === 'fund' ? { fund_manager } : {}),
+      firds_directory_tier,
+      firds_as_of: firdsRow?.as_of ?? null,
+    }
+  });
 }
 
 // GET /api/entities/:id/etf-exposure

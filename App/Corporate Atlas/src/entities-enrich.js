@@ -317,15 +317,31 @@ async function runPhase3(env) {
 
       if (!entity.lei_status) {
         // Only update Level 1 fields if not already enriched
+        //
+        // MA-SEP-014 fix (Known Issue 22.24): FIRDS-created rows are seeded
+        // with the raw LEI as a placeholder `name` (see firds.js's
+        // resolveEntitiesForLeis, "not silently accepted" per its own
+        // comment) and nothing downstream ever replaced it. This self-detail
+        // response already carries the real GLEIF legal name
+        // (attrs.entity.legalName.name — the same field read for
+        // parent-name resolution below) — hydrate `name` here too, in the
+        // same UPDATE, at no extra fetch cost. Gated so only a genuine
+        // placeholder row (name still equals its own lei) is touched; a
+        // real, already-correct name is never overwritten.
+        const gleifName = attrs.entity?.legalName?.name ?? null;
+        const nameIsPlaceholder = entity.name === entity.lei;
+
         await env.DB.prepare(`
           UPDATE entity_master
           SET lei_status = ?,
               country = COALESCE(country, ?),
+              name = ?,
               updated_at = CURRENT_TIMESTAMP
           WHERE entity_id = ?
         `).bind(
           attrs.entity?.status ?? 'ACTIVE',
           attrs.entity?.legalAddress?.country ?? null,
+          (nameIsPlaceholder && gleifName) ? gleifName : entity.name,
           entity.entity_id
         ).run();
       }

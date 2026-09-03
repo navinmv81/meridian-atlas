@@ -827,6 +827,7 @@ line-height:1;" title="Close">×</button>
             ${_leiBadge(entity.lei_registration_status)}
           </div>
         </div>
+        ${_firdsDirectoryTierBadge(entity.firds_directory_tier, entity.firds_as_of)}
         ${entity.entity_status && entity.entity_status !== 'ACTIVE' ? `
         <div style="margin:8px 0;padding:8px 12px;border-radius:4px;
 background:#3a1a1a;color:#C85050;font-size:0.85em;">
@@ -945,6 +946,20 @@ function _freshnessBadge(gleifLastUpdated) {
   } else {
     return `<span style="font-size:0.7em;padding:2px 6px;border-radius:3px;background:#3a1a1a;color:#C85050;margin-left:6px;">● STALE</span>`;
   }
+}
+
+// MA-SEP-014 (Known Issue 22.25 part 2): small, factual indicator for
+// entities sourced from FIRDS. `firds_directory_tier`/`firds_as_of` come
+// from entities-api.js's handleEntity (a join against entity_isin_map's
+// match_source = 'firds_direct' marker — the only writer that stamps that
+// value) — this function just renders what the API already decided, it
+// does not re-derive origin from any other field, so it never renders for
+// a non-FIRDS entity (a false positive here would be worse than no label
+// at all, per the Build Brief).
+function _firdsDirectoryTierBadge(isFirdsDirectoryTier, asOf) {
+  if (!isFirdsDirectoryTier) return '';
+  const dateText = asOf ? _esc(asOf.slice(0, 10)) : 'unknown date';
+  return `<div style="margin-top:8px"><span style="font-size:0.7em;padding:2px 8px;border-radius:3px;background:#1a2a3a;color:#4A9EFF;font-weight:600;">Directory-tier (ESMA FIRDS), as of ${dateText}</span></div>`;
 }
 
 function _entityStatusBadge(status) {
