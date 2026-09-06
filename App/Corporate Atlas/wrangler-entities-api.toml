@@ -6,3 +6,13 @@ compatibility_date = "2024-01-01"
 binding = "DB"
 database_name = "meridian-etf"
 database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
+
+# MA-SEP-015b: Cloudflare Access config for the /exceptions routes. Not secrets —
+# the team domain and aud tag are both public-facing values (the aud tag is
+# exactly what Access itself embeds, unsigned, in every request's JWT), so they
+# live as plain vars, not via `wrangler secret put`. The Worker still verifies
+# every JWT's signature against Access's own published JWKS before trusting
+# either value — see verifyAccessJwt() in src/entities-api.js.
+[vars]
+CF_ACCESS_TEAM_DOMAIN = "meridian-atlas-except.cloudflareaccess.com"
+CF_ACCESS_AUD = "af2ac4fec7f0594414eccf80cfa555261460857af7f077733461d9ac0f0d85cf"

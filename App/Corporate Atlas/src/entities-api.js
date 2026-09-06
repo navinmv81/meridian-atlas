@@ -5,12 +5,14 @@
 const CORS = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
-  // GET/POST/PUT added for MA-SEP-012b's secret-gated /admin/exceptions routes below.
-  // Not exposed anywhere in the terminal UI (no navigation entry in index.html or any
-  // ma-*.js file — verified) and every request still requires the shared-secret header
-  // regardless of CORS; this only affects browser preflight for direct/manual calls.
+  // GET/POST/PUT added for MA-SEP-012b's secret-gated /admin/exceptions routes
+  // (pending retirement) and MA-SEP-015b's Cloudflare-Access-gated /exceptions
+  // routes below. Neither is exposed anywhere in the terminal UI (no navigation
+  // entry in index.html or any ma-*.js file — verified); every request still
+  // requires the shared secret or a valid Access JWT regardless of CORS — this
+  // only affects browser preflight for direct/manual calls.
   'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Exceptions-Secret',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Exceptions-Secret, Cf-Access-Jwt-Assertion',
 };
 
 function json(data, status = 200) {
@@ -667,6 +669,565 @@ async function handleEditException(request, env, idParam) {
   return json({ result: updated });
 }
 
+// ── MA-SEP-015b: entity_exceptions live ops surface (generic, cross-domain-ready) ──
+// Generalizes the block above per the approved MA-SEP-015a design: a typed,
+// reusable exception queue (first populated case: 'entity_merge', migrated from
+// entity_merge_exceptions — see migrations/ma-sep-015b-entity-exceptions.sql),
+// gated by Cloudflare Access rather than a shared secret (OQ2). The Worker
+// validates the Cf-Access-Jwt-Assertion header itself — it never owns or stores
+// any credential — and pulls a verified `email` claim for `decided_by`, rather
+// than trusting client-supplied free text (a real improvement over MA-SEP-012b's
+// free-text decided_by, called out in the close-out report).
+
+// JWKS is small and rotates rarely; cache it in module scope for the life of the
+// isolate rather than re-fetching on every request.
+let _accessJwksCache = null;
+let _accessJwksCacheAt = 0;
+const ACCESS_JWKS_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function base64UrlToUint8Array(b64url) {
+  const pad = (4 - (b64url.length % 4)) % 4;
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat(pad);
+  const raw = atob(b64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
+function base64UrlDecodeJson(b64url) {
+  return JSON.parse(new TextDecoder().decode(base64UrlToUint8Array(b64url)));
+}
+
+async function getAccessJwks(env) {
+  const now = Date.now();
+  if (_accessJwksCache && (now - _accessJwksCacheAt) < ACCESS_JWKS_TTL_MS) return _accessJwksCache;
+  const res = await fetch(`https://${env.CF_ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs`);
+  if (!res.ok) throw new Error(`Failed to fetch Access JWKS: ${res.status}`);
+  const data = await res.json();
+  _accessJwksCache = data.keys || [];
+  _accessJwksCacheAt = now;
+  return _accessJwksCache;
+}
+
+// Verifies the Cf-Access-Jwt-Assertion header Cloudflare Access attaches once a
+// request has already passed the Access edge policy for this app. Re-verifying
+// here (signature, aud, exp, iss) rather than just trusting the header's presence
+// is standard Cloudflare guidance and is what lets us safely read `email` back out.
+async function verifyAccessJwt(request, env) {
+  if (!env.CF_ACCESS_TEAM_DOMAIN || !env.CF_ACCESS_AUD) {
+    // Fails closed if either binding is missing — same discipline as
+    // checkAdminExceptionsAuth above (no undefined-equals-undefined bypass).
+    return { ok: false, error: 'Access is not configured on this Worker' };
+  }
+
+  const token = request.headers.get('Cf-Access-Jwt-Assertion');
+  if (!token) return { ok: false, error: 'Missing Cf-Access-Jwt-Assertion header' };
+
+  const parts = token.split('.');
+  if (parts.length !== 3) return { ok: false, error: 'Malformed JWT' };
+  const [headerB64, payloadB64, sigB64] = parts;
+
+  let header, payload;
+  try {
+    header = base64UrlDecodeJson(headerB64);
+    payload = base64UrlDecodeJson(payloadB64);
+  } catch (e) {
+    return { ok: false, error: 'Malformed JWT segments' };
+  }
+
+  const audOk = Array.isArray(payload.aud)
+    ? payload.aud.includes(env.CF_ACCESS_AUD)
+    : payload.aud === env.CF_ACCESS_AUD;
+  if (!audOk) return { ok: false, error: 'aud mismatch' };
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (typeof payload.exp !== 'number' || payload.exp < nowSec) {
+    return { ok: false, error: 'Token expired' };
+  }
+
+  const expectedIss = `https://${env.CF_ACCESS_TEAM_DOMAIN}`;
+  if (payload.iss !== expectedIss) return { ok: false, error: 'iss mismatch' };
+
+  let keys;
+  try {
+    keys = await getAccessJwks(env);
+  } catch (e) {
+    return { ok: false, error: 'Could not fetch Access public keys' };
+  }
+  const jwk = keys.find(k => k.kid === header.kid);
+  if (!jwk) return { ok: false, error: 'Unknown signing key (kid)' };
+
+  let cryptoKey;
+  try {
+    cryptoKey = await crypto.subtle.importKey(
+      'jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']
+    );
+  } catch (e) {
+    return { ok: false, error: 'Failed to import signing key' };
+  }
+
+  const signedData = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+  const signature = base64UrlToUint8Array(sigB64);
+  const valid = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', cryptoKey, signature, signedData);
+  if (!valid) return { ok: false, error: 'Invalid signature' };
+
+  if (!payload.email || typeof payload.email !== 'string') {
+    return { ok: false, error: 'Token missing email claim' };
+  }
+
+  return { ok: true, email: payload.email };
+}
+
+const ENTITY_EXCEPTIONS_COLUMNS = `id, exception_type, source_table, source_ref, flagged_reason,
+       evidence, proposed_resolution, decision, corporate_action_note, decided_by, decided_at, created_at`;
+
+// GET /exceptions — list all rows, newest schema, any exception_type/source_table
+async function handleListEntityExceptions(env) {
+  const rows = await env.DB.prepare(
+    `SELECT ${ENTITY_EXCEPTIONS_COLUMNS} FROM entity_exceptions ORDER BY id`
+  ).all();
+  return json({ results: rows.results });
+}
+
+function normalizeSourceRef(source_ref) {
+  if (source_ref === undefined || source_ref === null) return { error: 'source_ref is required' };
+  if (typeof source_ref === 'string') {
+    try { JSON.parse(source_ref); } catch (e) { return { error: 'source_ref must be valid JSON' }; }
+    return { text: source_ref };
+  }
+  if (typeof source_ref === 'object') return { text: JSON.stringify(source_ref) };
+  return { error: 'source_ref must be a JSON object or JSON string' };
+}
+
+function nowSqlTimestamp() {
+  return new Date().toISOString().replace('T', ' ').slice(0, 19);
+}
+
+// POST /exceptions — add a new exception. decided_by/decided_at are only ever
+// set from the verified Access identity (never client-supplied), and only when
+// a real decision (anything other than 'pending') is being recorded.
+async function handleAddEntityException(request, env, decidedByEmail) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return err('Invalid JSON body', 400);
+  }
+
+  const { exception_type, source_table, source_ref, flagged_reason, evidence,
+          proposed_resolution, decision, corporate_action_note } = body;
+
+  if (typeof exception_type !== 'string' || !exception_type.trim()) {
+    return err('exception_type is required', 400);
+  }
+  if (typeof source_table !== 'string' || !source_table.trim()) {
+    return err('source_table is required', 400);
+  }
+  const refResult = normalizeSourceRef(source_ref);
+  if (refResult.error) return err(refResult.error, 400);
+
+  const decisionValue = (typeof decision === 'string' && decision.trim()) ? decision.trim() : 'pending';
+  const isDecided = decisionValue !== 'pending';
+
+  const result = await env.DB.prepare(
+    `INSERT INTO entity_exceptions
+       (exception_type, source_table, source_ref, flagged_reason, evidence, proposed_resolution,
+        decision, corporate_action_note, decided_by, decided_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    exception_type.trim(), source_table.trim(), refResult.text,
+    flagged_reason || null, evidence || null, proposed_resolution || null,
+    decisionValue, corporate_action_note || null,
+    isDecided ? decidedByEmail : null,
+    isDecided ? nowSqlTimestamp() : null
+  ).run();
+
+  const created = await env.DB.prepare(
+    `SELECT ${ENTITY_EXCEPTIONS_COLUMNS} FROM entity_exceptions WHERE id = ?`
+  ).bind(result.meta.last_row_id).first();
+
+  return json({ result: created }, 201);
+}
+
+// PUT /exceptions/:id — edit an existing exception / record a decision.
+async function handleEditEntityException(request, env, idParam, decidedByEmail) {
+  const id = parseInt(idParam, 10);
+  if (!Number.isInteger(id) || id <= 0) return err('Invalid exception id', 400);
+
+  const existing = await env.DB.prepare(`SELECT id FROM entity_exceptions WHERE id = ?`).bind(id).first();
+  if (!existing) return err('Exception not found', 404);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return err('Invalid JSON body', 400);
+  }
+
+  const editable = ['exception_type', 'source_table', 'source_ref', 'flagged_reason',
+                     'evidence', 'proposed_resolution', 'decision', 'corporate_action_note'];
+  const sets = [];
+  const params = [];
+
+  for (const col of editable) {
+    if (!(col in body)) continue;
+    if (col === 'source_ref') {
+      const refResult = normalizeSourceRef(body.source_ref);
+      if (refResult.error) return err(refResult.error, 400);
+      sets.push('source_ref = ?');
+      params.push(refResult.text);
+    } else if (col === 'exception_type' || col === 'source_table') {
+      if (typeof body[col] !== 'string' || !body[col].trim()) return err(`${col} must be a non-empty string`, 400);
+      sets.push(`${col} = ?`);
+      params.push(body[col].trim());
+    } else {
+      sets.push(`${col} = ?`);
+      params.push(body[col] === '' ? null : body[col]);
+    }
+  }
+
+  // decided_by/decided_at always come from the verified Access identity, never the
+  // request body, and only get (re-)set when a real decision is being recorded here.
+  if ('decision' in body && body.decision !== 'pending') {
+    sets.push('decided_by = ?');
+    params.push(decidedByEmail);
+    sets.push('decided_at = ?');
+    params.push(nowSqlTimestamp());
+  }
+
+  if (sets.length === 0) return err('No editable fields provided', 400);
+
+  params.push(id);
+  await env.DB.prepare(
+    `UPDATE entity_exceptions SET ${sets.join(', ')} WHERE id = ?`
+  ).bind(...params).run();
+
+  const updated = await env.DB.prepare(
+    `SELECT ${ENTITY_EXCEPTIONS_COLUMNS} FROM entity_exceptions WHERE id = ?`
+  ).bind(id).first();
+
+  return json({ result: updated });
+}
+
+// GET /exceptions/ui — the live ops page itself. Served by this same Worker (no
+// new Worker, no static file, no `file://` origin — the direct fix for Known
+// Issue 22.23's root cause). Sits under the same Access-protected path prefix as
+// the API routes above (Access app domain: "…workers.dev/exceptions"), so a
+// browser visiting this page is gated exactly the same way as the API calls it
+// makes. Not linked from index.html or any ma-*.js file — operations tool only,
+// per the Design's Non-Goals.
+function entityExceptionsUiHtml() {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Meridian Atlas — Entity Exceptions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07111F; --bg2:#0B1730; --bg3:#0F1B34; --bg4:#13213D;
+  --border:rgba(160, 184, 214, 0.14); --border2:rgba(160, 184, 214, 0.25);
+  --text:#E6EEF8; --text2:#93A4BD; --muted:#7D8D9F; --dim:#68788D;
+  --green:#2D9C75; --green-bg:rgba(45, 156, 117, 0.10); --green-bd:rgba(45, 156, 117, 0.25);
+  --red:#D9534F; --red-bg:rgba(217, 83, 79, 0.10); --red-bd:rgba(217, 83, 79, 0.25);
+  --blue:#5A9BC8; --blue-bg:rgba(90, 155, 200, 0.12); --blue-bd:rgba(90, 155, 200, 0.30);
+  --amber:#D99C3D; --amber-bg:rgba(217, 156, 61, 0.10); --amber-bd:rgba(217, 156, 61, 0.25);
+  --mono:'Inter',sans-serif; --sans:'Inter',sans-serif; --r:2px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:13px}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg3)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:var(--r)}
+
+#header{position:sticky;top:0;z-index:200;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;height:42px;display:flex;align-items:center;gap:10px}
+.logo{display:flex;align-items:center;gap:8px;flex-shrink:0;text-decoration:none}
+.logo svg{width:24px;height:24px}
+.logo-name{font-size:13px;font-weight:600;color:var(--text);letter-spacing:-.01em}
+.logo-name span{color:var(--blue)}
+.logo-sub{font-size:8px;color:var(--dim);margin-top:0px;letter-spacing:.02em}
+.hsp{flex:1}
+.live-pill{display:flex;align-items:center;gap:4px;background:var(--blue-bg);border:1px solid var(--blue-bd);border-radius:var(--r);padding:2px 6px}
+.live-dot{width:4px;height:4px;border-radius:50%;background:var(--blue)}
+.live-txt{font-size:8.5px;font-weight:600;color:var(--blue);letter-spacing:.05em}
+
+#sbar{background:var(--bg3);border-bottom:1px solid var(--border);padding:2px 16px;font-family:var(--mono);font-size:8.5px;color:var(--dim);letter-spacing:.04em;min-height:16px}
+
+.wrap{max-width:1400px;margin:0 auto;padding:16px}
+h1{font-size:15px;font-weight:600;color:var(--text);margin-bottom:2px}
+h2{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:22px 0 8px}
+.meta{color:var(--muted);font-size:10.5px;margin-bottom:12px}
+.banner{background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--text2);border-radius:var(--r);padding:8px 12px;margin-bottom:14px;font-size:10.5px;line-height:1.5}
+.banner code{font-family:var(--mono);color:var(--amber)}
+.error{background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red);border-radius:var(--r);padding:8px 12px;margin-bottom:12px;font-size:10.5px;display:none}
+
+table{width:100%;border-collapse:collapse;font-size:10.5px}
+th{padding:5px 8px;font-size:8px;font-weight:700;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--border);background:var(--bg3);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text2)}
+tr:hover td{background:rgba(160, 184, 214, 0.05)}
+tr:last-child td{border-bottom:none}
+.id-col{color:var(--dim);font-family:var(--mono)}
+.muted{color:var(--dim)}
+.mono{font-family:var(--mono);font-size:9.5px;white-space:pre-wrap;word-break:break-word;color:var(--text2)}
+
+.badge{display:inline-block;padding:1px 8px;border-radius:var(--r);font-size:9.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.badge-pending{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.badge-reject{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.badge-approve{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.badge-neutral{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+
+button{font:inherit;cursor:pointer;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:10.5px;font-weight:500;padding:4px 10px;border-radius:var(--r);transition:all .15s ease}
+button:hover{background:var(--bg4);border-color:var(--border2);color:var(--text)}
+button[type="submit"]{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
+button[type="submit"]:hover{background:var(--blue-bd)}
+
+form.add-form,form.edit-form{border:1px solid var(--border);background:var(--bg2);border-radius:var(--r);padding:14px;margin-top:6px;max-width:680px}
+form.add-form label,form.edit-form label{display:block;font-size:9.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin:10px 0 4px}
+form.add-form input,form.add-form textarea,form.add-form select,
+form.edit-form input,form.edit-form textarea,form.edit-form select{
+  width:100%;box-sizing:border-box;font:inherit;font-size:11px;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);outline:none
+}
+form.add-form input:focus,form.add-form textarea:focus,form.edit-form input:focus,form.edit-form textarea:focus{border-color:var(--blue)}
+form.add-form textarea,form.edit-form textarea{font-family:var(--mono);font-size:10px;min-height:4rem}
+.row-actions{margin-top:12px;display:flex;gap:8px}
+</style>
+</head>
+<body>
+
+<header id="header">
+  <a class="logo" href="#">
+    <svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="30" height="30" rx="6" fill="#eef4fc"/>
+      <rect x="3"  y="19" width="5" height="8"  rx="1" fill="#93c2e8"/>
+      <rect x="10" y="13" width="5" height="14" rx="1" fill="#4a90d9"/>
+      <rect x="17" y="7"  width="5" height="20" rx="1" fill="#1a56a0"/>
+      <polyline points="3,21 12,14 19,8 27,4" stroke="#0e7490" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="27" cy="4" r="2" fill="#0e7490"/>
+    </svg>
+    <div>
+      <div class="logo-name"><span>Meridian</span> Atlas</div>
+      <div class="logo-sub">Entity Exceptions · Ops</div>
+    </div>
+  </a>
+  <div class="hsp"></div>
+  <div class="live-pill"><span class="live-dot"></span><span class="live-txt">ACCESS-AUTHENTICATED</span></div>
+</header>
+<div id="sbar">entity_exceptions · Entities domain · live D1 read/write, no cache</div>
+
+<div class="wrap">
+  <h1>Entity Exceptions</h1>
+  <div class="meta" id="meta">Loading…</div>
+  <div class="banner">
+    Live, authenticated view of <code>entity_exceptions</code> (Entities domain). Reads and writes go straight to
+    D1 through this Worker — nothing here is a cached snapshot. Access is enforced by Cloudflare Access in front
+    of this path; this is still an operations tool, not a terminal-facing product surface.
+  </div>
+  <div class="error" id="error"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th><th>Type</th><th>Source</th><th>Source Ref</th><th>Flagged Reason</th>
+        <th>Evidence</th><th>Proposed Resolution</th><th>Decision</th><th>Corp. Action Note</th>
+        <th>Decided By</th><th>Decided At</th><th>Created At</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <h2>Add exception</h2>
+  <form class="add-form" id="addForm">
+    <label>Exception type *</label>
+    <input name="exception_type" required placeholder="e.g. entity_merge">
+    <label>Source table *</label>
+    <input name="source_table" required placeholder="e.g. entity_master">
+    <label>Source ref (JSON) *</label>
+    <textarea name="source_ref" required placeholder='{"entity_id_a":1,"entity_id_b":2}'></textarea>
+    <label>Flagged reason</label>
+    <textarea name="flagged_reason"></textarea>
+    <label>Evidence</label>
+    <textarea name="evidence"></textarea>
+    <label>Proposed resolution</label>
+    <textarea name="proposed_resolution"></textarea>
+    <label>Decision (leave blank for "pending")</label>
+    <input name="decision" placeholder="pending">
+    <label>Corporate action note</label>
+    <input name="corporate_action_note">
+    <div class="row-actions">
+      <button type="submit">Add exception</button>
+    </div>
+  </form>
+
+  <script>
+    const rowsEl = document.getElementById('rows');
+    const metaEl = document.getElementById('meta');
+    const errorEl = document.getElementById('error');
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    }
+    function clearError() {
+      errorEl.style.display = 'none';
+      errorEl.textContent = '';
+    }
+    function esc(s) {
+      if (s === null || s === undefined) return '<span class="muted">—</span>';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function badge(decision) {
+      const d = (decision || '').toLowerCase();
+      let cls = 'badge-neutral';
+      if (d === 'pending') cls = 'badge-pending';
+      else if (d.includes('do_not') || d.includes('reject') || d.includes('deny')) cls = 'badge-reject';
+      else if (d.includes('always') || d.includes('approve') || d.includes('accept')) cls = 'badge-approve';
+      return '<span class="badge ' + cls + '">' + esc(decision) + '</span>';
+    }
+
+    async function api(path, opts) {
+      const res = await fetch(path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts || {}));
+      let data;
+      try { data = await res.json(); } catch (e) { data = null; }
+      if (!res.ok) {
+        throw new Error((data && data.error) ? data.error : ('Request failed: ' + res.status));
+      }
+      return data;
+    }
+
+    function renderRow(row) {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="id-col">' + row.id + '</td>' +
+        '<td>' + esc(row.exception_type) + '</td>' +
+        '<td>' + esc(row.source_table) + '</td>' +
+        '<td class="mono">' + esc(row.source_ref) + '</td>' +
+        '<td>' + esc(row.flagged_reason) + '</td>' +
+        '<td>' + esc(row.evidence) + '</td>' +
+        '<td>' + esc(row.proposed_resolution) + '</td>' +
+        '<td>' + badge(row.decision) + '</td>' +
+        '<td>' + esc(row.corporate_action_note) + '</td>' +
+        '<td>' + esc(row.decided_by) + '</td>' +
+        '<td>' + esc(row.decided_at) + '</td>' +
+        '<td>' + esc(row.created_at) + '</td>' +
+        '<td><button data-edit="' + row.id + '">Edit</button></td>';
+      return tr;
+    }
+
+    function openEditForm(row, tr) {
+      const existing = tr.nextElementSibling;
+      if (existing && existing.classList && existing.classList.contains('edit-row')) {
+        existing.remove();
+        return;
+      }
+      const editTr = document.createElement('tr');
+      editTr.className = 'edit-row';
+      const td = document.createElement('td');
+      td.colSpan = 13;
+      td.innerHTML =
+        '<form class="edit-form">' +
+        '<label>Decision</label><input name="decision" value="' + (row.decision || '') + '">' +
+        '<label>Flagged reason</label><textarea name="flagged_reason">' + (row.flagged_reason || '') + '</textarea>' +
+        '<label>Evidence</label><textarea name="evidence">' + (row.evidence || '') + '</textarea>' +
+        '<label>Proposed resolution</label><textarea name="proposed_resolution">' + (row.proposed_resolution || '') + '</textarea>' +
+        '<label>Corporate action note</label><input name="corporate_action_note" value="' + (row.corporate_action_note || '') + '">' +
+        '<div class="row-actions"><button type="submit">Save</button> <button type="button" data-cancel="1">Cancel</button></div>' +
+        '</form>';
+      editTr.appendChild(td);
+      tr.after(editTr);
+
+      const form = td.querySelector('form');
+      form.querySelector('[data-cancel]').addEventListener('click', () => editTr.remove());
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearError();
+        const fd = new FormData(form);
+        const body = {
+          decision: fd.get('decision'),
+          flagged_reason: fd.get('flagged_reason'),
+          evidence: fd.get('evidence'),
+          proposed_resolution: fd.get('proposed_resolution'),
+          corporate_action_note: fd.get('corporate_action_note'),
+        };
+        try {
+          await api('/exceptions/' + row.id, { method: 'PUT', body: JSON.stringify(body) });
+          await loadRows();
+        } catch (err) {
+          showError('Save failed: ' + err.message);
+        }
+      });
+    }
+
+    async function loadRows() {
+      clearError();
+      metaEl.textContent = 'Loading…';
+      try {
+        const data = await api('/exceptions');
+        const results = data.results || [];
+        rowsEl.innerHTML = '';
+        const byRow = new Map();
+        results.forEach((row) => {
+          const tr = renderRow(row);
+          byRow.set(row.id, row);
+          rowsEl.appendChild(tr);
+        });
+        rowsEl.querySelectorAll('[data-edit]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = Number(btn.getAttribute('data-edit'));
+            openEditForm(byRow.get(id), btn.closest('tr'));
+          });
+        });
+        metaEl.textContent = results.length + ' row' + (results.length === 1 ? '' : 's') + ' · loaded ' + new Date().toLocaleString();
+      } catch (err) {
+        metaEl.textContent = '';
+        showError('Load failed: ' + err.message);
+      }
+    }
+
+    document.getElementById('addForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+      const fd = new FormData(e.target);
+      let source_ref = fd.get('source_ref');
+      try {
+        source_ref = JSON.parse(source_ref);
+      } catch (err) {
+        showError('Source ref must be valid JSON');
+        return;
+      }
+      const body = {
+        exception_type: fd.get('exception_type'),
+        source_table: fd.get('source_table'),
+        source_ref: source_ref,
+        flagged_reason: fd.get('flagged_reason'),
+        evidence: fd.get('evidence'),
+        proposed_resolution: fd.get('proposed_resolution'),
+        decision: fd.get('decision'),
+        corporate_action_note: fd.get('corporate_action_note'),
+      };
+      try {
+        await api('/exceptions', { method: 'POST', body: JSON.stringify(body) });
+        e.target.reset();
+        await loadRows();
+      } catch (err) {
+        showError('Add failed: ' + err.message);
+      }
+    });
+
+    loadRows();
+  </script>
+</body>
+</html>`;
+}
+
+function handleEntityExceptionsUi() {
+  return new Response(entityExceptionsUiHtml(), {
+    status: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     // Preflight
@@ -719,6 +1280,31 @@ export default {
       if (exceptionEditMatch) {
         if (!checkAdminExceptionsAuth(request, env)) return err('Unauthorized', 401);
         if (request.method === 'PUT') return await handleEditException(request, env, exceptionEditMatch[1]);
+        return err('Method not allowed', 405);
+      }
+
+      // MA-SEP-015b: /exceptions — generic entity_exceptions surface, gated by
+      // Cloudflare Access (verifyAccessJwt above) rather than a shared secret.
+      // The live ops page lives at /exceptions/ui, under the same Access-protected
+      // path prefix as the API routes it calls.
+      if (path === '/exceptions/ui') {
+        const auth = await verifyAccessJwt(request, env);
+        if (!auth.ok) return err('Unauthorized', 401);
+        if (request.method === 'GET') return handleEntityExceptionsUi();
+        return err('Method not allowed', 405);
+      }
+      if (path === '/exceptions') {
+        const auth = await verifyAccessJwt(request, env);
+        if (!auth.ok) return err('Unauthorized', 401);
+        if (request.method === 'GET')  return await handleListEntityExceptions(env);
+        if (request.method === 'POST') return await handleAddEntityException(request, env, auth.email);
+        return err('Method not allowed', 405);
+      }
+      const entityExceptionEditMatch = path.match(/^\/exceptions\/(\d+)$/);
+      if (entityExceptionEditMatch) {
+        const auth = await verifyAccessJwt(request, env);
+        if (!auth.ok) return err('Unauthorized', 401);
+        if (request.method === 'PUT') return await handleEditEntityException(request, env, entityExceptionEditMatch[1], auth.email);
         return err('Method not allowed', 405);
       }
 
