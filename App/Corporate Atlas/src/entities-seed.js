@@ -244,11 +244,21 @@ async function seedFundEntities(env) {
     `SELECT ticker, name, series_id, issuer FROM etf_master`
   ).all();
 
+  // Known Issue 22.26 fix (MA-SEP-017): ON CONFLICT DO UPDATE previously stamped
+  // updated_at unconditionally on every existing row, even when nothing changed —
+  // same defect class as Known Issue 22.8 (see firds.js's content-diff refresh
+  // pass for the reference pattern). normalized_name/type are the conflict target
+  // and can't differ between stored and incoming rows by definition; `name` (the
+  // raw display name) is the only column this INSERT writes besides those, so
+  // it's the only thing that can genuinely differ. IS NOT (not !=) for null-safety,
+  // matching 22.8's fix — though `name` is NOT NULL here, so this is belt-and-
+  // suspenders rather than a real null case.
   const upserts = etfs.results.map(etf =>
     env.DB.prepare(`
       INSERT INTO entity_master (name, normalized_name, type)
       VALUES (?, ?, 'fund')
       ON CONFLICT(normalized_name, type) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+      WHERE name IS NOT excluded.name
     `).bind(etf.name, normalizeName(etf.name))
   );
   let result = await runInBatches(env, upserts, 'Step 1 (fund entities)');
@@ -290,11 +300,15 @@ async function seedManagerEntities(env, etfs) {
     `SELECT DISTINCT issuer FROM etf_master WHERE issuer IS NOT NULL AND issuer != ''`
   ).all();
 
+  // Known Issue 22.26 fix (MA-SEP-017): same reasoning as seedFundEntities above —
+  // normalized_name/type are the conflict target (can't differ), `name` is the
+  // only other column this INSERT writes, so it's the only genuine diff signal.
   const mgrUpserts = issuers.results.map(r =>
     env.DB.prepare(`
       INSERT INTO entity_master (name, normalized_name, type)
       VALUES (?, ?, 'manager')
       ON CONFLICT(normalized_name, type) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+      WHERE name IS NOT excluded.name
     `).bind(r.issuer, normalizeName(r.issuer))
   );
   let result = await runInBatches(env, mgrUpserts, 'Step 2 (manager entities)');
@@ -370,11 +384,17 @@ async function seedIssuerEntities(env) {
     // Skip if it's a fund type — those are already handled in Step 1
     if (entityType === 'fund') continue;
 
+    // Known Issue 22.26 fix (MA-SEP-017): unlike the two sites above, this INSERT
+    // also writes `country` — issuer_country can genuinely vary run-to-run for
+    // the same normalized_name+type (e.g. a corrected/re-classified country on a
+    // later holdings snapshot), so both `name` and `country` are real diff
+    // signals here, not just `name`.
     upserts.push(
       env.DB.prepare(`
         INSERT INTO entity_master (name, normalized_name, type, country)
         VALUES (?, ?, ?, ?)
         ON CONFLICT(normalized_name, type) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+        WHERE name IS NOT excluded.name OR country IS NOT excluded.country
       `).bind(entityName, normalizeName(entityName), entityType, row.issuer_country ?? null)
     );
   }
