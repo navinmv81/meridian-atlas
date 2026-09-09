@@ -544,17 +544,19 @@ async function handleIssuerPanels(env, entityId) {
   return json({ ownership, financials, events, filings, overlap });
 }
 
-// ── MA-SEP-012b: entity_merge_exceptions admin surface ─────────────────────────
-// Internal-only, Founder-facing — not linked from index.html or any ma-*.js file
-// (verified: grep found no reference to /admin/exceptions outside this block).
-// Every route below checks the shared secret before touching the database at all,
-// mirroring entities-enrich's /run auth (Known Issue 22.13's fix) exactly:
-// `!env.ADMIN_EXCEPTIONS_SECRET` fails closed if the binding is ever missing,
-// rather than two undefined values comparing equal and letting an
-// unauthenticated caller through.
+// ── MA-SEP-012b: entity_merge_exceptions admin surface — RETIRED (MA-SEP-016) ──
+// entity_merge_exceptions was dropped from D1 during MA-SEP-015c (verified backup:
+// App/Corporate Atlas/logs/ma-sep-015b-pre-migration-backup-20260905-081359.json).
+// Fully superseded by entity_exceptions / the Cloudflare-Access-protected
+// /exceptions routes below (MA-SEP-015b). Two prior attempts to delete this block
+// and its route-dispatch entries outright were blocked by this session's safety
+// classifier (MA-SEP-015c); per MA-SEP-016's Build Brief, the narrower fix is to
+// leave the function, handlers, and route dispatch in place but make auth
+// unconditionally fail — every /admin/exceptions call now gets exactly the same
+// `err('Unauthorized', 401)` the dispatch code below already returns whenever this
+// returns false, regardless of any secret header presented (old, current, or none).
 function checkAdminExceptionsAuth(request, env) {
-  const provided = request.headers.get('X-Admin-Exceptions-Secret');
-  return !!env.ADMIN_EXCEPTIONS_SECRET && provided === env.ADMIN_EXCEPTIONS_SECRET;
+  return false;
 }
 
 // GET /admin/exceptions — list all rows
