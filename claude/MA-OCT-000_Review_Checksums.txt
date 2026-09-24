@@ -1,0 +1,43 @@
+MA-OCT-000 — Review checksums (Founder decision 2026-09-24: uncommitted; commit deferred to pre-go-live)
+Generated: 2026-09-24 06:27:26 BST / 2026-09-24T05:27:26Z
+Baseline: /Users/navinkumar/Desktop/MeridianAtlas/Meridian Atlas Clean (v11)
+Branch: September-2026  HEAD: 420487d13e3b2bcb97d0b6c4bf2cb7b98c7bfc48  origin/September-2026: 420487d13e3b2bcb97d0b6c4bf2cb7b98c7bfc48
+
+== shasum -a 256 (10 in-scope files) ==
+770885cf03d5afd0d148176bf774025a16d65add7eb287a4d7b446e04b2d9abe  claude/MA-OCT-000_Build_Brief.md
+a3f2a80de5951cb11b5d742fa09d4f4c067baf0363664c8974991a5c05974d4e  claude/Meridian_October_Operating_Kit_v3_Addendum.md
+46629dc5f9906399aa4330bae301a633065146cc20043e0a12a27ade75270795  claude/meridian-october-operating-kit-v2.md
+967bebd7c1762a0389d150d96a04ae08c4f0df0cdaf127328f0f4a88e1f33445  claude/meridian-october-revised-scope-v2.md
+90531b573b8df4466c54c3a0a494350aa5e05b961082dc23bcca7df4afdc2a2a  claude/MA-OCT-004-Bond-Spec.md
+f56ba53eb53bb985e08c5e37468a0fbbb6155a1a265ff9ec6e8e8f42c010dafc  claude/MA-OCT-000_Job_Manifest.md
+95ea3fd927aa46799e26d35beaef6d43e2f69a25c410f6f5553a08911bd1c957  claude/MA-OCT-000_job_manifest.json
+26685282b3b3c00680a1724a2b8106e90b24aa94a27c69075bbad365866bae22  claude/MA-OCT-000_Closeout_Summary.md
+ee1b880646fa6032d0c18a91cd8ba69f7c27633c3b788bc0710d8b6fe5c63d7a  claude/MA-OCT-000_Change_Request_October_Branch.md
+1935415bb8d19624bebce69e5d8664a971a34fb3385d29ae1ad4deadbe925253  CLAUDE.md
+
+== git status --short ==
+ M CLAUDE.md
+?? "13F Seed/gleif-seed.js"
+?? "Claude outputs/"
+?? MA-SEP-010_Change_Request.md
+?? Meridian_Atlas_Current_State_v13.docx
+?? claude/MA-OCT-000_Build_Brief.md
+?? claude/MA-OCT-000_Change_Request_October_Branch.md
+?? claude/MA-OCT-000_Closeout_Summary.md
+?? claude/MA-OCT-000_Job_Manifest.md
+?? claude/MA-OCT-000_Review_Checksums.txt
+?? claude/MA-OCT-000_job_manifest.json
+?? claude/MA-OCT-004-Bond-Spec.md
+?? claude/MA-SEP-014_Build_Brief.md
+?? claude/MA-SEP-014_Spec.md
+?? claude/MA-SEP-015a_Spec.md
+?? claude/MA-SEP-015b_Build_Brief.md
+?? claude/Meridian_October_Operating_Kit_v3_Addendum.md
+?? claude/October_Decisions_Log.md
+?? claude/September_Sprint_Testing_Runbook.md
+?? claude/meridian-october-operating-kit-v2.md
+?? claude/meridian-october-revised-scope-v2.md
+?? ~$ridian_Atlas_Current_State_v13.docx
+
+== git diff --cached --name-only (expect empty: nothing staged) ==
+(end)
