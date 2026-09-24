@@ -44,6 +44,8 @@ Kit v2's "Primary role" column is the packet **Owner**, the role that defines it
 3. **Reviews end in one verdict:** `PASS`, `PASS WITH NOTES` or `RETURN` (with the reasons). Only a `PASS` or `PASS WITH NOTES` goes to the Founder.
 4. **Operations Lead signs release readiness** for every packet that deploys, alongside the reviewer.
 5. **Founder approval happens at the gates in §5.** Steps between gates do not need a new approval unless something is out of scope.
+6. **No git writes through the Cowork device bridge.** The Main Lane may read git state **only with `git --no-optional-locks`** (plain `git status` takes an index lock the bridge cannot remove). Only local Claude Code lanes run `add`, `commit`, `switch` or `push`. Every lane's preflight runs `ls .git/*.lock`. If a lock exists, report it, confirm no git process owns it, and record the removal in the close-out.
+7. **Main Lane doc edits are committed by the next executing lane.** When the Main Lane changes `claude/` governance docs (Decisions Log, this Addendum, briefs), the next lane's commit includes them, staged by explicit path, and its brief names them.
 
 ---
 
@@ -104,6 +106,7 @@ REQUIRED BEFORE APPROVAL: [numbered, or "none"]
 | MA-OCT-008 | SEC corporate-bond ingestion | Data-Identity Lead | Engineering Lead | Architect + Operations Lead | Founder |
 | MA-OCT-009 | Fixed Income API | Engineering Lead | Engineering Lead | Architect | Founder |
 | MA-OCT-010 | Fixed Income page | UX Lead | Engineering Lead | Data-Identity Lead | Founder UAT |
+| MA-OCT-012 *(hotfix, added 2026-09-24)* | Entities-seed cron hotfix (`0 4 * * 1` → `0 4 * * mon`; stops the Sunday co-fire, KI 22.1) | Operations Lead | Engineering Lead | Architect + ETF Product Lead | Founder |
 | MA-OCT-011 *(conditional)* | GLEIF remediation, e.g. offline Level 2 relationship backfill (former backlog MA-OCT-003) | Data-Identity Lead | Engineering Lead | Architect + Operations Lead | Founder |
 
 Every row with "Engineering Lead" in both the Owner and Executes columns (007, 009) has a reviewer from a different role. Owning a packet does not make you its reviewer.
@@ -147,7 +150,7 @@ At most two build lanes run at once. The Founder has about one checkpoint a day.
 
 | # | Item | Executed by | Reviewed by |
 |---|---|---|---|
-| 0.1 | Run MA-OCT-000 (see `claude/MA-OCT-000_Build_Brief.md`) | Operations Lead (local Claude Code, started **from `Meridian Atlas Clean (v11)`**) | Architect |
+| 0.1 | Run MA-OCT-000 (see `claude/MA-OCT-000_Build_Brief.md`). **CLOSED 2026-09-24, commit `f650c03` on `October-2026`.** | Operations Lead (local Claude Code, started **from `Meridian Atlas Clean (v11)`**) | Architect |
 | 0.2 | MA-SEP-013 Step 5: **DONE 2026-09-23.** The Founder switched GitHub Pages to `September-2026` `/docs` manually and the site is live. Follow-up fix commit `420487d` (`.nojekyll`). Step 6 (CLAUDE.md `DEPLOY_BRANCH` update) and Step 7 (Board and Ledger close-out) remain | Founder (Step 5, done), Operations Lead (Step 6, inside OCT-000), Program Orchestrator (Step 7) | Program Orchestrator |
 | 0.3 | MA-SEP-017 residual: `seedIssuerEntities` `updated_at` check from the 14 and 21 Sep Monday crons | Operations Lead (inside OCT-000, read-only) | Data-Identity Lead |
 | 0.4 | Known Issue 22.1: Founder walks through the dashboard checklist from MA-SEP-016 Part 4 (rule out `meridian-holdings` Sunday 04:00 misattribution) | Founder | Operations Lead |

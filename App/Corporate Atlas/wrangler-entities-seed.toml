@@ -15,11 +15,11 @@ database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
 # RE-ENABLED 2026-08-01 — MA-AUG-002 cadence decision, Founder-approved.
 # Was frozen 2026-07-04 for budget conservation during Sprint 2 13F seeding
 # (original daily schedule was crons = ["0 3 * * *"]). Changed from daily to
-# weekly, Monday 04:00 UTC — one day after meridian-holdings' Sunday 04:00
-# UTC run, so this Worker reads freshly updated holdings data and the two
-# large operations don't stack on the same account-wide write cap. Paired
-# with a tightened pre-flight write-budget guard in entities-seed.js
-# (requires 65,000 headroom, not just "under 60,000 used") since this now
-# runs unattended.
+# Weekly, Monday 04:00 UTC (MA-OCT-012). Named day used because Cloudflare
+# numbers day-of-week 1-7 with 1 = Sunday (see MA-OCT-000 F2). Was
+# "0 4 * * 1", which fired on Sundays in the same second as meridian-holdings
+# ("0 4 * * sun") and shared its account-wide write cap (KI 22.1). Paired with
+# the pre-flight write-budget guard in entities-seed.js (65,000 headroom),
+# since this runs unattended.
 [triggers]
-crons = ["0 4 * * 1"]
+crons = ["0 4 * * mon"]

@@ -15,9 +15,14 @@ IMPLEMENTATION ROOT: .../App
 BUILD INSTRUCTIONS:  .../claude
 EXECUTE FROM:        App/Corporate Atlas
 FILES IN SCOPE:      App/Corporate Atlas/wrangler-entities-seed.toml (cron line + its comment only),
-                     CLAUDE.md (Environment Truth cron-numbering bullet only),
+                     CLAUDE.md (Environment Truth: cron-numbering bullet + LOCAL_MASTER branch line only),
+                     claude/October_Decisions_Log.md, claude/Meridian_October_Operating_Kit_v3_Addendum.md,
+                     claude/MA-OCT-012_Build_Brief.md (commit only — Main Lane edits, Addendum rule 7),
                      claude/MA-OCT-012_Closeout_Summary.md (new)
 ```
+
+## Revision note (rev 2, 2026-09-24)
+Precondition 2 is now met: `October-2026` = `f650c03`. This revision widens the CLAUDE.md scope to fix the stale LOCAL_MASTER branch line. It adds the Main Lane's governance-doc edits to the commit, per Addendum rule 7, and adds a lock check to preflight, per Addendum rule 6.
 
 ## Why
 MA-OCT-000 findings F2 and F3, confirmed by the Architect review as N2. `crons = ["0 4 * * 1"]` was meant to mean Monday. Cloudflare numbers day-of-week 1–7 with **1 = Sunday**, so the seed has fired **in the same second as `meridian-holdings`** every Sunday since at least 30 Aug. The two jobs share the account-wide write budget. On 20 Sep, `writes_today` was already at 83,638 at 04:00:15, and holdings stopped `partial` (`31/237`). This is the most likely root cause of **Known Issue 22.1**. The next co-fire is **Sun 27 Sep 04:00Z**.
@@ -26,6 +31,7 @@ MA-OCT-000 findings F2 and F3, confirmed by the Architect review as N2. `crons =
 1. Working directory is inside `Clean (v11)`.
 2. `git branch --show-current` returns **`October-2026`**, meaning the MA-OCT-000 commit handoff is done. If the branch is `September-2026`, STOP; commits there are prohibited.
 3. `hold_all_jobs` is `false` (read-only check).
+4. `ls .git/*.lock` returns nothing. **One `index.lock` from the Main Lane (24 Sep, about 07:00 BST) is expected.** Confirm no git process is running (`pgrep -fl git`), remove it, and record the removal. Report any other lock before touching it (Addendum rule 6).
 
 ## Approved scope
 1. **Diagnostic (report before editing):**
@@ -38,8 +44,8 @@ MA-OCT-000 findings F2 and F3, confirmed by the Architect review as N2. `crons =
    ```
    Update the comment to say: Monday 04:00 UTC; named day used because Cloudflare numbers day-of-week 1 = Sunday (see MA-OCT-000 F2); was `0 4 * * 1`, which fired on Sundays and co-fired with holdings.
 3. **Deploy** from `App/Corporate Atlas`: `wrangler deploy -c wrangler-entities-seed.toml`. Capture the deploy output, including the printed schedule line, which must show `0 4 * * mon`, and the version ID.
-4. **CLAUDE.md:** in the cron-numbering Environment Truth bullet, add that `meridian-entities-seed` is now `0 4 * * mon`, deployed with version ID and date.
-5. **Commit and push to `October-2026`:** the toml and CLAUDE.md, staged by explicit path. Message: `MA-OCT-012: entities-seed cron 0 4 * * 1 -> 0 4 * * mon (stop Sunday co-fire with holdings; F2/KI 22.1)`.
+4. **CLAUDE.md:** in the cron-numbering Environment Truth bullet, add that `meridian-entities-seed` is now `0 4 * * mon`, deployed with version ID and date. In the LOCAL_MASTER branch line, change `September-2026` to **`October-2026`**, and record that `September-2026` is frozen as the September release and live Pages source until the October go-live.
+5. **Commit and push to `October-2026`:** the toml, CLAUDE.md, `claude/October_Decisions_Log.md`, `claude/Meridian_October_Operating_Kit_v3_Addendum.md` and `claude/MA-OCT-012_Build_Brief.md`, staged by explicit path. Message: `MA-OCT-012: entities-seed cron 0 4 * * 1 -> 0 4 * * mon (stop Sunday co-fire with holdings; F2/KI 22.1)`.
 6. **Observe:**
    - **Sun 27 Sep:** `meridian-holdings` fires at 04:00Z and `meridian-entities-seed` does **not**. Holdings `last_run_status` should not be `partial` because of budget. Record `writes_today_2026-09-27`.
    - **Mon 28 Sep:** `meridian-entities-seed` fires at 04:00Z. Record its invocation (`meridian-ops` `/api/ops/cf/invocations`) and `writes_today_2026-09-28`.
