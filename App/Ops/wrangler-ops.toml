@@ -21,3 +21,18 @@ database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
 # — never put a real token value in this file.
 [vars]
 CF_ACCOUNT_TAG = "ea36070477560935a68ad9110a2fd40b"
+
+# MA-OCT-001 — Ops backend foundation (spec claude/MA-OCT-001_Spec.md §6, §8.4).
+# Ingest kill switches: OPS_INGEST_ENABLED="false" + `wrangler deploy` is the
+# hard switch (ingest returns 202 before any D1 read). OPS_INGEST_DAILY_EVENT_CAP
+# bounds ingest at <= 1000 events/day (~5,000 row-writes, 5% of the D1 cap).
+# The emitter key map OPS_INGEST_KEYS ({emitter_id: sha256_hex(key)}, hashes
+# only) is a SECRET set with `wrangler secret put` — never put it here.
+OPS_INGEST_ENABLED = "true"
+OPS_INGEST_DAILY_EVENT_CAP = "1000"
+# Cloudflare Access app "meridian-ops admin" (path /api/ops/admin). Team domain
+# and AUD are identifiers, not credentials (entities-api precedent). This app
+# has its OWN AUD (not 015b's). If either is missing, every /api/ops/admin/*
+# route fails closed with 401.
+CF_ACCESS_TEAM_DOMAIN = "meridian-atlas-except.cloudflareaccess.com"
+CF_ACCESS_AUD = "7f1b678452f2038a2900e478943d933ff39f24e3f9fac976b62eb2aae8c222cc"

@@ -38,8 +38,21 @@
 //    accelerating Sunday write volume) — mitigated further by
 //    entities-enrich-boost-install.sh deliberately scheduling fire times
 //    outside the Sunday 04:00-07:00 UTC window where practical.
+//
+// MA-OCT-001 (pilot emitter, Q1=A; Data-Identity Lead ACK 2026-10-01 18:41
+// UTC with conditions): each run also reports to the Ops run ledger
+// (meridian-ops POST /api/ops/ingest/run-event, contract v1) — `start` once
+// the pre-flight passes (sent concurrently with /run, never delaying it),
+// then one terminal event AFTER the run-log line above is written. Heartbeats
+// are fire-and-forget with a 2 s ceiling, never change the exit code, the
+// /run call or its timing, and log only to logs/entities-enrich-boost-heartbeat.log.
+// The pause path sends nothing (it stays "no network/D1 activity").
+// Kill switch on this side: delete .env.ops-ingest (heartbeats become a no-op).
 
 import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import http from 'node:http';
+import https from 'node:https';
 import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -64,6 +77,115 @@ function appendRunLog(outcome, detail) {
   mkdirSync(LOG_DIR, { recursive: true });
   const line = `${new Date().toISOString()} | ${outcome} | ${detail}\n`;
   appendFileSync(LOG_PATH, line, 'utf8');
+}
+
+// --- ops-heartbeat (MA-OCT-001, contract v1). Vendored, no cross-folder imports.
+const OPS_ENV_PATH = path.join(SCRIPT_DIR, '.env.ops-ingest');
+const HEARTBEAT_LOG_PATH = path.join(LOG_DIR, 'entities-enrich-boost-heartbeat.log');
+const OPS_JOB_ID = 'local.entities-enrich-boost';
+const HEARTBEAT_CEILING_MS = 2000;
+// Mirrors FIRE_HOURS_UTC in scripts/entities-enrich-boost-install.sh (all at :50).
+const SCHEDULED_SLOT_HOURS_UTC = [10, 16];
+
+function appendHeartbeatLog(text) {
+  try {
+    mkdirSync(LOG_DIR, { recursive: true });
+    appendFileSync(HEARTBEAT_LOG_PATH, `${new Date().toISOString()} | ${text}\n`, 'utf8');
+  } catch { /* heartbeat logging must never affect the job */ }
+}
+
+function loadOpsConfig() {
+  try {
+    if (!existsSync(OPS_ENV_PATH)) return null;
+    const env = Object.fromEntries(readFileSync(OPS_ENV_PATH, 'utf8').split('\n')
+      .filter(l => /^[A-Z_]+=/.test(l)).map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]));
+    if (!env.OPS_INGEST_URL || !env.OPS_EMITTER || !env.OPS_INGEST_KEY) return null;
+    return { url: env.OPS_INGEST_URL, emitter: env.OPS_EMITTER, key: env.OPS_INGEST_KEY };
+  } catch { return null; }
+}
+
+function redact(s) {
+  return s.replace(/(bearer|authorization|secret|token|key)\s*[:=]\s*\S+/gi, '$1=[redacted]')
+          .replace(/[A-Za-z0-9_\-]{32,}/g, '[redacted]');
+}
+
+// The scheduled slot this fire belongs to: the latest SCHEDULED_SLOT_HOURS_UTC:50
+// at or before `now` (a late fire after a sleeping Mac still maps to its slot).
+function scheduledSlot(now) {
+  for (let back = 0; back < 2; back++) {
+    const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - back));
+    for (const h of [...SCHEDULED_SLOT_HOURS_UTC].sort((a, b) => b - a)) {
+      const slot = new Date(day.getTime() + (h * 60 + 50) * 60000);
+      if (slot <= now) return slot.toISOString().slice(0, 16) + 'Z';
+    }
+  }
+  return null;
+}
+
+// Never throws, never writes to stdout/stderr; outcome goes to the heartbeat log only.
+// Uses node:http(s) rather than fetch: at the ceiling the request is destroyed,
+// which also kills a still-connecting socket. (fetch's AbortSignal leaves the TCP
+// connect running, which kept the process alive ~10 s on an unroutable host.)
+function sendOpsEvent(cfg, evt) {
+  if (!cfg) { appendHeartbeatLog(`${evt.event} | not sent: .env.ops-ingest not configured`); return Promise.resolve(); }
+  return new Promise(resolve => {
+    let done = false;
+    const finish = text => { if (!done) { done = true; appendHeartbeatLog(`${evt.event} | run_id=${evt.run_id} | ${text}`); resolve(); } };
+    try {
+      const body = JSON.stringify({ v: 1, ...evt,
+        error: evt.error ? { class: String(evt.error.class || 'ERROR').slice(0, 64),
+                             summary: redact(String(evt.error.summary || '')).slice(0, 500) } : null });
+      const u = new URL(cfg.url);
+      const req = (u.protocol === 'http:' ? http : https).request(u, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body),
+                   'X-Ops-Emitter': cfg.emitter, 'X-Ops-Ingest-Key': cfg.key }
+      }, resp => {
+        let text = '';
+        resp.setEncoding('utf8');
+        resp.on('data', d => { text += d; });
+        resp.on('end', () => finish(`HTTP ${resp.statusCode} ${text.replace(/\n/g, ' ').slice(0, 200)}`));
+        resp.on('error', e => finish(`not delivered: ${(e && e.name) || 'Error'}`));
+      });
+      const timer = setTimeout(() => { finish('not delivered: TimeoutError'); req.destroy(); }, HEARTBEAT_CEILING_MS);
+      timer.unref();
+      req.on('close', () => clearTimeout(timer));
+      req.on('error', e => finish(`not delivered: ${(e && (e.code || e.name)) || 'Error'}`));
+      req.end(body);
+    } catch (e) {
+      finish(`not delivered: ${(e && e.name) || 'Error'}`);
+    }
+  });
+}
+
+// Resolves after the given heartbeat promises settle, or after the ceiling — whichever is first.
+function settleHeartbeats(promises) {
+  return Promise.race([
+    Promise.allSettled(promises),
+    new Promise(r => setTimeout(r, HEARTBEAT_CEILING_MS).unref())
+  ]);
+}
+
+const RUN = { cfg: null, id: null, startedAt: null, slot: null, outOfWindow: null, pending: [] };
+
+function runEvent(event, extra = {}) {
+  const now = new Date();
+  const evt = {
+    run_id: RUN.id, job_id: OPS_JOB_ID, event,
+    trigger: process.env.XPC_SERVICE_NAME === 'com.meridianatlas.entities-enrich-boost' ? 'launchd' : 'manual',
+    started_at: RUN.startedAt.toISOString(),
+    detail: { slot: RUN.slot, fired_at: RUN.startedAt.toISOString(), out_of_window: RUN.outOfWindow, ...(extra.detail || {}) }
+  };
+  if (event !== 'start') { evt.ended_at = now.toISOString(); evt.duration_ms = now - RUN.startedAt; }
+  if (extra.error) evt.error = extra.error;
+  return evt;
+}
+
+// Terminal heartbeat: called only AFTER the run-log line is written; awaited with the 2 s ceiling.
+async function heartbeatEnd(event, extra) {
+  if (!RUN.id) return;
+  RUN.pending.push(sendOpsEvent(RUN.cfg, runEvent(event, extra)));
+  await settleHeartbeats(RUN.pending);
 }
 
 function loadSecret() {
@@ -138,6 +260,8 @@ async function main() {
   if (!inWindow) {
     console.log('WARNING: this fire landed outside :50-:59 — /run will only execute Phase 1 (cheap ISIN pass), NOT Phase 3. This invocation will not count toward backlog throughput. Check the LaunchAgent schedule / whether the Mac was asleep at the intended fire time.');
   }
+  Object.assign(RUN, { cfg: loadOpsConfig(), id: randomUUID(), startedAt: nowUtc,
+                       slot: scheduledSlot(nowUtc), outOfWindow: !inWindow });
 
   console.log('\nPre-flight headroom check (direct D1 read, not relying on the Worker\'s own 429 alone)...');
   let writesToday, headroom;
@@ -147,6 +271,9 @@ async function main() {
   } catch (err) {
     console.error('Headroom check failed:', err.message);
     appendRunLog('error', `headroom check failed: ${err.message.replace(/\n/g, ' ').slice(0, 300)}`);
+    await heartbeatEnd('failed', { error: {
+      class: /\b10000\b/.test(err.message) ? 'wrangler_auth_10000' : 'headroom_check_failed',
+      summary: `headroom check failed: ${err.message.replace(/\n/g, ' ')}` } });
     process.exit(1);
   }
   console.log(`  writes_today: ${writesToday.toLocaleString()} / ${DAILY_CAP.toLocaleString()} (headroom: ${headroom.toLocaleString()}, required: ${REQUIRED_HEADROOM.toLocaleString()})`);
@@ -154,8 +281,12 @@ async function main() {
   if (headroom < REQUIRED_HEADROOM) {
     console.log('Insufficient real headroom — refusing to call /run this fire.');
     appendRunLog('skipped_headroom', `writes_today=${writesToday} headroom=${headroom} required=${REQUIRED_HEADROOM} utc_minute=${utcMinute}`);
+    await heartbeatEnd('skipped', { detail: { reason: 'budget', writes_today: writesToday, headroom, required: REQUIRED_HEADROOM } });
     return;
   }
+
+  // Pre-flight passed: `start` goes out concurrently — never awaited before /run.
+  RUN.pending.push(sendOpsEvent(RUN.cfg, runEvent('start')));
 
   const secret = loadSecret();
 
@@ -172,22 +303,29 @@ async function main() {
     console.log(`  HTTP ${resp.status}: ${bodyText}`);
     const outcome = resp.ok ? 'fired' : `http_${resp.status}`;
     appendRunLog(outcome, `utc_minute=${utcMinute} in_window=${inWindow} writes_today=${writesToday} headroom=${headroom} response=${bodyText.replace(/\n/g, ' ').slice(0, 200)}`);
+    // /run only triggers enrichment (async server-side) and returns no counters,
+    // so items_attempted / items_progressed stay null (A1: never guessed).
+    await heartbeatEnd(resp.ok ? 'success' : 'failed', resp.ok
+      ? { detail: { http_status: resp.status } }
+      : { error: { class: `http_${resp.status}`, summary: bodyText.replace(/\n/g, ' ') }, detail: { http_status: resp.status } });
   } catch (err) {
     clearTimeout(timeout);
     console.error('Request to /run failed:', err.message);
     appendRunLog('error', `request failed: ${err.message.replace(/\n/g, ' ').slice(0, 300)} utc_minute=${utcMinute}`);
+    await heartbeatEnd('failed', { error: { class: 'run_request_failed', summary: `request failed: ${err.message.replace(/\n/g, ' ')}` } });
     process.exit(1);
   }
 
   console.log('\nDone. Actual Phase 2/3 GLEIF work (if in-window) runs async server-side — check `wrangler tail --config wrangler-entities-enrich.toml` or holdings_pipeline_state\'s enrich_phase3_last_run_* keys for real results, not this script\'s own output.');
 }
 
-main().catch(err => {
+main().catch(async err => {
   console.error('\nFATAL:', err.message);
   try {
     appendRunLog('error', `fatal: ${err.message.replace(/\n/g, ' ').slice(0, 300)}`);
   } catch (logErr) {
     console.error('(also failed to write run log:', logErr.message, ')');
   }
+  try { await heartbeatEnd('failed', { error: { class: 'fatal', summary: `fatal: ${err.message}` } }); } catch { /* never affects exit */ }
   process.exit(1);
 });

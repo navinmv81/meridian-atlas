@@ -46,6 +46,7 @@ Kit v2's "Primary role" column is the packet **Owner**, the role that defines it
 5. **Founder approval happens at the gates in §5.** Steps between gates do not need a new approval unless something is out of scope.
 6. **No git writes through the Cowork device bridge.** The Main Lane may read git state **only with `git --no-optional-locks`** (plain `git status` takes an index lock the bridge cannot remove). Only local Claude Code lanes run `add`, `commit`, `switch` or `push`. Every lane's preflight runs `ls .git/*.lock`. If a lock exists, report it, confirm no git process owns it, and record the removal in the close-out.
 7. **Main Lane doc edits are committed by the next executing lane.** When the Main Lane changes `claude/` governance docs (Decisions Log, this Addendum, briefs), the next lane's commit includes them, staged by explicit path, and its brief names them.
+8. **Sprint Board and Release Ledger are updated at every close-out, deploy and Founder decision** (added 2026-09-26 after a miss). The Main Lane updates the Project docs `Sprint_Board.md` and `Release_Ledger.md` in the same turn as the Decisions Log. They are Project-only files; D1 `sprintboarditems`/`releaseledger` are synced at board-sync steps. August and September history is frozen in `claude/Sprint_Board_September_2026_Archive.md` and `claude/Release_Ledger_September_2026_Archive.md`.
 
 ---
 
