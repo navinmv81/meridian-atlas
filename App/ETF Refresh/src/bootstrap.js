@@ -39,15 +39,12 @@ export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(runBootstrap(env));
   },
+  // MA-OCT-002a A5 (CR-6, KI 22.35): the unauthenticated /trigger route is
+  // removed; every path returns 404. The cron (scheduled → runBootstrap →
+  // runWeeklySync every 4 h) is untouched. If a manual trigger is ever needed,
+  // re-add it behind a RUN_AUTH_SECRET gate.
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    if (url.pathname === '/trigger') {
-      ctx.waitUntil(runBootstrap(env));
-      return new Response(JSON.stringify({ ok: true, message: 'Bootstrap triggered' }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    return new Response('Bootstrap Worker', { status: 200 });
+    return new Response('Not found', { status: 404 });
   }
 };
 

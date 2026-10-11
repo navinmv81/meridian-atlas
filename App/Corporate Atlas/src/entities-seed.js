@@ -462,6 +462,32 @@ async function runAllSteps(env) {
   await populateEnrichmentQueue(env, /* budgetAlreadyExhausted */ false);
 }
 
+// MA-OCT-002a A5 (CR-7 / CR-7b, KI 22.36 / 22.49): run-route auth gate.
+// Checked FIRST (before hold and budget, before any D1 read); fails closed when
+// the RUN_AUTH_SECRET binding is missing; constant-time compare of SHA-256
+// digests. The secret is set only via `wrangler secret put` (one per Worker).
+async function checkRunAuth(request, env) {
+  if (!env.RUN_AUTH_SECRET) return false;
+  const header = request.headers.get('Authorization') || '';
+  const presented = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const enc = new TextEncoder();
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(presented)),
+    crypto.subtle.digest('SHA-256', enc.encode(env.RUN_AUTH_SECRET))
+  ]);
+  const x = new Uint8Array(a), y = new Uint8Array(b);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+function unauthorizedResponse() {
+  return new Response(JSON.stringify({ ok: false, error: 'unauthorized' }), {
+    status: 401,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
 export default {
   async scheduled(event, env, ctx) {
     console.log('[entities-seed] Cron started');
@@ -489,6 +515,7 @@ export default {
     if (new URL(request.url).pathname !== '/run') {
       return new Response('Not found', { status: 404 });
     }
+    if (!(await checkRunAuth(request, env))) return unauthorizedResponse();
     if (await checkHold(env)) {
       return new Response(JSON.stringify({ ok: false, message: 'hold_all_jobs is active' }), {
         status: 423,
