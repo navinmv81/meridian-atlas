@@ -66,7 +66,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CORP_ATLAS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RUN_SCRIPT="$CORP_ATLAS_DIR/entities-enrich-boost-run.mjs"
 LOG_DIR="$CORP_ATLAS_DIR/logs"
-ENV_FILE="$CORP_ATLAS_DIR/.env.entities-enrich-run"
+# ML-1011-2: run secrets live outside the repo and iCloud.
+SECRETS_DIR="${MERIDIAN_SECRETS_DIR:-$HOME/.meridian-secrets}"
+ENV_FILE="$SECRETS_DIR/entities-enrich-run.env"
 
 if [ ! -f "$RUN_SCRIPT" ]; then
   echo "ERROR: run script not found at $RUN_SCRIPT" >&2

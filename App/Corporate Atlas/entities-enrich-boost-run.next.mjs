@@ -42,9 +42,10 @@
 //
 // The pause check stays FIRST; a paused run does no network work at all
 // (no d1-today, no heartbeat, no replay). Kill switch for the Ops side:
-// delete .env.ops-ingest (heartbeats and replay become a no-op).
+// delete ~/.meridian-secrets/ops-ingest.env (heartbeats and replay become a no-op).
 
 import { randomUUID } from 'node:crypto';
+import { homedir } from 'node:os';
 import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -54,7 +55,10 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PAUSE_FLAG_PATH = path.join(SCRIPT_DIR, '.entities-enrich-boost-paused');
 const LOG_DIR = path.join(SCRIPT_DIR, 'logs');
 const LOG_PATH = path.join(LOG_DIR, 'entities-enrich-boost.log');
-const ENV_FILE_PATH = path.join(SCRIPT_DIR, '.env.entities-enrich-run');
+// ML-1011-2 (Main Lane, 11 Oct): run secrets live OUTSIDE the repo and outside iCloud,
+// in a chmod-600 folder under the home directory (default ~/.meridian-secrets).
+const SECRETS_DIR = process.env.MERIDIAN_SECRETS_DIR || path.join(homedir(), '.meridian-secrets');
+const ENV_FILE_PATH = path.join(SECRETS_DIR, 'entities-enrich-run.env');
 
 const RUN_URL = 'https://meridian-entities-enrich.navinmv1981.workers.dev/run';
 const D1_TODAY_URL = 'https://meridian-ops.navinmv1981.workers.dev/api/ops/cf/d1-today';
@@ -73,7 +77,7 @@ function appendRunLog(outcome, detail) {
 }
 
 // --- ops-heartbeat + outbox (MA-OCT-001 contract v1; MA-OCT-002a A4) --------
-const OPS_ENV_PATH = path.join(SCRIPT_DIR, '.env.ops-ingest');
+const OPS_ENV_PATH = path.join(SECRETS_DIR, 'ops-ingest.env');
 const HEARTBEAT_LOG_PATH = path.join(LOG_DIR, 'entities-enrich-boost-heartbeat.log');
 const OUTBOX_DIR = path.join(LOG_DIR, 'ops-outbox');
 const OPS_JOB_ID = 'local.entities-enrich-boost';

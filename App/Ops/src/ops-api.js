@@ -46,6 +46,8 @@
 // writes) openfigicache, instrument_master, instrument_entity_map,
 // entity_master, and holdings_pipeline_state.
 
+import { computeLateness, intendedDrift, MAX_LOOKBACK_DAYS } from './lateness.js';
+
 const STAGE_ORDER = [
   'IDEA', 'PRODUCT_SPEC', 'ARCH_REVIEW', 'UX_REVIEW', 'ENG_DIAGNOSTIC',
   'FOUNDER_APPROVAL', 'ENG_IMPLEMENT', 'OPS_RELEASE_REVIEW', 'RELEASE_READY', 'CLOSED'
@@ -844,10 +846,44 @@ async function ingestRunEvent(request, env) {
 }
 
 // --- MA-OCT-001: fleet and run-history reads (Access-only) ----------------
-// Raw state only; health, lateness and drift are 002.
+// MA-OCT-002a A2: additive read-time lateness (spec 002 rev 1.3 §6.3) — per job
+// `slots`, `job_state`, `drift` (intended-only flags; live drift is B1), plus
+// `lookback_days` (default 7, max 14). Queries (all index-backed or declared):
+//   L2  SELECT … FROM ops_job_run WHERE job_id = ? AND started_at >= ? ORDER BY started_at
+//       → SEARCH idx_ops_job_run_job_at (job_id=? AND started_at>?); only for jobs with an emitter
+//   L3  SELECT … FROM ops_job_pause WHERE ends_at >= ?            → declared SCAN (≤ 100 rows)
+//       SELECT … FROM ops_job_pause WHERE job_id = ? AND ends_at >= ? → SEARCH idx_ops_job_pause_job_end
+//   R1  SELECT * FROM ops_job_registry WHERE job_id = ?           → PK
+// Jobs without an emitter read nothing extra (their slots are `unobserved`).
+
+const L2_SQL = `SELECT run_id, phase, event_type, trigger, started_at, ended_at, cursor_after,
+                       items_attempted, items_progressed, detail, end_only
+                FROM ops_job_run WHERE job_id = ? AND started_at >= ? ORDER BY started_at`;
+
+function lookbackWindow(url) {
+  const days = Math.min(Math.max(parseInt(url.searchParams.get('lookback_days') || '7', 10) || 7, 1), MAX_LOOKBACK_DAYS);
+  const now = Date.now();
+  // Runs may start up to 5 min before their slot (§6.3): read from 10 min before the window.
+  return { days, now, sinceIso: new Date(now - days * 86400000 - 10 * 60000).toISOString(),
+           pauseSinceIso: new Date(now - days * 86400000).toISOString() };
+}
+
+function withLateness(job, runRows, pauses, w) {
+  const out = { slots: [], job_state: null, drift: [] };
+  try {
+    const intended = job.intended_schedule ? JSON.parse(job.intended_schedule) : { kind: 'none' };
+    const l = computeLateness(job, runRows, pauses, w.now, w.days);
+    out.slots = l.slots; out.job_state = l.job_state; out.run_states = l.runs;
+    out.drift = intendedDrift(intended, w.now);
+  } catch (err) {
+    out.lateness_error = String(err && err.message || err).slice(0, 200);
+  }
+  return out;
+}
 
 async function listJobs(env, url) {
   const jobId = url.searchParams.get('job_id');
+  const w = lookbackWindow(url);
   if (jobId) {
     // Q5 — run history for one job, idx_ops_job_run_job_at.
     const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '100', 10) || 100, 1), 100);
@@ -858,7 +894,15 @@ async function listJobs(env, url) {
              contract_version, received_at
       FROM ops_job_run WHERE job_id = ? ORDER BY started_at DESC, phase LIMIT ?
     `).bind(jobId, limit).all();
-    return jsonPrivate({ ok: true, job_id: jobId, runs: rows.results, rows_read: rows.meta?.rows_read ?? null });
+    const [reg, l2, l3] = await env.DB.batch([
+      env.DB.prepare(`SELECT * FROM ops_job_registry WHERE job_id = ?`).bind(jobId),
+      env.DB.prepare(L2_SQL).bind(jobId, w.sinceIso),
+      env.DB.prepare(`SELECT job_id, starts_at, ends_at, reason FROM ops_job_pause WHERE job_id = ? AND ends_at >= ?`).bind(jobId, w.pauseSinceIso)
+    ]);
+    const job = reg.results[0] || null;
+    const lateness = job ? withLateness(job, job.emitter_id ? l2.results : [], l3.results, w) : {};
+    const rowsRead = [rows, reg, l2, l3].reduce((a, r) => a + (r.meta?.rows_read ?? 0), 0);
+    return jsonPrivate({ ok: true, job_id: jobId, lookback_days: w.days, runs: rows.results, registered: !!job, ...lateness, rows_read: rowsRead });
   }
   // Q4 — fleet: bounded SCAN of ops_job_registry (<= 60 rows) + 4 index lookups per job.
   // last_end_at walks idx_ops_job_run_job_at backwards to the newest end row (~2
@@ -873,7 +917,15 @@ async function listJobs(env, url) {
          ORDER BY started_at DESC LIMIT 1)                                                         AS last_end_at
     FROM ops_job_registry r ORDER BY r.domain, r.job_id
   `).all();
-  return jsonPrivate({ ok: true, jobs: rows.results, rows_read: rows.meta?.rows_read ?? null });
+  const emitting = rows.results.filter(j => j.emitter_id);
+  const stmts = [env.DB.prepare(`SELECT job_id, starts_at, ends_at, reason FROM ops_job_pause WHERE ends_at >= ?`).bind(w.pauseSinceIso),
+                 ...emitting.map(j => env.DB.prepare(L2_SQL).bind(j.job_id, w.sinceIso))];
+  const res = await env.DB.batch(stmts);
+  const pauses = res[0].results;
+  const runsByJob = new Map(emitting.map((j, i) => [j.job_id, res[i + 1].results]));
+  const jobs = rows.results.map(j => ({ ...j, ...withLateness(j, runsByJob.get(j.job_id) || [], pauses, w) }));
+  const rowsRead = (rows.meta?.rows_read ?? 0) + res.reduce((a, r) => a + (r.meta?.rows_read ?? 0), 0);
+  return jsonPrivate({ ok: true, lookback_days: w.days, jobs, rows_read: rowsRead });
 }
 
 // Copies a legacy handler's response without its CORS allowances (admin prefix).

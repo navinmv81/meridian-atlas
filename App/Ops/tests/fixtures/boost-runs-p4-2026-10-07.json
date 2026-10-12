@@ -1,0 +1,192 @@
+[
+ {
+  "run_id": "28d0dc53-aedc-4033-9145-17fe6a21869a",
+  "phase": "start",
+  "event_type": "start",
+  "started_at": "2026-10-01T05:52:50.492Z",
+  "ended_at": null,
+  "end_only": 0,
+  "trigger": "contract-test",
+  "detail": null
+ },
+ {
+  "run_id": "28d0dc53-aedc-4033-9145-17fe6a21869a",
+  "phase": "end",
+  "event_type": "success",
+  "started_at": "2026-10-01T05:52:50.492Z",
+  "ended_at": "2026-10-01T05:52:50.757Z",
+  "end_only": 0,
+  "trigger": "contract-test",
+  "detail": "{\"metrics\":{\"selected\":44,\"attempted\":44,\"progressed\":0,\"failed\":0,\"ext_404\":44}}"
+ },
+ {
+  "run_id": "add5bf4a-fef4-448e-9226-fcf91f403aef",
+  "phase": "end",
+  "event_type": "skipped",
+  "started_at": "2026-10-01T05:52:50.981Z",
+  "ended_at": "2026-10-01T05:52:50.981Z",
+  "end_only": 1,
+  "trigger": "contract-test",
+  "detail": "{\"reason\":\"budget\",\"headroom\":3200}"
+ },
+ {
+  "run_id": "4e0e7a70-700a-443b-a23c-1cb271502740",
+  "phase": "end",
+  "event_type": "partial",
+  "started_at": "2026-10-01T05:52:51.089Z",
+  "ended_at": "2026-10-01T05:52:51.089Z",
+  "end_only": 1,
+  "trigger": "contract-test",
+  "detail": null
+ },
+ {
+  "run_id": "101a6ae5-94c4-4c88-8851-6a0d4f0e1dbc",
+  "phase": "start",
+  "event_type": "start",
+  "started_at": "2026-10-02T16:50:01.789Z",
+  "ended_at": null,
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-02T16:50Z\",\"fired_at\":\"2026-10-02T16:50:01.789Z\",\"out_of_window\":false}"
+ },
+ {
+  "run_id": "101a6ae5-94c4-4c88-8851-6a0d4f0e1dbc",
+  "phase": "end",
+  "event_type": "success",
+  "started_at": "2026-10-02T16:50:01.789Z",
+  "ended_at": "2026-10-02T16:50:05.135Z",
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-02T16:50Z\",\"fired_at\":\"2026-10-02T16:50:01.789Z\",\"out_of_window\":false,\"http_status\":200}"
+ },
+ {
+  "run_id": "defd7823-fe6d-445f-9735-654b63a7d623",
+  "phase": "end",
+  "event_type": "failed",
+  "started_at": "2026-10-03T10:55:51.021Z",
+  "ended_at": "2026-10-03T10:55:53.424Z",
+  "end_only": 1,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-03T10:50Z\",\"fired_at\":\"2026-10-03T10:55:51.021Z\",\"out_of_window\":false}"
+ },
+ {
+  "run_id": "207c93ae-1777-46dd-877f-ebab9b89c91a",
+  "phase": "start",
+  "event_type": "start",
+  "started_at": "2026-10-03T16:52:56.204Z",
+  "ended_at": null,
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-03T16:50Z\",\"fired_at\":\"2026-10-03T16:52:56.204Z\",\"out_of_window\":false}"
+ },
+ {
+  "run_id": "207c93ae-1777-46dd-877f-ebab9b89c91a",
+  "phase": "end",
+  "event_type": "success",
+  "started_at": "2026-10-03T16:52:56.204Z",
+  "ended_at": "2026-10-03T16:53:00.108Z",
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-03T16:50Z\",\"fired_at\":\"2026-10-03T16:52:56.204Z\",\"out_of_window\":false,\"http_status\":200}"
+ },
+ {
+  "run_id": "9c6bc62b-a3ee-4b3d-ba67-94ea15fc4a81",
+  "phase": "start",
+  "event_type": "start",
+  "started_at": "2026-10-04T11:02:31.511Z",
+  "ended_at": null,
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-04T10:50Z\",\"fired_at\":\"2026-10-04T11:02:31.511Z\",\"out_of_window\":true}"
+ },
+ {
+  "run_id": "9c6bc62b-a3ee-4b3d-ba67-94ea15fc4a81",
+  "phase": "end",
+  "event_type": "success",
+  "started_at": "2026-10-04T11:02:31.511Z",
+  "ended_at": "2026-10-04T11:02:34.987Z",
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-04T10:50Z\",\"fired_at\":\"2026-10-04T11:02:31.511Z\",\"out_of_window\":true,\"http_status\":200}"
+ },
+ {
+  "run_id": "0c460ddb-d071-4603-84ab-d62edb622cbb",
+  "phase": "start",
+  "event_type": "start",
+  "started_at": "2026-10-05T11:02:48.956Z",
+  "ended_at": null,
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-05T10:50Z\",\"fired_at\":\"2026-10-05T11:02:48.956Z\",\"out_of_window\":true}"
+ },
+ {
+  "run_id": "0c460ddb-d071-4603-84ab-d62edb622cbb",
+  "phase": "end",
+  "event_type": "success",
+  "started_at": "2026-10-05T11:02:48.956Z",
+  "ended_at": "2026-10-05T11:02:56.891Z",
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-05T10:50Z\",\"fired_at\":\"2026-10-05T11:02:48.956Z\",\"out_of_window\":true,\"http_status\":200}"
+ },
+ {
+  "run_id": "8ee2580b-82f0-441e-80c4-79793bdac7ee",
+  "phase": "start",
+  "event_type": "start",
+  "started_at": "2026-10-06T10:55:15.459Z",
+  "ended_at": null,
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-06T10:50Z\",\"fired_at\":\"2026-10-06T10:55:15.459Z\",\"out_of_window\":false}"
+ },
+ {
+  "run_id": "8ee2580b-82f0-441e-80c4-79793bdac7ee",
+  "phase": "end",
+  "event_type": "success",
+  "started_at": "2026-10-06T10:55:15.459Z",
+  "ended_at": "2026-10-06T10:55:19.444Z",
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-06T10:50Z\",\"fired_at\":\"2026-10-06T10:55:15.459Z\",\"out_of_window\":false,\"http_status\":200}"
+ },
+ {
+  "run_id": "8ff9e8cb-1760-41b6-9512-251a8dab7c7d",
+  "phase": "start",
+  "event_type": "start",
+  "started_at": "2026-10-06T16:50:04.762Z",
+  "ended_at": null,
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-06T16:50Z\",\"fired_at\":\"2026-10-06T16:50:04.762Z\",\"out_of_window\":false}"
+ },
+ {
+  "run_id": "8ff9e8cb-1760-41b6-9512-251a8dab7c7d",
+  "phase": "end",
+  "event_type": "success",
+  "started_at": "2026-10-06T16:50:04.762Z",
+  "ended_at": "2026-10-06T16:50:08.143Z",
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-06T16:50Z\",\"fired_at\":\"2026-10-06T16:50:04.762Z\",\"out_of_window\":false,\"http_status\":200}"
+ },
+ {
+  "run_id": "157cf734-b68a-4d5b-850b-59ba963c9a3e",
+  "phase": "start",
+  "event_type": "start",
+  "started_at": "2026-10-07T16:53:31.832Z",
+  "ended_at": null,
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-07T16:50Z\",\"fired_at\":\"2026-10-07T16:53:31.832Z\",\"out_of_window\":false}"
+ },
+ {
+  "run_id": "157cf734-b68a-4d5b-850b-59ba963c9a3e",
+  "phase": "end",
+  "event_type": "success",
+  "started_at": "2026-10-07T16:53:31.832Z",
+  "ended_at": "2026-10-07T16:53:35.369Z",
+  "end_only": 0,
+  "trigger": "manual",
+  "detail": "{\"slot\":\"2026-10-07T16:50Z\",\"fired_at\":\"2026-10-07T16:53:31.832Z\",\"out_of_window\":false,\"http_status\":200}"
+ }
+]

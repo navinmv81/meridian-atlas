@@ -78,8 +78,9 @@ function sandbox({ ops, paused = false, now = IN_WINDOW, d1 = 'ok:390', runStatu
   copyFileSync(RUNNER, path.join(dir, 'entities-enrich-boost-run.mjs'));
   mkdirSync(path.join(dir, 'lib'));
   copyFileSync(OUTBOX_LIB, path.join(dir, 'lib/ops-outbox.mjs'));
-  writeFileSync(path.join(dir, '.env.entities-enrich-run'), 'ENTITIES_ENRICH_RUN_SECRET=test-only-not-a-secret\n');
-  if (ops) writeFileSync(path.join(dir, '.env.ops-ingest'), `OPS_INGEST_URL=${ops}\nOPS_EMITTER=boost-local\nOPS_INGEST_KEY=test-only-not-a-key\n`);
+  mkdirSync(path.join(dir, 'secrets'));   // ML-1011-2: runner reads MERIDIAN_SECRETS_DIR (default ~/.meridian-secrets)
+  writeFileSync(path.join(dir, 'secrets/entities-enrich-run.env'), 'ENTITIES_ENRICH_RUN_SECRET=test-only-not-a-secret\n');
+  if (ops) writeFileSync(path.join(dir, 'secrets/ops-ingest.env'), `OPS_INGEST_URL=${ops}\nOPS_EMITTER=boost-local\nOPS_INGEST_KEY=test-only-not-a-key\n`);
   if (paused) writeFileSync(path.join(dir, '.entities-enrich-boost-paused'), '');
   if (outbox) { mkdirSync(path.join(dir, 'logs/ops-outbox'), { recursive: true }); writeFileSync(path.join(dir, 'logs/ops-outbox/entities-enrich-boost.jsonl'), outbox); }
   writeFileSync(path.join(dir, 'stub.mjs'), `
@@ -112,7 +113,7 @@ function run(opts) {
   received.length = 0;
   return new Promise(res => {
     const t0 = Date.now();
-    const env = { ...process.env, PATH: process.env.PATH, XPC_SERVICE_NAME: '' };
+    const env = { ...process.env, PATH: process.env.PATH, XPC_SERVICE_NAME: '', MERIDIAN_SECRETS_DIR: path.join(dir, 'secrets') };
     delete env.OPS_TRIGGER; if (opts.trigger) env.OPS_TRIGGER = opts.trigger;
     const child = spawn(process.execPath, ['--import', path.join(dir, 'stub.mjs'), path.join(dir, 'entities-enrich-boost-run.mjs')], { cwd: dir, env });
     let out = ''; child.stdout.on('data', d => (out += d)); child.stderr.on('data', d => (out += d));
@@ -248,6 +249,8 @@ for (const t of ['s202', 's401', 's422']) {
 {
   const src = readFileSync(RUNNER, 'utf8').replace(/^\s*\/\/.*$/gm, '');
   check('[static] boost runner has no wrangler / npx / child_process call', !/\bnpx\b|execFileSync|child_process|'wrangler'/.test(src), null);
+  check('[static] boost runner reads run secrets from MERIDIAN_SECRETS_DIR / ~/.meridian-secrets, not the repo (ML-1011-2)',
+    /\.meridian-secrets/.test(readFileSync(RUNNER, 'utf8')) && !/SCRIPT_DIR, '\.env\./.test(src), null);
   const firds = path.join(CA, existsSync(path.join(CA, 'firds-local-seed.next.mjs')) ? 'firds-local-seed.next.mjs' : 'firds-local-seed.mjs');
   const fs = readFileSync(firds, 'utf8');
   check(`[static] ${path.basename(firds)} calls node_modules/.bin/wrangler by path, never npx`,
