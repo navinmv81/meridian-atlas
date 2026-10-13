@@ -307,6 +307,7 @@ Report both. **Wait for human confirmation before Task 6b-post.**
 
 **No writes to data rows. DDL only.**
 
+> superseded by MA-OCT-ENT-CR1 (13 Oct 2026); do not replay
 ```bash
 wrangler d1 execute meridian-etf --remote \
   --command="CREATE INDEX IF NOT EXISTS idx_instrument_master_isin
