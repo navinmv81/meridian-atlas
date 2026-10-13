@@ -1,168 +1,190 @@
 #!/usr/bin/env node
 // check-pipeline-health.js
-// Lightweight daily watchdog (MA-AUG-004, scoped 8 Aug 2026 for the August
-// closeout). Read-only — makes zero D1 writes. Checks two things:
-//   1. hold_all_jobs — the shared kill switch. If true, everything is
-//      halted and the Founder should know sooner than "eventually noticed".
-//   2. Live D1 headroom (via meridian-ops /api/ops/cf/d1-today) — flags if
-//      remaining headroom for the day is critically low.
-// Surfaces a native macOS notification ONLY if something needs attention —
-// deliberately silent (just a log line) on a clean day, to avoid alert
-// fatigue on what's meant to be a lightweight, low-noise check.
+// Pipeline watchdog — revived by MA-OCT-002a A3 (CR-4; spec MA-OCT-002 rev 1.3 §7).
+// Originally MA-AUG-004 (8 Aug 2026): a low-noise daily check of hold_all_jobs and
+// D1 headroom that self-disabled at a 29 Aug checkpoint and has not run since.
 //
-// Run manually: node check-pipeline-health.js
-// Scheduled via a LaunchAgent, same pattern as the financialfact backfill.
+// What it does now, 4× a day (08:00, 12:00, 18:00, 22:00 local, via its
+// LaunchAgent; installed by App/Ops/scripts/health-check-install.sh):
+//   1. Pause flag first (13F Seed/.health-check-paused): if present, log and exit —
+//      no network at all.
+//   2. Checkpoint (Founder Q1, 7 Oct): on/after 2026-12-31 it notifies and unloads
+//      its own LaunchAgent — no indefinitely-running automation without a review
+//      point. Re-enabling needs an explicit ask.
+//   3. Calls ONE route on meridian-ops, POST /api/ops/ingest/sweep (key-authenticated
+//      as emitter health-check-local). The sweep computes fleet lateness, hold,
+//      headroom and the ETF checks, and raises deduplicated ops_exception rows
+//      server-side. This script no longer reads D1 itself and needs no account token.
+//   4. Reports its own run to the Ops run ledger as job local.health-check (start +
+//      terminal; terminal carries detail.metrics.raised for the daily raise cap),
+//      2 s ceiling per event, with the shared local outbox
+//      (App/Corporate Atlas/lib/ops-outbox.mjs) for undelivered events.
+//   5. Notifies (macOS notification only, Founder Q2) only when the sweep returned
+//      NEW sev1–sev3 exceptions; the 18:00 run adds one line when open sev1/sev2
+//      cases exist. Clean sweeps are silent. If Ops cannot be reached it notifies.
+//
+// Run manually: node check-pipeline-health.js   (trigger 'manual'; launchd sets OPS_TRIGGER=launchd)
+// Secrets (ML-1011-2): ~/.meridian-secrets/health-check-ops-ingest.env (outside the repo and iCloud):
+//   OPS_INGEST_URL=…/api/ops/ingest/run-event  OPS_EMITTER=health-check-local  OPS_INGEST_KEY=…
+// Logs (gitignored): App/Corporate Atlas/logs/health-check.log, health-check-heartbeat.log, ops-outbox/.
 
-require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const { execSync } = require('child_process');
+const { randomUUID } = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { pathToFileURL } = require('url');
 
-// ── D1 config (same account/database as seed-financialfact.js) ──────────────
-const ACCOUNT_ID = 'ea36070477560935a68ad9110a2fd40b';
-const DB_ID      = '43e80149-5333-4917-b678-6a8218ca4f93';
-const TOKEN      = process.env.CF_API_TOKEN;
-const API_BASE   = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/d1/database/${DB_ID}`;
-const OPS_D1_TODAY_URL = process.env.OPS_D1_TODAY_URL;
+const ROOT = path.resolve(__dirname, '..');
+// Test-only overrides (tests/health-check.test.mjs): HEALTH_CHECK_LOG_DIR, HEALTH_CHECK_PAUSE_FLAG,
+// HEALTH_CHECK_DRY_LAUNCHCTL=1, HEALTH_CHECK_NO_NOTIFY=1. Unset in production.
+const LOG_DIR = process.env.HEALTH_CHECK_LOG_DIR || path.join(ROOT, 'App', 'Corporate Atlas', 'logs');
+const RUN_LOG = path.join(LOG_DIR, 'health-check.log');
+const HEARTBEAT_LOG = path.join(LOG_DIR, 'health-check-heartbeat.log');
+const OUTBOX_DIR = path.join(LOG_DIR, 'ops-outbox');
+const OUTBOX_LIB = path.join(ROOT, 'App', 'Corporate Atlas', 'lib', 'ops-outbox.mjs');
+const PAUSE_FLAG = process.env.HEALTH_CHECK_PAUSE_FLAG || path.join(__dirname, '.health-check-paused');
+const SECRETS_DIR = process.env.MERIDIAN_SECRETS_DIR || path.join(os.homedir(), '.meridian-secrets');
+const OPS_ENV = path.join(SECRETS_DIR, 'health-check-ops-ingest.env');
 
-const LOW_HEADROOM_THRESHOLD = 5000;
-
-// ── Checkpoint (added 8 Aug 2026, per Founder's explicit request: no
-// indefinitely-running automation without a built-in review point) ──────────
-// This watchdog exists primarily to cover the financialfact backfill's
-// active window. It self-disables — not just goes quiet — at whichever of
-// these comes first, defaulting to OFF rather than silently running forever:
-//   1. The backfill itself reports complete (financialfact_backfill_complete
-//      = 'true') — the main reason this exists has resolved.
-//   2. A hard calendar fallback, in case the backfill runs longer than
-//      expected or the situation changes in some other way.
-// On checkpoint, it unloads its own LaunchAgent (same launchctl bootout
-// pattern as the backfill's self-termination) and sends a distinct
-// notification explaining why — re-enabling requires an explicit ask, not
-// automatic continuation.
-const CHECKPOINT_DATE = new Date('2026-08-29T00:00:00Z'); // 3 weeks from setup
+const JOB_ID = 'local.health-check';
+const CHECKPOINT_DATE = new Date('2026-12-31T00:00:00Z');   // Founder Q1 (7 Oct 2026): review point
 const LAUNCH_AGENT_LABEL = 'com.meridianatlas.health-check';
+const HEARTBEAT_CEILING_MS = 2000;
+const SWEEP_TIMEOUT_MS = 25000;
+const LOOKBACK_DAYS = 7;
 
-if (!TOKEN) {
-  console.error('ERROR: CF_API_TOKEN is not set. Add it to 13F Seed/.env');
-  process.exit(1);
+function log(line) {
+  try { fs.mkdirSync(LOG_DIR, { recursive: true }); fs.appendFileSync(RUN_LOG, `${new Date().toISOString()} | ${line}\n`); } catch { /* never fatal */ }
+  console.log(line);
+}
+function heartbeatLog(text) {
+  try { fs.mkdirSync(LOG_DIR, { recursive: true }); fs.appendFileSync(HEARTBEAT_LOG, `${new Date().toISOString()} | ${text}\n`); } catch { /* never fatal */ }
 }
 
-function esc(v) {
-  return `'${String(v).replace(/'/g, "''")}'`;
-}
-
-async function d1Select(sql) {
-  const res = await fetch(`${API_BASE}/raw`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${TOKEN}`,
-      'Content-Type':  'application/json',
-    },
-    body: JSON.stringify({ sql }),
-  });
-  const json = await res.json();
-  if (!json.success) {
-    throw new Error(`D1 error: ${JSON.stringify(json.errors)}`);
-  }
-  const { columns, rows } = json.result[0].results;
-  return rows.map(row => Object.fromEntries(columns.map((c, i) => [c, row[i]])));
-}
-
-// Native macOS notification banner — no new credentials, no external
-// service, built into every Mac. Escapes single quotes for safe shell use.
+// Native macOS notification banner — no credentials, no external service.
 function notify(title, message, withSound) {
-  const script = `display notification ${JSON.stringify(message)} with title ${JSON.stringify(title)}` +
-    (withSound ? ' sound name "Basso"' : '');
-  try {
-    execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`);
-  } catch (err) {
-    console.error('  WARN: failed to send macOS notification:', err.message);
-  }
+  if (process.env.HEALTH_CHECK_NO_NOTIFY === '1') { log(`(notification suppressed) ${title}: ${message}`); return; }
+  const script = `display notification ${JSON.stringify(message)} with title ${JSON.stringify(title)}` + (withSound ? ' sound name "Basso"' : '');
+  try { execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`); } catch (err) { log(`WARN: failed to send macOS notification: ${err.message}`); }
 }
 
-// Unloads this LaunchAgent so it stops running — used only at the checkpoint,
-// never on a routine "needs attention" finding.
+// Unloads this LaunchAgent — used only at the checkpoint, never on a routine finding.
 function selfDisable() {
+  if (process.env.HEALTH_CHECK_DRY_LAUNCHCTL === '1') { log(`(dry run) would unload LaunchAgent ${LAUNCH_AGENT_LABEL}`); return; }
+  try { execSync(`/bin/launchctl bootout gui/$(id -u) ${LAUNCH_AGENT_LABEL}`); log(`Unloaded LaunchAgent ${LAUNCH_AGENT_LABEL}.`); }
+  catch (err) { log(`WARN: failed to unload LaunchAgent (${err.message}) — unload manually if needed.`); }
+}
+
+function loadOpsConfig() {
   try {
-    execSync(`/bin/launchctl bootout gui/$(id -u) ${LAUNCH_AGENT_LABEL}`);
-    console.log(`  Unloaded LaunchAgent ${LAUNCH_AGENT_LABEL} — will not run again until re-enabled.`);
-  } catch (err) {
-    console.error(`  WARN: failed to unload LaunchAgent (${err.message}) — it may still fire again; unload manually if needed.`);
-  }
+    if (!fs.existsSync(OPS_ENV)) return null;
+    const env = Object.fromEntries(fs.readFileSync(OPS_ENV, 'utf8').split('\n').filter(l => /^[A-Z_]+=/.test(l))
+      .map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]));
+    if (!env.OPS_INGEST_URL || !env.OPS_EMITTER || !env.OPS_INGEST_KEY) return null;
+    return { url: env.OPS_INGEST_URL, emitter: env.OPS_EMITTER, key: env.OPS_INGEST_KEY,
+             sweepUrl: env.OPS_SWEEP_URL || env.OPS_INGEST_URL.replace(/\/run-event$/, '/sweep') };
+  } catch { return null; }
+}
+
+async function callSweep(cfg, runId) {
+  const resp = await fetch(cfg.sweepUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Ops-Emitter': cfg.emitter, 'X-Ops-Ingest-Key': cfg.key },
+    body: JSON.stringify({ v: 1, run_id: runId, lookback_days: LOOKBACK_DAYS }),
+    signal: AbortSignal.timeout(SWEEP_TIMEOUT_MS)
+  });
+  let body = null;
+  try { body = await resp.json(); } catch { /* non-JSON */ }
+  return { status: resp.status, body };
 }
 
 async function main() {
-  const timestamp = new Date().toISOString();
-  const issues = [];
+  const startedAt = new Date();
+  log(`=== Meridian Atlas health-check sweep — ${startedAt.toISOString()} ===`);
 
-  console.log(`\n=== Meridian Atlas pipeline health check — ${timestamp} ===`);
+  // 1. Pause flag first — no network, no heartbeat, no replay.
+  if (fs.existsSync(PAUSE_FLAG)) { log(`paused | pause flag present at ${PAUSE_FLAG}; no network activity`); return 0; }
 
-  // ── Checkpoint check — runs before anything else ───────────────────────────
-  let backfillComplete = false;
-  try {
-    const rows = await d1Select(`SELECT value FROM holdings_pipeline_state WHERE key = ${esc('financialfact_backfill_complete')}`);
-    backfillComplete = rows.length > 0 && rows[0].value === 'true';
-  } catch (err) {
-    console.error(`  WARN: could not check backfill completion flag for checkpoint purposes: ${err.message}`);
-  }
-
-  const pastCalendarCheckpoint = new Date() >= CHECKPOINT_DATE;
-
-  if (backfillComplete || pastCalendarCheckpoint) {
-    const reason = backfillComplete
-      ? 'the financialfact backfill this watchdog primarily covers has completed'
-      : `the 3-week calendar checkpoint (${CHECKPOINT_DATE.toISOString().slice(0, 10)}) has passed`;
-    console.log(`\n=== CHECKPOINT REACHED — ${reason} ===`);
-    console.log('  Disabling this watchdog rather than continuing indefinitely. Re-enable explicitly if still needed.');
+  // 2. Checkpoint.
+  if (startedAt >= CHECKPOINT_DATE) {
+    const reason = `the review checkpoint (${CHECKPOINT_DATE.toISOString().slice(0, 10)}) has passed`;
+    log(`checkpoint | ${reason}; disabling the watchdog`);
     notify('Meridian Atlas — Health Check Checkpoint', `Watchdog stopping: ${reason}. Ask to re-enable if you still want it.`, true);
     selfDisable();
-    return;
+    return 0;
   }
 
-  // 1. hold_all_jobs check
+  const cfg = loadOpsConfig();
+  if (!cfg) {
+    log(`error | Ops ingest config missing or incomplete at ${OPS_ENV}`);
+    notify('Meridian Atlas — Health Check', `Sweep not configured: ${OPS_ENV} is missing or incomplete.`, true);
+    return 1;
+  }
+  const { createOpsOutbox } = await import(pathToFileURL(OUTBOX_LIB).href);
+  const ob = createOpsOutbox({ outboxDir: OUTBOX_DIR, name: 'health-check', cfg, log: heartbeatLog });
+  const runId = randomUUID();
+  const trigger = process.env.OPS_TRIGGER === 'launchd' ? 'launchd' : 'manual';
+  const evt = (event, extra = {}) => {
+    const e = { run_id: runId, job_id: JOB_ID, event, trigger, started_at: startedAt.toISOString(), ...extra };
+    if (event !== 'start') { const now = new Date(); e.ended_at = now.toISOString(); e.duration_ms = now - startedAt; }
+    return e;
+  };
+
+  // 3. Start event (concurrent), then the sweep — the job's work.
+  const pending = [ob.send(evt('start'), { ceilingMs: HEARTBEAT_CEILING_MS })];
+  let result, outcome, exitCode = 0;
   try {
-    const rows = await d1Select(`SELECT value FROM holdings_pipeline_state WHERE key = ${esc('hold_all_jobs')}`);
-    const holdValue = rows.length > 0 ? rows[0].value : 'false';
-    console.log(`  hold_all_jobs = ${holdValue}`);
-    if (holdValue === 'true') {
-      issues.push('hold_all_jobs is TRUE — all D1-writing pipelines are currently halted.');
-    }
+    result = await callSweep(cfg, runId);
   } catch (err) {
-    issues.push(`Could not check hold_all_jobs: ${err.message}`);
+    result = { status: null, error: (err && err.name === 'TimeoutError') ? 'TimeoutError' : (err && err.message) || 'Error' };
+  }
+  const b = result.body || {};
+  if (result.status === 200 && b.ok) {
+    outcome = 'success';
+    log(`swept | raised=${b.raised} findings=${b.findings} already_open=${b.already_open} overflow=${b.overflow} hold=${b.hold_all_jobs} ` +
+        `headroom=${b.headroom ? b.headroom.headroom : 'n/a'} open=${JSON.stringify(b.open_counts || {})} rows_read=${b.rows_read}`);
+  } else if (result.status === 202) {
+    outcome = 'skipped';
+    log(`skipped | sweep switched off (${b.reason || 'HTTP 202'})`);
+  } else {
+    outcome = 'failed'; exitCode = 1;
+    log(`error | sweep could not complete: ${result.status !== null ? `HTTP ${result.status} ${JSON.stringify(b).slice(0, 200)}` : result.error}`);
   }
 
-  // 2. Live headroom check
-  if (!OPS_D1_TODAY_URL) {
-    issues.push('OPS_D1_TODAY_URL is not set in .env — cannot check live headroom.');
-  } else {
-    try {
-      const res = await fetch(OPS_D1_TODAY_URL);
-      const json = await res.json();
-      if (!json.ok) {
-        issues.push(`d1-today check returned an error: ${JSON.stringify(json)}`);
-      } else {
-        const headroom = json.daily_cap - json.rowsWritten;
-        console.log(`  D1 headroom: ${headroom}/${json.daily_cap} remaining (${json.pct_of_cap}% used today)`);
-        if (headroom < LOW_HEADROOM_THRESHOLD) {
-          issues.push(`D1 headroom is low: only ${headroom} of ${json.daily_cap} remaining today (${json.pct_of_cap}% used).`);
-        }
-      }
-    } catch (err) {
-      issues.push(`Could not reach live headroom check: ${err.message}`);
+  // 4. Terminal event after the run-log line; carries metrics.raised (daily raise cap, B-1).
+  const metrics = { raised: Number(b.raised) || 0, findings: Number(b.findings) || 0, already_open: Number(b.already_open) || 0,
+                    open_sev1: Number(b.open_counts?.sev1) || 0, open_sev2: Number(b.open_counts?.sev2) || 0, open_sev3: Number(b.open_counts?.sev3) || 0,
+                    rows_read: Number(b.rows_read) || 0 };
+  const terminal = outcome === 'success' ? evt('success', { detail: { metrics } })
+    : outcome === 'skipped' ? evt('skipped', { detail: { reason: 'pause' } })
+    : evt('failed', { error: { class: result.status !== null ? `http_${result.status}` : 'sweep_unreachable', summary: `sweep failed: ${result.status ?? result.error}` } });
+  const own = ob.send(terminal, { ceilingMs: HEARTBEAT_CEILING_MS });
+  pending.push(own);
+  const settled = await Promise.allSettled(pending);
+  if ((await own).delivered) await ob.replay({ max: 10, ceilingMs: HEARTBEAT_CEILING_MS });
+  for (const r of settled) if (r.status === 'fulfilled' && r.value.spoolable) ob.spool(r.value.body);
+
+  // 5. Notify (§7.4).
+  if (outcome === 'failed') {
+    notify('Meridian Atlas — Health Check', 'Sweep could not reach Ops (meridian-ops). See App/Corporate Atlas/logs/health-check.log.', true);
+  } else if (outcome === 'success') {
+    const fresh = (b.new || []).filter(n => ['sev1', 'sev2', 'sev3'].includes(n.severity));
+    const lines = [];
+    if (fresh.length) {
+      const bySev = ['sev1', 'sev2', 'sev3'].map(s => [s, fresh.filter(n => n.severity === s).length]).filter(([, n]) => n).map(([s, n]) => `${n} ${s}`).join(', ');
+      lines.push(`${fresh.length} new (${bySev}): ` + fresh.slice(0, 3).map(n => n.title).join(' · '));
     }
+    const openHigh = metrics.open_sev1 + metrics.open_sev2;
+    if (new Date().getHours() === 18 && openHigh > 0) lines.push(`Open sev1/sev2 cases: ${openHigh}.`);
+    if (lines.length) notify('Meridian Atlas — Needs Attention', lines.join(' | '), fresh.some(n => n.severity !== 'sev3'));
+    else log('All clear — no notification sent (by design, low-noise).');
   }
-
-  if (issues.length > 0) {
-    console.log('\nNEEDS ATTENTION:');
-    issues.forEach(i => console.log(`  - ${i}`));
-    notify('Meridian Atlas — Needs Attention', issues.join(' | '), true);
-  } else {
-    console.log('\nAll clear — no notification sent (by design, to keep this low-noise).');
-  }
+  return exitCode;
 }
 
-main().catch(err => {
-  console.error('FATAL:', err.message);
-  // A crashed watchdog is itself worth knowing about — notify rather than fail silently.
-  notify('Meridian Atlas Health Check — Error', `Watchdog script crashed: ${err.message}`, true);
+main().then(code => process.exit(code || 0)).catch(err => {
+  log(`fatal | ${err && err.message}`);
+  notify('Meridian Atlas Health Check — Error', `Watchdog script crashed: ${err && err.message}`, true);
   process.exit(1);
 });

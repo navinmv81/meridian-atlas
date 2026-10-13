@@ -473,6 +473,13 @@ async function cfInvocations(env, url) {
 // GET /api/ops/cf/d1-today — account-wide D1 write/read totals for today.
 // Field names verified live, 2 and 4 August — see file-header note above.
 async function cfD1WritesToday(env) {
+  const t = await d1Totals(env);
+  return json({ ok: true, ...t, pct_of_cap: Math.round((t.rowsWritten / 100000) * 1000) / 10 });
+}
+
+// Account-wide D1 totals for today from Cloudflare analytics (1 subrequest, 0 D1
+// reads). Lags 25–30 min behind real writes (measured 12–13 Oct; ML-1012-1).
+async function d1Totals(env) {
   const today = new Date().toISOString().slice(0, 10);
   const query = `
     query($accountTag: string!, $date: Date!) {
@@ -496,14 +503,7 @@ async function cfD1WritesToday(env) {
     rowsRead: acc.rowsRead + (g.sum?.rowsRead ?? 0),
     rowsWritten: acc.rowsWritten + (g.sum?.rowsWritten ?? 0)
   }), { readQueries: 0, writeQueries: 0, rowsRead: 0, rowsWritten: 0 });
-
-  return json({
-    ok: true,
-    date: today,
-    ...totals,
-    daily_cap: 100000,
-    pct_of_cap: Math.round((totals.rowsWritten / 100000) * 1000) / 10
-  });
+  return { date: today, ...totals, daily_cap: 100000 };
 }
 
 // --- MA-OCT-001: Cloudflare Access verification (admin prefix) ------------
@@ -928,6 +928,211 @@ async function listJobs(env, url) {
   return jsonPrivate({ ok: true, lookback_days: w.days, jobs, rows_read: rowsRead });
 }
 
+// --- MA-OCT-002a A3: alerting sweep (spec 002 rev 1.3 §7.2–§7.3; R-E; B-1) --------
+// POST /api/ops/ingest/sweep, called by the revived local health-check LaunchAgent
+// (emitter health-check-local). It only reads and raises: it never updates or
+// closes a case (003 owns transitions) and ignores hold_all_jobs (a hold is itself
+// a finding). Kill switches: OPS_SWEEP_ENABLED="false" (0 reads); ingest_enabled=0
+// on local.health-check or ops.ingest; the local pause flag; health-check-uninstall.sh.
+// Budget per call: reads ≤ 1,000 (registry SCAN ≤ 60 + L2/L3 + ≤ 5 PK reads + a
+// dedupe pre-check of ≤ ~40 unique-index probes + open counts); writes ≤ 20 raises
+// × ≈ 11 ≈ 220. Daily raise cap OPS_SWEEP_DAILY_RAISE_CAP (default 100) is counted
+// from today's local.health-check end events (detail.metrics.raised), which L2
+// already reads — 0 extra reads.
+
+const SWEEP_JOB_ID = 'local.health-check';
+const SWEEP_RAISE_CAP = 20;
+const SWEEP_DEFAULT_DAILY_RAISE_CAP = 100;
+const WEEKLY_JOBS = new Set(['cf.meridian-holdings', 'cf.meridian-entities-seed', 'local.firds-weekly-seed']);
+const SEV_ORDER = { sev1: 1, sev2: 2, sev3: 3, sev4: 4 };
+
+async function sweepCaseRef(dedupeKey, n = 12) {
+  return 'EXC-S-' + (await sha256Hex(dedupeKey)).slice(0, n).toUpperCase();
+}
+
+function lastSundayUtc(now) {
+  const d = new Date(now);
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  return d.toISOString().slice(0, 10);
+}
+
+// Findings for one emitting job from its lateness and run rows.
+function jobFindings(job, lat, runRows) {
+  const out = [];
+  const t = job.job_id;
+  for (const s of lat.slots || []) {
+    if (s.state !== 'missed') continue;
+    out.push({ type: 'job_missed', severity: WEEKLY_JOBS.has(t) ? 'sev2' : 'sev3', job_id: t, dedupe_key: `job_missed:${t}:${s.slot}`,
+               title: `${t} missed its ${s.slot} slot`, summary: `No run matched the scheduled slot ${s.slot} within its grace window.` });
+  }
+  const byRun = new Map();
+  for (const r of runRows) { const x = byRun.get(r.run_id) || {}; x[r.phase] = r; byRun.set(r.run_id, x); }
+  for (const rs of lat.run_states || []) {
+    if (rs.state === 'lost') out.push({ type: 'job_lost', severity: 'sev2', job_id: t, run_id: rs.run_id, dedupe_key: `job_lost:${rs.run_id}`,
+      title: `${t} run ${rs.run_id.slice(0, 8)} lost (started ${rs.started_at}, never ended)`, summary: 'Start event with no end event beyond expected_max_duration_s + 300 s.',
+      snapshot: byRun.get(rs.run_id) });
+  }
+  const terminals = runRows.filter(r => r.phase === 'end').sort((a, b) => (a.started_at < b.started_at ? -1 : 1));
+  for (let i = 0; i < terminals.length; i++) {
+    const r = terminals[i];
+    if (r.event_type !== 'failed' && r.event_type !== 'killed') continue;
+    const last3 = terminals.slice(Math.max(0, i - 2), i + 1);
+    const streak = last3.length === 3 && last3.every(x => x.event_type === 'failed' || x.event_type === 'killed');
+    out.push({ type: 'job_failed', severity: streak ? 'sev2' : 'sev3', job_id: t, run_id: r.run_id, dedupe_key: `job_failed:${r.run_id}`,
+               title: `${t} run ${r.run_id.slice(0, 8)} ${r.event_type} (${r.started_at})`, summary: `Terminal ${r.event_type} event.`, snapshot: byRun.get(r.run_id) });
+  }
+  if (lat.job_state === 'frozen') {
+    const lastDone = terminals.filter(x => x.event_type === 'success' || x.event_type === 'partial').pop();
+    const marker = lastDone?.cursor_after || 'f4';
+    out.push({ type: 'job_frozen', severity: 'sev3', job_id: t, dedupe_key: `job_frozen:${t}:${marker}`,
+               title: `${t} is frozen (no progress)`, summary: 'Same cursor_after on the last 3 productive runs, or items_attempted > 0 with items_progressed = 0 (F4).' });
+  }
+  return out;
+}
+
+async function sweep(request, env) {
+  // 1. Hard switch — before any D1 access.
+  if (env.OPS_SWEEP_ENABLED === 'false') {
+    console.log('[ops-sweep] hard switch OPS_SWEEP_ENABLED=false: 202, 0 D1 reads');
+    return jsonPrivate({ ok: true, swept: false, reason: 'sweep_disabled' }, 202);
+  }
+  // 2. Emitter authentication (001 key map), then body.
+  const emitter = await authenticateEmitter(request, env);
+  if (!emitter) return jsonPrivate({ ok: false, error: 'unauthorized' }, 401);
+  const text = await request.text();
+  if (new TextEncoder().encode(text).length > INGEST_MAX_BODY_BYTES) return jsonPrivate({ ok: false, error: 'body exceeds 8 KB' }, 400);
+  let body;
+  try { body = JSON.parse(text); } catch { return jsonPrivate({ ok: false, error: 'invalid JSON' }, 400); }
+  if (!body || body.v !== 1) return jsonPrivate({ ok: false, error: 'unsupported contract version (expected v=1)' }, 400);
+  if (typeof body.run_id !== 'string' || !ID_RE.test(body.run_id)) return jsonPrivate({ ok: false, error: 'run_id is required' }, 400);
+  const days = Math.min(Math.max(parseInt(body.lookback_days ?? 7, 10) || 7, 1), MAX_LOOKBACK_DAYS);
+  const now = Date.now();
+  const w = { days, now, sinceIso: new Date(now - days * 86400000 - 10 * 60000).toISOString(), pauseSinceIso: new Date(now - days * 86400000).toISOString() };
+  let rowsRead = 0;
+  const meta = r => { rowsRead += r?.meta?.rows_read ?? 0; return r; };
+
+  // 3. Registry (declared SCAN ≤ 60) and its switches.
+  const reg = meta(await env.DB.prepare(`SELECT * FROM ops_job_registry`).all()).results;
+  const control = reg.find(r => r.job_id === 'ops.ingest');
+  const self = reg.find(r => r.job_id === SWEEP_JOB_ID);
+  if (control && control.ingest_enabled === 0) return jsonPrivate({ ok: true, swept: false, reason: 'ingest_disabled' }, 202);
+  if (!self) return jsonPrivate({ ok: false, error: 'unknown_job' }, 422);
+  if (self.emitter_id !== emitter) return jsonPrivate({ ok: false, error: 'emitter not allowed for the sweep' }, 403);
+  if (self.ingest_enabled === 0) return jsonPrivate({ ok: true, swept: false, reason: 'job_ingest_disabled' }, 202);
+
+  // 4. Fleet lateness (L2 per emitting job, L3) + platform keys (PK IN on holdings_pipeline_state).
+  const emitting = reg.filter(j => j.emitter_id && j.status !== 'retired');
+  const today = new Date(now).toISOString().slice(0, 10);
+  const dow = new Date(now).getUTCDay();
+  const sunday = lastSundayUtc(now);
+  const keys = ['hold_all_jobs', 'etf_offset', 'last_run_status'].concat(dow === 0 || dow === 1 ? [`writes_today_${sunday}`] : []);
+  const res = await env.DB.batch([
+    env.DB.prepare(`SELECT job_id, starts_at, ends_at, reason FROM ops_job_pause WHERE ends_at >= ?`).bind(w.pauseSinceIso),
+    env.DB.prepare(`SELECT key, value FROM holdings_pipeline_state WHERE key IN (${keys.map(() => '?').join(', ')})`).bind(...keys),
+    ...emitting.map(j => env.DB.prepare(L2_SQL).bind(j.job_id, w.sinceIso))
+  ]);
+  res.forEach(meta);
+  const pauses = res[0].results;
+  const state = Object.fromEntries(res[1].results.map(r => [r.key, r.value]));
+  const findings = [];
+  let raisedToday = 0;
+  emitting.forEach((j, i) => {
+    const runRows = res[i + 2].results;
+    if (j.job_id === SWEEP_JOB_ID) {
+      for (const r of runRows) {
+        if (r.phase !== 'end' || !String(r.started_at).startsWith(today)) continue;
+        try { raisedToday += Number(JSON.parse(r.detail || '{}')?.metrics?.raised) || 0; } catch { /* ignore */ }
+      }
+    }
+    try {
+      findings.push(...jobFindings(j, computeLateness(j, runRows, pauses, now, days), runRows));
+    } catch (err) { console.log(`[ops-sweep] lateness error for ${j.job_id}: ${err && err.message}`); }
+  });
+
+  const hold = state.hold_all_jobs === 'true';
+  if (hold) findings.push({ type: 'hold_active', severity: 'sev2', dedupe_key: `hold_active:${today}`, title: 'hold_all_jobs is TRUE', summary: 'All D1-writing pipelines are halted (shared kill switch).' });
+  let headroom = null, d1 = null;
+  try {
+    d1 = await d1Totals(env);
+    headroom = d1.daily_cap - d1.rowsWritten;
+    if (headroom < 5000) findings.push({ type: 'budget_risk', severity: 'sev1', dedupe_key: `budget_risk:headroom:${today}`,
+      title: `D1 headroom low: ${headroom} of ${d1.daily_cap} left today`, summary: 'Account rowsWritten from Cloudflare analytics (lags 25–30 min).' });
+  } catch (err) { console.log(`[ops-sweep] d1Totals failed: ${err && err.message}`); }
+  const sundayWrites = state[`writes_today_${sunday}`] != null ? parseInt(state[`writes_today_${sunday}`], 10) : null;
+  if (sundayWrites !== null && sundayWrites >= 80000) findings.push({ type: 'budget_risk', severity: 'sev2', dedupe_key: `budget_risk:holdings_guard:${sunday}`,
+      title: `Holdings Sunday ${sunday} reached the 80k guard (${sundayWrites})`, summary: 'ETF item (a): writes_today ≥ 80,000.' });
+  else if (sundayWrites !== null && sundayWrites >= 75000) findings.push({ type: 'budget_risk', severity: 'sev3', dedupe_key: `budget_risk:holdings_sunday:${sunday}`,
+      title: `Holdings Sunday ${sunday} writes ${sundayWrites} ≥ 75k`, summary: 'ETF item (a): baseline 70,672; warn ≥ 75,000.' });
+  const total = parseInt(String(state.last_run_status || '').match(/:(\d+)\/(\d+)/)?.[2] ?? '', 10);
+  const offset = parseInt(state.etf_offset ?? '', 10);
+  const etf = { offset: Number.isFinite(offset) ? offset : null, total: Number.isFinite(total) ? total : null,
+                weeks_to_complete: Number.isFinite(total) && Number.isFinite(offset) ? Math.ceil((total - offset) / 20) : null,
+                last_run_status: state.last_run_status ?? null, sunday, sunday_writes: sundayWrites };
+
+  // 5. Raise only NEW findings: dedupe pre-check (unique-index probes), then cap.
+  const uniq = [...new Map(findings.map(f => [f.dedupe_key, f])).values()];
+  let existing = new Set();
+  for (let i = 0; i < uniq.length; i += 50) {
+    const chunk = uniq.slice(i, i + 50).map(f => f.dedupe_key);
+    const r = meta(await env.DB.prepare(`SELECT dedupe_key FROM ops_exception WHERE dedupe_key IN (${chunk.map(() => '?').join(', ')})`).bind(...chunk).all());
+    r.results.forEach(x => existing.add(x.dedupe_key));
+  }
+  const fresh = uniq.filter(f => !existing.has(f.dedupe_key)).sort((a, b) => (SEV_ORDER[a.severity] - SEV_ORDER[b.severity]) || (a.dedupe_key < b.dedupe_key ? -1 : 1));
+  const dailyCap = parseInt(env.OPS_SWEEP_DAILY_RAISE_CAP || '', 10) || SWEEP_DEFAULT_DAILY_RAISE_CAP;
+  const allowed = Math.max(0, Math.min(SWEEP_RAISE_CAP, dailyCap - raisedToday));
+  let toRaise = fresh.slice(0, allowed);
+  let overflow = 0;
+  if (fresh.length > allowed && allowed > 0) {
+    overflow = fresh.length - (allowed - 1);
+    toRaise = fresh.slice(0, allowed - 1);
+    toRaise.push({ type: 'sweep_overflow', severity: 'sev2', dedupe_key: `sweep_overflow:${body.run_id}`,
+                   title: `Sweep found ${overflow} more new findings than its per-call cap`, summary: `Per-call cap ${SWEEP_RAISE_CAP}; daily cap ${dailyCap} (raised today before this call: ${raisedToday}).` });
+  }
+
+  const nowIso = new Date(now).toISOString();
+  const roleOf = new Map(reg.map(r => [r.job_id, r.owner_role]));
+  async function raiseStmts(f, n) {
+    const ref = await sweepCaseRef(f.dedupe_key, n);
+    return [
+      env.DB.prepare(`INSERT OR IGNORE INTO ops_exception (case_ref, exception_type, severity, status, title, summary, job_id, run_id, run_snapshot,
+                        owner_role, raised_by, raised_via, dedupe_key) VALUES (?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, 'ingest_auto', ?)`)
+        .bind(ref, f.type, f.severity, f.title.slice(0, 200), (f.summary || '').slice(0, 500), f.job_id || null, f.run_id || null,
+              f.snapshot ? JSON.stringify(f.snapshot).slice(0, 2000) : null, f.job_id ? roleOf.get(f.job_id) || null : null, `service:${emitter}`, f.dedupe_key),
+      env.DB.prepare(`INSERT OR IGNORE INTO ops_case_event (subject_type, subject_id, event_type, actor, actor_source, occurred_at, idempotency_key)
+                      SELECT 'exception', CAST(exception_id AS TEXT), 'raised', ?, 'ingest_key', ?, ? FROM ops_exception WHERE dedupe_key = ?`)
+        .bind(`service:${emitter}`, nowIso, `raised:${f.dedupe_key}`, f.dedupe_key),
+      ref
+    ];
+  }
+  const raised = [];
+  if (toRaise.length) {
+    const built = await Promise.all(toRaise.map(f => raiseStmts(f, 12)));
+    const out = await env.DB.batch(built.flatMap(([a, b]) => [a, b]));
+    for (let i = 0; i < toRaise.length; i++) {
+      const f = toRaise[i];
+      if ((out[i * 2].meta?.changes ?? 0) > 0) { raised.push({ case_ref: built[i][2], type: f.type, severity: f.severity, title: f.title }); continue; }
+      // Collision guard (R-E): changes = 0 for a finding pre-checked as absent.
+      const hit = meta(await env.DB.prepare(`SELECT case_ref FROM ops_exception WHERE dedupe_key = ?`).bind(f.dedupe_key).all()).results[0];
+      if (hit) continue;   // raised concurrently by another call — not new here
+      console.log(`[ops-sweep] case_ref collision for ${f.dedupe_key}; retrying with 16 hex chars`);
+      const [a, b, ref16] = await raiseStmts(f, 16);
+      const r2 = await env.DB.batch([a, b]);
+      if ((r2[0].meta?.changes ?? 0) > 0) raised.push({ case_ref: ref16, type: f.type, severity: f.severity, title: f.title });
+    }
+  }
+
+  // 6. Open counts (covering idx_ops_exception_queue).
+  const oc = meta(await env.DB.prepare(`SELECT severity, COUNT(*) AS n FROM ops_exception WHERE status = 'open' GROUP BY severity`).all()).results;
+  return jsonPrivate({
+    ok: true, run_id: body.run_id, lookback_days: days, hold_all_jobs: hold,
+    headroom: d1 ? { rows_written: d1.rowsWritten, daily_cap: d1.daily_cap, headroom } : null,
+    etf, findings: uniq.length, already_open: existing.size, new: raised, raised: raised.length,
+    overflow, raised_today_before: raisedToday, daily_cap: dailyCap,
+    open_counts: Object.fromEntries(oc.map(r => [r.severity, r.n])), rows_read: rowsRead
+  });
+}
+
 // Copies a legacy handler's response without its CORS allowances (admin prefix).
 function withoutCors(resp) {
   const headers = new Headers(resp.headers);
@@ -979,6 +1184,7 @@ export default {
       if (path.startsWith('/api/ops/admin/')) return await handleAdmin(request, env, url, path, method);
       if (path.startsWith('/api/ops/ingest/')) {
         if (path === '/api/ops/ingest/run-event' && method === 'POST') return await ingestRunEvent(request, env);
+        if (path === '/api/ops/ingest/sweep' && method === 'POST') return await sweep(request, env);
         return jsonPrivate({ ok: false, error: 'not found' }, 404);
       }
 

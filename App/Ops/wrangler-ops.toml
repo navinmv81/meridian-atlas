@@ -36,3 +36,8 @@ OPS_INGEST_DAILY_EVENT_CAP = "1000"
 # route fails closed with 401.
 CF_ACCESS_TEAM_DOMAIN = "meridian-atlas-except.cloudflareaccess.com"
 CF_ACCESS_AUD = "7f1b678452f2038a2900e478943d933ff39f24e3f9fac976b62eb2aae8c222cc"
+# MA-OCT-002a A3 (CR-3): alerting sweep POST /api/ops/ingest/sweep. Hard switch:
+# OPS_SWEEP_ENABLED="false" + deploy (202 before any D1 read). Raises are capped
+# at 20 per call (code) and OPS_SWEEP_DAILY_RAISE_CAP per UTC day.
+OPS_SWEEP_ENABLED = "true"
+OPS_SWEEP_DAILY_RAISE_CAP = "100"

@@ -100,6 +100,14 @@ const manual = [{ run_id: 'm1', phase: 'end', event_type: 'success', started_at:
 const rm = computeLateness(BOOST, manual, [], T('2026-10-07T00:00:00Z'), 1);
 check('[manual] a manual run outside any slot window matches no slot', rm.runs[0].matched_slot === false && rm.slots.every(s => s.run_id === null), rm);
 
+const HC = { job_id: 'local.health-check', status: 'active', emitter_id: 'health-check-local', expected_max_duration_s: 120,
+  intended_schedule: { kind: 'launchd_calendar', tz: 'Europe/London', entries: [8, 12, 18, 22].map(h => ({ hour: h, minute: 0 })),
+                       on_time_tol_s: 900, grace_s: 28800, observed_since: '2026-10-13T16:00:00Z' } };
+const rhc = computeLateness(HC, [], [], T('2026-10-14T12:00:00Z'), 7);
+check('[observed_since] a revived job: slots before observed_since are unobserved; later ones count',
+  rhc.slots.filter(s => s.slot < '2026-10-13T16:00Z').every(s => s.state === 'unobserved')
+  && rhc.slots.filter(s => s.slot >= '2026-10-13T16:00Z').map(s => s.state).join() === 'missed,missed,pending,pending', rhc.slots.slice(-6));
+
 // ---------------------------------------------------------------------------
 // 4. Frozen.
 const runsAt = (cursor, att, prog) => ['01', '02', '03'].map(d => ({ run_id: `f${d}`, phase: 'end', event_type: 'success', started_at: `2026-10-${d}T06:50:00Z`, ended_at: `2026-10-${d}T06:51:00Z`,

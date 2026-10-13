@@ -51,7 +51,10 @@ const GRACE = {   // [on_time_tol_s, grace_s]
   'local.firds-weekly-seed': [1800, 43200], 'local.health-check': [900, 28800], 'local.financialfact-backfill': [900, 28800]
 };
 const STATUS = { 'cf.meridian-entities-delta': 'held', 'local.financialfact-backfill': 'held', 'cf.meridian-firds': 'retired' };
-const EMITTER = { 'local.entities-enrich-boost': 'boost-local' };   // health-check-local is added at A3
+const EMITTER = { 'local.entities-enrich-boost': 'boost-local', 'local.health-check': 'health-check-local' };   // health-check: A3
+// Slots before a job's emitter went live are `unobserved`, not `missed` (lateness §6.3).
+// local.health-check was revived by 002a A3 on Tue 13 Oct 2026; its first counted slot is 18:00 local (17:00Z).
+const OBSERVED_SINCE = { 'local.health-check': '2026-10-13T16:30:00Z' };
 const PLISTS = {
   'local.entities-enrich-boost': 'com.meridianatlas.entities-enrich-boost',
   'local.firds-weekly-seed': 'com.meridianatlas.firds-weekly-seed',
@@ -107,6 +110,13 @@ function intendedFor(job) {
     if (id === 'cf.meridian-entities-enrich.phase1') return { kind: 'cf_cron', exprs: crons.filter(c => /^0 6 /.test(c)), tz: 'UTC', ...extra };
     if (id === 'cf.meridian-entities-enrich.phase23') return { kind: 'cf_cron', exprs: crons.filter(c => /^50 6 /.test(c)), tz: 'UTC', ...extra };
     return crons.length ? { kind: 'cf_cron', exprs: crons, tz: 'UTC', ...extra } : { kind: 'none' };
+  }
+  if (id === 'local.health-check') {
+    // A3: the install script is the source of truth for the revived watchdog's 4 local slots.
+    const inst = path.join(ROOT, 'App/Ops/scripts/health-check-install.sh');
+    const m = existsSync(inst) && readFileSync(inst, 'utf8').match(/^LOCAL_HOURS=\(([^)]*)\)/m);
+    if (m) return { kind: 'launchd_calendar', tz: 'Europe/London', entries: m[1].trim().split(/\s+/).map(h => ({ hour: parseInt(h, 10), minute: 0 })),
+                    ...extra, observed_since: OBSERVED_SINCE[id] };
   }
   if (PLISTS[id]) {
     const entries = plistCalendar(PLISTS[id]);

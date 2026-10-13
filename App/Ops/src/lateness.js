@@ -210,6 +210,9 @@ export function computeLateness(job, rows, pauses, nowMs, lookbackDays = 7) {
   const intended = typeof job.intended_schedule === 'string' ? JSON.parse(job.intended_schedule || '{"kind":"none"}') : (job.intended_schedule || { kind: 'none' });
   const tolMs = (intended.on_time_tol_s ?? DEFAULT_ON_TIME_TOL_S) * 1000;
   const graceMs = (intended.grace_s ?? DEFAULT_GRACE_S) * 1000;
+  // Optional: slots before `observed_since` (when the job's emitter went live) are
+  // `unobserved`, not `missed` — e.g. a revived job is not charged for its dead weeks.
+  const observedSinceMs = intended.observed_since ? Date.parse(intended.observed_since) : null;
 
   // Contract-test runs are never matched to a slot (or counted).
   const runs = groupRuns(rows).filter(r => r.trigger !== 'contract-test');
@@ -223,6 +226,7 @@ export function computeLateness(job, rows, pauses, nowMs, lookbackDays = 7) {
 
     let state;
     if (!job.emitter_id) state = 'unobserved';                     // cannot report → never missed
+    else if (observedSinceMs && s < observedSinceMs) state = 'unobserved';   // before the job could report
     else if (job.status === 'held' || inPause(pauses, job.job_id, s) || (run && run.outcome === 'skipped' && run.reason === 'pause')) state = 'paused';
     else if (run) state = run.startedMs <= s + tolMs ? 'on_time' : 'late';
     else state = nowMs > s + graceMs ? 'missed' : 'pending';
