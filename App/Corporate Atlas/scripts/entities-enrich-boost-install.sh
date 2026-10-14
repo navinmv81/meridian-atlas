@@ -46,6 +46,10 @@
 # firds-seed-install.sh — launchd's bare /usr/bin:/bin:/usr/sbin:/sbin PATH
 # doesn't include wherever Homebrew put node/npx/wrangler on this machine.
 
+# MA-OCT-002a A4 (CR-5, spec §8.4): the plist sets OPS_TRIGGER=launchd so the
+# runner labels scheduled fires trigger='launchd' (manual runs stay 'manual';
+# XPC_SERVICE_NAME is not set to the label by this /bin/bash -c agent).
+
 set -euo pipefail
 
 LABEL="com.meridianatlas.entities-enrich-boost"
@@ -62,10 +66,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CORP_ATLAS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RUN_SCRIPT="$CORP_ATLAS_DIR/entities-enrich-boost-run.mjs"
 LOG_DIR="$CORP_ATLAS_DIR/logs"
-ENV_FILE="$CORP_ATLAS_DIR/.env.entities-enrich-run"
+# ML-1011-2: run secrets live outside the repo and iCloud.
+SECRETS_DIR="${MERIDIAN_SECRETS_DIR:-$HOME/.meridian-secrets}"
+ENV_FILE="$SECRETS_DIR/entities-enrich-run.env"
 
 if [ ! -f "$RUN_SCRIPT" ]; then
   echo "ERROR: run script not found at $RUN_SCRIPT" >&2
+  exit 1
+fi
+# MA-OCT-002a A4: the runner imports lib/ops-outbox.mjs (outbox + heartbeat).
+if [ ! -f "$CORP_ATLAS_DIR/lib/ops-outbox.mjs" ]; then
+  echo "ERROR: outbox module not found at $CORP_ATLAS_DIR/lib/ops-outbox.mjs" >&2
   exit 1
 fi
 if [ ! -f "$ENV_FILE" ]; then
@@ -143,6 +154,8 @@ cat > "$PLIST_PATH" <<PLIST
     <dict>
         <key>PATH</key>
         <string>${LAUNCHD_PATH}</string>
+        <key>OPS_TRIGGER</key>
+        <string>launchd</string>
     </dict>
     <key>StartCalendarInterval</key>
     <array>

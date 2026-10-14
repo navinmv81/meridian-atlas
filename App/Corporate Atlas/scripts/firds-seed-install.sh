@@ -44,6 +44,19 @@ if [ ! -f "$SEED_SCRIPT" ]; then
 fi
 
 NODE_BIN="$(command -v node || true)"
+
+# MA-OCT-002a A4 (CR-5, spec §8.3 rule 4): wrangler is pinned in package.json
+# (exact devDependency) and the runner calls node_modules/.bin/wrangler. Refuse
+# when the pinned and installed versions differ, or the pinned binary is missing.
+PINNED_WRANGLER="$(node -e "console.log(require('$CORP_ATLAS_DIR/package.json').devDependencies?.wrangler || '')" 2>/dev/null || true)"
+INSTALLED_WRANGLER="$("$CORP_ATLAS_DIR/node_modules/.bin/wrangler" --version 2>/dev/null | tail -1 | tr -d '[:space:]' || true)"
+echo "wrangler pinned:    ${PINNED_WRANGLER:-<none>}"
+echo "wrangler installed: ${INSTALLED_WRANGLER:-<missing>} ($CORP_ATLAS_DIR/node_modules/.bin/wrangler)"
+if [ -z "$PINNED_WRANGLER" ] || [ "$PINNED_WRANGLER" != "$INSTALLED_WRANGLER" ]; then
+  echo "ERROR: wrangler version mismatch (pinned '${PINNED_WRANGLER:-none}' vs installed '${INSTALLED_WRANGLER:-missing}'). Run 'npm ci' in $CORP_ATLAS_DIR." >&2
+  exit 1
+fi
+
 if [ -z "$NODE_BIN" ]; then
   echo "ERROR: 'node' not found on PATH. Install Node or adjust this script." >&2
   exit 1

@@ -88,11 +88,19 @@ function esc(v) {
 // execFileSync) was verified this session to return real per-statement
 // `results` arrays for both single and multi-statement SQL, and to handle
 // a 1000-statement / ~330KB command reliably (~1.7s). That's what this uses.
+// MA-OCT-002a A4 (CR-5, spec §8.3, A-8): wrangler is pinned to 4.96.0 in this
+// folder's package.json (exact devDependency + lockfile, `npm ci`) and called by
+// absolute path — never `npx` (which resolved other versions: 006 D7-5, F6).
+const WRANGLER_BIN = path.join(SCRIPT_DIR, 'node_modules', '.bin', 'wrangler');
+
 function execWrangler(sqlText, { timeoutMs = 300000, label = 'query' } = {}) {
+  if (!existsSync(WRANGLER_BIN)) {
+    throw new Error(`pinned wrangler not found at ${WRANGLER_BIN} — run \`npm ci\` in ${SCRIPT_DIR}`);
+  }
   try {
     const out = execFileSync(
-      'npx',
-      ['wrangler', 'd1', 'execute', DB_NAME, '--remote', '--json', '--command', sqlText],
+      WRANGLER_BIN,
+      ['d1', 'execute', DB_NAME, '--remote', '--json', '--command', sqlText],
       { maxBuffer: 1024 * 1024 * 64, timeout: timeoutMs, encoding: 'utf8' }
     );
     const jsonStart = out.search(/[[{]/);
