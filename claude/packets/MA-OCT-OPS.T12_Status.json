@@ -1,0 +1,21 @@
+{
+  "packet": "MA-OCT-OPS.T12",
+  "state": "EXECUTING",
+  "owner": "LANE-1-ENG",
+  "write_owner": "Engineering Lead (LANE-1-ENG)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-OPS.T12_Control_v1.md",
+    "sha256": "3a609ca239af8c311ac2eb26153f09865d42907361bd43e198857157f4899e01"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-OPS.T12_Task_v1.md",
+    "sha256": "a2f29d027e2168cd497f57fa29b15aff2f5fe392a20f13243b69e3a8e1f5cdc3"
+  },
+  "blocker": null,
+  "review_needed": true,
+  "usage_class": "light",
+  "updated": "2026-10-15T05:58Z",
+  "updated_by": "Main Lane"
+}

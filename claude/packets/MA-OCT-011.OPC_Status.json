@@ -1,0 +1,26 @@
+{
+  "packet": "MA-OCT-011.OPC",
+  "state": "CLOSED",
+  "owner": "LANE-1-OPS",
+  "write_owner": "Operations Lead (LANE-1-OPS)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.OPC_Control_v1.md",
+    "sha256": "56252ce46d27a2c4e4c1af802d81ee790b01b09871694e339e242dcc9a137261"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.OPC_Task_v1.md",
+    "sha256": "093b4d99aba06f25c3baa245a7e354ce4837a3c95200e10a29e0fcc5d95e9c09"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-10T08:25Z",
+  "updated_by": "Main Lane",
+  "verdict": "CONFIRMED (R-1..R-4, N-1..N-6 present, not weakened); ML-0910-1 CONCUR with clarification",
+  "report": {
+    "file": "MA-OCT-011.OPC_Report.md",
+    "sha256": "aa2fab2daaa4b2ba365a9f240c29b8f70894f6dba4e92da053f97227a69c8989"
+  }
+}

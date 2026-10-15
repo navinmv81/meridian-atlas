@@ -1,0 +1,30 @@
+{
+  "packet": "MA-OCT-007.REV",
+  "state": "CLOSED",
+  "owner": "REVIEW-007 (fresh)",
+  "write_owner": "REVIEW-007",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-007.REV_Control_v1.md",
+    "sha256": "0de0912f2b14c0ef45bdf6b4cc53a513119b49bc6fa3dddfbb78b87cb9e0f3a7"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-007.REV_Task_v1.md",
+    "sha256": "ef7c5c292f050ea8e836a36ee9291d1de4d1c8e79216e745109a0bd1ccb1242d"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-10-10T08:25Z",
+  "updated_by": "Main Lane",
+  "verdict": "PASS WITH NOTES (R7-1..R7-10 required; N7-1..N7-12)",
+  "report": {
+    "file": "MA-OCT-007.REV_Report.md",
+    "sha256": "6b8bd6be016622a9ee21fb601b75b70ba8decac50e5d3b8104c0831ed680481f"
+  },
+  "output": {
+    "file": "claude/MA-OCT-007_Spec_Review.md",
+    "sha256": "79a852cad56864bfee39e1d3d3e404995200c978a586205390243100b70b035b"
+  }
+}

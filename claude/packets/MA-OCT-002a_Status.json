@@ -1,0 +1,40 @@
+{
+  "packet": "MA-OCT-002a",
+  "state": "EXECUTING",
+  "owner": "LANE-1-ENG",
+  "write_owner": "Engineering Lead (LANE-1-ENG)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-002a_Control_v1.md",
+    "sha256": "fe9ed369e771882b238b1f41adf601288778bb72350e1ebf3871475bec78c32a"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-002a_Task_v1.md",
+    "sha256": "10ff165a07f37441c1d4bb9db9acb782208d1fa68cd62124cb65a9941364aa5d"
+  },
+  "blocker": null,
+  "review_needed": true,
+  "usage_class": "heavy",
+  "updated": "2026-10-12T22:45Z",
+  "updated_by": "Main Lane",
+  "started": "2026-10-11T07:13Z (Founder Start Approval)",
+  "days": {
+    "2026-10-11": {
+      "report_sha256": "82970d8a6feb3bcae95b272aba2a312f5e7729443feec13c30570ef53801702c",
+      "commit": "8f06ed0",
+      "d1_writes": 0,
+      "d1_reads": 0
+    },
+    "2026-10-12": {
+      "report_sha256": "826ec0c35e35d1aba33007b76687072a6bdae60a851f061bf319b2fa95ab9957",
+      "commit": "45cdb9d",
+      "d1_writes": 149,
+      "d1_reads": 338
+    }
+  },
+  "rulings": [
+    "ML-1011-2",
+    "ML-1011-3"
+  ]
+}

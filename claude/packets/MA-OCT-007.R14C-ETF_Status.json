@@ -1,0 +1,31 @@
+{
+  "packet": "MA-OCT-007.R14C-ETF",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "write_owner": "REVIEW-A",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-007.R14C-ETF_Control_v1.md",
+    "sha256": "92e2aa721394f595acbb59031df56ea60906f9d7b88aa7ab4a23f8bfe3cfc4c6"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-007.R14C-ETF_Task_v1.md",
+    "sha256": "cd07fc433d784ba00bf73f92e44503fefd5243f9dd2f79dd17efa803b853161b"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-10T08:45Z",
+  "updated_by": "Main Lane",
+  "verdict": "E7-1..E7-3 MET; O6 consent holds with conditions",
+  "report": {
+    "file": "MA-OCT-007.R14C-ETF_Report.md",
+    "sha256": "d95a9a5cfd4ea76e60162bbfed5ebb19c5c9205560ad4dacb6d625178b492991"
+  },
+  "output": {
+    "file": "claude/MA-OCT-007_ETF_Consult.md",
+    "sha256": "f45ad5b967dacb3d13edecce90a337ecf9a54f8d030f2ca8e40793fec141d653",
+    "append_only": "first 66 lines = ae3c1c8d\u202676cc"
+  }
+}

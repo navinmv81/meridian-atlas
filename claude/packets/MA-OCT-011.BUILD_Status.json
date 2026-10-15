@@ -1,0 +1,35 @@
+{
+  "packet": "MA-OCT-011.BUILD",
+  "state": "EXECUTING",
+  "owner": "LANE-11-ENG",
+  "write_owner": "LANE-11-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.BUILD_Control_v1.md",
+    "sha256": "b4e3e1e119616b623729850601d99957bf460df5ba98ca25840141d2fe96fdc9"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.BUILD_Task_v1.md",
+    "sha256": "e32bfeb6d3b522e5c4ed9fefbda7ed5ad158e6484459df79bc3a6f949978bcc7"
+  },
+  "blocker": null,
+  "review_needed": true,
+  "usage_class": "heavy",
+  "updated": "2026-10-13T15:30Z",
+  "updated_by": "Main Lane",
+  "days": {
+    "2026-10-13": {
+      "report_sha256": "758fba1d7de163310773844a41f9816be450daab4861fefd3277b1994e0ab1ad",
+      "d1_reads": 998,
+      "d1_writes": 0,
+      "tests": "17/17"
+    }
+  },
+  "open_findings": [
+    "F-1 E-A 298",
+    "F-2 P/A 51+6 overlap",
+    "F-3 reads ~290k vs 250k",
+    "OQ-12 report-only lists do not reconcile"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "packet": "MA-OCT-008.BUILD",
+  "state": "EXECUTING",
+  "owner": "LANE-8-ENG",
+  "write_owner": "LANE-8-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-008.BUILD_Control_v1.md",
+    "sha256": "ccf533c0ab5c20235aefa3aaedc8c58d5b2deff076c7290f3284d51fd452a48d"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-008.BUILD_Task_v1.md",
+    "sha256": "1bdc15366aa61ff0f1dbbc9c7d5f21855963d9b65da2bc7e94e7e9738e2ec3e8"
+  },
+  "blocker": null,
+  "review_needed": true,
+  "usage_class": "heavy",
+  "updated": "2026-10-14T06:15Z",
+  "updated_by": "Main Lane"
+}

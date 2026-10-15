@@ -1,0 +1,76 @@
+{
+ "issued": "2026-10-09",
+ "by": "Main Lane",
+ "note": "UTC. Runners must refuse to start a live batch inside any window. Recurring windows use day/time; dated windows use ISO start/end.",
+ "recurring": [
+  {
+   "name": "holdings Sunday",
+   "days": [
+    "Sun"
+   ],
+   "start": "04:00",
+   "end": "07:05"
+  },
+  {
+   "name": "entities-seed Monday",
+   "days": [
+    "Mon"
+   ],
+   "start": "03:30",
+   "end": "08:00"
+  },
+  {
+   "name": "entities-enrich",
+   "days": [
+    "*"
+   ],
+   "start": "05:50",
+   "end": "07:10"
+  },
+  {
+   "name": "bootstrap fire buffer",
+   "days": [
+    "*"
+   ],
+   "start": "07:55",
+   "end": "08:05"
+  },
+  {
+   "name": "boost AM (standard band)",
+   "days": [
+    "*"
+   ],
+   "start": "10:45",
+   "end": "11:15"
+  },
+  {
+   "name": "boost PM (standard band)",
+   "days": [
+    "*"
+   ],
+   "start": "16:45",
+   "end": "17:15"
+  },
+  {
+   "name": "UTC midnight (F-3)",
+   "days": [
+    "*"
+   ],
+   "start": "23:50",
+   "end": "00:10"
+  }
+ ],
+ "dated": [
+  {
+   "name": "ENT-CR1 index change",
+   "start": "2026-10-13T08:05Z",
+   "end": "2026-10-13T10:30Z",
+   "fallback": "2026-10-14T08:05Z/2026-10-14T10:30Z"
+  },
+  {
+   "name": "011 run window (if GO) \u2014 other Entities writers frozen",
+   "start": "2026-10-17T00:00Z",
+   "end": "2026-10-24T00:00Z"
+  }
+ ]
+}

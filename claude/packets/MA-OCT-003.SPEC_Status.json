@@ -1,0 +1,21 @@
+{
+  "packet": "MA-OCT-003.SPEC",
+  "state": "EXECUTING",
+  "owner": "LANE-3",
+  "write_owner": "LANE-3",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-003.SPEC_Control_v1.md",
+    "sha256": "c38b4b7a1d6ec562c5a018d979bea8eb87e545eca6bddbd6e510f36024fb5cd2"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-003.SPEC_Task_v1.md",
+    "sha256": "8b23b06f03253abe7421d108c001ec456f0fc1972bd5c60399973af6cddfe675"
+  },
+  "blocker": null,
+  "review_needed": true,
+  "usage_class": "medium",
+  "updated": "2026-10-14T06:15Z",
+  "updated_by": "Main Lane"
+}

@@ -20,3 +20,7 @@ node_modules/
 13F Seed/*.zip
 13F Seed/*.csv
 13F Seed/2025_Q*/
+
+# MA-OCT-011 runner control flags (011 OQ-10; added by MA-OCT-OPS.T12) — never committed.
+App/Corporate Atlas/.gleif-reconcile-011-paused
+App/Corporate Atlas/.gleif-reconcile-011-stop

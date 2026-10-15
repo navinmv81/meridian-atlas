@@ -1,0 +1,26 @@
+{
+  "packet": "MA-OCT-011.R110R",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "write_owner": "REVIEW-A",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.R110R_Control_v1.md",
+    "sha256": "aca097ac537e37ee1afa63b84dfe65fcf5e7df0dd72d6b57dacdbe8ea09248d0"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.R110R_Task_v1.md",
+    "sha256": "f396fe0939ebdab979ae0e634dad3b871335b4f7310fd055dc5fda777f8977c3"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-15T05:58Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-011.R110R_Report.md",
+    "sha256": "29ad19df209b7b71783ca65bd7cafbf5cb601a3326c953a919144dc77563df92"
+  },
+  "verdict": "PASS WITH NOTES; RA-15; R110R-B1; R110R-1"
+}

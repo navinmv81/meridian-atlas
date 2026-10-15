@@ -1,0 +1,27 @@
+{
+  "packet": "MA-OCT-ENT-CR1.EXEC",
+  "state": "CLOSED",
+  "owner": "LANE-1-ENG",
+  "write_owner": "LANE-1-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-ENT-CR1.EXEC_Control_v1.md",
+    "sha256": "47e0afe8032106222e70d01f671ff88781a5f50d5fc4d4741b4fc15fa4f3db13"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-ENT-CR1.EXEC_Task_v1.md",
+    "sha256": "04a849086aecccc1b4cd102f25fbf975c5c6e8ba2d2c75e7a14387dc0d990101"
+  },
+  "blocker": null,
+  "review_needed": true,
+  "usage_class": "heavy",
+  "updated": "2026-10-13T15:30Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-ENT-CR1.EXEC_Report.md",
+    "sha256": "2587137cb219a2da6eb9504514e5b879a62cc1da749b2d6a14e67d9a81241c1c"
+  },
+  "commit": "4bf5530",
+  "result": "ENT-CR1 verified 09:33:45Z (C1 + E1/E2/E4); C2/C3 deferred (ML-1013-2)"
+}

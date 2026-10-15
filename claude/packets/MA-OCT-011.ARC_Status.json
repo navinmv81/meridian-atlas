@@ -1,0 +1,35 @@
+{
+  "packet": "MA-OCT-011.ARC",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "write_owner": "REVIEW-A",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.ARC_Control_v1.md",
+    "sha256": "b7c8eaefc9cb1050135ed692d89fff3585386d68240a271a3247af1070d2b6b8"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.ARC_Task_v1.md",
+    "sha256": "ad8a51b39f8d90196fae8fb4f96d4eb5f04218e25014299869d836d59984bb47"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-10T08:25Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-011.ARC_Report.md",
+    "sha256": "edaa48d5c441341f13836403f1aa5f5f15180c9e599e0cecfe2440b16cfd28c6"
+  },
+  "output": {
+    "file": "claude/MA-OCT-011_Architect_Review.md",
+    "sha256": "251ae4fca56a0600e8e865255a648a21261ccf2fa04498faa0f7924ca46d0904",
+    "lines": 164
+  },
+  "verdict": "PASS WITH NOTES (7/7 MET)",
+  "rulings": [
+    "ML-1010-1 RC-1 alias recorded; 011 rev 1.9 kept",
+    "ML-1010-2 RC-2/RC-3 bind on the 013 spec as B13-4/B13-5"
+  ]
+}

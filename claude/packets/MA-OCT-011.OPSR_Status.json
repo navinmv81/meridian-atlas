@@ -1,0 +1,21 @@
+{
+  "packet": "MA-OCT-011.OPSR",
+  "state": "READY",
+  "owner": "LANE-1-OPS",
+  "write_owner": "Operations Lead (LANE-1-OPS)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.OPSR_Control_v1.md",
+    "sha256": "7849cb4a0850472564002aed9381dc5d0bb4a22767ec1de5cb76cbaf1b74f245"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.OPSR_Task_v1.md",
+    "sha256": "36ddb1ccb60b281177bc176fa64f1abfdbf5d636e65e1426127db6953432e621"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-14T19:30Z",
+  "updated_by": "Main Lane"
+}

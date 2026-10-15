@@ -1,0 +1,37 @@
+{
+  "packet": "MA-OCT-007.R14",
+  "state": "CLOSED",
+  "owner": "LANE-7",
+  "write_owner": "Engineering Lead (LANE-7)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-007.R14_Control_v1.md",
+    "sha256": "cf4547bfd49d3aa01cb50bc4511165757c76c1b1090b54bab7ff932dd0b2832b"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-007.R14_Task_v1.md",
+    "sha256": "187ee7dc0c4820e9cf35b2b93fe024fce0b6f4121301d9affe42faf63683dae8"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-10-10T08:45Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-007.R14_Report.md",
+    "sha256": "e764891dffe3f49adf4545e3a86092fd47f8eee43fb746b09e730f300718a14a"
+  },
+  "output": {
+    "file": "claude/MA-OCT-007_Spec.md",
+    "rev": "1.4",
+    "sha256": "4d4fffefab020d516a1804843d01142452306bd07e20275a0cd1bf79759b397c",
+    "lines": 818,
+    "rev13_copy": "332c638c\u2026ec72e verified",
+    "hunks": 28
+  },
+  "reviewed_by": [
+    "MA-OCT-007.R14C-UXDI",
+    "MA-OCT-007.R14C-ETF"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "packet": "MA-OCT-007.R14C-UXDI",
+  "state": "CLOSED",
+  "owner": "REVIEW-007 (fresh session that wrote the 007 review)",
+  "write_owner": "REVIEW-007 (fresh session that wrote the 007 review)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-007.R14C-UXDI_Control_v1.md",
+    "sha256": "0a52bc401bbb51a246297292fa79838382e07bbca138d3f63c150e7b93530c47"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-007.R14C-UXDI_Task_v1.md",
+    "sha256": "62788dc8f77bad41ec15912573dcebccd930709bda01df59ba446e5d76c5dc3c"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-10T08:45Z",
+  "updated_by": "Main Lane",
+  "verdict": "PASS WITH NOTES: R7-1..R7-10 MET; N7-13..N7-16 non-blocking",
+  "report": {
+    "file": "MA-OCT-007.R14C-UXDI_Report.md",
+    "sha256": "97d3713306a5abb75b12ed0ee66940b8f272c88d9df04096992ff249bd65002f"
+  },
+  "output": {
+    "file": "claude/MA-OCT-007_Spec_Review.md",
+    "sha256": "9b6a56999e9afedf4d7154f2fb9e186851c8be016c7db4bd34d0cb965a110eb7",
+    "append_only": "first 114 lines = 79a852ca\u2026035b"
+  }
+}

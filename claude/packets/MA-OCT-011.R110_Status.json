@@ -1,0 +1,32 @@
+{
+  "packet": "MA-OCT-011.R110",
+  "state": "REVIEW_NEEDED",
+  "owner": "LANE-11",
+  "write_owner": "Data-Identity Lead (LANE-11)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.R110_Control_v1.md",
+    "sha256": "62551a3454d23dd273f278050abb2bf2c919698267f9286091dae702026e0f8d"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.R110_Task_v1.md",
+    "sha256": "3d2954ad7d448cd568a3d5848aefeade9b14f94ad8fbb50de5a3dca2f3c9d3a6"
+  },
+  "blocker": null,
+  "review_needed": true,
+  "usage_class": "medium",
+  "updated": "2026-10-13T20:20Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-011.R110_Report.md",
+    "sha256": "455cf4e00788403301adea11b91521180679ecf2d51f6132e3d03979b54e2f71"
+  },
+  "output": {
+    "file": "claude/MA-OCT-011_Spec.md",
+    "rev": "1.10",
+    "sha256": "6328069130ee437d128c3c0f08081218cab7e0e5df3beb2c0010dda46c1b0aaa",
+    "lines": 889,
+    "hunks_U0": 43
+  }
+}

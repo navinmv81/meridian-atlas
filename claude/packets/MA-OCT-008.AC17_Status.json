@@ -1,0 +1,30 @@
+{
+  "packet": "MA-OCT-008.AC17",
+  "state": "CLOSED",
+  "owner": "LANE-8",
+  "write_owner": "Data-Identity Lead (LANE-8)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-008.AC17_Control_v1.md",
+    "sha256": "e8655b0e8fa0fddd8c36a52dfb9977d18774f8ae486272d433deb88ffd282be6"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-008.AC17_Task_v1.md",
+    "sha256": "6a3a955b16b0efddff0eafc3dd25e2804ed859debe7595bf8701c48c01814d16"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-15T05:58Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-008.AC17_Report.md",
+    "sha256": "1a8a29348d6e2002dc991db062b4f424960f4251359d9806d9a0262b398eebbb"
+  },
+  "output": {
+    "file": "claude/MA-OCT-008_AC17_Signoff.md",
+    "sha256": "5cdb7d89ac34360698b991c6d1769a5381b5a0a5d1b222cc46462063f889f4e0"
+  },
+  "note": "Run in the REVIEW-A session (role deviation, ML-1015-2)"
+}

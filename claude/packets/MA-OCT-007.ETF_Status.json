@@ -1,0 +1,31 @@
+{
+  "packet": "MA-OCT-007.ETF",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "write_owner": "REVIEW-A",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-007.ETF_Control_v1.md",
+    "sha256": "aa504925cd9a3bc309071406f92573434bbb3e99f3f32b6b711260c7fa57bf92"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-007.ETF_Task_v1.md",
+    "sha256": "be985245480d2c4737269fb5d452dee3240cfec839113ad8d5baefefe1286323"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-10T08:25Z",
+  "updated_by": "Main Lane",
+  "verdict": "Item1 PASS WITH NOTES; O6 YES WITH CONDITIONS; Item3 PASS WITH NOTES (E7-1..E7-3 required)",
+  "report": {
+    "file": "MA-OCT-007.ETF_Report.md",
+    "sha256": "4dad703f062e57a04fac502b760ede77ecb6e13f0a5cbf006a6736599015e3cf"
+  },
+  "output": {
+    "file": "claude/MA-OCT-007_ETF_Consult.md",
+    "sha256": "ae3c1c8db1fb6e35ca32e1118feeef3eacd410304a25d4b1dcd79855cae276cc"
+  },
+  "note": "Ran before 011.OPC on the Founder's instruction; reorder recorded; WIP held at 2"
+}
