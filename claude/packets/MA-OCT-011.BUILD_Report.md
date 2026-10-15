@@ -401,3 +401,165 @@ Plans v1–v3 in `plans/` are superseded: v1 has the F-2 double claim, and v2/v3
 | New: plan files and rev 1.10 | When rev 1.10 is approved, the Fri 16 plan header should cite it alongside rev 1.9. That is a one-line change to the `spec` field in the generator, held until approval. |
 
 **Stop point:** end of day, Wed 14.
+
+---
+
+## Thu 15 Oct 2026
+
+**Instruction:** Founder (chat, Thu 15). The packet "MA-OCT-011.BUILD, Thu 15: rehearsal + R110R-B1 / RA-15 + ML-1015-1" was drafted by the Data-Identity Lead from Decisions Log 15 Oct (`f761cc4b…3f6f`) and R110R report `29ad19df…df92`.
+
+### Preflight
+- No `.git/*.lock`. HEAD `3960aee`.
+- All four pinned files matched before coding: runner `62e35bd5…f0fc`, core `4aedd09c…1a2f`, verify `4e29340a…c30b`, tests `679599fa…04f0`.
+- Control `b4e3e1e1…6fc9` unchanged.
+- **No git writes by this lane.** 0 GLEIF calls.
+- **MA-OCT-OPS.T12 was not run in this session** (Founder's choice, 05:4x UTC): T12's items are prohibited to LANE-11 by its own Control, so T12 runs in the LANE-1-ENG session.
+
+### 1. Rollback rehearsal: PASS (live D1)
+
+| | Value |
+|---|---|
+| Time | 07:16:39–07:16:44 UTC, inside the 07:15–10:40 run window, outside every `FREEZES.json` window (calendar check OK, `FREEZES.json` `cdc9606a…`) |
+| `status.sh` | clean: no runner, no flags, no holds |
+| `d1-today` at the gate | `rowsWritten` 200 (ceiling 60,000; 011 own cap 25,000) |
+| Command | `rehearse --plan …/dryrun-d2-v6 --step CR --rows 20 --max-writes 100 --transport remote --operator EngLead-LANE-11` |
+| Code | runner `333e48e2…2f26`, core `4aedd09c…1a2f` (final Thu 15 code, 30/30 tests) |
+| Selection | probed 60 planned C-reasons rows (V1); all 20 chosen still matched the plan pre-image. Entity ids 310, 311, 312, 313, 314, 316, 318, 331, 334, 335, 337, 338, 341, 342, 344, 346, 347, 348, 349, 350 |
+| Forward | `success`, 20/20 `applied`, 0 mismatches; declared 40, **D1 `rows_written` 40** (1.0×) |
+| Restore | `success`, 20/20 `applied` (CAS on `gleif_enrichment_version = 11` + post-image), 0 mismatches; **D1 `rows_written` 40** |
+| **Total writes** | **80** (limit 100) |
+| Back to pre-image | **yes, byte-identical**: the restore read-back = the forward pre-image, SHA-256 `ec1ffb9c8d4c4aa36b18cca54ad6fa1d01fce043dd764f3c75eb4315c0ba837f` on both, covering all 28 tracked columns of all 20 rows |
+
+**Measured multipliers (the first measured on D1; the §6 (ii) pilot check):**
+- C-reasons CAS UPDATE: **2 writes per statement** (20/20 statements = 2). That matches §4.2's basis of 1 row + `idx_entity_master_phase3`.
+- CAS read: **1 per statement**.
+- Pre-image / read-back `IN (…)` lookup: **2 reads per row** (40 for 20). This confirms F-3.
+- Max read in any execution: 1.
+
+**Per-statement D1 `meta` (ledger `rehearsal-2026-10-15/d1-ledger.jsonl`):**
+
+| UTC | Call | Statements | rows_read | rows_written |
+|---|---|---|---|---|
+| 07:16:39 | `hold_all_jobs` | 1 | 1 | 0 |
+| 07:16:40 | probe pre-image (60 rows) | 1 | 120 | 0 |
+| 07:16:41 | pre-image RH-CR-001 | 1 | 40 | 0 |
+| 07:16:41 | **forward RH-CR-001** | 20 | 20 | **40** |
+| 07:16:42 | read-back | 1 | 40 | 0 |
+| 07:16:42 | restore pre-image | 1 | 40 | 0 |
+| 07:16:43 | **restore RH-CR-001** | 20 | 20 | **40** |
+| 07:16:43 | restore read-back | 1 | 40 | 0 |
+| **Total** | | | **321** | **80** |
+
+**Heartbeats.** T12 was EXECUTING in the LANE-1-ENG session at 07:16, and `ops-ingest.env` had just appeared in the work folder. The rehearsal therefore ran with `--work ~/MeridianAtlas-work/gleif-011/rehearsal-2026-10-15/` (mode 700; no key file), and **sent no heartbeats**. The run log is the record of truth (the §7 fallback). Two reasons:
+- not to make the new `gleif-011` emitter's first live events during T12's K-3/K-4 checks;
+- not to add ≈ 20 Ops-side writes against this packet's 100-write limit.
+
+The Operations Lead can rule at release review whether to repeat a heartbeat-on batch at the Sat 17 pilot (it is the first bulk start anyway).
+
+**Evidence** (`~/MeridianAtlas-work/gleif-011/rehearsal-2026-10-15/`):
+
+| File | SHA-256 |
+|---|---|
+| `checkpoints/602ab58ab8f75c2c/RH-CR-001.json` | `91a66ff3a46c030f582657218fbcc5e37a99d63f3451ca9583d2b19ffc5365ba` |
+| `checkpoints/602ab58ab8f75c2c/RH-CR-001.restore-c15f5b8f.json` | `fcc69d69bf8c8145e5fd767659bcfe3d1dcf51e3041d52da38d5febd8202c018` |
+| `rehearsal-2026-10-15T071644455Z.json` | `7e58b7a907f0b889bf9506fe2389c9aa526f445183b2c8f26cbc89b76030d600` |
+| `runlog.jsonl` (2 lines: forward, restore; both `success`, 40 writes each) | `181eda31716e2de940f442395a9574ef1a50f18918ee8e5e537943c50c8a1ca6` |
+| `d1-ledger.jsonl` | `103b2459dcaec1453d1015b033029e8bdef757d60c51f523bf4ec8d85cc327ee` |
+| forward pre-image = restore read-back | `ec1ffb9c8d4c4aa36b18cca54ad6fa1d01fce043dd764f3c75eb4315c0ba837f` |
+| forward read-back = restore pre-image | `e279d018beb297f38a2c5a91322e6556ebf4b815c5f9fb5f1f656176193c6bd9` |
+
+### 2. R110R-B1 / RA-15: ECA treated exactly like E-A under E-4 (runner `333e48e2…2f26`)
+
+**a) Gate (`abGate`).** ECA runs only when all of the following hold:
+1. the A adjudication file records ≥ 50/50 (with the Data-Identity Lead and the Ops spot-check);
+2. every A batch has a checkpoint with outcome `success` or `partial` and 0 mismatches;
+3. there is no A stop (E-4 trigger, A drop or failed A batch) and no drop;
+4. **an Operations Lead release whose `steps` list names ECA**: `--ea-release {release:"EA", steps:["ECA","EA"], no_open_trigger:true}`.
+
+A release without `steps`, or with `steps` not naming ECA, **blocks ECA**. It still releases E-A, so the earlier E-A format keeps working for E-A only. The release review is asked to confirm the format.
+
+**b) Drop.** `--drop-ea` or `holds/ea-dropped.json` drops ECA as well as E-A for the rest of the run.
+
+**c) A stops.** "A stops" means an open `holds/e4-trigger.json`, an A drop (`--drop-a` or `holds/a-dropped.json`; new, and it also blocks A), or any A checkpoint with outcome `failed`. When A stops, `dropEdgeStepsIfAStopped` runs **at the start of `run`, before anything else**, and again right after a failed A batch:
+- it writes `holds/eca-ea-dropped.json`, which keeps ECA and E-A dropped for the rest of the run even after the trigger closes;
+- it restores every ECA and E-A batch that has a checkpoint (E-A first, then ECA), deleting every edge already written.
+
+**Note for the review:** spec §3.1 already required this deletion for E-A ("Whenever A stops, E-A is dropped … E-A edges already written are deleted"). The runner did not do it before today; it now does, for both steps. "A failure" is read conservatively as any failed A batch, including one that failed after 3 transient retries.
+
+**d) Restore.**
+- `restore --batch <A id>` first deletes the ECA edges whose parent entity is in that A batch. They are found through the ECA statements' `depends_on` and restored from the ECA checkpoint as a partial batch, recorded in `cursor.partially_restored`. Then it restores the A rows.
+- ECA edges whose parent is in another A batch are left alone.
+- `--all` keeps Q → EA → ECA → A → EC → … (unchanged; `restoreOrder` is now a tested function).
+- The stale comment at runner line 9 is fixed and now includes ECA.
+
+**e) Tests** (shared state: the replica run through A and ECA with an adjudication and a release naming ECA, stopped before E-A; each test works on its own copy):
+- **Blocked by each of:** no adjudication; adjudication 49/50; an A batch with a mismatch (`A-004`); no release; a release with `steps:["EA"]`; a release with no `steps`. **Allowed** with all three present. A release with no `steps` still releases E-A.
+- **Drop:** `--drop-ea` blocks ECA; `ea-dropped.json` blocks ECA.
+- **E-4 trigger:** `run` deletes **all 45 ECA edges** before anything else, stops on the trigger, leaves the A rows for RA-12's restore, moves ECA-001 to `restored`, and keeps ECA dropped after the trigger closes.
+- **Failed A batch** (`A-007` marked `failed`): ECA is dropped and its 45 edges are deleted.
+- **`restore --batch A-003`:** results are `ECA-001` (partial, `success`) and then `A-003` (`success`). Exactly **its 7 dependent ECA edges** are deleted, the other **38 stay**, and A-003's rows lose their LEI.
+- **`--all` order:** unchanged (13-id fixture including `B-001-fb`).
+- **Sat 17 pilot:** P-001 (250), P-002 (58) and B-001 (250) are unchanged. Statements SHA-256 `df77f739…29f4` (pinned from `dryrun-d2-v6`), with no A, ECA or E-A statements.
+
+### 3. ML-1015-1: LEI-bearing rows on both bases (verify `d649ad52…68c0`)
+`leiBases()` reports both bases. **PASS/FAIL uses the whole-table basis.**
+
+| Basis | Rule |
+|---|---|
+| **Whole table (governing)** | Expected = **20,612** + drift, where 20,612 = 16,627 (29 Sep) + 3,677 A + 308 P. Drift is explained from the exports in two parts: *before the run* = fresh pre-run export LEI rows − 16,627 (other writers since 29 Sep), and *during the run* = LEI rows in the post-run export that 011 did not create, beyond the pre-run export (e.g. FIRDS). Reports observed, expected, drift and its two parts, and `unexplained`. PASS iff observed = expected. |
+| **29 Sep export basis (traceability)** | 16,627 + A applied = **20,304**. |
+
+**Fixture tests:**
+
+| Fixture | Setup | Result |
+|---|---|---|
+| (1) no drift | — | 20,612 / 20,612, PASS; 29 Sep 20,304 |
+| (2) drift 165 | 140 before the run + 25 during | expected 20,777, PASS; 29 Sep 20,304 |
+| (3) 011 short by 3 A rows | — | whole table FAIL, `unexplained` −3; 29 Sep 20,301 |
+
+**Dry-run output** (`dryrun/2026-10-15-d2-v6/postrun.json` `0aab5e61…6ecb`): **PASS**.
+- Whole table: observed **20,612**, expected **20,612**, drift 0 (0 before + 0 during), unexplained 0.
+- 29 Sep basis: **20,304**.
+- Sampled diff: 200/200, 25 E-A edges.
+
+### Tests and dry run
+- **`node --test "App/Corporate Atlas/tests/gleif-reconcile-011.test.mjs"`: 30/30 pass** (23 on Wed + 6 RA-15 + 1 ML-1015-1).
+- **Dry run on `dryrun-d2-v6`:**
+  - writes per day: Sat 17 24,503 · Mon 19 24,633 · Tue 20 23,650 · Wed 21 14,462; 0 calendar violations;
+  - holds: the A pilot (Tue 20), then **ECA is the first step held for the release** (Wed 21), as RA-15 intends;
+  - §9 counts unchanged (20,304 / 152 / 18,739 / 1,089 edges / 0 new duplicate LEIs);
+  - full rollback **identical** (`2e4a052b…9ba5e`).
+- **Found and fixed while doing this:** the dry-run harness still supplied the old release format `{release:"EA", no_open_trigger:true}`. Under RA-15 that correctly blocks ECA, so the run stalled before ECA. The harness now writes a release naming ECA and throws if a supplied release is still held, rather than looping. The test asserts the hold sequence.
+
+### D1 today
+
+| | rows_read | rows_written |
+|---|---|---|
+| Thu 15 (rehearsal only) | 321 | **80** |
+| **Packet total** | **1,319** of 20k | **80** of 100 |
+
+All writes were on Thu 15 inside a run window, and all were restored.
+
+### Files (SHA-256; untracked; no git writes)
+
+| File | Lines | SHA-256 |
+|---|---|---|
+| `App/Corporate Atlas/scripts/gleif-reconcile-011.mjs` | 885 | `333e48e29440b5d41ec9f4f23196641db398c31c06b6c436125daea109402f26` |
+| `App/Corporate Atlas/lib/gleif-reconcile-011-core.mjs` | 496 | `4aedd09c9f74b30ef3dbf3e69e136bfa51f2d0708058a3a028050b8a11461a2f` (unchanged) |
+| `App/Corporate Atlas/scripts/gleif-reconcile-011-plan.mjs` | 694 | `922ce5c7cf9f60d83e9143f94d41a77b1fd94922181a25f3672f42a5005317f4` (unchanged) |
+| `App/Corporate Atlas/scripts/gleif-reconcile-011-verify.mjs` | 239 | `d649ad52bfdd03126f06f4857e25562a718ef107efc125b23c25c32740a868c0` |
+| `App/Corporate Atlas/tests/gleif-reconcile-011.test.mjs` | 563 | `79cce99fa14046f34647a7d607d44cff2a275630022d1aa4f43b3a09c274959a` |
+| `App/Corporate Atlas/tests/gleif-reconcile-011-dryrun.mjs` | 99 | `1510c072a9bc9af8a60805d8f1f2c2f10c467e50c86bca7ff718b806b31e0330` |
+| `App/Corporate Atlas/scripts/gleif-reconcile-011-{status,pause,resume,stop}.sh` | — | unchanged since Tue |
+
+### Status for the Fri 16 release review
+Task items 1–6 are complete with evidence. Remaining for Fri 16, none of it in this packet:
+- the fresh keyset export after the 06:50 cron;
+- plan generation (the first releasable plan; its header should cite rev 1.10 once approved);
+- the Architect + Operations Lead review;
+- the freshness gate (≤ 50 GLEIF calls, ≥ 15 A rows);
+- the F-3 read-ceiling ruling;
+- confirmation of the RA-15 release format;
+- the T12 items (registry row, emitter key, pause row) verified in MA-OCT-011.OPSR.
+
+**Final stop: Thu 15, after the rehearsal.**

@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-003.SPEC",
-  "state": "EXECUTING",
+  "state": "REVIEW_NEEDED",
   "owner": "LANE-3",
   "write_owner": "LANE-3",
   "control": {
@@ -16,6 +16,16 @@
   "blocker": null,
   "review_needed": true,
   "usage_class": "medium",
-  "updated": "2026-10-14T06:15Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-10-15T16:55Z",
+  "updated_by": "Main Lane",
+  "outputs": [
+    {
+      "file": "claude/MA-OCT-003_Spec.md",
+      "sha256": "8fb129ac00909aecbbd4065f05895ba88808614352f46eb8499679fd74a0ed91"
+    },
+    {
+      "file": "claude/MA-OCT-004_Spec.md",
+      "sha256": "c3d0cd3e1ddfc02a5eeb48101eabe5f2aebbfd93dbc47df96ace15c5b51c0889"
+    }
+  ]
 }

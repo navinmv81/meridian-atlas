@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-011.BUILD",
-  "state": "EXECUTING",
+  "state": "REVIEW_NEEDED",
   "owner": "LANE-11-ENG",
   "write_owner": "LANE-11-ENG",
   "control": {
@@ -16,7 +16,7 @@
   "blocker": null,
   "review_needed": true,
   "usage_class": "heavy",
-  "updated": "2026-10-13T15:30Z",
+  "updated": "2026-10-15T16:55Z",
   "updated_by": "Main Lane",
   "days": {
     "2026-10-13": {
@@ -31,5 +31,10 @@
     "F-2 P/A 51+6 overlap",
     "F-3 reads ~290k vs 250k",
     "OQ-12 report-only lists do not reconcile"
-  ]
+  ],
+  "report": {
+    "file": "MA-OCT-011.BUILD_Report.md",
+    "sha256": "c8f664281707ae92769ad3b8f17fc231ff8f648810a78cc7fba4e1b2fcca653f"
+  },
+  "result": "build complete Thu 15: rehearsal PASS 80/100 writes; RA-15 + ML-1015-1 implemented; 30/30 tests"
 }

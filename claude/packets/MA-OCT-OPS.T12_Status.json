@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-OPS.T12",
-  "state": "EXECUTING",
+  "state": "REVIEW_NEEDED",
   "owner": "LANE-1-ENG",
   "write_owner": "Engineering Lead (LANE-1-ENG)",
   "control": {
@@ -16,6 +16,12 @@
   "blocker": null,
   "review_needed": true,
   "usage_class": "light",
-  "updated": "2026-10-15T05:58Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-10-15T16:55Z",
+  "updated_by": "Main Lane",
+  "commit": "d0e6847",
+  "report": {
+    "file": "MA-OCT-OPS.T12_Report.md",
+    "sha256": "a99e2e507cd06284c789d1e52957ab14172f23626b41b3f61f1b48ea6b86c5b0"
+  },
+  "remaining": "boost pause flag Fri 16 after 16:50 UTC"
 }

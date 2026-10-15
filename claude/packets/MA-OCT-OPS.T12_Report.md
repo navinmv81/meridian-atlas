@@ -138,7 +138,7 @@ Read-back:
 - **Fri 16, after 16:50 UTC:** `scripts/entities-enrich-boost-pause.sh`. This is T12 step 3's second half.
 - **MA-OCT-011.OPSR:** the Operations Lead verifies the K-3 list (old + `gleif-011` + `local-bonds`), the pause row (id 1) and the registry rows.
 - **At 011 close-out:** K-5.
-- **Founder decision:** whether to rotate `ADMIN_EXCEPTIONS_SECRET` now (deviation 1).
+- ~~Founder decision: whether to rotate `ADMIN_EXCEPTIONS_SECRET` now (deviation 1).~~ **Decided by the Founder, Thu 15 Oct (after commit `d0e6847`): exposure accepted, no rotation now; 003 retires the secret from Sat 24 Oct (AC-15).**
 
 ## Appendix: step 1 SQL (as executed)
 
