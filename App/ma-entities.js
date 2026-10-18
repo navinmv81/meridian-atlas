@@ -717,7 +717,8 @@ function _buildEntityDetailHTML(entity, backLabel, backHandler, parents, childre
   // of updating the overlay, leaving the old overlay stuck on top. backHandler
   // already tells us which context this render is for, so reuse that signal
   // rather than adding a new parameter.
-  const navFn = backHandler === 'closeEntityOverlay()' ? 'showEntityOverlay' : 'showEntityDetail';
+  // MA-OCT-007: navigation layers pass 'navBack()' (history-backed overlay stack).
+  const navFn = (backHandler === 'closeEntityOverlay()' || backHandler === 'navBack()') ? 'showEntityOverlay' : 'showEntityDetail';
 
   function _statusBadge(status) {
     if (!status) return '';
@@ -982,16 +983,25 @@ async function showEntityDetail(entityId, breadcrumbLabel) {
   _previousView = main.innerHTML;
   main.innerHTML = '<div class="entity-detail-loading" style="padding:40px;text-align:center;color:var(--dim);font-size:13px">Loading entity…</div>';
 
-  let entity;
+  let entity, redirect = null;
   try {
     const res = await fetch(`${ENTITIES_API_URL}/api/entities/${entityId}`);
     if (res.status === 404) {
-      main.innerHTML = _detailError('Entity not found.', breadcrumbLabel, 'restoreEntityPreviousView()');
+      main.innerHTML = _detailError('This entity is no longer in Meridian Atlas. It may have been merged into another record.', breadcrumbLabel, 'restoreEntityPreviousView()');
+      return;
+    }
+    if (res.status === 409) {
+      const body = await res.json().catch(() => ({}));
+      console.warn('[ma-entities] merge history unresolved', body.state, body.chain);
+      main.innerHTML = _detailError("This record's merge history couldn't be resolved.", breadcrumbLabel, 'restoreEntityPreviousView()');
       return;
     }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     entity = data.entity ?? data;
+    // MA-OCT-007 R3: a merged id lands on its survivor; sub-routes use the resolved id.
+    redirect = data.redirect || null;
+    if (entity && entity.entity_id) entityId = entity.entity_id;
   } catch (e) {
     console.error('[ma-entities] showEntityDetail fetch error', e);
     main.innerHTML = _detailError('Unable to load entity. Please try again.', breadcrumbLabel, 'restoreEntityPreviousView()');
@@ -1018,6 +1028,7 @@ async function showEntityDetail(entityId, breadcrumbLabel) {
   }
 
   main.innerHTML = _buildEntityDetailHTML(entity, breadcrumbLabel, 'restoreEntityPreviousView()', parents, children);
+  if (redirect) _navInsertAfterBreadcrumb(main, _navRedirectNoticeHtml(redirect, entity));
   _loadEntityExposureStrip(entityId, entity);
   _loadLinkedInstruments(entityId);
 
@@ -1028,8 +1039,10 @@ async function showEntityDetail(entityId, breadcrumbLabel) {
   ent_injectIssuerPanels(entityId);
 }
 
-async function _loadEntityExposureStrip(entityId, entity) {
-  const section = document.getElementById(`etf-exposure-section-${entityId}`);
+// `root` (MA-OCT-007): the overlay layer to search, so two stacked layers for the
+// same entity never pick up each other's sections. Defaults to the document.
+async function _loadEntityExposureStrip(entityId, entity, root) {
+  const section = _navFind(root, `etf-exposure-section-${entityId}`);
   if (!section) return;
 
   let exposureData = [];
@@ -1073,7 +1086,7 @@ async function _loadEntityExposureStrip(entityId, entity) {
   }).join('');
 
   const showAllBtn = total > 5
-    ? `<button onclick="_showAllEtfExposure(${entityId})" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:4px 10px;border-radius:var(--r);cursor:pointer">Show all ${total} ETFs ↓</button>`
+    ? `<button onclick="_showAllEtfExposure(${entityId}, this)" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:4px 10px;border-radius:var(--r);cursor:pointer">Show all ${total} ETFs ↓</button>`
     : '';
 
   section.innerHTML = `
@@ -1089,8 +1102,8 @@ async function _loadEntityExposureStrip(entityId, entity) {
   section._allExposures = exposureData;
 }
 
-function _showAllEtfExposure(entityId) {
-  const section = document.getElementById(`etf-exposure-section-${entityId}`);
+function _showAllEtfExposure(entityId, btn) {
+  const section = (btn && btn.closest(`#etf-exposure-section-${entityId}`)) || document.getElementById(`etf-exposure-section-${entityId}`);
   if (!section || !section._allExposures) return;
 
   const exposureData = section._allExposures;
@@ -1121,99 +1134,127 @@ function _showAllEtfExposure(entityId) {
   `;
 }
 
-// Source badge for instrument_entity_map.source — differentiates the
-// higher-confidence OpenFIGI match from the identifier-based tier-1 matches
-// (cusip_tier1/isin_tier1) and the lowest-confidence heuristic match.
+// Source badge for a mapping source (instrument_entity_map.source and the
+// entity_isin_map / bond sources). Labels are the user-facing names of spec
+// rev 1.4 §5.4 (AC7); the raw code is never shown.
+const _NAV_SOURCE_LABELS = {
+  openfigi_tier1: { label: 'OpenFIGI', color: '#4A9EFF' },
+  cusip_tier1:    { label: 'CUSIP',    color: '#2D9C75' },
+  isin_tier1:     { label: 'ISIN',     color: '#2D9C75' },
+  heuristic:      { label: 'Name match (heuristic)', color: '#D99C3D' },
+  isin_direct:    { label: 'GLEIF ISIN', color: '#2D9C75' },
+  firds_direct:   { label: 'ESMA FIRDS', color: '#2D9C75' },
+  sec_bond:       { label: 'SEC filing', color: '#2D9C75' }
+};
+function _navSourceLabel(source) {
+  return (_NAV_SOURCE_LABELS[source] || { label: 'Other source' }).label;
+}
 function _instrumentSourceBadge(source) {
-  const map = {
-    openfigi_tier1: { label: 'OpenFIGI', color: '#4A9EFF' },
-    cusip_tier1:    { label: 'CUSIP',    color: '#2D9C75' },
-    isin_tier1:     { label: 'ISIN',     color: '#2D9C75' },
-    heuristic:      { label: 'Heuristic', color: '#D99C3D' }
-  };
-  const c = map[source] || { label: source ?? '—', color: '#666' };
+  const c = _NAV_SOURCE_LABELS[source] || { label: 'Other source', color: '#666' };
   return `<span style="border:1px solid ${c.color}40;background:${c.color}18;color:${c.color};border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700;letter-spacing:.03em;flex-shrink:0">${_esc(c.label)}</span>`;
 }
 
-function _instrumentRowHtml(r) {
+// Confidence band chip (§5.2): the raw number always sits next to the band.
+function _navBandChip(band, confidence) {
+  const col = band === 'high' ? '#2D9C75' : band === 'medium' ? '#4A9EFF' : '#D99C3D';
+  const label = band === 'high' ? 'High' : band === 'medium' ? 'Medium' : 'Low';
+  return `<span style="border:1px solid ${col}40;color:${col};border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap">${label} · ${_esc(confidence ?? '—')}</span>`;
+}
+
+// One R2 row (a NavLink-shaped mapping row). Clicking opens its Instrument card,
+// with from = entity:{id}:{page} so the issuer page and its loaded pages survive.
+function _instrumentRowHtml(r, entityId, page, showAssetBadge) {
   // Distinguishing identifier — this is the whole point of the row.
   // Same-name entries (e.g. dozens of Microsoft bond issuances) are only
   // ever told apart by their actual ISIN/CUSIP value, not by name or source.
-  const identifier = r.isin
-    ? `ISIN ${_esc(r.isin)}`
-    : (r.cusip ? `CUSIP ${_esc(r.cusip)}` : 'No identifier on file');
-
-  const assetTag = r.asset_cat
-    ? `<span style="font-family:var(--mono);font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;flex-shrink:0;white-space:nowrap">${_esc(r.asset_cat)}</span>`
+  const ids = r.identifiers || {};
+  const identifier = ids.isin
+    ? `ISIN ${_esc(ids.isin)}`
+    : (ids.cusip ? `CUSIP ${_esc(ids.cusip)}` : 'No identifier on file');
+  const c = (r.candidates && r.candidates[0]) || {};
+  const assetTag = (showAssetBadge && r.asset_type)
+    ? `<span style="font-family:var(--mono);font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;flex-shrink:0;white-space:nowrap">${_esc(r.asset_type)}</span>`
     : '';
-
   return `
-    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)">
+    <div class="nav-li-row" role="button" tabindex="0" data-key="${_esc(r.instrument_key)}" data-entity="${entityId}" data-page="${page}"
+      onclick="_navOpenInstrumentFromRow(this)" onkeydown="if(event.key==='Enter')_navOpenInstrumentFromRow(this)"
+      style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer">
       <div style="flex:1;min-width:0">
-        <div style="font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(r.security_name ?? '—')}${r.security_ticker ? ` <span style="font-family:var(--mono);color:var(--dim)">(${_esc(r.security_ticker)})</span>` : ''}</div>
+        <div style="font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(r.name ?? '—')}${ids.ticker ? ` <span style="font-family:var(--mono);color:var(--dim)">(${_esc(ids.ticker)})</span>` : ''}</div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:1px">${identifier}</div>
       </div>
       ${assetTag}
-      ${_instrumentSourceBadge(r.source)}
+      ${_instrumentSourceBadge(c.source)}
+      ${_navBandChip(c.confidence_band, c.confidence)}
     </div>`;
 }
 
-async function _loadLinkedInstruments(entityId) {
-  const section = document.getElementById(`linked-instruments-section-${entityId}`);
+// R2 + R4 (spec §4.2, R7-4): pages of 25 via keyset; "Linked instruments · N"
+// (exact up to 1,000, else "1,000+"). Single-page issuers are sorted by asset type
+// then name with group headers; multi-page issuers stay in key order with an
+// asset-type badge on every row and a "Sorted by identifier" label.
+async function _loadLinkedInstruments(entityId, root) {
+  const section = _navFind(root, `linked-instruments-section-${entityId}`);
   if (!section) return;
-
-  let instruments = [];
-  try {
-    const res = await fetch(`${ENTITIES_API_URL}/api/entities/${entityId}/instruments`);
-    if (res.ok) {
-      const data = await res.json();
-      instruments = data.instruments ?? [];
-    }
-  } catch (e) {
-    console.error('[ma-entities] instruments fetch error', e);
-  }
-
-  if (!instruments.length) {
-    section.innerHTML = `
-      <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">Linked Instruments</div>
-      <div style="color:var(--dim);font-size:11px">No linked instruments</div>
-    `;
-    return;
-  }
-
-  const total = instruments.length;
-  const top10 = instruments.slice(0, 10);
-  const rows = top10.map(_instrumentRowHtml).join('');
-
-  const showAllBtn = total > 10
-    ? `<button onclick="_showAllLinkedInstruments(${entityId})" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:4px 10px;border-radius:var(--r);cursor:pointer">Show all ${total} instruments ↓</button>`
-    : '';
-
-  section.innerHTML = `
-    <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">
-      Linked Instruments · <span style="font-weight:400;text-transform:none;letter-spacing:0">${total} matched instrument${total !== 1 ? 's' : ''}</span>
-    </div>
-    <div style="border-top:1px solid var(--border);padding-top:8px">${rows}</div>
-    ${showAllBtn}
-  `;
-
-  // Stash full list for "Show all" expansion
-  section._allInstruments = instruments;
+  section._nav = { entityId, rows: [], cursor: '', total: null, capped: false, pages: 0, multi: false, error: false };
+  await _linkedLoadPage(section);
 }
 
-function _showAllLinkedInstruments(entityId) {
-  const section = document.getElementById(`linked-instruments-section-${entityId}`);
-  if (!section || !section._allInstruments) return;
+async function _linkedLoadPage(section) {
+  const st = section._nav;
+  st.error = false;
+  const btn = section.querySelector('.nav-li-more');
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+  const q = `?limit=25${st.cursor ? `&cursor=${encodeURIComponent(st.cursor)}` : ''}`;
+  const r = await data_entitiesGet(`/api/entities/${st.entityId}/instruments${q}`);
+  if (!section.isConnected) return;
+  if (!r.ok || !r.data || !Array.isArray(r.data.instruments)) {
+    st.error = true;
+    console.error('[ma-entities] instruments page fetch error', r.status, r.type || '');
+    _linkedRender(section);
+    return;
+  }
+  const d = r.data;
+  if (st.pages === 0) { st.total = d.total; st.capped = !!d.total_capped; st.multi = d.next_cursor !== null; }
+  d.instruments.forEach(x => st.rows.push({ ...x, _page: st.pages + 1 }));
+  st.cursor = d.next_cursor;
+  st.pages++;
+  _linkedRender(section);
+}
 
-  const instruments = section._allInstruments;
-  const rows = instruments.map(_instrumentRowHtml).join('');
-
-  section.innerHTML = `
-    <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">
-      Linked Instruments · <span style="font-weight:400;text-transform:none;letter-spacing:0">${instruments.length} matched instrument${instruments.length !== 1 ? 's' : ''}</span>
-    </div>
-    <div style="border-top:1px solid var(--border);padding-top:8px">${rows}</div>
-  `;
+function _linkedRender(section) {
+  const st = section._nav;
+  const title = `<div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Linked instruments${st.pages ? ` · <span style="font-weight:400;text-transform:none;letter-spacing:0">${st.capped ? '1,000+' : Number(st.total ?? st.rows.length).toLocaleString()}</span>` : ''}</div>`;
+  if (st.pages === 0) {
+    section.innerHTML = `${title}<div style="color:var(--dim);font-size:11px">${st.error
+      ? `Couldn't reach Corporate Atlas. <button onclick="_linkedLoadPage(this.closest('[id^=linked-instruments-section-]'))" style="background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:2px 8px;border-radius:var(--r);cursor:pointer">Retry</button>`
+      : 'Loading linked instruments…'}</div>`;
+    return;
+  }
+  if (!st.rows.length) {
+    section.innerHTML = `${title}<div style="color:var(--dim);font-size:11px">No linked instruments in Meridian Atlas</div>`;
+    return;
+  }
+  let body;
+  if (!st.multi) {
+    const sorted = [...st.rows].sort((a, b) =>
+      String(a.asset_type ?? '').localeCompare(String(b.asset_type ?? '')) || String(a.name ?? '').localeCompare(String(b.name ?? '')));
+    let group = null;
+    body = sorted.map(r => {
+      const head = (r.asset_type ?? '') !== group
+        ? `<div style="font-size:9px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;padding:8px 0 2px">${_esc(r.asset_type || 'Other')}</div>`
+        : '';
+      group = r.asset_type ?? '';
+      return head + _instrumentRowHtml(r, st.entityId, r._page, false);
+    }).join('');
+  } else {
+    body = `<div style="font-size:9px;color:var(--muted);margin-bottom:4px">Sorted by identifier</div>` +
+      st.rows.map(r => _instrumentRowHtml(r, st.entityId, r._page, true)).join('');
+  }
+  const more = st.cursor
+    ? `<button class="nav-li-more" onclick="_linkedLoadPage(this.closest('[id^=linked-instruments-section-]'))" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:4px 10px;border-radius:var(--r);cursor:pointer">${st.error ? "Couldn't load more · Retry" : 'Show 25 more ↓'}</button>`
+    : '';
+  section.innerHTML = `${title}<div style="border-top:1px solid var(--border);padding-top:4px">${body}</div>${more}`;
 }
 
 function _detailError(message, backLabel, backHandler) {
@@ -1227,11 +1268,7 @@ function _detailError(message, backLabel, backHandler) {
 }
 
 function restoreEntityPreviousView() {
-  const overlay = document.getElementById('entity-overlay');
-  if (overlay) {
-    overlay.remove();
-    return;
-  }
+  if (_navStack.length) { navBack(); return; }
   const panel = document.getElementById('entities-panel');
   if (!panel) {
     openCorporateAtlas();
@@ -1247,102 +1284,28 @@ function restoreEntityPreviousView() {
 }
 
 // ── Entity overlay — shown on top of ETF Holdings panel ──────────────────────
-
+// MA-OCT-007: the overlay is now one layer of a history-backed stack (see the
+// navigation section below). Existing callers (ma-etf.js, ma-13f.js, ownership
+// click-throughs) keep this signature; each call opens a new layer and pushes one
+// history entry, so in-app Back and browser Back both close exactly that layer.
 async function showEntityOverlay(entityId, backLabel) {
-  backLabel = backLabel || 'ETF Holdings';
-
-  // Remove any existing overlay first
-  const existing = document.getElementById('entity-overlay');
-  if (existing) existing.remove();
-
-  // Create overlay on top of ETF panel (and possibly on top of an already-open
-  // Manager Page — mgr_openManagerPage() in ma-13f.js shares this same
-  // _nextAtlasOverlayZ() counter so whichever overlay opened most recently
-  // wins the stacking order, in either navigation direction).
-  const overlay = document.createElement('div');
-  overlay.id = 'entity-overlay';
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    background: var(--bg, #0f1117);
-    overflow-y: auto;
-    padding: 0;
-  `;
-  overlay.style.zIndex = _nextAtlasOverlayZ();
-
-  // Loading state
-  overlay.innerHTML = `
-    <div style="padding:32px;">
-      <button onclick="closeEntityOverlay()"
-        style="background:none;border:none;color:#4DC8C8;
-               cursor:pointer;font-size:0.9em;margin-bottom:24px;
-               display:block;">
-        ← Back to ${backLabel}
-      </button>
-      <div style="color:#888;padding:32px;">Loading entity...</div>
-    </div>`;
-  document.body.appendChild(overlay);
-
-  try {
-    const res = await fetch(`${ENTITIES_API_URL}/api/entities/${entityId}`);
-    if (!res.ok) throw new Error('not_found');
-    const data = await res.json();
-    const entity = data.entity || data;
-
-    // MA-SEP-004: same non-fatal /graph fetch as showEntityDetail, so the
-    // ETF Holdings entry point gets the same clickable Ownership Chain /
-    // Children behavior, not a silently degraded version of it.
-    let parents = [], children = [];
-    try {
-      const graphRes = await fetch(`${ENTITIES_API_URL}/api/entities/${entityId}/graph`);
-      if (graphRes.ok) {
-        const graphData = await graphRes.json();
-        parents = graphData.parents ?? [];
-        children = graphData.children ?? [];
-      }
-    } catch (e) {
-      console.error('[ma-entities] showEntityOverlay /graph fetch error (non-fatal)', e);
-    }
-
-    overlay.innerHTML = _buildEntityDetailHTML(entity, backLabel, 'closeEntityOverlay()', parents, children);
-
-    const backBtn = overlay.querySelector('.entity-overlay-back');
-    if (backBtn) {
-      backBtn.addEventListener('click', closeEntityOverlay);
-    }
-
-    // Load ETF exposure strip asynchronously
-    _loadEntityExposureStrip(entityId, entity);
-    _loadLinkedInstruments(entityId);
-
-    // Load Issuer page panels (13F ownership / financials / events / filings)
-    ent_injectIssuerPanels(entityId);
-  } catch (e) {
-    overlay.innerHTML = `
-      <div style="padding:32px;">
-        <button onclick="closeEntityOverlay()"
-          style="background:none;border:none;color:#4DC8C8;
-                 cursor:pointer;font-size:0.9em;margin-bottom:24px;
-                 display:block;">
-          ← Back to ${backLabel}
-        </button>
-        <div style="color:#888;">Entity data unavailable.</div>
-      </div>`;
-  }
+  return _navOpen('entity', Number(entityId), { history: 'push', backLabel: backLabel || 'ETF Holdings' });
 }
 
+// Closes every navigation layer without touching the panel underneath (ma-etf.js
+// calls this when the user switches ETF), and unwinds the history entries the
+// layers pushed, so a later Back never resurrects them.
 function closeEntityOverlay() {
-  const overlay = document.getElementById('entity-overlay');
-  if (overlay) overlay.remove();
+  const depth = history.state && Number.isInteger(history.state.maNav) ? history.state.maNav : 0;
+  while (_navStack.length) _navStack.pop().el.remove();
+  if (depth > 0) history.go(-depth);
 }
 
 function closeEntityDetail() {
-  // Path 1: called from entity-overlay (over ETF Holdings panel)
-  // Just remove the overlay — ETF Holdings panel stays underneath
-  const overlay = document.getElementById('entity-overlay');
-  if (overlay) {
-    overlay.remove();
+  // Path 1: called from a navigation layer (over ETF Holdings or any panel):
+  // the × closes all layers — the panel underneath stays as it was.
+  if (_navStack.length) {
+    closeEntityOverlay();
     if (typeof _setupSearch === 'function') _setupSearch();
     return;
   }
@@ -1653,9 +1616,9 @@ function ent_renderOverlap(data) {
   return _issuerPanelSection('ETF & 13F Overlap', inner);
 }
 
-async function ent_injectIssuerPanels(entityId) {
+async function ent_injectIssuerPanels(entityId, root) {
   if (!entityId) return; // backward-compatible: no entity_id, no panels, overlay renders as before
-  const container = document.getElementById(`issuer-panels-section-${entityId}`);
+  const container = _navFind(root, `issuer-panels-section-${entityId}`);
   if (!container) return;
 
   container.innerHTML = `<div style="padding:14px 16px;color:var(--dim);font-size:11px">Loading issuer data...</div>`;
@@ -1674,3 +1637,365 @@ async function ent_injectIssuerPanels(entityId) {
     ent_renderOverlap(data)
   ].join('');
 }
+
+// ── MA-OCT-007 Phase 1: navigation layers, Instrument card, states ───────────
+// Spec rev 1.4 §3.3–§6. Every overlay layer is one history entry (state
+// { maNav: depth }; the base panel is depth 0). The router in index.html only
+// parses the hash and dispatches `ma:route`; this module owns the layers.
+// Back = history.back() always, so the in-app and browser Back never diverge.
+// A popstate closes layers down to its depth and never re-renders the base panel.
+// Reads go through data_entitiesGet (ma-data.js); nothing here writes (D4).
+
+const _navStack = [];   // index 0 = depth 1: { el, kind, id, from, title }
+
+function _navFind(root, id) {
+  return root && root.querySelector ? root.querySelector(`#${CSS.escape(id)}`) : document.getElementById(id);
+}
+
+function _navHash(kind, id, from) {
+  const base = kind === 'entity' ? `#/entity/${id}` : `#/instrument/${encodeURIComponent(id)}`;
+  return from ? `${base}?from=${encodeURIComponent(from)}` : base;
+}
+
+// R7-10: the type ends at the FIRST ':'; etf/entity payloads split on the LAST ':'.
+function _navParseFrom(from) {
+  if (!from) return { type: 'direct' };
+  const i = from.indexOf(':');
+  if (i < 0) return { type: 'direct' };
+  const type = from.slice(0, i), rest = from.slice(i + 1);
+  if (type === 'etf' || type === 'entity') {
+    const j = rest.lastIndexOf(':');
+    return j < 0 ? { type: 'direct' } : { type, key: rest.slice(0, j), sub: rest.slice(j + 1) };
+  }
+  if (type === 'instrument' || type === 'bond') return { type, key: rest };
+  return { type: 'direct' };
+}
+
+function navBack() {
+  if (_navStack.length) history.back();
+}
+
+// opts: { history: 'push'|'replace'|'none', from, backLabel, navlink, isin, prefetched, lastName }
+async function _navOpen(kind, id, opts = {}) {
+  const el = document.createElement('div');
+  el.className = 'entity-overlay ma-nav-layer';
+  el.dataset.navKind = kind;
+  el.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:var(--bg, #0f1117);overflow-y:auto;padding:0;';
+  el.style.zIndex = typeof _nextAtlasOverlayZ === 'function' ? _nextAtlasOverlayZ() : 1600;
+  const layer = { el, kind, id, from: opts.from || null, title: null,
+    backLabel: opts.backLabel || (_navParseFrom(opts.from).type === 'etf' ? 'ETF Holdings' : 'Home') };
+  _navStack.push(layer);
+  el.dataset.navDepth = String(_navStack.length);
+  document.body.appendChild(el);
+  const hash = _navHash(kind, id, opts.from);
+  if (opts.history === 'push') history.pushState({ maNav: _navStack.length }, '', hash);
+  else if (opts.history === 'replace') history.replaceState({ maNav: _navStack.length }, '', hash);
+  if (kind === 'entity') await _navRenderEntity(layer, opts);
+  else await _navRenderInstrument(layer, opts);
+  return layer;
+}
+
+function _navIsTop(layer) {
+  return _navStack[_navStack.length - 1] === layer && layer.el.isConnected;
+}
+
+function _navShell(layer, inner) {
+  return `
+    <div style="display:flex;flex-direction:column;min-height:100%;background:var(--bg2)">
+      <div class="entity-breadcrumb" style="position:relative;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--bg3);flex-shrink:0">
+        <button class="entity-overlay-back" onclick="navBack()" style="background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;padding:2px 0">← Back to ${_esc(_navBackLabel(layer))}</button>
+        <button onclick="closeEntityDetail()" style="position:absolute;top:8px;right:16px;background:none;border:none;color:#888;font-size:1.2em;cursor:pointer;line-height:1" title="Close">×</button>
+      </div>
+      <div style="padding:16px">${inner}</div>
+    </div>`;
+}
+
+function _navInsertAfterBreadcrumb(root, html) {
+  const bc = root.querySelector('.entity-breadcrumb');
+  if (bc && html) bc.insertAdjacentHTML('afterend', html);
+}
+
+function _navFmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d) ? String(iso).slice(0, 10) : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+// §6.4 notice. A chain of more than one hop names the intermediate ids.
+function _navRedirectNoticeHtml(redirect, entity) {
+  if (!redirect) return '';
+  const via = (redirect.chain || []).slice(1, -1);
+  const viaTxt = via.length ? ` (via ${via.map(v => `#${_esc(v)}`).join(', ')})` : '';
+  const when = redirect.merged_at ? ` on ${_esc(_navFmtDate(redirect.merged_at))}` : '';
+  const pkt = redirect.packet ? ` (${_esc(redirect.packet)})` : '';
+  return `<div role="note" style="margin:16px 16px 0;padding:10px 14px;border:1px solid #D99C3D60;background:#D99C3D14;border-radius:var(--r);font-size:11px;color:var(--text2)">
+    <strong>Merged record.</strong> Entity #${_esc(redirect.requested_id)} was merged${viaTxt} into <strong>${_esc(entity.legal_name ?? entity.name ?? '')} (#${_esc(redirect.resolved_id)})</strong>${when}${pkt}. You are viewing the surviving record.</div>`;
+}
+
+// §4.1 step 3: "Reached from NAME · ISIN … · OpenFIGI · confidence 70 (medium) · View instrument".
+function _navProvenanceHtml(nl) {
+  if (!nl) return '';
+  const c = (nl.candidates || [])[0] || {};
+  const ids = nl.identifiers || {};
+  const idTxt = ids.isin ? `ISIN ${_esc(ids.isin)}${nl.isin_source === 'holding' ? ' (ISIN from the ETF holding)' : ''}`
+    : ids.cusip ? `CUSIP ${_esc(ids.cusip)}` : ids.ticker ? `Ticker ${_esc(ids.ticker)}` : _esc(nl.instrument_key);
+  return `<div style="margin:16px 16px 0;padding:8px 14px;border:1px solid var(--border);background:var(--bg3);border-radius:var(--r);font-size:11px;color:var(--text2)">
+    Reached from <strong>${_esc(nl.name || nl.instrument_key)}</strong> · ${idTxt} · ${_esc(_navSourceLabel(c.source))} · confidence ${_esc(c.confidence ?? '—')} (${_esc(c.confidence_band || '—')}) ·
+    <a href="${_esc(_navHash('instrument', nl.instrument_key, null))}" onclick="event.preventDefault();_navOpen('instrument', ${_esc(JSON.stringify(nl.instrument_key))}, { history: 'push' })" style="color:var(--blue)">View instrument</a></div>`;
+}
+
+async function _navRenderEntity(layer, opts) {
+  const el = layer.el;
+  el.innerHTML = _navShell(layer, `<div style="color:var(--dim);font-size:12px;padding:16px">Loading entity…</div>`);
+  const r = await data_entitiesGet(`/api/entities/${layer.id}`);
+  if (!el.isConnected) return;
+  if (r.status === 0) { _navRenderNetworkError(layer, opts); return; }
+  if (r.status === 404 || r.status === 409) { _navRenderGone(layer, opts, r.data || {}); return; }
+  if (!r.ok || !r.data || !r.data.entity) {
+    el.innerHTML = _navShell(layer, `<div style="color:#888">Entity data unavailable.</div>`);
+    return;
+  }
+  const entity = r.data.entity;
+  const redirect = r.data.redirect || null;
+  const eid = entity.entity_id;
+  layer.title = entity.legal_name ?? entity.name ?? `#${eid}`;
+  if (redirect) {
+    // §6.4: canonical hash for the survivor; breadcrumbs that held the old id are rewritten.
+    layer.id = eid;
+    if (_navIsTop(layer) && history.state && history.state.maNav === _navStack.length) {
+      history.replaceState(history.state, '', _navHash('entity', eid, layer.from));
+    }
+    _breadcrumb.forEach(b => { if (b.entity_id === redirect.requested_id) { b.entity_id = eid; b.name = layer.title; } });
+  }
+
+  let parents = [], children = [];
+  const g = await data_entitiesGet(`/api/entities/${eid}/graph`);
+  if (g.ok && g.data) { parents = g.data.parents ?? []; children = g.data.children ?? []; }
+  else console.error('[ma-entities] layer /graph fetch error (non-fatal)', g.status);
+  if (!el.isConnected) return;
+
+  el.innerHTML = _buildEntityDetailHTML(entity, _esc(_navBackLabel(layer)), 'navBack()', parents, children);
+  _navInsertAfterBreadcrumb(el, _navRedirectNoticeHtml(redirect, entity) + _navProvenanceHtml(opts.navlink));
+  _loadEntityExposureStrip(eid, entity, el);
+  _loadLinkedInstruments(eid, el);
+  ent_injectIssuerPanels(eid, el);
+}
+
+// §6.5 fallback (gone, and merge history that couldn't be resolved): a search box
+// prefilled with the last known name. No guessing of a survivor.
+function _navRenderGone(layer, opts, body) {
+  const unresolved = body.state === 'redirect_too_deep' || body.state === 'redirect_cycle';
+  if (unresolved) console.warn('[ma-entities] merge history unresolved', body.state, body.chain);
+  layer.title = 'Entity not found';
+  const msg = unresolved
+    ? "This record's merge history couldn't be resolved."
+    : 'This entity is no longer in Meridian Atlas. It may have been merged into another record.';
+  layer.el.innerHTML = _navShell(layer, `
+    <div style="color:var(--text2);font-size:13px;margin-bottom:12px">${_esc(msg)}</div>
+    <input class="nav-gone-search" type="search" aria-label="Search Corporate Atlas" placeholder="Search Corporate Atlas…" value="${_esc(opts.lastName || '')}"
+      style="width:100%;max-width:420px;box-sizing:border-box;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:12px">
+    <div class="nav-gone-results" style="margin-top:10px"></div>`);
+  const input = layer.el.querySelector('.nav-gone-search');
+  const out = layer.el.querySelector('.nav-gone-results');
+  let t = null;
+  const run = async () => {
+    const q = input.value.trim();
+    if (q.length < 2) { out.innerHTML = ''; return; }
+    const s = await data_entitiesGet(`/api/entities/search?q=${encodeURIComponent(q)}`);
+    if (!out.isConnected) return;
+    const rows = (s.ok && s.data && s.data.results) || [];
+    out.innerHTML = s.status === 0 ? `<div style="color:var(--dim);font-size:11px">Couldn't reach Corporate Atlas.</div>`
+      : rows.length ? rows.map(x => `<div class="ent-bc-item" style="display:block;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px" onclick="_navOpen('entity', ${Number(x.entity_id)}, { history: 'push' })">
+          <strong>${_esc(x.name)}</strong> <span style="color:var(--dim)">${_esc(x.country || '')}</span></div>`).join('')
+      : `<div style="color:var(--dim);font-size:11px">No matches.</div>`;
+  };
+  input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(run, 300); });
+  if (input.value) run();
+}
+
+function _navRenderNetworkError(layer, opts) {
+  layer.title = layer.title || 'Corporate Atlas';
+  const depth = _navStack.indexOf(layer) + 1;
+  layer.el.innerHTML = _navShell(layer, `
+    <div style="color:var(--text2);font-size:13px;margin-bottom:12px">Couldn't reach Corporate Atlas.</div>
+    <button onclick="_navRetry(${depth})" style="background:none;border:1px solid var(--border);color:var(--blue);font-size:11px;padding:5px 14px;border-radius:var(--r);cursor:pointer">↻ Retry</button>`);
+  layer.retryOpts = opts;
+}
+
+function _navRetry(depth) {
+  const layer = _navStack[depth - 1];
+  if (!layer) return;
+  const opts = { ...(layer.retryOpts || {}), prefetched: null };
+  if (layer.kind === 'entity') _navRenderEntity(layer, opts); else _navRenderInstrument(layer, opts);
+}
+
+// ── Instrument card (§4.1, §5.3, §5.4) ──────────────────────────────────────
+
+const _NAV_STATE_STYLE = {
+  matched:        { label: 'Matched', color: '#4DC8C8', glyph: '' },
+  low_confidence: { label: 'Low confidence', color: '#D99C3D', glyph: '' },
+  ambiguous:      { label: 'Ambiguous', color: '#E07B39', glyph: '' },
+  unmatched:      { label: 'No issuer', color: '#888888', glyph: '? ' }
+};
+
+function _navStateBadge(state) {
+  const s = _NAV_STATE_STYLE[state] || _NAV_STATE_STYLE.unmatched;
+  return `<span style="border:1px solid ${s.color}60;background:${s.color}18;color:${s.color};border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.04em">${s.glyph}${_esc(s.label)}</span>`;
+}
+
+// §5.4 one-line explanation; machine codes are never shown raw (AC7).
+function _navExplain(nl) {
+  const c = (nl.candidates || [])[0] || {};
+  switch (nl.state) {
+    case 'matched': return `Issuer linked by ${_navSourceLabel(c.source)}, score ${c.confidence}.`;
+    case 'low_confidence': return c.source === 'heuristic'
+      ? `Name-based match (heuristic), score ${c.confidence} — not verified by an identifier.`
+      : `Linked by ${_navSourceLabel(c.source)} with a low score (${c.confidence}).`;
+    case 'ambiguous': return nl.reason === 'source_conflict'
+      ? 'Our sources disagree about the issuer. Choose one.'
+      : 'Several issuers share this ISIN. Choose one.';
+    default:
+      if (nl.placeholder_key) return 'No unique identifier for this holding (for example cash or a derivative).';
+      if (nl.reason === 'lei_only') return `The issuer's LEI (${nl.lei || '—'}) is known, but the issuer isn't in Meridian Atlas yet.`;
+      if (nl.reason === 'not_in_universe') return "This instrument isn't in Meridian Atlas's instrument list yet.";
+      if (nl.reason === 'redirect_unresolved') return "The linked issuer record was merged, and its merge history couldn't be resolved.";
+      return 'No issuer linked — no mapping exists for this instrument yet.';
+  }
+}
+
+function _navCandidateHtml(c, nl, showButton) {
+  const merged = c.redirect ? `<span style="border:1px solid #D99C3D60;color:#D99C3D;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700">Merged</span>` : '';
+  const btn = showButton
+    ? `<button data-entity="${Number(c.entity_id)}" data-key="${_esc(nl.instrument_key)}" data-name="${_esc(c.name || '')}" onclick="_navOpenCandidate(this)"
+        style="background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:4px 10px;border-radius:var(--r);cursor:pointer;white-space:nowrap">Open issuer →</button>`
+    : '';
+  return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--border)">
+    <div style="flex:1;min-width:180px">
+      <div style="font-size:12px;font-weight:600;color:var(--text)">${_esc(c.name || `#${c.entity_id}`)} ${merged}</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px">${c.lei ? `LEI ${_esc(c.lei)}` : 'No LEI on file'} · #${_esc(c.entity_id)}${c.as_of ? ` · as of ${_esc(String(c.as_of).slice(0, 10))}` : ''}</div>
+    </div>
+    ${_instrumentSourceBadge(c.source)}
+    ${_navBandChip(c.confidence_band, c.confidence)}
+    ${btn}
+  </div>`;
+}
+
+function _navEmitState(nl) {
+  const c = (nl.candidates || [])[0];
+  document.dispatchEvent(new CustomEvent('ma:instrument-state', { detail: {
+    instrument_key: nl.instrument_key, state: nl.state, confidence_band: nl.state === 'matched' || nl.state === 'low_confidence' ? (c && c.confidence_band) : null } }));
+}
+
+function _navInstrumentPath(key, isin) {
+  const q = isin && !/^[A-Z0-9]{12}$/.test(key) ? `?isin=${encodeURIComponent(isin)}` : '';
+  return `/api/instruments/${encodeURIComponent(key)}${q}`;
+}
+
+async function _navRenderInstrument(layer, opts) {
+  const el = layer.el;
+  layer.title = layer.title || String(layer.id);
+  el.innerHTML = _navShell(layer, `<div style="color:var(--dim);font-size:12px;padding:16px">Loading instrument…</div>`);
+  const r = opts.prefetched || await data_entitiesGet(_navInstrumentPath(layer.id, opts.isin));
+  if (!el.isConnected) return;
+  if (r.status === 0) {
+    document.dispatchEvent(new CustomEvent('ma:instrument-state', { detail: { instrument_key: layer.id, state: null, error: 'network' } }));
+    _navRenderNetworkError(layer, opts);
+    return;
+  }
+  if (!r.ok || !r.data || !r.data.state) {
+    el.innerHTML = _navShell(layer, `<div style="color:var(--text2);font-size:13px">That link isn't valid.</div>`);
+    return;
+  }
+  const nl = r.data;
+  layer.title = nl.name || nl.instrument_key;
+  _navEmitState(nl);
+  const ids = nl.identifiers || {};
+  const idRows = [
+    ids.isin ? `<div><span style="color:var(--dim)">ISIN</span> <span style="font-family:var(--mono)">${_esc(ids.isin)}</span>${nl.isin_source === 'holding' ? ' <span style="color:var(--muted);font-size:10px">(ISIN from the ETF holding)</span>' : ''}</div>` : '',
+    ids.cusip ? `<div><span style="color:var(--dim)">CUSIP</span> <span style="font-family:var(--mono)">${_esc(ids.cusip)}</span></div>` : '',
+    ids.ticker ? `<div><span style="color:var(--dim)">Ticker</span> <strong>${_esc(ids.ticker)}</strong></div>` : '',
+    nl.asset_type ? `<div><span style="color:var(--dim)">Asset type</span> ${_esc(nl.asset_type)}</div>` : '',
+    `<div><span style="color:var(--dim)">Key</span> <span style="font-family:var(--mono);font-size:10px">${_esc(nl.instrument_key)}</span></div>`
+  ].join('');
+  const cands = nl.candidates || [];
+  let body;
+  if (nl.state === 'matched' || nl.state === 'low_confidence') body = _navCandidateHtml(cands[0], nl, true);
+  else if (nl.state === 'ambiguous') {
+    body = `<div style="font-size:10px;color:var(--dim);margin-bottom:4px">${cands.length} candidate issuers — none is selected for you</div>` +
+      cands.map(c => _navCandidateHtml(c, nl, true)).join('') +
+      (nl.candidates_truncated ? `<div style="font-size:10px;color:var(--muted);padding-top:6px">More candidates exist than are shown.</div>` : '');
+  } else body = '';
+  const primary = cands[0];
+  el.innerHTML = _navShell(layer, `
+    <div style="padding:18px 20px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <h2 style="margin:0;font-size:16px;font-weight:700;color:var(--text);flex:1;min-width:200px">${_esc(nl.name || nl.instrument_key)}</h2>
+        ${_navStateBadge(nl.state)}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:4px 20px;font-size:11px;color:var(--text2);line-height:1.8;margin-bottom:12px">${idRows}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">${_esc(_navExplain(nl))}</div>
+      ${primary && nl.state !== 'ambiguous' ? `<div style="font-size:10px;color:var(--muted);margin-bottom:8px">Source: ${_esc(_navSourceLabel(primary.source))} · confidence ${_esc(primary.confidence)} (${_esc(primary.confidence_band)})${nl.as_of ? ` · as of ${_esc(String(nl.as_of).slice(0, 10))}` : ''}</div>` : ''}
+      ${body}
+    </div>`);
+}
+
+function _navOpenCandidate(btn) {
+  _navOpen('entity', Number(btn.dataset.entity), { history: 'push', from: `instrument:${btn.dataset.key}`, lastName: btn.dataset.name || '' });
+}
+
+// "← Back to …" names the layer underneath (its title once loaded), else the origin.
+function _navBackLabel(layer) {
+  const i = _navStack.indexOf(layer);
+  const prev = i > 0 ? _navStack[i - 1] : null;
+  return prev ? (prev.title || 'previous page') : layer.backLabel;
+}
+
+// J2 → J1: a linked-instrument row opens its card, from = entity:{id}:{page}.
+function _navOpenInstrumentFromRow(rowEl) {
+  const key = rowEl.dataset.key;
+  if (!key) return;
+  _navOpen('instrument', key, { history: 'push', from: `entity:${rowEl.dataset.entity}:${rowEl.dataset.page}` });
+}
+
+// §3.4 ma:open-instrument (ETF holding rows in Phase 2; any surface). One click: a
+// single matched candidate opens the issuer directly with the provenance strip;
+// any other state (or an outage) opens the Instrument card.
+document.addEventListener('ma:open-instrument', async e => {
+  const d = e.detail || {};
+  const key = d.instrument_key || (typeof data_instrumentKey === 'function' ? data_instrumentKey(d) : null);
+  if (!key) return;
+  const r = await data_entitiesGet(_navInstrumentPath(key, d.isin));
+  const nl = r.ok ? r.data : null;
+  if (nl && nl.state === 'matched' && (nl.candidates || []).length === 1) {
+    _navEmitState(nl);
+    _navOpen('entity', nl.candidates[0].entity_id, { history: 'push', from: d.from || null, navlink: nl, lastName: nl.candidates[0].name });
+  } else {
+    _navOpen('instrument', key, { history: 'push', from: d.from || null, isin: d.isin, prefetched: r });
+  }
+});
+
+// §3.3 routes (the router in index.html dispatches; see its header comment).
+document.addEventListener('ma:route', e => {
+  const d = e.detail || {};
+  if (d.mode === 'pop') {
+    const depth = Number.isInteger(d.depth) ? d.depth : 0;
+    while (_navStack.length > depth) _navStack.pop().el.remove();
+    // Forward into a layer that was closed: reopen it on its existing entry.
+    if (d.type && depth === _navStack.length + 1) _navOpen(d.type, d.id, { history: 'none', from: d.from });
+    return;
+  }
+  if (!d.type) return;
+  if (d.mode === 'cold') {
+    // N7-13: the deep link's own entry becomes Home (depth 0), so Back never leaves the site.
+    history.replaceState({ maNav: 0 }, '', location.pathname + location.search);
+    const origin = _navParseFrom(d.from);
+    // An entity/instrument origin is rebuilt underneath; ETF and bond origins go Home in
+    // Phase 1 (ma-etf.js wiring is Phase 2).
+    if (origin.type === 'entity' && /^\d+$/.test(origin.key)) _navOpen('entity', Number(origin.key), { history: 'push' });
+    else if (origin.type === 'instrument' && origin.key) _navOpen('instrument', origin.key, { history: 'push' });
+    _navOpen(d.type, d.id, { history: 'push', from: d.from });
+    return;
+  }
+  // 'typed': the browser already made a new entry for the hand-typed hash; stamp it.
+  _navOpen(d.type, d.id, { history: 'replace', from: d.from });
+});

@@ -192,3 +192,37 @@ async function data_opsPost(path, body) {
 
 window.data_opsGet = data_opsGet;
 window.data_opsPost = data_opsPost;
+
+// --- meridian-entities-api wrappers (MA-OCT-007 Phase 1, spec rev 1.4 §3.1, §9) ---
+// Ruling D: ETF screens reach entities-api only through these helpers or DOM
+// events, never by a direct fetch from ma-etf.js. GET only; the front end
+// writes nothing (D4).
+const ENTITIES_WORKER_BASE = 'https://meridian-entities-api.navinmv1981.workers.dev';
+
+// Same return shape as data_opsGet: { ok, status, data } or { ok:false, status:0, type }.
+// A status of 0 is a network failure or timeout, never a mapping state (§5.3).
+async function data_entitiesGet(path) {
+  return fetchWithTimeout(`${ENTITIES_WORKER_BASE}${path}`);
+}
+
+// Byte-for-byte port of deriveInstrumentKey (App/Corporate Atlas/gate1-instrument-seed.js:51),
+// the rule that formed every instrument_key (E8). Takes raw holding values, never the
+// rendered "—" (N7-9). ISIN and CUSIP are trimmed, not uppercased, exactly like the seed.
+// Placeholder keys (e.g. CUSIP:000000000) are returned as derived; R1 guards them (R7-2).
+// Returns null when there is nothing to key on (the seed would throw on a missing name).
+function data_instrumentKey({ isin, cusip, ticker, name } = {}) {
+  if (isin && isin.trim().length === 12) {
+    return isin.trim();
+  } else if (cusip && cusip.trim().length >= 6) {
+    return 'CUSIP:' + cusip.trim();
+  } else if (ticker && ticker.trim() !== '') {
+    return 'TICKER:' + ticker.toUpperCase().trim();
+  } else if (typeof name === 'string') {
+    return 'NAME:' + name.toUpperCase().trim()
+      .replace(/\s+/g, '_').slice(0, 80);
+  }
+  return null;
+}
+
+window.data_entitiesGet = data_entitiesGet;
+window.data_instrumentKey = data_instrumentKey;

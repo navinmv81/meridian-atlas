@@ -123,3 +123,112 @@
 - **No more Worker deploys are planned.** The freeze runs 17–23 Oct; the next slot is Sat 24 08:05 UTC, if the front end needs a Worker fix.
 
 **Commit (Thu 15):** Worker source + tests + this report, by explicit path; its SHA is in the Founder line.
+
+---
+
+## Day Sun 18 Oct 2026
+
+**Scope:** front end only, built and tested locally. **No Worker deploy** (011 N-3 freeze; next slot Sat 24 08:05 UTC). **Not released:** `docs/` was not regenerated and Pages is unchanged (go-live at the end of October).
+**Opening checks (08:09 UTC):**
+- Control `73ad4f22…c712` and Task `abfdba59…8708` re-hashed; both match.
+- No locks.
+- HEAD `0dd7ef0` = origin.
+
+### Files changed
+
+| File | SHA-256 | Change |
+|---|---|---|
+| `App/ma-data.js` | `38eb07ae369270a46b8fb7e5cc1e64fc10abcfeae89b6816ae728116076c9ded` | `data_entitiesGet(path)` (same shape as `data_opsGet`; status 0 = outage) and `data_instrumentKey({isin, cusip, ticker, name})`, a byte port of `deriveInstrumentKey`. ISIN and CUSIP are trimmed, never uppercased (N7-9). Returns `null` where the seed would throw. |
+| `App/index.html` | `e0d2778b3a47091e4987c731efc077780597d1d7f8583646d7777279bae64a59` | Inline hash router, ≈ 45 lines, no new `<script src>`. Parses `#/entity/{id}` and `#/instrument/{key}` with an optional `?from=` (one `encodeURIComponent` string, R7-10), then dispatches `ma:route` with mode `cold`, `typed` or `pop`. On a cold or typed bad link it shows the "That link isn't valid" toast and clears the hash. A `popstate` never shows it. Listens to both `popstate` and `hashchange`. Imports nothing. |
+| `App/ma-entities.js` | `94aa252f99e68df26164bc09fc59f71f6f822d5c7cb824556f3b105228e62e7a` | History-backed overlay **stack**, Instrument card, state badges and §5.4 copy, provenance strip, paged linked instruments (R2/R4, R7-4), redirect notice, `gone` fallback with search (§6.5), outage + retry, `ma:route` / `ma:open-instrument` listeners, `ma:instrument-state` emitter. |
+| `App/Corporate Atlas/tests/nav-007-key.test.mjs` | `2c124d0283bfff2a803c5cdab49e62d7f674ee99324c7c2b3bdb17b9b4018445` | T1 |
+
+### Design notes
+
+**History contract (R7-6, N7-13):**
+- Each overlay layer is one history entry with state `{maNav: depth}`; the base panel is depth 0.
+- In-app "← Back" calls `history.back()`.
+- A `popstate` closes layers down to its depth and **never re-renders the base panel**. Forward re-opens a closed layer on its existing entry.
+- **Cold deep link:** the entry is rewritten to Home (`{maNav: 0}`, no hash) and the route is pushed above it, so Back lands on Home and never leaves the site.
+  - An `entity:` or `instrument:` origin is rebuilt underneath.
+  - `etf:` and `bond:` origins go Home in Phase 1, because rebuilding an ETF tab needs `ma-etf.js` (Phase 2).
+- **Typed hash:** the new entry is stamped (`replaceState`).
+- **Merged id:** `replaceState` to the survivor's hash, and `_breadcrumb` ids are rewritten.
+
+**Existing callers kept:** `showEntityOverlay(id, backLabel)` (`ma-etf.js:3016`, `ma-13f.js:535`, ownership click-throughs) now opens one layer and pushes one entry. `closeEntityOverlay()` (called by `ma-etf.js:1192` on an ETF switch) closes every layer and unwinds their entries with `history.go(-depth)`. The × closes all layers.
+
+**Same entity twice in one stack:** the section loaders (`_loadEntityExposureStrip`, `_loadLinkedInstruments`, `ent_injectIssuerPanels`) take the layer as `root`, and "Show all ETFs" finds its section from the button. So two layers for the same entity never share sections. Verified with 28088 at depths 1 and 3.
+
+**The Corporate Atlas panel path (`showEntityDetail`)** also follows R3 now: the survivor plus a notice; 404 shows the "no longer in Meridian Atlas" text; 409 shows "merge history couldn't be resolved".
+
+**Linked instruments:**
+- Replaces the 75-row list and its "Show all N" (E6).
+- The header reads "Linked instruments · N", or "1,000+" when capped.
+- Single-page issuers are sorted by asset type then name, with group headers.
+- Multi-page issuers keep key order, with an asset-type badge on every row and a "Sorted by identifier" label.
+- "Show 25 more ↓" appends the next page. A failed page offers Retry.
+- Each row shows source label + band + score, and opens its card with `from=entity:{id}:{page}`.
+
+### Tests
+
+| Test | Result |
+|---|---|
+| **T1** `data_instrumentKey` ≡ `deriveInstrumentKey` (both loaded from their real source files) | **34/34**: 33 fixtures (12-char, padded, lower-case, 11- and 13-char ISINs; 5/6/8/9/10-char CUSIPs, padded and lower-case; placeholder `000000000` / `000000`; tickers; long, spaced, tab, non-ASCII, Turkish-locale and empty names; `N/A` / `na` / `None`) + the null case |
+| T2–T5, T9 (Worker, re-run) | **58/58**, unchanged |
+| **T8a** no entities-api URL in `ma-etf.js` | **Expected FAIL until Phase 2:** `ma-etf.js:2997–2999` still fetches `/api/entities/isin/` directly. Phase 2 replaces it with `ma:open-instrument` (ETF files are out of Phase 1). |
+| **T8b** no `POST` in 007 front-end code | **Pass** (grep of the added lines) |
+| **AC3** grep | **Pass.** Every `_navOpen` call is keyed by `entity_id` or `instrument_key`. Same-name Microsoft bonds render as separate rows, each with its own ISIN. |
+
+**T7, browser preview** (`corporate-atlas-static` on :8791, against the live Worker `73851c02`; desktop + 375 px):
+
+| Check | Result |
+|---|---|
+| Cold `#/entity/28088` | Issuer layer, "← Back to Home", state `{maNav:1}`; "Linked instruments · 871", "Sorted by identifier" |
+| Show 25 more | 50 rows, 50 unique, strict key order |
+| **AC1 round trip:** page-2 row (`US36176XJ595`, `from=entity:28088:2`) → card (depth 2) → Open issuer (depth 3) → browser Back → in-app Back | Each Back closes exactly one layer. On return, pages 1–2 are still loaded (50 rows), **scroll restored (1661 px)**, and it is the same DOM element |
+| One more Back from the cold layer (N7-13) | `http://localhost:8791/`, depth 0, no layers. **Still on the site.** |
+| Cold `#/instrument/US36176XJ595?from=entity:28088:2` | Issuer 28088 rebuilt underneath; Back → issuer; Back → Home `{maNav:0}` |
+| Typed and cold invalid links (`#/entity/abc`, `#/nonsense`, cold `#/entity/0`) | Toast "That link isn't valid"; hash cleared; no layer opened |
+| Typed `#/instrument/US9219378190` (KI 22.17) | Card "Ambiguous · Several issuers share this ISIN. Choose one."; 2 candidates (`ESMA FIRDS`, High · 100), **none selected** |
+| `#/entity/25782` (MA-SEP-007 loser) | `gone` fallback: "This entity is no longer in Meridian Atlas…"; the search box returns live results ("bayer" → Bayer Aktiengesellschaft …) |
+| `#/instrument/CUSIP%3A000000000` | "? No issuer · No unique identifier for this holding (for example cash or a derivative)." |
+| `ma:open-instrument` (MSFT ISIN, `from=etf:VTI:holdings`) | **One click straight to the issuer** (#1371), with the strip "Reached from MICROSOFT CORPORATION · ISIN US5949181045 · ISIN · confidence 100 (high) · View instrument", "← Back to ETF Holdings"; `ma:instrument-state` `{state: matched, confidence_band: high}` |
+| **Outage** (fetch to entities-api blocked in the page) | Card shows "Couldn't reach Corporate Atlas. ↻ Retry"; `ma:instrument-state` `{state: null, error: 'network'}`, **never "unmatched"**. Retry after unblocking renders the matched card |
+| `XS2199266698` (live heuristic row, Bayer) | "Low confidence · Name-based match (heuristic), score 75 — not verified by an identifier." → "Open issuer" |
+| Fixture-rendered states (local responses, no production rows; D4) | `lei_only` shows the LEI line; `source_conflict` shows "Our sources disagree about the issuer. Choose one." with 2 candidates and the **Merged** chip; a name with an apostrophe ("LOWE'S COS") opens correctly; the redirect notice reads "Merged record. Entity #25782 was merged (via #25800) into Bayer Aktiengesellschaft (#2730) on 27 Oct 2026 (MA-OCT-013). You are viewing the surviving record." |
+| Single-page issuer (#2730, 6 rows) | Sorted, with a "DBT" group header and no "Sorted by identifier"; zero-row issuer (#208217) shows "No linked instruments in Meridian Atlas" |
+| `showEntityOverlay(1371)` (legacy signature) → `showEntityOverlay(28088,'Manager')` → `closeEntityOverlay()` | Depth 2 → 0, state `{maNav:0}`, hash cleared, 0 layers in the DOM |
+| 375 px | Card and linked list render without horizontal overflow (screenshots taken) |
+| Console | No errors from 007 code. Two kinds seen: 404s from the intentional `gone` probes, and **402 from `meridian-proxy …/?ipos=1`** (home-screen module, existing, not 007) |
+
+**Fixes made during T7:**
+1. A typed **invalid** hash showed no toast. The browser fires `popstate` (state null) for it, and the router classed it as a pop. Now any null-state entry with a hash counts as typed.
+2. The candidate "Open issuer" button inlined the name in a single-quoted handler, so an apostrophe would break it. It now uses data attributes.
+3. The Back label is computed at render time, so a rebuilt origin shows its real title, not "previous page".
+
+### Budget
+
+- **D1 writes: 0.**
+- **D1 reads:** all through the live Worker during T7, which this lane does not meter. **Estimate ≈ 10–14k.** About 14 issuer-layer opens each load `/graph`, `/etf-exposure`, `/issuer-panels` and R2/R4 (entity 28088 is the heaviest at ≈ 0.9k for R2+R4), plus ≈ 20 R1 calls at about 8 reads each.
+- **Packet total so far ≈ 15–19k against ≤ 20k.**
+- **Ruling R-P1-3:** the rest of the build tests against fixtures (prefetched responses, as above) or the local stub, not the live Worker. The remaining headroom is kept for the Main Lane's UAT-day R1 re-checks.
+
+### Not done / carry-overs
+
+- **Phase 1 front end is functionally complete.** What remains:
+  - the UX Lead + Data-Identity Lead build review (separate packet; never reviewed by this lane);
+  - fill-in of the UAT sheet values (§13).
+- **Known limits, documented:**
+  - (a) A cold deep link with `from=entity:{id}:{page}` rebuilds the origin issuer with page 1 only, not pages 1…*k*. The in-session round trip keeps every loaded page.
+  - (b) `etf:` and `bond:` origins go Home until Phase 2.
+  - (c) Scroll restoration relies on the layer's DOM surviving underneath. That holds for in-session navigation, not for a cold reload.
+- **UAT candidates found today:**
+  - low-confidence: `XS2199266698` (Bayer, heuristic 75);
+  - large issuer: 28088 (871);
+  - ambiguous: `US9219378190`, `CA46431R1029`, `US0321084339`;
+  - gone: 25782;
+  - unmatched (not in universe): `CUSIP:999999999`.
+  - Each needs its one R1 re-check on UAT day.
+- **P10** (R1f) still runs once 008's tables exist.
+
+**Commit (Sun 18):** front-end files + T1 + this report, by explicit path. Nothing is released.
