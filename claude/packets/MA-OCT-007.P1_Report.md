@@ -256,3 +256,38 @@
 - 0 live reads were made today.
 
 **Commit:** `App/ma-entities.js` + this report, by explicit path.
+
+### Wed 21 (continued): BR-1/BR-2 tests and browser re-check (completes the carry-over above)
+
+**New test:** `App/Corporate Atlas/tests/nav-007-frontend.test.mjs` (SHA-256 `95012c73046b9f3779198f5261f25acf9d22491768216dbfb6190ab312d44ed7`), **39/39**.
+- **Harness:** loads the real `App/ma-entities.js` in a `vm` context with a minimal DOM stub, a stubbed `data_entitiesGet` and a stubbed `fetch`. No network, no D1.
+- **BR-1 cases:**
+  - the `_navIsOutage` table (0, 500, 502, 503 → outage; 200, 400, 404, 409 → not), plus `null`;
+  - **Instrument card on a 500, a 503 and status 0:** the outage text, `_navRetry(1)`, never "That link isn't valid" or "No issuer", and exactly one `ma:instrument-state {state:null, error:'network'}`;
+  - Retry after the outage clears renders the Matched card;
+  - a 400 stays "That link isn't valid";
+  - **issuer layer:** 500 → outage + Retry; 404 → gone page;
+  - **`ma:open-instrument` on a 500:** the card in the outage state, with an `error:'network'` event and never `unmatched`;
+  - **linked instruments:** 500 → outage + Retry; 404 → "Linked instruments unavailable" + Retry;
+  - **Corporate Atlas panel path (`showEntityDetail`, direct `fetch`) on a 500:** the outage text, "↻ Retry" re-running `showEntityDetail(1371, …)`, and Back kept.
+- **BR-2 cases:**
+  - `_navRealId` hides `N/A`/`n/a`/`NA`/`NONE`/`NULL`/`-`/`—`/all zeros/blank, and keeps real values (incl. `00A123456`);
+  - **row line:** a placeholder CUSIP falls back to "No identifier on file"; a real CUSIP is still shown;
+  - **card grid:** "CUSIP N/A" is hidden; an all-zero CUSIP and a "NONE" ticker are hidden; real ISIN/CUSIP/ticker are all shown; the key line is unchanged;
+  - **provenance strip:** a placeholder CUSIP is skipped in favour of the ticker, else it falls back to the key.
+
+**Mutation check:** with `NAV_SRC` pointed at the pre-fix `ma-entities.js` from `3989ab1`, **23 checks fail and 13 pass**. The 13 are regression guards: the network-0 path, 400, gone, real identifiers. The tests therefore catch both defects.
+
+**All suites:** T1 34/34 · Worker 58/58 · front end 39/39.
+
+**Browser re-check** (preview :8791). Every `meridian-entities-api` call was answered in-page with fixtures or 500s, so **0 real entities requests** were made (performance entries) and **0 D1 reads**.
+- `#/instrument/US5949181045` on a 500 → "Couldn't reach Corporate Atlas. ↻ Retry".
+- `#/entity/1371` on a 500 → the same.
+- Issuer #2730 with its instruments page on a 500 → "Couldn't reach Corporate Atlas. Retry".
+- The Bayer `XS2199266698` fixture card shows ISIN, asset type and key, with **no CUSIP row**. Screenshot taken.
+
+**Code:** `App/ma-entities.js` is unchanged since `e4ee5c8` (SHA-256 `9b42b5ffdba22ad12fe39ec5abcf206b68f26606258e2df9ff43b1d8c576e303`). Today's only code change was the BR-1/BR-2 fix committed there.
+
+**Budget:** today 0 D1 writes and 0 D1 reads (all fixtures). The packet total is unchanged at ≈ 15–19k of ≤ 20k.
+
+**Status:** BR-1 and BR-2 are **fixed and tested**. BR-3 (TRADEWEB EU B.V. offered as a candidate issuer) belongs to the Data-Identity Lead. BR-4 (merged-id redirect live) waits for 013. Both are unchanged. Still local only: no Worker change was needed for either fix, nothing is released, and no deploy is planned before Sat 24.
