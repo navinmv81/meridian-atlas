@@ -1004,7 +1004,9 @@ async function showEntityDetail(entityId, breadcrumbLabel) {
     if (entity && entity.entity_id) entityId = entity.entity_id;
   } catch (e) {
     console.error('[ma-entities] showEntityDetail fetch error', e);
-    main.innerHTML = _detailError('Unable to load entity. Please try again.', breadcrumbLabel, 'restoreEntityPreviousView()');
+    // BR-1 (§5.3): any failure here is an outage (5xx or network), shown with Retry.
+    main.innerHTML = _detailError("Couldn't reach Corporate Atlas.", breadcrumbLabel, 'restoreEntityPreviousView()')
+      .replace('</button>', `</button> <button onclick="restoreEntityPreviousView();showEntityDetail(${Number(entityId)}, ${_esc(JSON.stringify(breadcrumbLabel))})" style="background:none;border:1px solid var(--border);color:var(--blue);font-size:11px;padding:5px 14px;border-radius:var(--r);cursor:pointer">↻ Retry</button>`);
     return;
   }
 
@@ -1167,7 +1169,7 @@ function _instrumentRowHtml(r, entityId, page, showAssetBadge) {
   // Distinguishing identifier — this is the whole point of the row.
   // Same-name entries (e.g. dozens of Microsoft bond issuances) are only
   // ever told apart by their actual ISIN/CUSIP value, not by name or source.
-  const ids = r.identifiers || {};
+  const ids = _navDisplayIds(r.identifiers);
   const identifier = ids.isin
     ? `ISIN ${_esc(ids.isin)}`
     : (ids.cusip ? `CUSIP ${_esc(ids.cusip)}` : 'No identifier on file');
@@ -1209,7 +1211,7 @@ async function _linkedLoadPage(section) {
   const r = await data_entitiesGet(`/api/entities/${st.entityId}/instruments${q}`);
   if (!section.isConnected) return;
   if (!r.ok || !r.data || !Array.isArray(r.data.instruments)) {
-    st.error = true;
+    st.error = _navIsOutage(r) ? 'outage' : 'unavailable';
     console.error('[ma-entities] instruments page fetch error', r.status, r.type || '');
     _linkedRender(section);
     return;
@@ -1227,7 +1229,7 @@ function _linkedRender(section) {
   const title = `<div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Linked instruments${st.pages ? ` · <span style="font-weight:400;text-transform:none;letter-spacing:0">${st.capped ? '1,000+' : Number(st.total ?? st.rows.length).toLocaleString()}</span>` : ''}</div>`;
   if (st.pages === 0) {
     section.innerHTML = `${title}<div style="color:var(--dim);font-size:11px">${st.error
-      ? `Couldn't reach Corporate Atlas. <button onclick="_linkedLoadPage(this.closest('[id^=linked-instruments-section-]'))" style="background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:2px 8px;border-radius:var(--r);cursor:pointer">Retry</button>`
+      ? `${st.error === 'outage' ? "Couldn't reach Corporate Atlas." : 'Linked instruments unavailable.'} <button onclick="_linkedLoadPage(this.closest('[id^=linked-instruments-section-]'))" style="background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:2px 8px;border-radius:var(--r);cursor:pointer">Retry</button>`
       : 'Loading linked instruments…'}</div>`;
     return;
   }
@@ -1652,6 +1654,25 @@ function _navFind(root, id) {
   return root && root.querySelector ? root.querySelector(`#${CSS.escape(id)}`) : document.getElementById(id);
 }
 
+// BR-1 (§5.3): a network failure, timeout or any 5xx is an outage, never a
+// mapping or link state — it always shows "Couldn't reach Corporate Atlas" + Retry.
+function _navIsOutage(r) {
+  return !r || r.status === 0 || r.status >= 500;
+}
+
+// BR-2: placeholder identifier values (N/A, NA, NONE, '-', all zeros) are not
+// identifiers and are never displayed as one. Keys are unaffected (R1 guards them).
+function _navRealId(v) {
+  if (v === null || v === undefined) return null;
+  const t = String(v).trim();
+  if (!t || /^(N\/?A|NONE|NULL|-+|—)$/i.test(t) || /^0+$/.test(t)) return null;
+  return t;
+}
+function _navDisplayIds(ids) {
+  ids = ids || {};
+  return { isin: _navRealId(ids.isin), cusip: _navRealId(ids.cusip), ticker: _navRealId(ids.ticker) };
+}
+
 function _navHash(kind, id, from) {
   const base = kind === 'entity' ? `#/entity/${id}` : `#/instrument/${encodeURIComponent(id)}`;
   return from ? `${base}?from=${encodeURIComponent(from)}` : base;
@@ -1736,7 +1757,7 @@ function _navRedirectNoticeHtml(redirect, entity) {
 function _navProvenanceHtml(nl) {
   if (!nl) return '';
   const c = (nl.candidates || [])[0] || {};
-  const ids = nl.identifiers || {};
+  const ids = _navDisplayIds(nl.identifiers);
   const idTxt = ids.isin ? `ISIN ${_esc(ids.isin)}${nl.isin_source === 'holding' ? ' (ISIN from the ETF holding)' : ''}`
     : ids.cusip ? `CUSIP ${_esc(ids.cusip)}` : ids.ticker ? `Ticker ${_esc(ids.ticker)}` : _esc(nl.instrument_key);
   return `<div style="margin:16px 16px 0;padding:8px 14px;border:1px solid var(--border);background:var(--bg3);border-radius:var(--r);font-size:11px;color:var(--text2)">
@@ -1749,7 +1770,7 @@ async function _navRenderEntity(layer, opts) {
   el.innerHTML = _navShell(layer, `<div style="color:var(--dim);font-size:12px;padding:16px">Loading entity…</div>`);
   const r = await data_entitiesGet(`/api/entities/${layer.id}`);
   if (!el.isConnected) return;
-  if (r.status === 0) { _navRenderNetworkError(layer, opts); return; }
+  if (_navIsOutage(r)) { _navRenderNetworkError(layer, opts); return; }
   if (r.status === 404 || r.status === 409) { _navRenderGone(layer, opts, r.data || {}); return; }
   if (!r.ok || !r.data || !r.data.entity) {
     el.innerHTML = _navShell(layer, `<div style="color:#888">Entity data unavailable.</div>`);
@@ -1804,7 +1825,7 @@ function _navRenderGone(layer, opts, body) {
     const s = await data_entitiesGet(`/api/entities/search?q=${encodeURIComponent(q)}`);
     if (!out.isConnected) return;
     const rows = (s.ok && s.data && s.data.results) || [];
-    out.innerHTML = s.status === 0 ? `<div style="color:var(--dim);font-size:11px">Couldn't reach Corporate Atlas.</div>`
+    out.innerHTML = _navIsOutage(s) ? `<div style="color:var(--dim);font-size:11px">Couldn't reach Corporate Atlas.</div>`
       : rows.length ? rows.map(x => `<div class="ent-bc-item" style="display:block;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px" onclick="_navOpen('entity', ${Number(x.entity_id)}, { history: 'push' })">
           <strong>${_esc(x.name)}</strong> <span style="color:var(--dim)">${_esc(x.country || '')}</span></div>`).join('')
       : `<div style="color:var(--dim);font-size:11px">No matches.</div>`;
@@ -1897,7 +1918,7 @@ async function _navRenderInstrument(layer, opts) {
   el.innerHTML = _navShell(layer, `<div style="color:var(--dim);font-size:12px;padding:16px">Loading instrument…</div>`);
   const r = opts.prefetched || await data_entitiesGet(_navInstrumentPath(layer.id, opts.isin));
   if (!el.isConnected) return;
-  if (r.status === 0) {
+  if (_navIsOutage(r)) {
     document.dispatchEvent(new CustomEvent('ma:instrument-state', { detail: { instrument_key: layer.id, state: null, error: 'network' } }));
     _navRenderNetworkError(layer, opts);
     return;
@@ -1909,7 +1930,7 @@ async function _navRenderInstrument(layer, opts) {
   const nl = r.data;
   layer.title = nl.name || nl.instrument_key;
   _navEmitState(nl);
-  const ids = nl.identifiers || {};
+  const ids = _navDisplayIds(nl.identifiers);
   const idRows = [
     ids.isin ? `<div><span style="color:var(--dim)">ISIN</span> <span style="font-family:var(--mono)">${_esc(ids.isin)}</span>${nl.isin_source === 'holding' ? ' <span style="color:var(--muted);font-size:10px">(ISIN from the ETF holding)</span>' : ''}</div>` : '',
     ids.cusip ? `<div><span style="color:var(--dim)">CUSIP</span> <span style="font-family:var(--mono)">${_esc(ids.cusip)}</span></div>` : '',

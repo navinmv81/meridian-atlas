@@ -232,3 +232,27 @@
 - **P10** (R1f) still runs once 008's tables exist.
 
 **Commit (Sun 18):** front-end files + T1 + this report, by explicit path. Nothing is released.
+
+---
+
+## Day Wed 21 Oct 2026 (partial: stopped at the usage limit)
+
+**Scope:** BR-1 and BR-2 from `claude/packets/MA-OCT-007.BR1_Report.md`. Local only, with no deploy (N-3; next slot Sat 24 08:05 UTC). Not released.
+
+**Fixed in `App/ma-entities.js`** (SHA-256 `9b42b5ffdba22ad12fe39ec5abcf206b68f26606258e2df9ff43b1d8c576e303`):
+- **BR-1:** the new `_navIsOutage(r)` treats status 0 (network or timeout) and any **≥ 500** as an outage. Every such case shows "Couldn't reach Corporate Atlas" with Retry:
+  - the Instrument card, which also emits `ma:instrument-state {error:'network'}`, and through it the `ma:open-instrument` path;
+  - the issuer layer;
+  - the gone-page search;
+  - the Corporate Atlas panel path (`showEntityDetail`), which now has a Retry button.
+- **Linked instruments:** an outage shows "Couldn't reach Corporate Atlas"; a 4xx shows "Linked instruments unavailable". Both offer Retry.
+- **BR-2:** the new `_navRealId` / `_navDisplayIds` hide placeholder identifier values (`N/A`, `NA`, `NONE`, `NULL`, dashes, all zeros) in the card's identifier grid, the linked-instrument row line and the provenance strip. Keys are unchanged.
+
+**Tests run:** T1 34/34 and Worker 58/58, both unchanged.
+
+**NOT done (carry-over):**
+- the new tests for BR-1 (a stubbed 500 on card, layer, panel and list) and BR-2 (placeholder hiding);
+- a browser re-check;
+- 0 live reads were made today.
+
+**Commit:** `App/ma-entities.js` + this report, by explicit path.
