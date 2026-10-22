@@ -1,0 +1,26 @@
+name = "meridian-control"
+main = "src/control-api.js"
+compatibility_date = "2024-01-01"
+
+# MA-OCT-002a A6 (spec claude/MA-OCT-002_Spec.md rev 1.3 §13, CR-1): governance
+# routes (Sprint Board, Release Ledger, operational events, release drift) split
+# out of meridian-ops, same paths. No [triggers] section — on-request only; it
+# does not use one of the account's 5 Cron Trigger slots.
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meridian-etf"
+database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
+
+# Cloudflare Access app "meridian-control admin" (path /api/ops/admin on
+# meridian-control.navinmv1981.workers.dev, the 001 allow list). Team domain and
+# AUD are identifiers, not credentials. CF_ACCESS_AUD is EMPTY until the Founder
+# creates the Access app (Sat 24, deploy step C2); while empty, every
+# /api/ops/admin/* route fails closed with 401. Set it to the new app's own AUD
+# (NOT meridian-ops's) and commit it before the redeploy (step C3).
+[vars]
+CF_ACCESS_TEAM_DOMAIN = "meridian-atlas-except.cloudflareaccess.com"
+CF_ACCESS_AUD = ""

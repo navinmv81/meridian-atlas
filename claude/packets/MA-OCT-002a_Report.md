@@ -483,3 +483,150 @@ All exited 0 and were silent. Headroom figures match the analytics (≤ 101 read
 3. **The AC-a3 uninstall test** remains for close-out, on a copy or as a script review.
 
 **Stop point reached for Wed 14** (19:07 UTC). Reply: "MA-OCT-002a day 2026-10-14 reported".
+
+---
+
+## Day Thu 22 Oct 2026: A6 `meridian-control` split (local build; ML-1022-2)
+
+**Authority:** Main Lane ruling ML-1022-2 (Decisions Log, 22 Oct). A6 is built locally today under 002a Control v1 (§13, CR-1, AC-a6), committed, then stops for the Architect review on Fri 23. Deploys come first on Sat 24 (N-3 lifts Sat 00:00Z), then 003 per its run sheet. CR-1 Founder approval comes with the Sat 24 go-live approval.
+
+**Opening checks (17:55 UTC):**
+- Control `fe9ed369…c32a` matches the STATUS_BOARD row; Task `10ff165a…5aa5d` matches the Control.
+- Spec rev 1.3 is in force (§13 read).
+- No `.git/*.lock`.
+- HEAD `c3c6e4a` = origin.
+
+**No deploy, no remote D1 access, no Cloudflare write today.** The only Cloudflare-adjacent commands were two local `wrangler deploy --dry-run` bundles.
+
+### Isolation from 003 (LANE-8-ENG)
+
+The shared checkout holds **uncommitted 003 work** in the files A6 must change:
+- `App/Ops/src/ops-api.js` (+43/−4: `cases.js` / `sweep-ext.js` imports, sweep hooks, `handleAdmin` service gate);
+- `App/Ops/wrangler-ops.toml` (+15: `OPS_CASES_*`, `OPS_SERVICE_ACTORS`, sweep switches);
+- `App/Corporate Atlas/src/entities-api.js` and its toml (retirement);
+- new `App/Ops/src/cases.js`, `sweep-ext.js`, migrations 004/m1/m2, tests and tools.
+
+To leave every one of those untouched (as instructed):
+- A6 was built in a **separate detached git worktree** at `~/MeridianAtlas-work/a6-worktree`, created from `origin/October-2026` (`c3c6e4a`), outside the repo folder and iCloud.
+- It was committed there and pushed as a fast-forward of `origin/October-2026`.
+- **The main checkout's files, index and branch ref were not changed.** Its local `October-2026` stays at `c3c6e4a`, one commit behind origin, until LANE-8-ENG rebases on Sat 24.
+
+**Rebase preview for LANE-8-ENG:**
+- A three-way merge (base `c3c6e4a`, ours = A6, theirs = 003's working copy, read-only) of `ops-api.js` and `wrangler-ops.toml` gives **0 conflicts**, and the merged file parses.
+- 003's `handleAdmin` service gate and case hook land just before `/api/ops/admin/jobs`, as written.
+- On a scratch copy of A6 + the merged `ops-api.js` + 003's files, **003's own tests pass:** `cases-contract` 63/63, `sweep-ext-contract` 34/34, `sweep-contract` 23/23, plus A6's `control-split` 100/100. (`migration-m1` needs a Corporate Atlas file outside the scratch copy and was not run.)
+- **Suggested rebase:**
+
+  ```bash
+  git stash
+  git merge --ff-only origin/October-2026
+  git stash pop
+  ```
+
+  Then rerun 003's tests.
+
+### What A6 changes (spec §13, exactly)
+
+**New Worker `meridian-control`:**
+- **Files:** `App/Ops/src/control-api.js` (486 lines) and `App/Ops/wrangler-control.toml`. Existing folder, so no folder CR.
+- **8 endpoints, same paths:**
+  - GET `/api/ops/sprint-board`, `/api/ops/release-ledger`, `/api/ops/events`, `/api/ops/drift`;
+  - POST `/api/ops/admin/sprint-board`, `…/:id/stage`, `/api/ops/admin/release-ledger`, `…/:id/event`.
+- **The legacy anonymous-POST 401 deny rule is copied.**
+- **`verifyAccessJwt` is vendored**, and the file imports nothing.
+- **`CF_ACCESS_AUD = ""` is committed on purpose.** Every admin route fails closed (401) until the Founder's new Access app "meridian-control admin" exists and its own AUD is committed (Sat 24 step C3).
+- No cron.
+- **Moved verbatim:** 21 of 21 moved definitions are byte-identical to the pre-split file (handlers, `STAGE_ORDER`, `RELEASE_EVENT_TYPES`, CORS/json helpers, the Access verification, `withoutCors`, `LEGACY_POST_RE`). Only its `handleAdmin` (4 POSTs) and router are new.
+
+**`meridian-ops` (`App/Ops/src/ops-api.js`, +38/−279) now serves 7 endpoints plus 2 rules:**
+- **Endpoints:** GET `budget-risk`, `openfigi-status`, `cf/invocations`, `cf/d1-today`, `admin/jobs`; POST `ingest/run-event`, `ingest/sweep`.
+- **Rule 1:** the legacy-POST 401 deny (unchanged).
+- **Rule 2 (new):** the 4 moved public GETs (and HEAD) return **302, never 301**, to the same path and query on `https://meridian-control.navinmv1981.workers.dev`. The 302 carries `Access-Control-Allow-Origin: *` and `Cache-Control: no-store`; 0 D1 reads. The optional var `CONTROL_BASE_URL` can override the target, so no `wrangler-ops.toml` change was needed, which avoids a toml conflict with 003.
+- **Removed:** the moved handlers, `STAGE_ORDER`, `withoutCors`, the unused `readJson`, and the 4 admin POST branches. Those paths now answer 404 after Access, and nothing is written.
+- **Added:** `meridian-control` to `TRACKED_SCRIPTS` (`/api/ops/cf/invocations`).
+- **Header comments** updated to the new domain boundary.
+- The now-unused `who` line in `handleAdmin` was **kept deliberately**: it is the context line of 003's hook, which is why the merge is clean.
+
+**Domain and writer (the §13 decision, for the Architect):**
+- `sprintboarditems`, `releaseledger` and `operationalevents` stay Ops-domain, and their only Worker writer is now `meridian-control`.
+- `ops_*` tables stay written only by the `meridian-ops` bundle.
+- No cross-domain table.
+
+**Front end unchanged** (§13):
+- `ma-ops.js` still calls `meridian-ops`. Its 4 GETs follow the 302.
+- Its two POSTs use the legacy anonymous paths, which have returned 401 since 001 and still do (rule 1). No behaviour change.
+
+### Tests (local, 0 D1, no network)
+
+**New `App/Ops/tests/control-split.mjs`: 100/100.** It runs the real handlers on `node:sqlite` with migrations 001–003, real RS256 Access JWTs signed in the test against a stubbed JWKS, and Cloudflare analytics stubbed (the test fails on any unexpected network call).
+- **[routes]:** of the 15 pre-split endpoints, `meridian-ops` serves exactly 7 and `meridian-control` exactly 8. Each is served by exactly one Worker, as §13 assigns. Headroom is 8 (003 adds 4 → 11 of the 15 cap; BREVA S-1).
+- **[redirect]:** all moved GETs, including query strings, return 302 with the exact Location, ACAO `*` and `no-store`. HEAD too. The `CONTROL_BASE_URL` override works. OPTIONS stays 204 with CORS. Never 301.
+- **[parity]:** after following the redirect, each GET's status, body and CORS equal the **pre-split capture** (`tests/fixtures/a6-pre-split-capture.json`), generated today by running the pre-split handler from `c3c6e4a` on the same seeded DB.
+  - A 13-call sequence over the 4 admin POSTs gives identical responses on both. It covers create, duplicate, missing fields, a forward stage with a gate, a backward reject, BLOCKED, an unknown ticket, release create, `worker_deployed`, `verification_passed`, the `release_closed` cascade, rollback-without-reason and a bad event type.
+  - Identical governance tables at the end; wall-clock columns are compared as set/unset.
+- **[auth] (001 AC4 on `meridian-control`):** each of the following → 401, 0 rows, no CORS, on each of the 4 POSTs:
+  - no JWT, a forged signature, the wrong aud (`meridian-ops`'s), an expired token, the wrong iss, an unknown kid, a malformed token;
+  - **Access unconfigured (empty AUD, as committed).**
+
+  The rest of the matrix:
+  - A valid user session → 200 with actor = the verified email (`access_jwt`).
+  - A service token → actor `service:<cn>`.
+  - Unknown admin path → 404; GET on an admin POST route → 404.
+  - The 4 legacy anonymous POSTs → 401, 0 rows, **on both Workers**.
+  - On `meridian-ops`, the moved admin POSTs → 401 without a JWT and **404 with a valid ops JWT, 0 rows**.
+- **[cors]:** control's public GETs have ACAO `*`; admin OPTIONS has none; public OPTIONS has `*`. A `meridian-ops` route asked of `meridian-control` returns 404 (no overlap).
+- **[writers] (the AC-a6 grep, bundle-aware):**
+  - `ops_*` are written only inside the `meridian-ops` bundle (`ops-api.js` plus its transitive imports; that includes 003's `cases.js` and `sweep-ext.js` after the rebase, checked on the merged scratch tree);
+  - the governance tables are written only in `control-api.js`;
+  - `control-api.js` imports nothing, shares no file with the ops bundle and never names an `ops_*` table.
+
+**Mutation check:** the same test run with the pre-split `ops-api.js` in place **fails 17 checks** (routes, redirect) and then stops at parity. The test catches an unsplit Worker.
+
+**Regression (unchanged suites, A6 tree):** `sweep-contract` 23/23 · `lateness` 42/42 · `admin-jobs-lateness` 13/13 · `health-check` 15/15 · `boost-heartbeat-resilience` all passed. `ingest-contract` needs a live URL and was not run.
+
+**Bundles (`--dry-run`):** `meridian-control` 17.27 KiB (4.90 gzip), bindings DB + 2 Access vars (AUD empty). `meridian-ops` 50.26 KiB (14.47 gzip), bindings unchanged.
+
+**Not testable locally (Sat 24 steps C4–C5):** that a real browser follows the cross-origin 302 from GitHub Pages and the `ma-ops.js` tabs render on the live site, and the auth matrix against the real Access app.
+
+### Files (SHA-256)
+
+| File | SHA-256 |
+|---|---|
+| `App/Ops/src/control-api.js` (new) | `6a5e0a2f98b7589aa055bbb137cacdfab643286e8eab9c428184517971f70832` |
+| `App/Ops/wrangler-control.toml` (new) | `f6770d2a014046703419ec744b61141d70a06ceed9a2c1fba2d48ce3cf1b2e6b` |
+| `App/Ops/src/ops-api.js` | `173f120e768ed7b49294686d1926b7a60524c9db41a02fc5884aad46b8631d29` |
+| `App/Ops/tests/control-split.mjs` (new) | `5bac1384840a4f7fd988214b97e2df17e71ae72b32225dadc4cee1107b7404f8` |
+| `App/Ops/tests/fixtures/a6-pre-split-capture.json` (new) | `3a23c79acd0a23bb2e6a728d37b8159f0a66745528053a8762fb2a6b3f552117` |
+
+### Deploy steps for Sat 24 (after the Architect's PASS and the Founder's CR-1 + go-live approval)
+
+**Rules for the day:**
+- **Deploy only from the A6 worktree** (`~/MeridianAtlas-work/a6-worktree`, at the A6 commit). **Never from the shared checkout**, which carries 003's uncommitted code; this is the same principle as BREVA S-3.
+- Respect FREEZES.json: enrich 05:50–07:10, bootstrap 07:55–08:05, 23:50–00:10. Suggested start: **08:10 UTC**, finished well before 003's run sheet.
+- Wrangler only `/usr/local/bin/wrangler` 4.96.0.
+- Every step records the version id (BREVA S-5).
+
+| # | Step | Verify | If it fails |
+|---|---|---|---|
+| C0 | **Preflight.** `git -C ~/MeridianAtlas-work/a6-worktree fetch && git … status`: the worktree is at the A6 commit, clean, and that commit is on `origin/October-2026`. Record the live `meridian-ops` version (`wrangler deployments status --config App/Ops/wrangler-ops.toml`; expected `9d437dd1…` unless something changed). **Live pre-split capture:** `curl -si` the 4 moved GETs on `meridian-ops` and save to `~/MeridianAtlas-work/a6-live/pre/`. | Versions and capture saved | Stop |
+| C1 | **Deploy `meridian-control`** (`wrangler deploy --config App/Ops/wrangler-control.toml`, from the worktree). Record the version. | Its 4 GETs → 200, ACAO `*`, bodies equal to the C0 capture. Admin POST without a session → 401 (AUD still empty: fail closed). | Leave it; nothing routes to it yet |
+| C2 | **Founder (≈ 15 min):** create the Access app "meridian-control admin" on `meridian-control.navinmv1981.workers.dev/api/ops/admin` with the 001 allow list. Read its **AUD** (an identifier, not a secret) to this lane. | AUD received | Stop; ops is not yet changed |
+| C3 | Put the AUD into `CF_ACCESS_AUD` in `App/Ops/wrangler-control.toml`. Commit (explicit path) and push, then **redeploy `meridian-control`**. Record the version. | Admin path without a session → Access login (302) / 401. Forged JWT sent directly → 401. With the Founder's session, a POST with a missing field → **400** (auth passed, 0 rows written; no production rows needed). | Redeploy C1's version |
+| C4 | **Deploy `meridian-ops`** (`wrangler deploy --config App/Ops/wrangler-ops.toml`, **from the worktree**, so no 003 code). Record the version. | The 4 moved GETs → **302**, correct Location, ACAO `*`, no-store; following them gives the same status, shape and CORS as the C0 capture. `budget-risk`, `openfigi-status`, `cf/d1-today` → 200. Ingest keys still accepted (400 probes, 0 writes, as T12). `admin/jobs` via Access → 200. Moved admin POSTs → 404. | **`wrangler rollback <C0 version>`** (routes restored in one step; §13); leave control deployed and unused |
+| C5 | **Live site (AC-a6):** open the GitHub Pages Ops tabs (Sprint Board, Release Ledger, Events, Drift) in a real browser. Each renders through the redirect, with no CORS error in the console. | Screenshots and console clean | C4 rollback |
+| C6 | **Hand-off:** tell LANE-8-ENG that A6 is live. Then 003's rebase (stash / ff / pop; preview above: 0 conflicts) and its run sheet. The next health-check sweep reaches `meridian-ops` unchanged. Afterwards remove the worktree (`git worktree remove ~/MeridianAtlas-work/a6-worktree`). | 003 tests rerun green on the rebased tree | — |
+
+**D1 for the whole A6 deploy:** 0 writes. Reads: the verification GETs only (a few hundred). **Rollback:** §13. Redeploy the C0 `meridian-ops` version; leave `meridian-control` deployed but unused (with an empty AUD it can only serve the 4 public GETs).
+
+### Budget, deviations, open points
+
+- **Today:** 0 D1 reads or writes, 0 deploys, 0 Cloudflare API writes.
+- **Git:** one commit from the A6 worktree (explicit paths: the 5 A6 files + this report), pushed as a fast-forward. The Task's Git section says `claude/` files go through a Main Lane commit list; this report is included on the Founder's instruction for today ("commit by explicit path").
+- **Founder action needed Sat 24:** step C2 (Access app + AUD) and the CR-1 approval with the go-live approval.
+- **For the Architect:**
+  - (a) the 302 rule, implemented as §13 (GET and HEAD);
+  - (b) the empty-AUD fail-closed default in the committed toml;
+  - (c) the bundle-aware writer rule in place of the literal "only in `ops-api.js`" grep, needed once 003's modules land;
+  - (d) deploying from the worktree on Sat 24.
+
+**Stop point reached for Thu 22.** Waiting for the Architect review. Reply: "MA-OCT-002a day 2026-10-22 reported".

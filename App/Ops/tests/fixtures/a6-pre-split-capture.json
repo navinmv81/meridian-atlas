@@ -1,0 +1,561 @@
+{
+ "captured_from": "pre-split App/Ops/src/ops-api.js (origin/October-2026 c3c6e4a), MA-OCT-002a A6 build, Thu 22 Oct 2026",
+ "gets": {
+  "/api/ops/sprint-board": {
+   "status": 200,
+   "json": {
+    "ok": true,
+    "items": [
+     {
+      "ticket_id": "MA-T-002",
+      "title": "Beta",
+      "domain": "Entities",
+      "lane": "data_identity",
+      "stage": "ARCH_REVIEW",
+      "owner_role": "Data-Identity Lead",
+      "status": "ACTIVE",
+      "blocker": null,
+      "next_step": null,
+      "approval_needed": null,
+      "notes": null,
+      "created_at": "2026-10-02 10:00:00",
+      "updated_at": "2026-10-06 10:00:00"
+     },
+     {
+      "ticket_id": "MA-T-001",
+      "title": "Alpha",
+      "domain": "Ops",
+      "lane": "control",
+      "stage": "ENG_IMPLEMENT",
+      "owner_role": "Engineering Lead",
+      "status": "ACTIVE",
+      "blocker": null,
+      "next_step": null,
+      "approval_needed": null,
+      "notes": null,
+      "created_at": "2026-10-01 10:00:00",
+      "updated_at": "2026-10-05 10:00:00"
+     },
+     {
+      "ticket_id": "MA-T-003",
+      "title": "Gamma",
+      "domain": "ETF",
+      "lane": "application",
+      "stage": "BLOCKED",
+      "owner_role": "ETF Product Lead",
+      "status": "BLOCKED",
+      "blocker": null,
+      "next_step": null,
+      "approval_needed": null,
+      "notes": null,
+      "created_at": "2026-10-03 10:00:00",
+      "updated_at": "2026-10-04 10:00:00"
+     }
+    ]
+   },
+   "acao": "*"
+  },
+  "/api/ops/sprint-board?stage=BLOCKED": {
+   "status": 200,
+   "json": {
+    "ok": true,
+    "items": [
+     {
+      "ticket_id": "MA-T-003",
+      "title": "Gamma",
+      "domain": "ETF",
+      "lane": "application",
+      "stage": "BLOCKED",
+      "owner_role": "ETF Product Lead",
+      "status": "BLOCKED",
+      "blocker": null,
+      "next_step": null,
+      "approval_needed": null,
+      "notes": null,
+      "created_at": "2026-10-03 10:00:00",
+      "updated_at": "2026-10-04 10:00:00"
+     }
+    ]
+   },
+   "acao": "*"
+  },
+  "/api/ops/release-ledger": {
+   "status": 200,
+   "json": {
+    "ok": true,
+    "items": [
+     {
+      "release_id": "REL-T-001",
+      "ticket_ids": "[\"MA-T-001\",\"MA-T-002\"]",
+      "change_summary": "Ops release",
+      "frontend_files": null,
+      "worker_files": null,
+      "d1_migration_status": "none",
+      "worker_deploy_status": "deployed",
+      "frontend_push_status": "in_progress",
+      "verification_status": "not_started",
+      "production_parity_status": "unknown",
+      "rollback_note": null,
+      "status": "DEPLOYING",
+      "created_at": "2026-10-07 10:00:00",
+      "updated_at": "2026-10-08 10:00:00",
+      "closed_at": null
+     },
+     {
+      "release_id": "REL-T-002",
+      "ticket_ids": "[\"MA-T-003\"]",
+      "change_summary": "ETF release",
+      "frontend_files": null,
+      "worker_files": null,
+      "d1_migration_status": "none",
+      "worker_deploy_status": "not_started",
+      "frontend_push_status": "not_started",
+      "verification_status": "not_started",
+      "production_parity_status": "unknown",
+      "rollback_note": null,
+      "status": "NOT_READY",
+      "created_at": "2026-10-07 11:00:00",
+      "updated_at": "2026-10-07 11:00:00",
+      "closed_at": null
+     }
+    ]
+   },
+   "acao": "*"
+  },
+  "/api/ops/events": {
+   "status": 200,
+   "json": {
+    "ok": true,
+    "events": [
+     {
+      "event_id": 4,
+      "event_type": "worker_deployed",
+      "ticket_id": null,
+      "release_id": "REL-T-001",
+      "actor_role": "Engineering Lead",
+      "payload": "{}",
+      "created_at": "2026-10-08 10:00:00"
+     },
+     {
+      "event_id": 3,
+      "event_type": "packet_created",
+      "ticket_id": null,
+      "release_id": "REL-T-001",
+      "actor_role": "Program Orchestrator",
+      "payload": "{\"packet_type\":\"release\"}",
+      "created_at": "2026-10-07 10:00:00"
+     },
+     {
+      "event_id": 2,
+      "event_type": "ticket_state_changed",
+      "ticket_id": "MA-T-001",
+      "release_id": null,
+      "actor_role": "Engineering Lead",
+      "payload": "{\"from_stage\":\"IDEA\",\"to_stage\":\"ENG_IMPLEMENT\"}",
+      "created_at": "2026-10-05 10:00:00"
+     },
+     {
+      "event_id": 1,
+      "event_type": "packet_created",
+      "ticket_id": "MA-T-001",
+      "release_id": null,
+      "actor_role": "Program Orchestrator",
+      "payload": "{\"packet_type\":\"ticket\"}",
+      "created_at": "2026-10-01 10:00:00"
+     }
+    ]
+   },
+   "acao": "*"
+  },
+  "/api/ops/events?ticket_id=MA-T-001&limit=1": {
+   "status": 200,
+   "json": {
+    "ok": true,
+    "events": [
+     {
+      "event_id": 2,
+      "event_type": "ticket_state_changed",
+      "ticket_id": "MA-T-001",
+      "release_id": null,
+      "actor_role": "Engineering Lead",
+      "payload": "{\"from_stage\":\"IDEA\",\"to_stage\":\"ENG_IMPLEMENT\"}",
+      "created_at": "2026-10-05 10:00:00"
+     }
+    ]
+   },
+   "acao": "*"
+  },
+  "/api/ops/drift": {
+   "status": 200,
+   "json": {
+    "ok": true,
+    "drift": [
+     {
+      "release_id": "REL-T-001",
+      "change_summary": "Ops release",
+      "worker_deploy_status": "deployed",
+      "frontend_push_status": "in_progress",
+      "status": "DEPLOYING"
+     }
+    ],
+    "has_drift": true
+   },
+   "acao": "*"
+  }
+ },
+ "posts": {
+  "responses": [
+   {
+    "p": "/api/ops/admin/sprint-board",
+    "status": 200,
+    "json": {
+     "ok": true,
+     "ticket_id": "MA-T-010"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/sprint-board",
+    "status": 200,
+    "json": {
+     "ok": true,
+     "ticket_id": "MA-T-010"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/sprint-board",
+    "status": 400,
+    "json": {
+     "ok": false,
+     "error": "ticket_id, title, domain, lane, owner_role are required"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/sprint-board/MA-T-010/stage",
+    "status": 200,
+    "json": {
+     "ok": true,
+     "ticket_id": "MA-T-010",
+     "from_stage": "IDEA",
+     "to_stage": "ENG_IMPLEMENT"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/sprint-board/MA-T-010/stage",
+    "status": 400,
+    "json": {
+     "ok": false,
+     "error": "cannot move backward from ENG_IMPLEMENT to IDEA — use BLOCKED first if this ticket needs to be reopened"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/sprint-board/MA-T-010/stage",
+    "status": 200,
+    "json": {
+     "ok": true,
+     "ticket_id": "MA-T-010",
+     "from_stage": "ENG_IMPLEMENT",
+     "to_stage": "BLOCKED"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/sprint-board/NOPE/stage",
+    "status": 404,
+    "json": {
+     "ok": false,
+     "error": "ticket not found"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/release-ledger",
+    "status": 200,
+    "json": {
+     "ok": true,
+     "release_id": "REL-T-010"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/release-ledger/REL-T-010/event",
+    "status": 200,
+    "json": {
+     "ok": true,
+     "release_id": "REL-T-010",
+     "status": "NOT_READY"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/release-ledger/REL-T-010/event",
+    "status": 200,
+    "json": {
+     "ok": true,
+     "release_id": "REL-T-010",
+     "status": "VERIFIED"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/release-ledger/REL-T-010/event",
+    "status": 200,
+    "json": {
+     "ok": true,
+     "release_id": "REL-T-010",
+     "status": "VERIFIED"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/release-ledger/REL-T-002/event",
+    "status": 400,
+    "json": {
+     "ok": false,
+     "error": "release_rolled_back requires payload.reason"
+    },
+    "acao": null
+   },
+   {
+    "p": "/api/ops/admin/release-ledger/REL-T-002/event",
+    "status": 400,
+    "json": {
+     "ok": false,
+     "error": "event_type must be one of: build_started, build_completed, worker_deployed, frontend_pushed, migration_applied, verification_passed, verification_failed, release_closed, release_rolled_back"
+    },
+    "acao": null
+   }
+  ],
+  "tables": {
+   "sprintboarditems": [
+    {
+     "ticket_id": "MA-T-001",
+     "title": "Alpha",
+     "domain": "Ops",
+     "lane": "control",
+     "stage": "CLOSED",
+     "owner_role": "Engineering Lead",
+     "status": "CLOSED",
+     "blocker": null,
+     "next_step": null,
+     "approval_needed": null,
+     "notes": null,
+     "created_at": true,
+     "updated_at": true
+    },
+    {
+     "ticket_id": "MA-T-002",
+     "title": "Beta",
+     "domain": "Entities",
+     "lane": "data_identity",
+     "stage": "ARCH_REVIEW",
+     "owner_role": "Data-Identity Lead",
+     "status": "ACTIVE",
+     "blocker": null,
+     "next_step": null,
+     "approval_needed": null,
+     "notes": null,
+     "created_at": true,
+     "updated_at": true
+    },
+    {
+     "ticket_id": "MA-T-003",
+     "title": "Gamma",
+     "domain": "ETF",
+     "lane": "application",
+     "stage": "BLOCKED",
+     "owner_role": "ETF Product Lead",
+     "status": "BLOCKED",
+     "blocker": null,
+     "next_step": null,
+     "approval_needed": null,
+     "notes": null,
+     "created_at": true,
+     "updated_at": true
+    },
+    {
+     "ticket_id": "MA-T-010",
+     "title": "Delta",
+     "domain": "Ops",
+     "lane": "ops",
+     "stage": "CLOSED",
+     "owner_role": "Operations Lead",
+     "status": "CLOSED",
+     "blocker": "waiting",
+     "next_step": null,
+     "approval_needed": null,
+     "notes": null,
+     "created_at": true,
+     "updated_at": true
+    }
+   ],
+   "releaseledger": [
+    {
+     "release_id": "REL-T-001",
+     "ticket_ids": "[\"MA-T-001\",\"MA-T-002\"]",
+     "change_summary": "Ops release",
+     "frontend_files": null,
+     "worker_files": null,
+     "d1_migration_status": "none",
+     "worker_deploy_status": "deployed",
+     "frontend_push_status": "in_progress",
+     "verification_status": "not_started",
+     "production_parity_status": "unknown",
+     "rollback_note": null,
+     "status": "DEPLOYING",
+     "created_at": true,
+     "updated_at": true,
+     "closed_at": false
+    },
+    {
+     "release_id": "REL-T-002",
+     "ticket_ids": "[\"MA-T-003\"]",
+     "change_summary": "ETF release",
+     "frontend_files": null,
+     "worker_files": null,
+     "d1_migration_status": "none",
+     "worker_deploy_status": "not_started",
+     "frontend_push_status": "not_started",
+     "verification_status": "not_started",
+     "production_parity_status": "unknown",
+     "rollback_note": null,
+     "status": "NOT_READY",
+     "created_at": true,
+     "updated_at": true,
+     "closed_at": false
+    },
+    {
+     "release_id": "REL-T-010",
+     "ticket_ids": "[\"MA-T-001\",\"MA-T-010\"]",
+     "change_summary": "A6 test release",
+     "frontend_files": null,
+     "worker_files": null,
+     "d1_migration_status": "none",
+     "worker_deploy_status": "deployed",
+     "frontend_push_status": "not_started",
+     "verification_status": "passed",
+     "production_parity_status": "unknown",
+     "rollback_note": null,
+     "status": "VERIFIED",
+     "created_at": true,
+     "updated_at": true,
+     "closed_at": true
+    }
+   ],
+   "operationalevents": [
+    {
+     "event_id": 1,
+     "event_type": "packet_created",
+     "ticket_id": "MA-T-001",
+     "release_id": null,
+     "actor_role": "Program Orchestrator",
+     "payload": "{\"packet_type\":\"ticket\"}",
+     "created_at": true
+    },
+    {
+     "event_id": 2,
+     "event_type": "ticket_state_changed",
+     "ticket_id": "MA-T-001",
+     "release_id": null,
+     "actor_role": "Engineering Lead",
+     "payload": "{\"from_stage\":\"IDEA\",\"to_stage\":\"ENG_IMPLEMENT\"}",
+     "created_at": true
+    },
+    {
+     "event_id": 3,
+     "event_type": "packet_created",
+     "ticket_id": null,
+     "release_id": "REL-T-001",
+     "actor_role": "Program Orchestrator",
+     "payload": "{\"packet_type\":\"release\"}",
+     "created_at": true
+    },
+    {
+     "event_id": 4,
+     "event_type": "worker_deployed",
+     "ticket_id": null,
+     "release_id": "REL-T-001",
+     "actor_role": "Engineering Lead",
+     "payload": "{}",
+     "created_at": true
+    },
+    {
+     "event_id": 5,
+     "event_type": "packet_created",
+     "ticket_id": "MA-T-010",
+     "release_id": null,
+     "actor_role": "Program Orchestrator",
+     "payload": "{\"packet_type\":\"ticket\",\"stage\":\"IDEA\",\"actor\":\"founder@example.com\",\"actor_source\":\"access_jwt\"}",
+     "created_at": true
+    },
+    {
+     "event_id": 6,
+     "event_type": "packet_created",
+     "ticket_id": "MA-T-010",
+     "release_id": null,
+     "actor_role": "Program Orchestrator",
+     "payload": "{\"packet_type\":\"ticket\",\"stage\":\"IDEA\",\"actor\":\"founder@example.com\",\"actor_source\":\"access_jwt\"}",
+     "created_at": true
+    },
+    {
+     "event_id": 7,
+     "event_type": "gate_passed",
+     "ticket_id": "MA-T-010",
+     "release_id": null,
+     "actor_role": "Engineering Lead",
+     "payload": "{\"from_stage\":\"IDEA\",\"to_stage\":\"ENG_IMPLEMENT\",\"gate\":null,\"actor\":\"founder@example.com\",\"actor_source\":\"access_jwt\"}",
+     "created_at": true
+    },
+    {
+     "event_id": 8,
+     "event_type": "ticket_state_changed",
+     "ticket_id": "MA-T-010",
+     "release_id": null,
+     "actor_role": "Engineering Lead",
+     "payload": "{\"from_stage\":\"ENG_IMPLEMENT\",\"to_stage\":\"BLOCKED\",\"gate\":null,\"actor\":\"founder@example.com\",\"actor_source\":\"access_jwt\"}",
+     "created_at": true
+    },
+    {
+     "event_id": 9,
+     "event_type": "packet_created",
+     "ticket_id": null,
+     "release_id": "REL-T-010",
+     "actor_role": "Program Orchestrator",
+     "payload": "{\"packet_type\":\"release\",\"actor\":\"founder@example.com\",\"actor_source\":\"access_jwt\"}",
+     "created_at": true
+    },
+    {
+     "event_id": 10,
+     "event_type": "worker_deployed",
+     "ticket_id": null,
+     "release_id": "REL-T-010",
+     "actor_role": "Engineering Lead",
+     "payload": "{\"actor\":\"founder@example.com\",\"actor_source\":\"access_jwt\"}",
+     "created_at": true
+    },
+    {
+     "event_id": 11,
+     "event_type": "verification_passed",
+     "ticket_id": null,
+     "release_id": "REL-T-010",
+     "actor_role": "Operations Lead",
+     "payload": "{\"actor\":\"founder@example.com\",\"actor_source\":\"access_jwt\"}",
+     "created_at": true
+    },
+    {
+     "event_id": 12,
+     "event_type": "release_closed",
+     "ticket_id": null,
+     "release_id": "REL-T-010",
+     "actor_role": "Program Orchestrator",
+     "payload": "{\"note\":\"ok\",\"actor\":\"founder@example.com\",\"actor_source\":\"access_jwt\"}",
+     "created_at": true
+    }
+   ]
+  }
+ }
+}
