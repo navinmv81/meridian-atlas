@@ -58,6 +58,7 @@
 // entity_master, and holdings_pipeline_state.
 
 import { computeLateness, intendedDrift, MAX_LOOKBACK_DAYS } from './lateness.js';
+import { adminRouteId, handleCases, serviceGate } from './cases.js';   // MA-OCT-003 routes
 
 const DAILY_WRITE_LIMIT = 80000; // matches holdings-pipeline.js's shared guard
 
@@ -906,6 +907,11 @@ async function handleAdmin(request, env, url, path, method) {
   const auth = await verifyAccessJwt(request, env);
   if (!auth.ok) return jsonPrivate({ ok: false, error: `unauthorized: ${auth.error}` }, 401);
   const who = { actor: auth.actor, actor_source: auth.actor_source };
+  // MA-OCT-003 §8.5: service tokens are narrowed by OPS_SERVICE_ACTORS on every admin route (403 before D1).
+  const gate = serviceGate(env, auth, adminRouteId(path, method));
+  if (gate.response) return gate.response;
+  const caseResp = await handleCases(request, env, url, path, method, gate.who);
+  if (caseResp) return caseResp;
 
   if (path === '/api/ops/admin/jobs' && method === 'GET') return await listJobs(env, url);
   return jsonPrivate({ ok: false, error: 'not found' }, 404);

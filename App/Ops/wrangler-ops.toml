@@ -41,3 +41,13 @@ CF_ACCESS_AUD = "7f1b678452f2038a2900e478943d933ff39f24e3f9fac976b62eb2aae8c222c
 # at 20 per call (code) and OPS_SWEEP_DAILY_RAISE_CAP per UTC day.
 OPS_SWEEP_ENABLED = "true"
 OPS_SWEEP_DAILY_RAISE_CAP = "100"
+# MA-OCT-003 (spec rev 1 §8, §11.3) — exception workflow routes (src/cases.js).
+# Kill switch: OPS_CASES_ENABLED="false" + deploy → E-1, E-2, C-1, C-2 return 503 before any D1 access.
+# OPS_SERVICE_ACTORS (§8.5, F-3): Access service-token common_name → allowed routes/actions. It holds
+# identifiers only (an Access Client ID), never a secret. Empty = every service token gets 403 on every
+# admin route. The ops-script entry is filled with the token's Client ID on Sat 24 BEFORE deploy 3, and the
+# token is admitted to the Access policy only AFTER deploy 3 is verified (AC-1b). Shape:
+#   {"<client-id>.access":{"label":"ops-script","routes":["E-1","E-2","C-1","C-2"],
+#    "actions":{"EXC":["acknowledge","assign","comment","set_severity","resolve","dismiss","reopen"],"DQ":["comment","assign","triage"]}}}
+OPS_CASES_ENABLED = "true"
+OPS_SERVICE_ACTORS = '{"0b8216d5b404b87731353bd452829e99.access":{"label":"ops-script","routes":["E-1","E-2","C-1","C-2"],"actions":{"EXC":["acknowledge","assign","comment","set_severity","resolve","dismiss","reopen"],"DQ":["comment","assign","triage"]}}}'
