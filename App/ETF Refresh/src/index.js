@@ -80,10 +80,15 @@ export default {
 
     try {
 
+      // MA-OCT-MON26.ENG1 (ML-1025-3): the entity_master GROUP BY (a full ~88.8k-row scan on every call,
+      // polled every 10 min — 5.77M rows read on Sun 25, past the 5M/day free limit) is REMOVED. The
+      // `enrichment` keys stay (null) so the live Ops console renders unchanged; `enrichment_source` says why.
+      // Every remaining query is an index SEARCH or a tiny state table (EXPLAINed in the MON26 report).
+      // `rows_read` (sum of D1 meta.rows_read for this call) makes the per-call cost observable.
       if (url.pathname === '/api/ops-health' && request.method === 'GET') {
         const todayKey = `writes_today_${new Date().toISOString().slice(0, 10)}`;
 
-        const [pipelineRows, coverageRows, bootstrapRows, enrichmentRows, writesRow] = await Promise.all([
+        const [pipelineRows, coverageRows, bootstrapRows, writesRows] = await Promise.all([
           env.DB.prepare(
             `SELECT key, value FROM holdings_pipeline_state
              WHERE key IN ('etf_offset', 'last_full_run', 'last_run_status', ?)`
@@ -96,18 +101,17 @@ export default {
              ORDER BY coverage_depth`
           ).all(),
           env.DB.prepare(`SELECT key, value FROM edgar_bootstrap_state ORDER BY key`).all(),
-          env.DB.prepare(
-            `SELECT gleif_enrichment_version, COUNT(*) as cnt
-             FROM entity_master
-             GROUP BY gleif_enrichment_version
-             ORDER BY gleif_enrichment_version`
-          ).all(),
+          // Latest writes_today_* key. A PK range, not LIKE: LIKE cannot use the primary key here and
+          // scanned the whole table (+ temp B-tree); the range is a SEARCH reading ~1 row.
           env.DB.prepare(
             `SELECT key, value FROM holdings_pipeline_state
-             WHERE key LIKE 'writes_today_%'
+             WHERE key >= 'writes_today_' AND key < 'writes_today\`'
              ORDER BY key DESC LIMIT 1`
-          ).first()
+          ).all()
         ]);
+        const writesRow = (writesRows.results || [])[0] || null;
+        const rowsRead = [pipelineRows, coverageRows, bootstrapRows, writesRows]
+          .reduce((s, r) => s + ((r && r.meta && r.meta.rows_read) || 0), 0);
 
         const pipelineMap = Object.fromEntries(
           (pipelineRows.results || []).map(r => [r.key, r.value])
@@ -120,11 +124,6 @@ export default {
         const bootstrapMap = Object.fromEntries(
           (bootstrapRows.results || []).map(r => [r.key, r.value])
         );
-
-        const enrichmentByVersion = Object.fromEntries(
-          (enrichmentRows.results || []).map(r => [r.gleif_enrichment_version, r.cnt])
-        );
-        const enrichmentTotal = (enrichmentRows.results || []).reduce((s, r) => s + (r.cnt || 0), 0);
 
         const writesToday = writesRow ? parseInt(writesRow.value, 10) || 0 : 0;
 
@@ -151,10 +150,13 @@ export default {
             discovery_threshold: 36405
           },
           enrichment: {
-            version_1_pending: enrichmentByVersion[1] ?? 0,
-            version_2_complete: enrichmentByVersion[2] ?? 0,
-            total: enrichmentTotal
+            version_1_pending: null,
+            version_2_complete: null,
+            total: null,
+            by_version: {},
+            enrichment_source: 'removed-ML-1025-3'
           },
+          rows_read: rowsRead,
           snapshot_at: new Date().toISOString()
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }

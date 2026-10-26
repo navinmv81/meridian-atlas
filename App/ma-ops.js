@@ -26,6 +26,28 @@ const OPS_WORKERS = [
 
 let _opsPollTimer = null;
 
+// MA-OCT-MON26.ENG1 (ML-1025-3): poll /api/ops-health only while the tab is visible. A hidden tab
+// stops the 10-min interval; becoming visible again refreshes once at once and restarts it. Closing
+// the panel clears it as before. (A background tab left open all day was the 144-polls/day case.)
+function _opsStartPoll() {
+  if (!_opsPollTimer) _opsPollTimer = setInterval(() => openOps({ skipCreate: true }), OPS_POLL_MS);
+}
+function _opsStopPoll() {
+  if (_opsPollTimer) {
+    clearInterval(_opsPollTimer);
+    _opsPollTimer = null;
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.getElementById('ops-panel')) return;   // panel closed: nothing to do
+  if (document.hidden) {
+    _opsStopPoll();
+  } else {
+    openOps({ skipCreate: true });   // one immediate refresh
+    _opsStartPoll();
+  }
+});
+
 function _timeAgo(isoTimestamp) {
   if (!isoTimestamp) return 'unknown';
   const then = new Date(isoTimestamp).getTime();
@@ -362,9 +384,7 @@ async function openOps(opts) {
     // because that function now only touches #ops-tab-health's innerHTML.
     ops_renderTabBar();
 
-    if (!_opsPollTimer) {
-      _opsPollTimer = setInterval(() => openOps({ skipCreate: true }), OPS_POLL_MS);
-    }
+    if (!document.hidden) _opsStartPoll();
   }
 
   try {
@@ -390,10 +410,7 @@ async function openOps(opts) {
 function closeOps() {
   const panel = document.getElementById('ops-panel');
   if (panel) panel.remove();
-  if (_opsPollTimer) {
-    clearInterval(_opsPollTimer);
-    _opsPollTimer = null;
-  }
+  _opsStopPoll();
 }
 
 // ============================================================
