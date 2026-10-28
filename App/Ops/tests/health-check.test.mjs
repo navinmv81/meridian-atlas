@@ -64,6 +64,12 @@ check('[clean] start + success events for job local.health-check, same run_id as
 check('[clean] terminal carries detail.metrics.raised = 0 (daily raise cap input, B-1)', ev[1]?.detail?.metrics?.raised === 0, ev[1]);
 check('[clean] no notification (low-noise); "All clear" logged', !/notification suppressed/.test(r.out) && /All clear/.test(rd('health-check.log')), r.out);
 check('[clean] trigger manual without OPS_TRIGGER', ev.every(e => e.trigger === 'manual'), ev.map(e => e.trigger));
+// MA-OCT-WED28.ENG8 (BREVA S-3): the full response body is logged as one line; the ingest key never is.
+const respLine = rd('health-check.log').split('\n').find(l => / \| response \| HTTP 200 /.test(l)) || '';
+let logged = null; try { logged = JSON.parse(respLine.replace(/^.* \| response \| HTTP 200 /, '')); } catch { /* not JSON */ }
+check('[S-3 log] full sweep body logged verbatim (every field, e.g. open_counts, new, headroom)', logged && logged.ok === true && logged.rows_read === 240
+  && JSON.stringify(Object.keys(logged).sort()) === JSON.stringify(['already_open','findings','headroom','hold_all_jobs','new','ok','open_counts','overflow','raised','rows_read','run_id']), respLine);
+check('[S-3 log] neither the ingest key nor a request header is in any log', !/test-only-not-a-key|x-ops-emitter|authorization/i.test(rd('health-check.log') + rd('health-check-heartbeat.log')), 'key or header found in log');
 
 // 2. New findings → one notification with count by severity and first titles.
 mode = 'findings';

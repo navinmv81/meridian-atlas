@@ -140,6 +140,9 @@ async function main() {
     result = { status: null, error: (err && err.name === 'TimeoutError') ? 'TimeoutError' : (err && err.message) || 'Error' };
   }
   const b = result.body || {};
+  // MA-OCT-WED28.ENG8 (BREVA S-3): the full sweep response body, so every field the Worker returns is on record.
+  // The body carries no secret; request headers are never logged.
+  if (result.body != null) log(`response | HTTP ${result.status} ${JSON.stringify(result.body)}`);
   if (result.status === 200 && b.ok) {
     outcome = 'success';
     log(`swept | raised=${b.raised} findings=${b.findings} already_open=${b.already_open} overflow=${b.overflow} hold=${b.hold_all_jobs} ` +
