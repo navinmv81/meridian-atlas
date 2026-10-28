@@ -1,0 +1,25 @@
+{
+  "packet": "MA-OCT-008.DIL14",
+  "state": "CLOSED",
+  "owner": "LANE-8",
+  "write_owner": "Data-Identity Lead (LANE-8)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-008.DIL14_Control_v1.md",
+    "sha256": "f61b18cbedf2048f82b77d074068bd8f3897078a8cedb2314cb5dc57d98d4033"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-008.DIL14_Task_v1.md",
+    "sha256": "289430796d7768c2aad65f8dcf655efcdaf1de0406cfd3e3626c767f2e1d4c92"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-17T08:45Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-008.DIL14_Report.md",
+    "sha256": "c517dde7b9a561870ef1123b33d55a2d99fcbdb6f3bbb197dd946691d11c9399"
+  }
+}

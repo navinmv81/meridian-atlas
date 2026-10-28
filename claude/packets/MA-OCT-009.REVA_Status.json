@@ -1,0 +1,24 @@
+{
+  "packet": "MA-OCT-009.REVA",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "write_owner": "Architect (REVIEW-A)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-009.REVA_Control_v1.md",
+    "sha256": "c172471690e995664af3b03c1a548f5cc3364c3e0e5ce50ef4fd0069952f10da"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-009.REVA_Task_v1.md",
+    "sha256": "f0bfedf023f6455d4b93d1ed3d7cbed01ef12d39c7385084b63eeca69fe1f1b8"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-27T08:00Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "6ecad71dcc4c8af5145e9b88c6c6fef7c3e81ca1a2209dde6bc4879c3198427e"
+  },
+  "output_sha256": "15d0ef4c4dc878fc346f3cbc886ccdc1b02e16543ed128456e059011af370d58"
+}

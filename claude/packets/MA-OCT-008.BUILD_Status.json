@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-008.BUILD",
-  "state": "EXECUTING",
+  "state": "REVIEW_NEEDED",
   "owner": "LANE-8-ENG",
   "write_owner": "LANE-8-ENG",
   "control": {
@@ -16,6 +16,11 @@
   "blocker": null,
   "review_needed": true,
   "usage_class": "heavy",
-  "updated": "2026-10-14T06:15Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-10-16T18:55Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-008.BUILD_Report.md",
+    "sha256": "c58271be9d82bf1a6f02e96c7c1886237e118925a182d5d53e7a16d83ef73271"
+  },
+  "remaining": "DIL \u00a714.2 sample + 3 links; Ops AC13 confirm; commit list; Architect close-out (fresh session)"
 }

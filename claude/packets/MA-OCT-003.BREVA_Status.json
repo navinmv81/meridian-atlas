@@ -1,0 +1,23 @@
+{
+  "packet": "MA-OCT-003.BREVA",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "write_owner": "Architect (REVIEW-A)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-003.BREVA_Control_v1.md",
+    "sha256": "b7376cae598b3249b081c6b16122d3b71f8328859422682e8cb7a7520b1d768b"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-003.BREVA_Task_v1.md",
+    "sha256": "638db3bc80e558dc57b24cbd4ebee5d4ee9f89f8001af64e44dc20e2119ca114"
+  },
+  "usage_class": "medium",
+  "updated": "2026-10-22T07:40Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-003.BREVA_Report.md",
+    "sha256": "365464181ee7219cdadd1f917bd51770d078b2078422087fc485886270e1a0c1"
+  }
+}

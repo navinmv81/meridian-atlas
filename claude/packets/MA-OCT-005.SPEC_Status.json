@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-005.SPEC",
+  "state": "READY",
+  "owner": "REVIEW-007",
+  "write_owner": "UX Lead (REVIEW-007)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-005.SPEC_Control_v1.md",
+    "sha256": "c68849ee7116ee6186dfc925b86f686d85a0579c2dc533d09b7ae39b2f96ace6"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-005.SPEC_Task_v1.md",
+    "sha256": "0d804183d5bbeb124cb51114e681fb78ec28a835871b6f5d49be5ca86e8a448d"
+  },
+  "usage_class": "medium",
+  "updated": "2026-10-25T08:30Z",
+  "updated_by": "Main Lane"
+}

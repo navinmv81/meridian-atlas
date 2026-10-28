@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-007.P1",
-  "state": "READY",
+  "state": "EXECUTING",
   "owner": "LANE-1-ENG",
   "write_owner": "Engineering Lead (LANE-1-ENG)",
   "control": {
@@ -16,6 +16,16 @@
   "blocker": null,
   "review_needed": true,
   "usage_class": "heavy",
-  "updated": "2026-10-14T19:30Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-10-15T18:35Z",
+  "updated_by": "Main Lane",
+  "worker_live": {
+    "version": "73851c02-f891-478d-abe1-1e2e5290f11f",
+    "at": "2026-10-15T17:16:51Z",
+    "rollback": "0f475f4c"
+  },
+  "commit": "0dd7ef0",
+  "report": {
+    "file": "MA-OCT-007.P1_Report.md",
+    "sha256": "a9227367a54d9e5836fbda540b8bc27c5832e6bcb86c04955809029407e39f33"
+  }
 }

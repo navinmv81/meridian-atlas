@@ -1,0 +1,16 @@
+# MA-OCT-WED28.ENG8 — Task v1 (immutable): Wed 28: 003 sweep logging → 008 PepsiCo fix + AC12 re-check → 003 deploy 4
+
+Governing: BREVA S-3 (prove deploy 3 had no sweep code from the full response, then deploy 4); SAT24.ENG8 report (`260290fcf18bf81e156afceba2ee8dabfd9b67a3439f297d986fc1630f178db3`); 008 spec (`bcdad9a2d315371b9c60b11cbcf72dfca88c99dca22fbe4e5310e2fb5f815cd3`) §16 and DIL14 (`c517dde7b9a561870ef1123b33d55a2d99fcbdb6f3bbb197dd946691d11c9399`) R-1; 009 DIL review `claude/MA-OCT-009_010_DIL_Review.md` (`5bb8b8c77343469de890c059e9c1a9c0ed99d76c1863123abd3046e345882777`) M-3 for the exact AC12/PepsiCo pass-fail. Window 19:40–23:45Z. Work from `~/MeridianAtlas-work/ma-oct-003/eng8-worktree`, first fast-forwarded to `origin/October-2026` (rebase your uncommitted work onto it).
+
+**Commit ownership tonight (ML-1028-1):** you commit **your own** files by explicit path and push (`git pull --rebase` first; LANE-1-ENG is pushing other paths tonight): 003 sweep/deploy-4 files and the runner logging change; 008 code (`App/Corporate Atlas/bonds/` code — not state/data/log files — and `migrations/008-bonds.sql`). List any data files you leave untracked.
+
+Do in order:
+1. **Sweep logging (local, not production):** change the local health-check runner so the **full** sweep response body is logged (redact nothing secret — the response holds none; never log request headers). Before 21:00Z.
+2. **008 PepsiCo fix + AC12 re-check** (D1 writes to bond tables only, Entities domain): apply DIL14 R-1 (PepsiCo Singapore Financing I linked to the **issuer**, not guarantor PepsiCo Inc 1457) as guarded statements; three-point check first; then the AC12 re-check exactly as 008 §16 / REVD M-3 define. Report PASS/FAIL with evidence rows. **Do not open any serving gate** (it does not exist yet; 009 creates it Thu, the Data-Identity Lead opens it).
+3. **21:00Z sweep on deploy 3** (`meridian-ops` `14aa968c`): capture the full logged response; confirm **no** `suppressed` / `gleif_checks` fields (S-3 proof).
+4. **Deploy 4** (`meridian-ops`, sweep code) at ≥ 21:20Z, only after step 3 passes: record rollback = `14aa968c`; deploy from your committed tree; check `d1-today`; trigger one sweep only if the runner supports a manual run, otherwise verify at the 11:00Z Thu sweep (state which). Endpoint count stays ≤ 15.
+5. **Note for Thu:** 004 goes live on `meridian-ops` Thu 29 — give the 004 lane your deploy-4 commit hash as its rebase base.
+
+**Standing rules:** Wrangler only `/usr/local/bin/wrangler` 4.96.0 (never `npx`); pre-flight `wrangler whoami`. Respect `claude/relays/FREEZES.json` (tonight: 23:50–00:10Z; sweeps 21:00Z). **One production change at a time** across all lanes — before any deploy or D1 write, check no other lane is mid-change (announce "starting <change>" in your report log with UTC time). ML-1024-1: never read the contents of `~/.meridian-secrets/*`, `.env*`, `*.secret` (existence/mode/size only). Stop before any macOS permission prompt (ML-1013-3). Stage by explicit path only; never `git add -A`; never `September-2026`; never touch `13F Seed/gleif-seed.js`, `.env.*`, `.claude/settings.local.json`. D1 writes: `INSERT OR IGNORE` / guarded statements, `db.batch()`, three-point check documented first.
+
+Write `claude/packets/MA-OCT-WED28.ENG8_Report.md`. Reply **"MA-OCT-WED28.ENG8 reported"**.

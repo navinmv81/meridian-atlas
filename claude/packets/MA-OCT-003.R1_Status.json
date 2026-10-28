@@ -1,0 +1,33 @@
+{
+  "packet": "MA-OCT-003.R1",
+  "state": "CLOSED",
+  "owner": "LANE-3",
+  "write_owner": "Operations Lead (LANE-3)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-003.R1_Control_v1.md",
+    "sha256": "9c42ff1017a08cc927bb460d9575bfa5a78f43b3a99d2929d630ea572904c27b"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-003.R1_Task_v1.md",
+    "sha256": "1c3c1e6e199f903715853fa6c7d6ec8844bce1eccc5789674cf864622c0a1f1a"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-10-17T15:05Z",
+  "updated_by": "Main Lane",
+  "outputs": {
+    "003": "7b8bba9f3adb582c495c3899717a98dee61d8c0f285919b221240ca1483480c2",
+    "004": "570de1a571a69c752ce26ce3502177fbadca8e9fcb0d00b4f44f992c9dee5379"
+  },
+  "report": {
+    "file": "MA-OCT-003.R1_Report.md",
+    "sha256": "b83c6264721828f8cb9849bf278e414ba1b12b116ccc5fb3e6d0dd55953c3eda"
+  },
+  "approved": {
+    "by": "Founder",
+    "at": "2026-10-17T15:05Z"
+  }
+}

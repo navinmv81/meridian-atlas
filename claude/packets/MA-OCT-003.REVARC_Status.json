@@ -1,0 +1,25 @@
+{
+  "packet": "MA-OCT-003.REVARC",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "write_owner": "Architect (REVIEW-A)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-003.REVARC_Control_v1.md",
+    "sha256": "8c50d402567b2a16914eef0292499db9f1c159bd34ba8cabd15fc73824fb3572"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-003.REVARC_Task_v1.md",
+    "sha256": "e00f51bf17ef2139bfac3cba3816e221861e5a914399a07ba6de56c51b44799d"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-17T08:45Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-003.REVARC_Report.md",
+    "sha256": "598caa80c6298a89c7eca2edcf42739a52f558313e1d1494812964e9756e2d63"
+  }
+}

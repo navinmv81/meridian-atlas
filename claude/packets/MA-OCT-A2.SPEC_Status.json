@@ -1,0 +1,20 @@
+{
+  "packet": "MA-OCT-A2.SPEC",
+  "state": "READY",
+  "owner": "LANE-11",
+  "write_owner": "Data-Identity Lead (LANE-11)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-A2.SPEC_Control_v1.md",
+    "sha256": "50a9bdcd81e3642fbaed1d3bb755027996d66f59e2b0ae9f221c2b381abd2e93"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-A2.SPEC_Task_v1.md",
+    "sha256": "eb63a161a237752c59491f109726a044bb8be43fbe10506cc5a748fc1b044e59"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-28T19:45Z",
+  "updated_by": "Main Lane"
+}

@@ -1,0 +1,25 @@
+{
+  "packet": "MA-OCT-011.RELARC",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "write_owner": "Architect (REVIEW-A)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.RELARC_Control_v1.md",
+    "sha256": "ba23017db39942eae9736d974f81fa634c65e04d5dc5e6d74c03755fd6b76ac7"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.RELARC_Task_v1.md",
+    "sha256": "a2a0bdaab4b3cdfa03fe82ed5128967989616387cb35025e64d2387573272951"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-16T21:20Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-011.RELARC_Report.md",
+    "sha256": "ea75c9ec48c7a4b9775bb5b82b291167fdde82c1bd1ce906e3de9de6ab1288f1"
+  }
+}

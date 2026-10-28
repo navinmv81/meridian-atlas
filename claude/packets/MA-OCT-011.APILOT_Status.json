@@ -1,0 +1,24 @@
+{
+  "packet": "MA-OCT-011.APILOT",
+  "state": "CLOSED",
+  "owner": "LANE-11",
+  "write_owner": "Data-Identity Lead (LANE-11)",
+  "control": {
+    "version": "v2",
+    "file": "MA-OCT-011.APILOT_Control_v2.md",
+    "sha256": "530e945f4a563cd3628d74ca451fe2e228da63f35340da1047c6203a1ba44a47"
+  },
+  "task": {
+    "version": "v2",
+    "file": "MA-OCT-011.APILOT_Task_v2.md",
+    "sha256": "2b0b7256ffa52de4af695013e3c8c351277b592f275f2aa90fffcf9b38809abf"
+  },
+  "usage_class": "medium",
+  "updated": "2026-10-21T18:20Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-011.APILOT_Report.md",
+    "sha256": "2f66708114bc60f158ea0ff023ae72b31438247143bffe875faa27b9132e4206"
+  },
+  "result": "E-4"
+}

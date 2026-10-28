@@ -1,0 +1,25 @@
+{
+  "packet": "MA-OCT-011.RELOPS",
+  "state": "CLOSED",
+  "owner": "LANE-1-OPS",
+  "write_owner": "Operations Lead (LANE-1-OPS)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.RELOPS_Control_v1.md",
+    "sha256": "4f962132fc60cd85aae04b0b87ff09556047b0fb4e75f1b712f63dd1972e7a58"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.RELOPS_Task_v1.md",
+    "sha256": "bc31af056ee3cd2c5aa9cd0c932d7fe99c0106b027b64ef7b7adcc68fe05f2a2"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-16T21:20Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-011.RELOPS_Report.md",
+    "sha256": "991c46290a106c4bf076fbc6f9dbc7c9219373a17fd86fcc91c8835d305ac81b"
+  }
+}

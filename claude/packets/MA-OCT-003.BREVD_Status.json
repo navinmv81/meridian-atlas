@@ -1,0 +1,23 @@
+{
+  "packet": "MA-OCT-003.BREVD",
+  "state": "CLOSED",
+  "owner": "LANE-11",
+  "write_owner": "Data-Identity Lead (LANE-11)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-003.BREVD_Control_v1.md",
+    "sha256": "f6994d9aabf91f25ea51467cb15228739a4860ce00ca0b28fde8253264b047c7"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-003.BREVD_Task_v1.md",
+    "sha256": "c8605466cf35830fa6e955dd6e7098750636b0eae5b4bd461981c5035097d00d"
+  },
+  "usage_class": "medium",
+  "updated": "2026-10-22T07:40Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-003.BREVD_Report.md",
+    "sha256": "d630fe73b4510bbf5015d709854f3a18b73ac6a566dc3c8a196c0e25dd509e58"
+  }
+}

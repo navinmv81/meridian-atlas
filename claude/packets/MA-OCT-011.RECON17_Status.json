@@ -1,0 +1,25 @@
+{
+  "packet": "MA-OCT-011.RECON17",
+  "state": "CLOSED",
+  "owner": "LANE-1-OPS",
+  "write_owner": "Operations Lead (LANE-1-OPS)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.RECON17_Control_v1.md",
+    "sha256": "82207c37659cc0b642626c06e6bb5bd60251b2b905e5785e5bd937d9f02651a5"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.RECON17_Task_v1.md",
+    "sha256": "baee4804fdcec39742ace17fa7f8bbce17d6e23da3c55fb1009718b0ff1ffbda"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-18T08:30Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-011.RECON17_Report.md",
+    "sha256": "585bba213ef4fb29a4955eb967b878f2a12e0de9f8db440cd12d3eb0fc1adcb9"
+  }
+}

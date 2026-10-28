@@ -1,0 +1,25 @@
+{
+  "packet": "MA-OCT-011.P3R",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "write_owner": "Architect (REVIEW-A)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.P3R_Control_v1.md",
+    "sha256": "a6f208bb8893320a00f2a0c8f7e2d7e4d8aba361c8d168b0fb62aea2b7bb3e49"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.P3R_Task_v1.md",
+    "sha256": "c51a829e20c67dc46677c16bd2cf5729bfa977ce5378ed40b64a6c4df845cfa8"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-17T12:00Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-011.P3R_Report.md",
+    "sha256": "84a1c78c6471372e303b01ad35fc48a6742affdc22e5fdbd2958e6a650e5b1ea"
+  }
+}

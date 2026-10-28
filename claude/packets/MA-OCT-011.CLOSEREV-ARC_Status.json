@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-011.CLOSEREV-ARC",
+  "state": "READY",
+  "owner": "REVIEW-A",
+  "write_owner": "Architect (REVIEW-A)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.CLOSEREV-ARC_Control_v1.md",
+    "sha256": "b0973c6cbb9a4e179933cd10b3387fc6f9dd4f27405b5454268e2c12b097f95d"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.CLOSEREV-ARC_Task_v1.md",
+    "sha256": "a95183c0001440e7f242508a1948dc545cbc88b7bab1a3aee3aa68bf32ba0c83"
+  },
+  "usage_class": "medium",
+  "updated": "2026-10-22T18:00Z",
+  "updated_by": "Main Lane"
+}

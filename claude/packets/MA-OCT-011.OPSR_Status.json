@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-011.OPSR",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-1-OPS",
   "write_owner": "Operations Lead (LANE-1-OPS)",
   "control": {
@@ -16,6 +16,14 @@
   "blocker": null,
   "review_needed": false,
   "usage_class": "light",
-  "updated": "2026-10-14T19:30Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-10-15T17:50Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-011.OPSR_Report.md",
+    "sha256": "87d2036e7c2aade8520951cd501944dd25c82b8a80835f9358a7c88e74db6b1f"
+  },
+  "rulings": [
+    "OPS-R9",
+    "OPS-R10"
+  ]
 }

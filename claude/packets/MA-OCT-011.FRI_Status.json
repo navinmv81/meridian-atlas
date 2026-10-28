@@ -1,0 +1,26 @@
+{
+  "packet": "MA-OCT-011.FRI",
+  "state": "CLOSED",
+  "owner": "LANE-11-ENG",
+  "write_owner": "Engineering Lead (LANE-11-ENG)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.FRI_Control_v1.md",
+    "sha256": "5a0de827df3e36f41f973fce24c84a5dd5a2077413f937fcfb9b02e7f67b9bb6"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.FRI_Task_v1.md",
+    "sha256": "533473453bacebfc323961fabaf47196530796bbf7e8302f34e12bc06f3b9566"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "heavy",
+  "updated": "2026-10-16T21:15Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-011.FRI_Report.md",
+    "sha256": "8a3385c60dcf72741c0deabfb0dddb919300ae3a375122ac15cc5bef078534ec"
+  },
+  "plan_sha256": "e3854698494d3be020c317100128902c9843ffa4c738ef050e2299d4a1a6e6a8"
+}

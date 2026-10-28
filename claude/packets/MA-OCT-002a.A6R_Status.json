@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-002a.A6R",
+  "state": "READY",
+  "owner": "REVIEW-A",
+  "write_owner": "Architect (REVIEW-A)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-002a.A6R_Control_v1.md",
+    "sha256": "daa9e6b59a869e5ab939e50dea5e7dea508aa15dbed36dd603b537efb0c04d65"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-002a.A6R_Task_v1.md",
+    "sha256": "9b0ac41e239421e1d43888495ce6372550db93d82fea2b316d61e81a6e0266dc"
+  },
+  "usage_class": "medium",
+  "updated": "2026-10-22T18:00Z",
+  "updated_by": "Main Lane"
+}

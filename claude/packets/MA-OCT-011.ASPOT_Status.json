@@ -1,0 +1,20 @@
+{
+  "packet": "MA-OCT-011.ASPOT",
+  "state": "CLOSED",
+  "owner": "LANE-1-OPS",
+  "write_owner": "Operations Lead (LANE-1-OPS)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.ASPOT_Control_v1.md",
+    "sha256": "21ba68ec9d6ec28b7c9e9df040352f0e529c19e1cc246bdd5b0c3aab1f0ee37c"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.ASPOT_Task_v1.md",
+    "sha256": "f7d3fa0db43ffc1db6a1b09455aeb9fe84901951daefc7d59b9cc3233c0bfc14"
+  },
+  "usage_class": "medium",
+  "updated": "2026-10-21T18:20Z",
+  "updated_by": "Main Lane",
+  "note": "not run; E-4"
+}

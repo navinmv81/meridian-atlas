@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-009.SPEC",
+  "state": "READY",
+  "owner": "LANE-7",
+  "write_owner": "Engineering Lead (LANE-7)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-009.SPEC_Control_v1.md",
+    "sha256": "1bd1c83800a0674ca50fe26c12d2dfe2c62b7ac83259316569918bcdfc349408"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-009.SPEC_Task_v1.md",
+    "sha256": "ca66f8661ba9fb14923f6422925e1b15996e84255c2be15a525582d8eae4bfa7"
+  },
+  "usage_class": "medium",
+  "updated": "2026-10-25T08:30Z",
+  "updated_by": "Main Lane"
+}

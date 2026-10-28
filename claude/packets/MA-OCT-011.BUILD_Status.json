@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-011.BUILD",
-  "state": "REVIEW_NEEDED",
+  "state": "CLOSED",
   "owner": "LANE-11-ENG",
   "write_owner": "LANE-11-ENG",
   "control": {
@@ -14,9 +14,9 @@
     "sha256": "e32bfeb6d3b522e5c4ed9fefbda7ed5ad158e6484459df79bc3a6f949978bcc7"
   },
   "blocker": null,
-  "review_needed": true,
+  "review_needed": false,
   "usage_class": "heavy",
-  "updated": "2026-10-15T16:55Z",
+  "updated": "2026-10-15T17:50Z",
   "updated_by": "Main Lane",
   "days": {
     "2026-10-13": {

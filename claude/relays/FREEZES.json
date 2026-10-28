@@ -1,7 +1,7 @@
 {
- "issued": "2026-10-09",
+ "issued": "2026-10-24",
  "by": "Main Lane",
- "note": "UTC. Runners must refuse to start a live batch inside any window. Recurring windows use day/time; dated windows use ISO start/end.",
+ "note": "UTC. Runners must refuse to start a live batch inside any window. Recurring windows use day/time; dated windows use ISO start/end. 24 Oct: UK clocks go back Sun 25 Oct; local boost fires move from 10:50/16:50 UTC to 11:50/17:50 UTC. GMT bands added; the BST bands (10:45\u201311:15, 16:45\u201317:15) stay until the Main Lane removes them (keep both = safe).",
  "recurring": [
   {
    "name": "holdings Sunday",
@@ -58,6 +58,22 @@
    ],
    "start": "23:50",
    "end": "00:10"
+  },
+  {
+   "name": "boost AM (GMT band, from 25 Oct)",
+   "days": [
+    "*"
+   ],
+   "start": "11:45",
+   "end": "12:15"
+  },
+  {
+   "name": "boost PM (GMT band, from 25 Oct)",
+   "days": [
+    "*"
+   ],
+   "start": "17:45",
+   "end": "18:15"
   }
  ],
  "dated": [

@@ -1,0 +1,24 @@
+{
+  "packet": "MA-OCT-009.REVD",
+  "state": "CLOSED",
+  "owner": "LANE-11",
+  "write_owner": "Data-Identity Lead (LANE-11)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-009.REVD_Control_v1.md",
+    "sha256": "85abe8e2c970b047c9743aa36b40f2bf40befee4817df866329c874e0dbeea75"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-009.REVD_Task_v1.md",
+    "sha256": "e898a1e3b32acad1a42d2930938fe64ac36a82b78ae5c4b23fb23ebd61570f10"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-27T08:00Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "1e595d16388130594eb352f75de2f518b381c019bf782cf3d2ae08afc98e7c02"
+  },
+  "output_sha256": "5bb8b8c77343469de890c059e9c1a9c0ed99d76c1863123abd3046e345882777"
+}

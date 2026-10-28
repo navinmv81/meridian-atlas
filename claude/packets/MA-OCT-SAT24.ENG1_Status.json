@@ -1,0 +1,24 @@
+{
+  "packet": "MA-OCT-SAT24.ENG1",
+  "state": "READY",
+  "owner": "LANE-1-ENG",
+  "write_owner": "Engineering Lead (LANE-1-ENG)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-SAT24.ENG1_Control_v1.md",
+    "sha256": "73a02a0698d226f53d4acba14b611e54b6863d74de9869984ff35b69bbcd5eb1"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-SAT24.ENG1_Task_v1.md",
+    "sha256": "34d00e46cea6f63003d2a841d484db3a616066a52b106de59c38e6d8366f572f"
+  },
+  "blocker": null,
+  "usage_class": "heavy",
+  "updated": "2026-10-23T07:30Z",
+  "updated_by": "Main Lane",
+  "founder_approval": {
+    "text": "Approve Sat 24 go-live",
+    "at": "2026-10-23"
+  }
+}

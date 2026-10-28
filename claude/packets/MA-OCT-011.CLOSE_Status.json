@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-011.CLOSE",
+  "state": "READY",
+  "owner": "LANE-11-ENG",
+  "write_owner": "Engineering Lead (LANE-11-ENG)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.CLOSE_Control_v1.md",
+    "sha256": "fec9dc0b3fd60ce6fe3486b962e3307d4406694201fd41a385df8e46ff64d96a"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.CLOSE_Task_v1.md",
+    "sha256": "2b92a48a1d071401e5122ff8270408e5e718e30ca9fb524173f7d6ea65c9d3ef"
+  },
+  "usage_class": "heavy",
+  "updated": "2026-10-22T10:00Z",
+  "updated_by": "Main Lane"
+}

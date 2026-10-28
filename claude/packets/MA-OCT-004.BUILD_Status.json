@@ -1,0 +1,20 @@
+{
+  "packet": "MA-OCT-004.BUILD",
+  "state": "READY",
+  "owner": "LANE-4-ENG",
+  "write_owner": "Engineering Lead (LANE-4-ENG)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-004.BUILD_Control_v1.md",
+    "sha256": "d7aa1da4c08a153a660ffaea2412ebf57ab9d422299db5db488e6180a3a14635"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-004.BUILD_Task_v1.md",
+    "sha256": "3904e39b12a5f5ed00728c2529752be750d2888504f82411c2da12036702782e"
+  },
+  "blocker": null,
+  "usage_class": "heavy",
+  "updated": "2026-10-28T19:45Z",
+  "updated_by": "Main Lane"
+}

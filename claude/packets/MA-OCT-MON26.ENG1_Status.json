@@ -1,0 +1,25 @@
+{
+  "packet": "MA-OCT-MON26.ENG1",
+  "state": "CLOSED",
+  "owner": "LANE-1-ENG",
+  "write_owner": "Engineering Lead (LANE-1-ENG)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-MON26.ENG1_Control_v1.md",
+    "sha256": "a88ba467fb23c6c9432c8d40deedf5d4caad8e3644040be9c8eec81233ef6e80"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-MON26.ENG1_Task_v1.md",
+    "sha256": "fcea3c670e53d9768e541cf8fcafadc216f0531dbda4138f285b68428eba27a3"
+  },
+  "blocker": null,
+  "usage_class": "light",
+  "updated": "2026-10-26T19:58Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-MON26.ENG1_Report.md",
+    "sha256": "beb88f13becafb7df0b3842e54ed79e455f377157d759836babef0974f64bd29"
+  },
+  "commit": "721d093"
+}

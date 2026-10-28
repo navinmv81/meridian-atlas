@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-OPS.T12",
-  "state": "REVIEW_NEEDED",
+  "state": "CLOSED",
   "owner": "LANE-1-ENG",
   "write_owner": "Engineering Lead (LANE-1-ENG)",
   "control": {
@@ -14,14 +14,15 @@
     "sha256": "a2f29d027e2168cd497f57fa29b15aff2f5fe392a20f13243b69e3a8e1f5cdc3"
   },
   "blocker": null,
-  "review_needed": true,
+  "review_needed": false,
   "usage_class": "light",
-  "updated": "2026-10-15T16:55Z",
+  "updated": "2026-10-16T18:55Z",
   "updated_by": "Main Lane",
   "commit": "d0e6847",
   "report": {
     "file": "MA-OCT-OPS.T12_Report.md",
-    "sha256": "a99e2e507cd06284c789d1e52957ab14172f23626b41b3f61f1b48ea6b86c5b0"
+    "sha256": "c31a73ef8024206931764d02d6f69a23e33d92c597d6e465f52c26a26f0385ec"
   },
-  "remaining": "boost pause flag Fri 16 after 16:50 UTC"
+  "remaining": "K-5 at 011 close-out",
+  "signed_by": "Operations Lead (OPSR, 15 Oct)"
 }

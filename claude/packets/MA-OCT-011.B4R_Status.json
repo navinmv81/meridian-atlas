@@ -1,0 +1,25 @@
+{
+  "packet": "MA-OCT-011.B4R",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "write_owner": "Architect (REVIEW-A)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.B4R_Control_v1.md",
+    "sha256": "399c67a2d55c35a9f8061433758672b51220d5c6abc3d9a21b378ddb303a856a"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.B4R_Task_v1.md",
+    "sha256": "dc3b38f9c1f5bacd1cedfe889b2757cc96a47c87f48c12a2fa55cb2a62321e1e"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-18T10:00Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-011.B4R_Report.md",
+    "sha256": "250766600e13062aeffca5b6614629b885735d6a7fc16d51b6fcb4369dc153bc"
+  }
+}

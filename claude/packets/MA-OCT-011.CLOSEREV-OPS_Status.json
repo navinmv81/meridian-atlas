@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-011.CLOSEREV-OPS",
+  "state": "READY",
+  "owner": "LANE-1-OPS",
+  "write_owner": "Operations Lead (LANE-1-OPS)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.CLOSEREV-OPS_Control_v1.md",
+    "sha256": "5d716d42ca83b16e58986a0a98caea57f3e015aa560f8747f3f02fd5f4fb0707"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.CLOSEREV-OPS_Task_v1.md",
+    "sha256": "0589d3d3f7c483893116d460eef2980741155ab54caa987f2472560e572f69f5"
+  },
+  "usage_class": "medium",
+  "updated": "2026-10-22T18:00Z",
+  "updated_by": "Main Lane"
+}

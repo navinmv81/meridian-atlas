@@ -1,0 +1,48 @@
+{
+  "packet": "MA-OCT-011.RUN",
+  "state": "CLOSED",
+  "owner": "LANE-11-ENG",
+  "write_owner": "Engineering Lead (LANE-11-ENG)",
+  "control": {
+    "version": "v4",
+    "file": "MA-OCT-011.RUN_Control_v4.md",
+    "sha256": "7691b267d55bea74c205f2487632dd0890b7e53f3daa633fdecc99d72e8e4085"
+  },
+  "task": {
+    "version": "v4",
+    "file": "MA-OCT-011.RUN_Task_v4.md",
+    "sha256": "e07537e227f122f2b57bbffddc6fcf7bfe7e0b2f6e7cc671f032c4a3b731371a"
+  },
+  "superseded": "v1, v2, v3",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "heavy",
+  "updated": "2026-10-22T10:00Z",
+  "updated_by": "Main Lane",
+  "release_approval": {
+    "by": "Founder",
+    "at": "2026-10-16T21:25Z",
+    "plan": "e3854698494d3be020c317100128902c9843ffa4c738ef050e2299d4a1a6e6a8"
+  },
+  "report": {
+    "file": "MA-OCT-011.RUN_Report.md",
+    "sha256": "e957bfaa4a06a0784c026c2524eec05477d14169e87324e808ca6d83531fd1dd"
+  },
+  "cursor": "CR-040",
+  "day_totals": {
+    "2026-10-17": {
+      "batches": 23,
+      "rows": 5553,
+      "mismatches": 0,
+      "writes_011": 24987,
+      "reads_cum": 102575
+    },
+    "2026-10-19": {
+      "batches": 47,
+      "rows": 11059,
+      "mismatches": 0,
+      "writes_011": 24878,
+      "reads_cum": 158711
+    }
+  }
+}

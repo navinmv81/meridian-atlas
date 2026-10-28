@@ -1,0 +1,25 @@
+{
+  "packet": "MA-OCT-003.R1C-ARC",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "write_owner": "Architect (REVIEW-A)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-003.R1C-ARC_Control_v1.md",
+    "sha256": "0b1ac4ec27d788eb198f73feb9cab1c8632c9691204cc243714bc40fecf98b22"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-003.R1C-ARC_Task_v1.md",
+    "sha256": "dc52985469d3b2115d251bccfb9dc9277edd1cf94072711f7dab8e209c53482e"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-10-17T14:55Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "file": "MA-OCT-003.R1C-ARC_Report.md",
+    "sha256": "e4e05fec097488c197c8c3fe3eb533a0e29b48cfb555d9b21b977be4867feaac"
+  }
+}

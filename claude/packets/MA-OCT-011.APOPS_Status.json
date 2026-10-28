@@ -1,0 +1,20 @@
+{
+  "packet": "MA-OCT-011.APOPS",
+  "state": "READY",
+  "owner": "LANE-1-OPS",
+  "write_owner": "Operations Lead (LANE-1-OPS)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.APOPS_Control_v1.md",
+    "sha256": "7ba67c6d91c6a41bca16055e108a503fdcb81875eda42542f4d398f2c471ba1b"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.APOPS_Task_v1.md",
+    "sha256": "48e8c2306edf251b2fcec55c93394a165afbf99088bac3e337b79f9c3c6fa9e9"
+  },
+  "blocker": "APILOT",
+  "usage_class": "light",
+  "updated": "2026-10-21T14:00Z",
+  "updated_by": "Main Lane"
+}

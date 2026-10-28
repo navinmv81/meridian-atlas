@@ -289,3 +289,30 @@ INSERT OR IGNORE INTO ops_case_event (subject_type, subject_id, event_type, from
 | `claude/relays/REVIEW-A_NEXT.md` | `643d5e4ae911ecd632d993e0fba087f379b17fc972482cd3307d982d412f0095` |
 | `claude/relays/REVIEW-A_REPORT.md` | `433eb132c9653b82f0b7690dc79642f988a7055c50ba2c6aa93a0bd6c6d8c755` |
 | `.gitignore` | `261213ce058dfc132a25f61c67dfc646ca2e85d5573e06b92243b9cf1fab6ecc` |
+
+## Fri 16 addendum: boost pause flag (step 3, second half)
+
+**Run by:** LANE-1-ENG, Fri 16 Oct 2026, **18:32:46 UTC**. That is after the 16:50 UTC fire and outside every FREEZES.json window.
+
+**Pre-checks:**
+- Control `3a609ca2…9e01` and Task `a2f29d02…cdc3` re-hashed; both match.
+- Today's boost fires are in `logs/entities-enrich-boost.log`: 10:53:39Z `fired` and **16:50:06Z `fired`** (headroom 99,586).
+- No `entities-enrich-boost-run` process was running.
+- The live runner (`entities-enrich-boost-run.mjs:55`) checks `PAUSE_FLAG_PATH = <Corporate Atlas>/.entities-enrich-boost-paused`, the file the script writes.
+
+**Command:**
+
+```bash
+"App/Corporate Atlas/scripts/entities-enrich-boost-pause.sh"
+```
+
+Output: `Paused. Flag file written: …/App/Corporate Atlas/.entities-enrich-boost-paused`. The LaunchAgent stays scheduled, and each fire while paused is a no-op with no network call. The script does not touch launchctl or the Cloudflare cron.
+
+**Flag-file check:**
+- `App/Corporate Atlas/.entities-enrich-boost-paused` exists, 65 bytes.
+- Content: `paused at 2026-10-16T18:32:46Z by entities-enrich-boost-pause.sh`.
+- `git check-ignore -v` shows it is gitignored by `App/.gitignore:18`. It is not in `git status`.
+
+**Effect:** the next boost fire (Sat 17, 10:50 UTC) and every fire after it are no-ops until resumed. The `ops_job_pause` row (`pause_id` 1, 17 Oct 00:00Z → 24 Oct 00:00Z) marks those slots `paused`. **Resume is after 23 Oct and is a separate step:** `scripts/entities-enrich-boost-resume.sh`.
+
+**D1:** 0 reads, 0 writes. No other changes.

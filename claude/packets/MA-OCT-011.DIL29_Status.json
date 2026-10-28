@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-011.DIL29",
+  "state": "READY",
+  "owner": "LANE-11",
+  "write_owner": "Data-Identity Lead (LANE-11)",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-011.DIL29_Control_v1.md",
+    "sha256": "f4e6e6ae1b6ffeeb3c632e218b4d1259aad11adcf7d8ed48790e69b95cd7cb05"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-011.DIL29_Task_v1.md",
+    "sha256": "540234cd2d97fcd1cd181af92d8ce7e338952bc5042f34cc7c0b96e176abb1db"
+  },
+  "usage_class": "medium",
+  "updated": "2026-10-22T18:00Z",
+  "updated_by": "Main Lane"
+}

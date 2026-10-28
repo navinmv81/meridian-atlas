@@ -6,11 +6,22 @@ EXECUTED BY:  Operations Lead (packet owner and spec author; LANE-3, doc-only)
 REVIEWED BY:  Data-Identity Lead (separate review packet; the author never reviews this). Architect consulted on the new table and the page route (Addendum D1).
 APPROVED BY:  Founder
 PACKET:       MA-OCT-004 — Data-quality ticketing
-GATE:         Spec approval → build Mon 26 – Wed 28 Oct (Claude Code) → close-out
-STATUS:       REV 0 (Thu 15 Oct 2026). Doc-only: 0 D1 reads or writes, no deploys, no git writes.
+GATE:         Spec approval → local build from Mon 26 → remote only after 003 is live (Sat 24) → close-out (ML-1017-3)
+STATUS:       REV 1 (Sat 17 Oct 2026; packet MA-OCT-003.R1). Applies REVARC A4-1..A4-4, REVDIL 004-1..004-9, the
+              Founder's answers to Q1–Q3 (all YES, 17 Oct), ML-1017-3 and the DIL14 §4 DQ list. Change table: Appendix C.
+              Doc-only: 0 D1, no deploys, no git writes.
+SUPERSEDES:   rev 0 c3d0cd3e1ddfc02a5eeb48101eabe5f2aebbfd93dbc47df96ace15c5b51c0889 (kept as claude/MA-OCT-004_Spec_rev0.md)
 DOMAIN:       Ops (Addendum D3). Owner Operations Lead. Only writer of ops_* tables: meridian-ops.
-BASELINE:     October-2026 @ 3960aee; meridian-ops 0905784d; builds on claude/MA-OCT-003_Spec.md rev 0 (8fb129ac…a0ed91).
+BASELINE:     October-2026 @ 0dd7ef0; meridian-ops 0905784d; builds on claude/MA-OCT-003_Spec.md rev 1 (same packet, MA-OCT-003.R1).
 ```
+
+**Founder decisions (17 Oct, all YES; were §19 Q1–Q3):**
+
+| # | Decision | Where it lands |
+|---|---|---|
+| F-1 | **Reopen KI 22.9 as an aggregate ticket.** The deletion of the 4 edges is a Data-Identity Lead packet ≥ Sat 24, using the full edge identity including `source` (004-7). The 22 Aug decision stays on record. | §10.3 (M3c, now unconditional) |
+| F-2 | **008's runner raises `missing_entity` itself** with a scoped Access service token (`bond-runner`, 003 §8.5). It can raise only; it never resolves or dismisses. | §8.5, §10.4 |
+| F-3 | **The new-DQ count goes in the health-check notification** (one indexed count, 0 writes, no new prompt) | §9.5 |
 
 Input hashes are in Appendix B. This spec extends 003's case engine (`src/cases.js`, routes C-1 and C-2) and reuses 003's conventions. DV-1: `ops_case_event.subject_id` is the numeric id. Atomic guarded batches: 003 §8.4. 003's facts are not repeated here.
 
@@ -25,12 +36,18 @@ Input hashes are in Appendix B. This spec extends 003's case engine (`src/cases.
 5. **Duplicate reports are folded into the open ticket for the same (type, object)**, not keyed by a permanent `dedupe_key`. A UNIQUE `nav:{type}:{key}` (007 §8.3) would block a fresh report after the ticket is resolved. A repeat click returns the existing ticket and writes at most one `reported_again` event per actor per day (§9.3).
 6. **Consumer screens only raise.** The page holds no state, and the create route requires an Access JWT, JSON, and a custom header that cross-site forms cannot send (D4, §9.4).
 7. **Known-issue tickets are seeded by a reviewed `wrangler --file` batch (M3)**, as for 003's M1 and M2:
-   - **KI 22.44**: one aggregate `wrong_lei` ticket with 24 members (6 replace-with-T1, 5 review, 13 null-and-requeue).
+   - **KI 22.44**: one aggregate `wrong_lei` ticket with 24 members (6 replace-with-T1, 5 review, 13 null-and-offline-match), taken from 006 Evidence §15.3 (004-8).
    - **KI 22.17**: one aggregate `isin_duplicate` ticket with the 37 ISINs from 007 Appendix A Q5. The two legacy `DQ-M-000008/9` tickets are dismissed as duplicates of it.
-   - **KI 22.9**: one aggregate `bad_relationship_edge` ticket proposing the deletion of the 4 edges, **only if the Founder reopens his 22 Aug `accepted_no_fix`** (Q1).
-8. **008's unlinked issuers** (`missing_entity`, one ticket per issuer, Founder 008-Q2) are loaded from 008's hand-over list by **M4**. Raising them from 008's runner directly needs an Access service token (Q2; 003 Q3).
+   - **KI 22.9**: one aggregate `bad_relationship_edge` ticket proposing the deletion of the 4 edges (F-1). The members carry the full edge identity, including `source` and `created_at` (004-7).
+   - **KI 22.43** (004-3), **`wrong_identifier`** on entity 2289's CIK (004-2) and the **OTP Bank** `entity_merge` pair (004-5).
+   - **M5**: the 011 close-out hand-off aggregates (004-4), after 011 closes.
+8. **008's unlinked issuers** (`missing_entity`, one ticket per issuer, Founder 008-Q2):
+   - **M4** loads the first set, with a **named minimum**: Welltower Inc, GM Financial, Pfizer NL and PepsiCo Singapore Financing I (DIL14 §4, 004-1).
+   - Later raises come from 008's runner itself, through the `bond-runner` token (F-2).
 9. **The fixes are not 004's.** Corrections to `entity_master`, `entity_relationships` and `entity_isin_map` are Entities-domain writes by Data-Identity Lead packets after the 011 window (≥ 24 Oct). 004 tracks them: per-member status, and `fix_pending` with a `fix_ref`.
-10. **D1:** one-time ≤ about 700 writes (M3 + M4); steady state ≤ about 600 writes and ≤ about 3k reads a day; no execution above 500 reads (§11).
+10. **Who may resolve (004-9):** tickets on Entities data are resolved or dismissed only by the Data-Identity Lead or the Founder. `fixed` needs an earlier `fix_scheduled` event. A service token can never resolve or dismiss. The three legacy `do_not_merge` decisions cannot be reopened without a recorded Founder supersession (004-6).
+11. **013 hand-off (A4-4):** seeds and members are never rewritten when 013 merges entities. Readers resolve `entity` keys through `entity_merge_redirect`, read-only, and show "merged into".
+12. **D1:** one-time ≤ about 1,000 writes (M3 + M4 + M5); steady state ≤ about 600 writes and ≤ about 3k reads a day; no execution above 500 reads (§11).
 
 ### 0.1 Facts checked in the source and on disk (15 Oct, read-only)
 
@@ -59,7 +76,7 @@ Today they live in markdown evidence files, Known Issue rows and a Founder-only 
 
 ## 2. Goals (measurable, checked at close-out)
 
-1. **Every known DQ issue is on record:** KI 22.44 (24 members), KI 22.17 (37 members), 008's unmatched issuers (1 ticket each), and, if Q1 is yes, KI 22.9 (4 members). Each has an owner role and a status (AC-11, AC-12).
+1. **Every known DQ issue is on record:** KI 22.44 (24 members), KI 22.17 (37 members), KI 22.9 (4 members, F-1), KI 22.43, the 2289 `wrong_identifier`, the OTP Bank pair, 008's unmatched issuers (the named 4 at least, 1 ticket each) and the 011 hand-off aggregates (M5). Each has an owner role and a status (AC-11, AC-12).
 2. **A user can report a mapping problem in ≤ 2 clicks** from 007's card: the button, then Submit on the prefilled page. The ticket's `raised_by` is the verified identity, and repeat clicks create no duplicate (AC-6 to AC-8).
 3. **Every change is audited:** 100% of transitions and member updates write one `ops_case_event` row (AC-2, AC-9).
 4. **Tickets link to exceptions** in both directions in the detail view (AC-10).
@@ -92,13 +109,14 @@ Today they live in markdown evidence files, Known Issue rows and a Founder-only 
 
 | Item | State on 15 Oct | 004 assumption |
 |---|---|---|
-| `ops_data_quality_ticket` (001) | Live, 0 rows | 9 `DQ-M-*` rows after 003 M1 (Thu 22) |
-| 003 engine, C-1, C-2 | Specced (rev 0, in review) | **Built and live by Fri 23** (dependency D-1). 004 extends `cases.js`. |
+| `ops_data_quality_ticket` (001) | Live, 0 rows | 9 `DQ-M-*` rows after 003 M1 (Sat 24) |
+| 003 engine, C-1, C-2 | Rev 1 (this packet) | **Built locally Mon 19 – Fri 23; live from Sat 24** (ML-1017-3, A4-1). 004 builds locally from Mon 26 and **deploys only after 003 is live**. 004 extends `cases.js`. |
 | A6 | Not built | Done by the 003 build (003 D-1) |
 | Access app "meridian-ops admin" on `/api/ops/admin` | Live | D-3 sits under that prefix, so the page is Access-gated with no new app |
 | 011 run 17–24 Oct; Entities writers frozen | Scheduled | 004 makes no Entities writes. M3 reads no Entities tables (lists are embedded). |
-| 008 Pack C linkage | Thu 15 (step 4) | M4 loads its unmatched list after 004 is live (Tue 27–Wed 28) |
-| 006 `WORK/` folder | Outside the repo (006 Q1) | The Data-Identity Lead exports the 24 rows for M3 (§10.2) |
+| 008 Pack C linkage and DIL14 | Pack C done; DIL14 (17 Oct) confirms the DQ list with corrections | M4 loads the named minimum set (§10.4) plus anything else in `unmatched-issuers.json`, after 004 is live (Tue 27–Wed 28) |
+| KI 22.44 member list | **006 Evidence §15.3 in the repo** (`0d1bbf9b…db1bc`) holds all 25 rows (24 wrong + OPAP cleared) | The M3 seed data (Appendix D) embeds the 24 rows from §15.3 (004-8). No export from `WORK/` is needed. |
+| `entity_merge_redirect` (013) | Not yet written (013 runs after 011) | C-1 and D-1 read it **if present**, tolerating a missing table as 007 R3 does (A4-4) |
 
 ---
 
@@ -154,13 +172,38 @@ There are **no new columns** on `ops_data_quality_ticket`. `fix_ref` (the packet
 | any | `comment` | same | `note` (≤ 2,000) | `commented` |
 | `open`, `triaged`, `fix_pending` | `set_severity` | same | `severity`, `note` | `severity_changed` |
 | `open`, `triaged`, `fix_pending` | `link_exception` | same | `exception_ref` (must exist; `EXC-…`) | `linked` (sets `linked_exception_ref`) |
-| `open`, `triaged`, `fix_pending` | `resolve` | `resolved` | `disposition` (resolve set), `note`. **An aggregate ticket with any member still `open` → 409**, unless `force: true` with a note naming why. | `resolved` |
-| `open`, `triaged`, `fix_pending` | `dismiss` | `dismissed` | `disposition` (dismiss set), `note`; `duplicate_of` for `duplicate` | `dismissed` |
-| `resolved`, `dismissed` | `reopen` | `open` | `note` | `reopened` (prior disposition in `from_value`/`payload`) |
+| `open`, `triaged`, `fix_pending` | `resolve` | `resolved` | `disposition` (resolve set), `note`. **An aggregate ticket with any member still `open` → 409**, unless `force: true` with a note naming why. **Entities-data types (§7.5): `fixed` needs an earlier `fix_scheduled` event (409 otherwise), and a service token gets 403.** | `resolved` |
+| `open`, `triaged`, `fix_pending` | `dismiss` | `dismissed` | `disposition` (dismiss set), `note`; `duplicate_of` for `duplicate`. **Entities-data types: a service token gets 403.** | `dismissed` |
+| `resolved`, `dismissed` | `reopen` | `open` | `note`. **Refused (409 `protected_decision`) on a ticket whose `disposition = 'do_not_merge'` (`DQ-M-000001…3`) unless the body carries `founder_supersession: {reference, decided_at}`** (004-6). That reference goes in the event payload. | `reopened` (prior disposition in `from_value`/`payload`) |
 | `open`, `triaged`, `fix_pending` | `add_members` | same | `members[]` (≤ 100 per call; ≤ 500 per ticket) | `members_added` (count) |
 | `open`, `triaged`, `fix_pending` | `member_update` | same | `member` (`object_domain`, `object_key`), `member_status`, optional `note` | `member_updated` (`payload`: key, from, to) |
 
-The mechanics are 003 §8.4: a per-action `SET` list, `expected_status`, a required `request_id`, and one event per batch. `member_update` puts an `UPDATE ops_dq_ticket_member … WHERE ticket_id = ? AND object_domain = ? AND object_key = ? AND member_status = :expected_member_status` in the same batch as the ticket's `updated_at` bump and the event.
+The mechanics are 003 §8.4: a per-action `SET` list, `expected_status`, a required `request_id`, the `NOT EXISTS` idempotency guard, and one event per batch.
+
+**Member-level actions (A4-3).** `member_update`, `add_members` and `link_exception` change a member row or a link column. The ticket bump and the event are conditioned on **that** change having applied, so a no-op never leaves an orphan event and a change never lacks one:
+
+```sql
+-- (1) the member change, guarded by expected state and by request idempotency
+UPDATE ops_dq_ticket_member SET member_status = :to, note = :note, updated_at = :now
+ WHERE ticket_id = :tid AND object_domain = :od AND object_key = :ok AND member_status = :expected_member_status
+   AND NOT EXISTS (SELECT 1 FROM ops_case_event WHERE idempotency_key = 'act:' || :request_id);
+-- (2) ticket bump only if (1) applied
+UPDATE ops_data_quality_ticket SET updated_at = :now
+ WHERE ticket_id = :tid AND EXISTS (SELECT 1 FROM ops_dq_ticket_member
+        WHERE ticket_id = :tid AND object_domain = :od AND object_key = :ok AND member_status = :to AND updated_at = :now);
+-- (3) event only if (1) applied
+INSERT OR IGNORE INTO ops_case_event (subject_type, subject_id, event_type, payload, actor, actor_source, actor_role, occurred_at, idempotency_key)
+SELECT 'dq_ticket', CAST(:tid AS TEXT), 'member_updated', json_object('object_domain', :od, 'object_key', :ok, 'from', :expected_member_status, 'to', :to),
+       :actor, :actor_source, :actor_role, :now, 'act:' || :request_id
+ WHERE EXISTS (SELECT 1 FROM ops_dq_ticket_member
+        WHERE ticket_id = :tid AND object_domain = :od AND object_key = :ok AND member_status = :to AND updated_at = :now);
+```
+
+The other two follow the same pattern:
+- **`add_members`:** `INSERT OR IGNORE` the members with `updated_at = :now`. The bump and event are conditioned on `EXISTS (… member WHERE ticket_id = :tid AND updated_at = :now)`, and the event payload carries the count actually inserted.
+- **`link_exception`:** a guarded `UPDATE … SET linked_exception_ref = :exc, updated_at = :now WHERE ticket_id = :tid AND linked_exception_ref IS NOT :exc AND status = :expected_status AND NOT EXISTS (…)`. The event is conditioned on `updated_at = :now`.
+
+**Rule for entity-data members:** `member_update` → `fixed` follows the same authority rule as `resolve fixed` (§7.5). The note names the applied fix packet, and a service token gets 403.
 
 ### 7.2 Vocabularies (Worker-validated; `cases.js` constants)
 
@@ -171,19 +214,37 @@ The mechanics are 003 §8.4: a per-action `SET` list, `expected_status`, a requi
 | `disposition` on `resolved` | `fixed`; 006's four: `source_absence` (a), `valid_exception` (b), `pipeline_omission` (c), `job_failure` (d) |
 | `disposition` on `dismissed` | `duplicate`, `not_a_problem`, `wont_fix` |
 | `disposition` legacy (read-only; never accepted on a write) | `do_not_merge`, `accepted_no_fix`, `pending` (003 M1, verbatim) |
-| `ticket_type` (**O4, confirmed**) | **007:** `missing_mapping`, `ambiguous_mapping`, `low_confidence_mapping`, `merged_link_unresolved`. **008:** `missing_entity`. **006:** `wrong_lei`. **Legacy and known issues:** `entity_merge`, `bad_relationship_edge`, `isin_duplicate`. **Console:** `data_error` (anything else; title must say what) |
+| `ticket_type` (**O4, confirmed**) | **007:** `missing_mapping`, `ambiguous_mapping`, `low_confidence_mapping`, `merged_link_unresolved`.<br>**008:** `missing_entity` (an SEC issuer with no linked entity; candidates go in members).<br>**006:** `wrong_lei`, plus `no_link_marker` (KI 22.43).<br>**004-2:** `wrong_identifier` (an identifier field such as `cik` stored on the wrong entity; default owner Data-Identity Lead). It is the type DIL14 called `identity_mismatch`; REVDIL's name is taken, because REVDIL also gives the seed shape.<br>**Legacy and known issues:** `entity_merge`, `bad_relationship_edge`, `isin_duplicate`.<br>**011 hand-off (M5):** `gleif_handoff`.<br>**Console:** `data_error` (anything else; the title must say what). |
 | `raised_via` | `consumer_screen` (D-3 page), `ops_console` (console and seeds decided by a person), `ingest_auto` (a service caller, e.g. 008 with a service token), `migration` (003 M1) |
 
 ### 7.3 Members
 
 | Field | Values |
 |---|---|
-| `proposed_action` | `replace_lei_t1`, `review`, `null_and_requeue` (22.44); `dedupe` (22.17); `delete_edge` (22.9); `create_entity` (008); `none` |
+| `proposed_action` | `replace_lei_t1`, `review`, **`null_and_offline_match`** (22.44; renamed from `null_and_requeue`, because the queue has no `name_search` consumer, 004-8); `dedupe` (22.17); `delete_edge` (22.9); `create_entity`, `confirm_and_assign_lei`, `merge_then_assign_lei` (008, DIL14); `merge_013` (OTP Bank); `none` |
 | `member_status` | `open`, `fixed`, `wont_fix`, `not_a_problem` |
 
 ### 7.4 Ownership and triage targets
 
 The default `owner_role` is the **Data-Identity Lead** for every type except `data_error` (Operations Lead). Triage targets are display only, as in 003 §7.2: triage within sev1 4 h, sev2 2 days, sev3 7 days, sev4 none. `age_h` and `overdue` are computed in the D-1 response.
+
+### 7.5 Resolve authority for tickets on Entities data (004-9; Founder answer to 003 Q3)
+
+**Entities-data types:** `wrong_lei`, `wrong_identifier`, `no_link_marker`, `bad_relationship_edge`, `entity_merge`, `isin_duplicate`, `missing_entity`, `gleif_handoff`, and the four 007 mapping types.
+
+| Rule | Enforcement |
+|---|---|
+| `resolve` with `disposition = 'fixed'` needs an earlier `fix_scheduled` event whose `fix_ref` names a Data-Identity Lead packet or CR. The note confirms it was **applied**. | **Worker:** 409 `fix_not_scheduled` without the event (one probe on `idx_ops_case_event_subject`). That the fix was applied is procedural, checked by the reviewer of that packet. |
+| `resolve`, `dismiss` and member `fixed` are done by the **Data-Identity Lead or the Founder** | **Procedural:** Access identifies the person, not the role. `actor_role` is recorded on the event, and the D-1 list shows it. |
+| **A service token never resolves or dismisses these tickets**, nor reopens them | **Worker:** the `OPS_SERVICE_ACTORS` allowlist (003 §8.5) → 403 before D1 |
+| `reopen` on the three `do_not_merge` tickets needs `founder_supersession` | **Worker:** 409 `protected_decision` (§7.1) |
+| `fix_ref` lives **only** in the `fix_scheduled` event payload (N4-4) | `proposed_resolution` is never rewritten |
+
+### 7.6 Entity keys after 013 merges (A4-4)
+
+- **Never rewritten.** Seeds, tickets and members keyed by `entity_id` are not changed when MA-OCT-013 merges twins. This covers the KI 22.44 members, 003 M1's `object_key`s, 008's candidate members and the OTP pair.
+- **Resolved on read.** C-1 and D-1 resolve each `entity` key through `entity_merge_redirect`. The read is read-only, PK-probed, and **tolerant of a missing table** (the 007 R3 pattern; at most 5 hops, cycle-guarded). They return `merged_into` beside the original key, and the console shows "merged into …".
+- **Build check B2** (Appendix A) also compares the 24 KI 22.44 ids with 013's hand-off file (the 392 twins), when that file exists.
 
 ---
 
@@ -203,7 +264,14 @@ The default `owner_role` is the **Data-Identity Lead** for every type except `da
 | D-2 | `POST /api/ops/admin/dq-tickets` | Create (console, D-3 page, service callers). Body in §8.3. Answers **201** `{case_ref}` for a new ticket, or **200** `{case_ref, deduplicated: true}` (§9.3). |
 | D-3 | `GET /api/ops/admin/dq/new` | **Link-out page** (007 Q1 (a)). Validates the §9.1 query parameters and returns an HTML form, prefilled and read-only, with one optional free-text note. Submit POSTs to D-2 on the same origin. |
 
-C-1 (`GET /api/ops/admin/cases/DQ-…`) returns the ticket, its events (≤ 200), its members (≤ 200, ordered by `object_domain, object_key`, which is index order with no sort) and its linked exception. C-2 handles §7.1.
+C-1 (`GET /api/ops/admin/cases/DQ-…`) returns:
+- the ticket;
+- its events (≤ 200);
+- its members: the first page of ≤ 200 in index order (`object_domain, object_key`, no sort), with a **keyset `members_cursor`** for the next page (`?members_after=<domain>|<key>`; N4-2), because a ticket may hold up to 500;
+- its linked exception;
+- `merged_into` for every `entity` key (§7.6).
+
+C-2 handles §7.1.
 
 ### 8.3 D-2 body
 
@@ -211,7 +279,7 @@ C-1 (`GET /api/ops/admin/cases/DQ-…`) returns the ticket, its events (≤ 200)
 - **Optional:** `severity`, `title` (≤ 200; default `"<type label>: <object_key>"`), `summary` (≤ 500), `note` (≤ 1,000; stored as the `created` event's body), `object_ref` (JSON ≤ 1.5 kB), `source_system`, `source_record_ref`, `field_name`, `observed_value`, `expected_value`, `evidence` (≤ 2 kB), `proposed_resolution`, `owner_role`, `linked_exception_ref`, `members[]` (≤ 100), `via`.
 
 **Server-set, never from the body:**
-- `raised_by`: the JWT email, or `service:<common_name>`.
+- `raised_by`: the JWT email, or `service:<label>` from the allowlist (003 §8.5; the raw `common_name` goes in the event payload).
 - `raised_via`: `consumer_screen` if `via='nav-007'` and the actor is a person; `ingest_auto` if the actor is a service token; else `ops_console`.
 - `case_ref`: `DQ-` + `printf('%06d', ticket_id)`, through the 003 §8.2 insert-then-update batch with a `DQ-PENDING-<request_id>` placeholder.
 
@@ -220,16 +288,26 @@ C-1 (`GET /api/ops/admin/cases/DQ-…`) returns the ticket, its events (≤ 200)
 | Caller | Types allowed |
 |---|---|
 | A person with `via='nav-007'` | the 4 007 types |
-| A service token | `missing_entity` only |
-| The console | any type |
+| The `bond-runner` service token (F-2) | `missing_entity` only, on D-2 only |
+| The `ops-script` service token (003 F-3) | none on D-2; on C-2 only `comment`, `assign`, `triage` for `DQ-` refs |
+| A person through the console | any type |
 
-Anything else gets a 403.
+Anything else gets a 403, from the 003 §8.5 allowlist, which is checked on **every** admin route. Unknown service tokens are refused before D1 access (A4-2).
 
 ### 8.4 CSRF and CORS
 
 - D-2 requires `Content-Type: application/json` **and** `X-Ops-Client: <console|dq-page|service>`.
 - A cross-site HTML form can send neither, and any cross-origin `fetch` with them needs a preflight. Admin routes answer preflights with no CORS allowances (001 §6.2), so the browser blocks it.
 - D-3 is same-origin with D-2. No `Access-Control-Allow-Origin` is ever sent.
+
+
+### 8.5 Service tokens (A4-2, F-2)
+
+004 adds **one allowlist entry** to `OPS_SERVICE_ACTORS` (003 §8.5): `bond-runner` → routes `[D-2]`, types `[missing_entity]`.
+- It is **one token per caller**: the `bond-runner` token is separate from `ops-script`.
+- The token is created by the Founder and **admitted to the "meridian-ops admin" Access policy only after** the 004 deploy carrying the entry is verified (AC-18c).
+- It is stored in `~/.meridian-secrets/bond-runner-ops.env` (mode 600), with an expiry set and recorded. It never appears in the repo or logs.
+- 008's runner reads it in the same way as its ingest key (008's own build; LANE-8-ENG).
 
 ---
 
@@ -254,7 +332,7 @@ Anything else gets a 403.
 - **Content:** the prefilled fields as read-only text, a note box (≤ 1,000), Submit and Cancel.
 - **On success:** shows `DQ-000123 created` or `Already reported as DQ-000045 (open)`.
 - **On error:** shows the message, with no technical detail.
-- **Caching and policy:** `Cache-Control: no-store`. CSP is `default-src 'none'; script-src 'nonce-…'; style-src 'nonce-…'; connect-src 'self'; form-action 'none'; frame-ancestors 'none'`.
+- **Caching and policy:** `Cache-Control: no-store`. CSP is `default-src 'none'; script-src 'nonce-…'; style-src 'nonce-…'; connect-src 'self'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'` (REVARC RQ-3 note).
 - **Escaping:** every value is HTML-escaped.
 - **Network:** no external resources. The page makes one D-2 `fetch` and nothing else.
 - **No state:** no cookies of its own, and no local storage.
@@ -288,13 +366,26 @@ The subquery uses `idx_ops_dq_object` and reads only that object's tickets. D1 r
 
 All writes need an Access-verified identity, and **ticket contents are never public** (001 §6.1: new Ops data is Access-only).
 
+### 9.5 New-DQ count in the health-check notification (F-3)
+
+- **What the sweep adds:** one count to its response, `dq_new` = tickets opened since the previous sweep's start.
+- **Query:**
+  ```sql
+  SELECT COUNT(*) FROM ops_data_quality_ticket
+   WHERE status = 'open' AND severity IN ('sev1','sev2','sev3','sev4') AND opened_at >= :since
+  ```
+  Plan: covering `idx_ops_dq_queue (status=? AND severity=? AND opened_at>?)`. `:since` is the previous `local.health-check` start, which L2 already holds. Cost: ≤ 1 + new rows reads, 0 writes.
+- **Script change:** `13F Seed/check-pipeline-health.js` adds one line to its existing notification ("2 new data-quality tickets") when `dq_new > 0`. Clean sweeps stay silent, and no new macOS permission is needed (N4-5).
+- **When it ships:** with the 004 deploy (Tue 27), as a `meridian-ops` change plus the script change. The script is a local file, so changing it is not a remote step.
+
 ---
 
 ## 10. Known-issue and source tickets (seeds)
 
 The M3 and M4 batches are reviewed `wrangler d1 execute --remote --file` runs.
 - **Actor:** `ops_lead:wrangler`, with `actor_source='system'` (003 DV-2).
-- **Idempotency:** each seed ticket carries a fixed `dedupe_key` (`ki:22.44`, `ki:22.17`, `ki:22.9`, `sec_cik:<CIK>`), so a re-run inserts nothing.
+- **Idempotency:** each seed ticket carries a fixed `dedupe_key`, so a re-run inserts nothing. The keys are `ki:22.17`, `ki:22.44`, `ki:22.9`, `ki:22.43`, `wrong_identifier:entity:2289:cik`, `entity_merge:2019:467290`, `sec_cik:<CIK>` and `m5:<item>`. The template also refuses a second open ticket on the same object.
+- **Calendar (ML-1017-3, A4-1):** every seed runs **after the 004 deploy** (Tue 27 at the earliest), and so after 003's M1 (Sat 24).
 - **Before each run:** a `d1-today` read and the F-5 ceiling, as in 003 §10.3.
 
 ### 10.1 M3a — KI 22.17 (37 ISINs) and consolidation of the legacy rows
@@ -338,38 +429,115 @@ UPDATE ops_data_quality_ticket
  WHERE legacy_source = 'entity_exceptions' AND ticket_type = 'isin_duplicate' AND status = 'open';
 ```
 
-**Order matters:** the event comes **before** the `UPDATE`, because the event selects `status = 'open'` rows. The legacy row's original `disposition` (`pending`) is kept in that event's payload. Run M3a only **after** 003's V2 check has passed (Thu 22), because V2 compares `disposition` with `decision`.
+**Order matters:** the event comes **before** the `UPDATE`, because the event selects `status = 'open'` rows. The legacy row's original `disposition` (`pending`) is kept in that event's payload. Run M3a only **after** 003's V2 check has passed (Sat 24), because V2 compares `disposition` with `decision`.
 
-### 10.2 M3b — KI 22.44 (24 wrong LEIs)
+### 10.2 M3 — the remaining known items (one reviewed data file plus one fixed template)
 
-- **Ticket:** `wrong_lei`, sev2, `triaged`, anchor `known-issue:22.44`, `dedupe_key 'ki:22.44'`.
-- **`evidence`:** "MA-OCT-006 RC-12; Evidence §14.4/§15.3; D5-8, D6-4 (OPAP cleared), D6-5; WORK/day6/wrong_lei_detail.csv".
-- **`proposed_resolution`:** "Replace with T1 LEI (6); review 5 non-T1 candidates; set NULL and re-queue (13). Excluded from 011. Manual correction by a Data-Identity Lead packet after 24 Oct; 011 never overwrites an existing LEI."
-- **Members (24):** `object_domain='entity'` and `object_key=entity_id`, each with `proposed_action` and `object_ref = {name, current_lei, correct_lei|null, kind: 'subsidiary'|'other_or_predecessor'}`.
-- **Who provides the member rows:** the members come from `wrong_lei_detail.csv`, which is outside the repo. **The Data-Identity Lead exports a JSON array** of `{entity_id, name, current_lei, correct_lei, kind, proposed_action}` to `App/Ops/seeds/ki-22-44-members.json` (tracked; it holds public LEIs and names only). The build embeds it in a `json_each` insert, as in M3a. **Check:** 24 rows; action counts 6/5/13; the names match the 24 in Evidence §14.4.
-- **If the file is not ready by build day:** the ticket is seeded with **0 members**, and the members are added later through C-2 `add_members` (the ticket shows `members: 0`).
+M3a (above) is hand-written because it also consolidates legacy rows. The remaining seeds share one shape, so they are **data, not code**:
 
-### 10.3 M3c — KI 22.9 (4 edges), only if Founder Q1 = yes
+- **Data:** `App/Ops/seeds/m3-seeds.json` and `App/Ops/seeds/m4-minimum.json`. These hold public identifiers and names only, and are tracked. The build creates them **byte-for-byte from Appendix D**, and the build report records each file's SHA-256.
+- **Template:** below, fixed in this spec.
+- **Generator:** `App/Ops/tools/seed-sql.mjs` (≈ 30 lines). It reads a JSON file, re-serialises it compactly, doubles single quotes, and replaces `__SEEDS__` and `__FILE_SHA__`. It writes `App/Ops/migrations/m3-seeds.sql` / `m4-minimum.sql`, which are run with `wrangler d1 execute --remote --file`.
+- **Author's dry-run:** done on 17 Oct (§15).
 
-- **Ticket:** `bad_relationship_edge`, sev3, `triaged`, anchor `known-issue:22.9`, `dedupe_key 'ki:22.9'`.
-- **`proposed_resolution`:** "Delete the 4 legal_parent edges (006 RC-20, ≈ 16 writes, Entities packet after 24 Oct)."
-- **Members:** `entity_relationships:1565->3:legal_parent`, `2247->143`, `2476->49`, `6980->194` (`proposed_action='delete_edge'`).
-- **Links:** one `linked` event on each of the 4 legacy `DQ-M-000004…7` tickets, naming the new ref. The legacy tickets stay `resolved/accepted_no_fix`, because history is not rewritten.
-- **If Q1 is no:** M3c is skipped, and KI 22.9 stays as the 4 resolved legacy tickets.
+```sql
+-- MA-OCT-004 seed template. The generator App/Ops/tools/seed-sql.mjs replaces __SEEDS__ with the reviewed JSON
+-- (single quotes doubled) and __FILE_SHA__ with that JSON file's SHA-256. Idempotent: a re-run changes nothing.
+-- (1) tickets: dedupe_key UNIQUE, and never a second open ticket on the same object
+INSERT OR IGNORE INTO ops_data_quality_ticket
+  (case_ref, ticket_type, severity, status, title, summary, object_domain, object_key, object_ref, source_system,
+   field_name, observed_value, expected_value, evidence, proposed_resolution, owner_role, raised_by, raised_via, dedupe_key)
+SELECT 'DQ-SEED-' || json_extract(s.value,'$.dedupe'), json_extract(s.value,'$.type'), json_extract(s.value,'$.sev'),
+       json_extract(s.value,'$.status'), json_extract(s.value,'$.title'), json_extract(s.value,'$.summary'),
+       json_extract(s.value,'$.od'), json_extract(s.value,'$.ok'), json_extract(s.value,'$.ref'), json_extract(s.value,'$.src'),
+       json_extract(s.value,'$.field'), json_extract(s.value,'$.obs'), json_extract(s.value,'$.exp'),
+       json_extract(s.value,'$.evidence'), json_extract(s.value,'$.proposal'), json_extract(s.value,'$.owner'),
+       'ops_lead:wrangler', 'ops_console', json_extract(s.value,'$.dedupe')
+  FROM json_each('__SEEDS__') s
+ WHERE NOT EXISTS (SELECT 1 FROM ops_data_quality_ticket x
+                    WHERE x.object_domain = json_extract(s.value,'$.od') AND x.object_key = json_extract(s.value,'$.ok')
+                      AND x.status IN ('open','triaged','fix_pending'));
+-- (2) final case_ref
+UPDATE ops_data_quality_ticket SET case_ref = 'DQ-' || printf('%06d', ticket_id) WHERE case_ref LIKE 'DQ-SEED-%';
+-- (3) members
+INSERT OR IGNORE INTO ops_dq_ticket_member (ticket_id, object_domain, object_key, object_ref, proposed_action)
+SELECT t.ticket_id, json_extract(m.value,'$.d'), json_extract(m.value,'$.k'), json_extract(m.value,'$.ref'), json_extract(m.value,'$.act')
+  FROM json_each('__SEEDS__') s
+  JOIN ops_data_quality_ticket t ON t.dedupe_key = json_extract(s.value,'$.dedupe'),
+       json_each(json_extract(s.value,'$.members')) m;
+-- (4) created events
+INSERT OR IGNORE INTO ops_case_event (subject_type, subject_id, event_type, actor, actor_source, occurred_at, payload, idempotency_key)
+SELECT 'dq_ticket', CAST(t.ticket_id AS TEXT), 'created', 'ops_lead:wrangler', 'system', strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+       json_object('case_ref', t.case_ref, 'seed', t.dedupe_key, 'members', json_array_length(json_extract(s.value,'$.members')),
+                   'file_sha256', '__FILE_SHA__'),
+       'seed:' || t.dedupe_key || ':created'
+  FROM json_each('__SEEDS__') s JOIN ops_data_quality_ticket t ON t.dedupe_key = json_extract(s.value,'$.dedupe');
+-- (5) fix_scheduled events (fix_ref lives only here; N4-4)
+INSERT OR IGNORE INTO ops_case_event (subject_type, subject_id, event_type, to_value, actor, actor_source, occurred_at, payload, idempotency_key)
+SELECT 'dq_ticket', CAST(t.ticket_id AS TEXT), 'fix_scheduled', 'fix_pending', 'ops_lead:wrangler', 'system',
+       strftime('%Y-%m-%dT%H:%M:%fZ','now'), json_object('fix_ref', json_extract(s.value,'$.fix_ref')),
+       'seed:' || t.dedupe_key || ':fix'
+  FROM json_each('__SEEDS__') s JOIN ops_data_quality_ticket t ON t.dedupe_key = json_extract(s.value,'$.dedupe')
+ WHERE json_extract(s.value,'$.fix_ref') IS NOT NULL;
+```
 
-### 10.4 M4 — 008 unmatched issuers (after Pack C; Tue 27–Wed 28)
+| Seed (in `m3-seeds.json`) | Type, severity, status | Anchor object | Members | Source of the facts | Review item |
+|---|---|---|---|---|---|
+| **KI 22.44** | `wrong_lei`, sev2, `triaged` | `source_record` `known-issue:22.44` | **24** entities from Evidence §15.3 (`0d1bbf9b…db1bc`): **6 `replace_lei_t1`** (528, 596, 1134, 1514, 1803, 1809); **5 `review`** (575, 902, 931, 1049, 1868); **13 `null_and_offline_match`** (576, 702, 838, 890, 899, 927, 943, 1015, 1138, 1157, 1162, 1181, 1455). OPAP 2014 is absent (cleared, D6-4). Member 931 cites `DQ-M-000001`. | Evidence §15.3, §14.4; D5-8, D6-4, D6-5 | 004-8 |
+| **KI 22.9** | `bad_relationship_edge`, sev3, `triaged` | `known-issue:22.9` | **4 edges with full identity** (`parent, child, relationship_type, source='gleif', created_at` verbatim, D4 rowid in `object_ref`): 1565→3, 2247→143, 2476→49, 6980→194 | Evidence §14.5; 015c | F-1, 004-7 |
+| **KI 22.43** | `no_link_marker`, sev3, `fix_pending` (`fix_ref` MA-OCT-011 bucket C) | `known-issue:22.43` | 0 (657 > the 500 cap); the 011 close-out list SHA is added later by `comment` (H-1) | Matrix rank 3 (RC-5); D7-2 | 004-3 |
+| **Welltower OP LLC CIK** | `wrong_identifier`, sev2, `triaged` | `entity` 2289, `field_name='cik'`, observed `0000766704`, expected `0001917598` | 0 | DIL14 §4 DQ-1 | 004-2 |
+| **OTP Bank pair** | `entity_merge`, sev3, `fix_pending` (`fix_ref` MA-OCT-013) | `entity` 2019 | entity 2019 and 467290 (`merge_013`) | 011 FRI report; RELARC N-3 | 004-5 |
 
-- **Source:** the 008 build writes its unmatched list to `App/Corporate Atlas/bonds/state/unmatched-issuers.json` (gitignored `state/`), as `[{cik, sec_name, lei|null, co_registrant_of|null}]`.
-- **Batch:** M4 inserts one `missing_entity` ticket per CIK:
-  - `object_domain='source_record'`, `object_key='sec_cik:'||cik`, `dedupe_key='sec_cik:'||cik`;
-  - sev3, `open`;
-  - `proposed_resolution` "Create the entity properly (never link a subsidiary filer to its parent — 008 §11 rule 2)";
-  - one member `create_entity`;
-  - a `created` event.
-- **Rows:** ≤ 33.
-- **Later runs (008 re-verification, §11 rule 4):**
-  - **if Q2 = yes**, 008's runner calls D-2 with an Access service token, and the server's dedupe makes repeats free;
-  - **otherwise** the list is re-handed and M4 is re-run (an idempotent re-run).
+**M3c companion (`m3c-links.sql`, run after the template):** a `linked` event on each of the 4 legacy `DQ-M-000004…7` tickets, naming the new aggregate. The legacy rows are **not** updated; the 22 Aug `accepted_no_fix` stays verbatim.
+
+```sql
+-- M3c: link the 4 legacy KI 22.9 tickets (resolved, accepted_no_fix, unchanged) to the new aggregate.
+INSERT OR IGNORE INTO ops_case_event (subject_type, subject_id, event_type, body, actor, actor_source, occurred_at, payload, idempotency_key)
+SELECT 'dq_ticket', CAST(l.ticket_id AS TEXT), 'linked',
+       'Reopened as a fix in ' || a.case_ref || ' (Founder 17 Oct, MA-OCT-004 F-1). This 22 Aug decision is kept unchanged.',
+       'ops_lead:wrangler', 'system', strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+       json_object('superseded_by', a.case_ref, 'legacy_disposition', l.disposition), 'seed:ki:22.9:link:' || l.case_ref
+  FROM ops_data_quality_ticket l, ops_data_quality_ticket a
+ WHERE l.legacy_source = 'entity_exceptions' AND l.ticket_type = 'bad_relationship_edge' AND a.dedupe_key = 'ki:22.9';
+```
+
+**The later edge delete (Data-Identity Lead packet ≥ Sat 24, not 004) must match all five identity fields** of each member's `object_ref`. A row whose `source` or `created_at` differs, for example an edge 011 wrote, is never deleted (004-7). Build check B4 (Appendix A) re-reads the 4 rows by primary key before M3.
+
+### 10.3 (merged into §10.2: KI 22.9 is now unconditional, per Founder decision F-1)
+
+### 10.4 M4 — 008 unmatched issuers: the named minimum set plus 008's list (004-1; DIL14 §4)
+
+The same template, run on `m4-minimum.json` (Appendix D), then on the tickets generated from 008's `bonds/state/unmatched-issuers.json` (`[{cik, sec_name, lei|null, co_registrant_of|null}]`). The generator maps each row to a `missing_entity` seed with `dedupe='sec_cik:'||cik`. The file's SHA-256 is recorded in the build report (N4-3).
+
+**Named minimum set, seeded whatever the file holds.** DIL14 corrected REVDIL here, and DIL14's evidence is taken: GM Financial and Pfizer NL do have candidate entities. Each ticket's members say what to do.
+
+| CIK | Issuer | LEI (in `object_ref`) | Members (`proposed_action`) | Note |
+|---|---|---|---|---|
+| 0000766704 | Welltower Inc | `254900F33BIAR82QTA19` | `gleif:254900F33BIAR82QTA19` (`create_entity`) | sev4: 0 final bond rows. Never link to Welltower OP LLC (2289). |
+| 0000804269 | GM Financial | `5493008B6JBRUJ90QL97` | entities 3324, 30187, 103981 (`merge_then_assign_lei`) | A duplicate cluster with no LEI. Do not create a fourth row; this is a 013 input. |
+| 0002058265 | Pfizer Netherlands International Finance B.V. | `254900YI79T8NMNA4349` | entity 106006 (`confirm_and_assign_lei`) | `co_registrant_of = 'Pfizer Inc'`; **never linked to the parent** (L8-12) |
+| 0002007029 | PepsiCo Singapore Financing I Pte. Ltd. | unknown | entities 3367, 31416 (`merge_then_assign_lei`) | **Its 4 rows currently sit under guarantor PepsiCo Inc (1457, P-1).** 008's R-1 moves them; the link stays `unmatched` until resolved; never link to the guarantor. |
+
+**Later raises (F-2):** 008's runner calls D-2 with the `bond-runner` token (§8.5). The object-scoped dedupe (§9.3) makes a repeat raise for a CIK with an open ticket return the existing ticket.
+
+### 10.5 M5 — MA-OCT-011 close-out hand-off (004-4; after 011 closes, ≥ Sat 24)
+
+The same template. **One aggregate `gleif_handoff` ticket per item**, each with 0 members, `owner_role` Data-Identity Lead, anchor `source_record` `ma-oct-011:<item>`, and `evidence` = the list file and SHA-256 that **LANE-11 supplies at 011 close-out (H-1)**. M5 runs only when those SHAs exist; until then the build records it as waiting on H-1.
+
+| `dedupe` | Item | Count (011 / REVDIL) |
+|---|---|---|
+| `m5:deferred_a_edges` | Deferred A edges | 215 |
+| `m5:t1_lapsed_parents` | T1_LAPSED parent LEIs and their waiting edges | 6 LEIs, 3 edges |
+| `m5:e1_exclusion` | The E-1 exclusion: child 99231, parent `549300CZ8QS1GE53O776` (RC-12) | 1 |
+| `m5:ki2241_to_013` | LEIs on several rows (KI 22.41 → 013) | 31 LEIs / 62 rows |
+| `m5:government_rows` | Government rows excluded from automated matching (D7-1) | 9 |
+| `m5:report_only_tiers` | Report-only tiers: T1_LAPSED 1,342; T1+/T1c 1,739; N+ 852; review 2,336 | 6,269 |
+| `m5:no_reason_rows` | Rows with neither RR nor RX | 128 |
+
+### 10.6 Seeds and the 013 merges (A4-4)
+
+These rows are **never rewritten** by 013: the KI 22.44 members, the OTP pair, the 008 candidate members, and 003 M1's `object_key`s. They are read through `entity_merge_redirect` (§7.6).
 
 ---
 
@@ -388,19 +556,20 @@ Counting basis: 003 §11 (INSERT = 1 + 1 per index; UPDATE = 1 + 1 per changed i
 | **Steady total** | | | **≤ ≈ 600 / day** (0.6% of 100k) |
 | `005-ops-dq.sql` | — | — | ≈ 0 (empty table) |
 | **M3a** (1 ticket 13 + 37 members × 3 + 3 events × 3 + 2 legacy dismissals × 5) | | | ≈ 145 |
-| **M3b** (13 + 24 × 3 + 3) | | | ≈ 90 |
-| **M3c** (13 + 4 × 3 + 5 events × 3) | | | ≈ 40 |
-| **M4** (≤ 33 × (13 + 3 + 3)) | | | ≤ 630 |
-| **One-time total** | | | **≤ ≈ 900** (≤ ≈ 700 if, as expected, ≤ 20 issuers are unmatched) |
+| **M3** template (5 tickets × 13 + 30 members × 3 + 5 created + 2 fix_scheduled events × 3) + M3c links (4 × 3) | | | ≈ 190 (author's dry-run: 47 + 4 row changes before index entries) |
+| **M4** (the 4 named tickets × 13 + 7 members × 3 + 4 events × 3, plus ≤ 29 more from 008's list × 19) | | | ≈ 85 + ≤ 550 |
+| **M5** (7 tickets × (13 + 3)) | | | ≈ 115 |
+| **One-time total** | | | **≤ ≈ 1,100** (≈ 550 if, as expected, 008's list adds few beyond the named 4). Each `--file` run reads `d1-today` first (F-5). |
 
-**Daily create cap:** `OPS_DQ_DAILY_CREATE_CAP = 100`, counted with:
+**Daily create cap:** `OPS_DQ_DAILY_CREATE_CAP = 100`, counted **across all five statuses** (N4-1), so triaging a ticket does not free cap:
 
 ```sql
 SELECT COUNT(*) FROM ops_data_quality_ticket
- WHERE status = 'open' AND severity IN ('sev1','sev2','sev3','sev4') AND opened_at >= :today
+ WHERE status IN ('open','triaged','fix_pending','resolved','dismissed')
+   AND severity IN ('sev1','sev2','sev3','sev4') AND opened_at >= :today
 ```
 
-Plan: `SEARCH … idx_ops_dq_queue (status=? AND severity=? AND opened_at>?)`. When the cap is reached, D-2 answers 429. Seeds are exempt.
+Plan: 5 × 4 seeks on the covering `idx_ops_dq_queue (status=? AND severity=? AND opened_at>?)`; it reads only today's tickets. When the cap is reached, D-2 answers 429. Seeds are exempt.
 
 ### 11.2 Reads and query plans
 
@@ -411,7 +580,9 @@ Plan: `SEARCH … idx_ops_dq_queue (status=? AND severity=? AND opened_at>?)`. W
 | D-1 object filter | `idx_ops_dq_object (object_domain=? AND object_key=?)` + `idx_ops_dq_member_object (…)` → PK | ≤ 50 |
 | D-2 dedupe guard | `idx_ops_dq_object` (subquery) | ≤ 10 |
 | D-2 cap count | `idx_ops_dq_queue (status=? AND severity=? AND opened_at>?)` | ≤ 100 |
-| C-1 DQ detail | case_ref autoindex 1 + events ≤ 200 (`idx_ops_case_event_subject`) + members ≤ 200 (UNIQUE autoindex, `ticket_id=?`) + linked exception 1 | **≤ 405** |
+| C-1 DQ detail | case_ref autoindex 1 + events ≤ 200 (`idx_ops_case_event_subject`) + one member page ≤ 200 (UNIQUE autoindex, `ticket_id=?`, keyset) + linked exception 1 + `entity_merge_redirect` PK probes for `entity` keys on the page (≤ 200 × ≤ 5 hops, typically 0, because the table is absent until 013) | **≤ 405 typical; ≤ 500 with redirects** |
+| `resolve fixed` precondition | `idx_ops_case_event_subject (subject_type=? AND subject_id=?)`, `event_type='fix_scheduled'` | ≤ 200 |
+| §7.1 guards (`NOT EXISTS` idempotency, member `EXISTS`) | `sqlite_autoindex_ops_case_event_1`, member UNIQUE autoindex | 1–2 per action |
 | C-2 `resolve` member check | `SELECT 1 FROM ops_dq_ticket_member WHERE ticket_id = ? AND member_status = 'open' LIMIT 1` (autoindex prefix) | ≤ 500 worst, typically ≤ 37 |
 | D-3 page | 0 D1 reads (validation only) | 0 |
 
@@ -421,9 +592,9 @@ Plan: `SEARCH … idx_ops_dq_queue (status=? AND severity=? AND opened_at>?)`. W
 
 | Point | Result |
 |---|---|
-| 1. Index audit | Every query is a `SEARCH` on a named index, or a PK or unique probe. No Entities, ETF or `fundholdingsmonthly` table is read; M3 and M4 embed their lists. One new table and one new index. |
+| 1. Index audit | Every query is a `SEARCH` on a named index, or a PK or unique probe. No ETF or `fundholdingsmonthly` table is read. Entities reads are only the `entity_merge_redirect` PK probes (A4-4) and build checks B1, B2 and B4. M3 and M4 embed their lists. One new table and one new index. |
 | 2. Single execution < 50k reads | Max ≈ 500 (C-1 on a full aggregate, or the `resolve` member check). Measured at build (AC-15). |
-| 3. Read/write budget per invocation | §11.1–§11.2. Build writes ≤ 900, inside the F-5 ceiling and checked against `d1-today` before each seed. |
+| 3. Read/write budget per invocation | §11.1–§11.2. Build writes ≤ 1,100, inside the F-5 ceiling and checked against `d1-today` before each seed. |
 
 ### 11.4 Kill switches
 
@@ -458,12 +629,12 @@ Every file stays under 1,500 lines. The Worker has 14 endpoints, leaving **1 spa
 | R2 | D-1, D-2 (§8.3 rules, §9.3 dedupe, §8.4 CSRF guard, cap) |
 | R3 | The DQ engine in C-1/C-2 (§7) |
 | R4 | The D-3 page (§9) |
-| R5 | M3a, M3b (with members, or 0 members if the file is late), M3c (if Q1 = yes), M4 |
-| R6 | Tests (§15) and the build report |
+| R5 | M3a; the M3 template seeds (KI 22.44, KI 22.9, KI 22.43, `wrong_identifier` 2289, OTP Bank) with the M3c links; M4 (the named 4 + 008's list); M5 when H-1 delivers |
+| R6 | §7.5 resolve authority, §7.1 `do_not_merge` reopen guard, §7.1 member guards (A4-3), §7.6 redirect resolution (A4-4) |
+| R7 | The `bond-runner` allowlist entry (§8.5, F-2) and the `dq_new` count in the sweep and the health-check notification (§9.5, F-3) |
+| R8 | Tests (§15) and the build report |
 
 **P1:**
-- service-token raising for 008 (Q2);
-- the sweep's DQ count in the macOS notification (Q3: one `idx_ops_dq_queue` count, 0 writes, plus a one-line change to `check-pipeline-health.js`);
 - `age_h`/`overdue`.
 
 **P2:**
@@ -477,31 +648,46 @@ Every file stays under 1,500 lines. The Worker has 14 endpoints, leaving **1 spa
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | No JWT, or the wrong AUD | D-1, D-2, D-3, or C-1/C-2 on a `DQ-` ref | 401, no CORS headers, counts unchanged |
-| AC-2 | An open ticket | `triage` → `schedule_fix` (`fix_ref`) → `resolve fixed` | Each step 200, with 1 event each (`triaged`, `fix_scheduled` with `payload.fix_ref`, `resolved`), `resolved_by` = the JWT email |
+| AC-1 | No JWT, or the wrong AUD; or a POST without JSON + `X-Ops-Client` | D-1, D-2, D-3, or C-1/C-2 on a `DQ-` ref | 401 or 400 before D1, no CORS headers, counts unchanged |
+| AC-2 | An open ticket | `triage` → `schedule_fix` (`fix_ref`) → `resolve fixed` | Each step 200, with 1 event each (`triaged`, `fix_scheduled` with `payload.fix_ref`, `resolved`), `resolved_by` = the JWT email. `proposed_resolution` is unchanged (N4-4). |
 | AC-3 | An aggregate with 1 open member | `resolve` without `force` | 409 `members_open`; nothing written. With `force: true` and a note → 200 |
 | AC-4 | Any ticket | `resolve` with `disposition='duplicate'`, or `dismiss` with `fixed` | 400 |
 | AC-5 | A legacy `DQ-M-*` ticket | C-1 | `disposition` is shown verbatim (`do_not_merge`, `accepted_no_fix`), with the 003 M1 events (`created`, `decision_recorded`, `migrated`) |
 | AC-6 | A signed-in user and a 007 URL with `type=missing_mapping&key=ISIN:US0000000000…&via=nav-007` | Open D-3, Submit | 201. Ticket `raised_via='consumer_screen'`, `source_system='ma-ui'`, `object_domain='instrument'`, `raised_by` = the JWT email, and `object_ref` holding only the whitelisted keys |
 | AC-7 | AC-6 done | Submit the same URL twice more the same day | 200 `deduplicated` with the same `case_ref`; exactly **1** `reported_again` event. After the ticket is resolved, a new report creates a new ticket. |
 | AC-8 | No Access session | Open the D-3 URL | Access login, then the prefilled form with the same values |
-| AC-9 | M3b loaded | `member_update` on one member → `fixed` | The member row changes; 1 `member_updated` event; the ticket's `updated_at` changes; `expected_member_status` stale → 409 |
+| AC-9 | M3 loaded, and a `fix_scheduled` event on the KI 22.44 ticket | 1. `member_update` on one member → `fixed`; 2. the same with a stale `expected_member_status`; 3. the same `request_id` with a different member | 1: the member row changes, with 1 `member_updated` event and the ticket's `updated_at` bumped. 2: 409, and **no** event and **no** ticket bump (A4-3). 3: 409 `request_id_reused`, 0 changes. |
 | AC-10 | A ticket and an exception | `link_exception` | C-1 on the ticket shows the exception; C-1 on the exception shows the ticket (003 `idx_ops_dq_linked_exc`) |
 | AC-11 | 003 V2 passed | M3a | 1 ticket with 37 members; `DQ-M-000008/9` `dismissed/duplicate` with events naming the new ref; payload keeps `pending`. Re-run: 0 changes |
-| AC-12 | The member file is present (or not), and Q1 is answered | M3b, M3c | 22.44: 24 members, actions 6/5/13 (or 0 members and a note). 22.9 per Q1. Re-run: 0 changes |
-| AC-13 | 008's unmatched list | M4 | One `missing_entity` ticket per CIK, with no parent link and no duplicates on re-run |
+| AC-12 | M3 template + M3c links (Appendix D data) | Run, then re-run | **KI 22.44:** 24 members, actions **6 / 5 / 13** (`replace_lei_t1` / `review` / `null_and_offline_match`); OPAP 2014 absent; member 931's `object_ref.see_also` = `DQ-M-000001`. **KI 22.9:** 4 `delete_edge` members whose keys carry `legal_parent:gleif:<created_at>`, plus 4 `linked` events on `DQ-M-000004…7`, which stay `resolved/accepted_no_fix`. **Re-run: 0 changes.** |
+| AC-13 | `m4-minimum.json` and 008's list | M4 | **At least the named 4:** Welltower Inc (`0000766704`), GM Financial (`0000804269`, 3 candidate members), Pfizer NL (`0002058265`, `co_registrant_of = 'Pfizer Inc'`, member 106006) and PepsiCo Singapore Financing I (`0002007029`, members 3367 and 31416, `current_wrong_link_entity = 1457`). **Each has its LEI in `object_ref` where known.** No ticket links a subsidiary to its parent or guarantor. A CIK in both files makes one ticket. Re-run: 0 changes. |
 | AC-14 | `OPS_DQ_CONSUMER_ENABLED="false"` | D-3 and D-2 with `via=nav-007` | The page says paused; D-2 503; console create still 201 |
 | AC-15 | Production | Each route once | `rows_read`: D-1 ≤ 153, D-2 ≤ 120, C-1 (KI 22.17 ticket) ≤ 405; remote EXPLAIN matches §11.2 |
-| AC-16 | A static check | grep of `App/` and `docs/` | No ops key, JWT or ticket content in front-end code. 007's button builds only the §9.1 URL. |
+| AC-16 | A static check | grep of `App/` and `docs/` | No ops key, JWT, service-token value or ticket content in front-end code. 007's button builds only the §9.1 URL. |
+| AC-17 | M3 template run | C-1 on each seed | **KI 22.43:** `no_link_marker`, `fix_pending`, 0 members, 1 `fix_scheduled` event with `fix_ref` MA-OCT-011. **`wrong_identifier`:** entity 2289, `cik` 0000766704 → 0001917598. **OTP:** `entity_merge`, members 2019 and 467290, `fix_ref` MA-OCT-013. **M5** (when H-1 delivers): 7 `gleif_handoff` tickets with the list SHAs. Re-run: 0 changes. |
+| AC-18 | Tickets of Entities-data types | 1. `resolve fixed` with no `fix_scheduled` event; 2. the `bond-runner` or `ops-script` token on `resolve`, `dismiss` or `reopen`; 3. `reopen` on `DQ-M-000001…3` without `founder_supersession`; 4. the same with it | 1: 409 `fix_not_scheduled`. 2: 403 before D1. 3: 409 `protected_decision`, and the row is unchanged. 4: 200, with the supersession in the event payload. |
+| AC-18c | The 004 deploy is verified | The Founder admits the `bond-runner` token; then the token calls D-2 (`missing_entity`), D-2 (`missing_mapping`) and D-1 | 201/200, then 403, then 403. **Admission happens only after this AC passes in the test harness and the allowlist is live.** |
+| AC-19 | C-1 on a ticket whose `entity` member was merged by 013 (a fixture redirect row) | C-1 | The member shows `merged_into` the survivor; the stored `object_key` is unchanged. With no redirect table, C-1 still answers 200. |
+| AC-20 | A sweep after a new ticket | The sweep runs | The response carries `dq_new ≥ 1`; the notification line appears; a clean sweep is silent (F-3). |
 
 ---
 
 ## 15. Test plan (order)
 
-1. **`App/Ops/tests/dq-contract.mjs`** (`node:sqlite`, the real migrations 002–005, the real `ops-api.js`, `cases.js` and `dq-page.js`; RS256 test keys as in 003): AC-1 to AC-7, AC-9, AC-10 and AC-14, the caller-class matrix (§8.3), the CSRF header rule, the cap (429), and object-key validation including 007's placeholders.
-2. **`App/Ops/tests/dq-seeds.mjs`:** applies 003 M1 to the 015b/015c rows, runs V2 (**before** M3a), then M3a, M3b (from a fixture with the same shape), M3c and M4 (fixture). Checks AC-11 to AC-13 and re-runs each for 0 changes.
+1. **`App/Ops/tests/dq-contract.mjs`** (`node:sqlite`, the real migrations 002–005, the real `ops-api.js`, `cases.js` and `dq-page.js`; RS256 test keys and service-token JWTs as in 003). It covers:
+   - AC-1 to AC-7, AC-9, AC-10, AC-14, AC-18, AC-18c and AC-19;
+   - the caller-class matrix (§8.3) and the `OPS_SERVICE_ACTORS` allowlist;
+   - the CSRF header rule and the five-status cap (429);
+   - object-key validation, including 007's placeholders.
+2. **`App/Ops/tests/dq-seeds.mjs`:**
+   - applies 003 M1 and M2 to the 015b/015c rows and runs V2 (**before** M3a);
+   - then runs M3a, the generator over `m3-seeds.json`, `m3c-links.sql`, and the generator over `m4-minimum.json` plus a fixture `unmatched-issuers.json` that repeats one named CIK;
+   - checks AC-11, AC-12, AC-13 and AC-17, and re-runs each for 0 changes.
 3. **`dq-page` render test:** escaping (a `<script>` value in `ref` comes out inert), CSP header present, the whitelist drops extra keys, an invalid `type` gives the error page.
-4. **Remote, in order:** `005-ops-dq.sql` → deploy → AC-1 → AC-15 → M3a → M3b → M3c (per Q1) → M4 (after the 008 list) → AC-6 to AC-8 in production (Founder, a browser on the real site) → AC-14 (switch on, then off again).
+4. **`sweep-contract.mjs`** (003's) gains AC-20 (`dq_new`). `health-check.test.mjs` gains the notification line.
+5. **Remote, in order (§16):**
+   - **Tue 27:** B1, B2, B4 → `005-ops-dq.sql` → deploy → AC-1, AC-15 → M3a → M3 + M3c links → M4 → AC-11 to AC-13, AC-17.
+   - **Wed 28:** `bond-runner` token (AC-18c) → AC-6 to AC-8 in production (Founder, a browser on the real site) → AC-14 (switch on, then off again) → AC-20 → M5 when H-1 delivers.
 
 **Author's local check of this spec's SQL (not a review):**
 - **Setup:** Python `sqlite3` with the real `002-ops-control-plane.sql`, 003's index, this §6 DDL, and 003's M1 over the real 015b/015c rows.
@@ -513,33 +699,45 @@ Every file stays under 1,500 lines. The Worker has 14 endpoints, leaving **1 spa
   - object filter → `idx_ops_dq_member_object`;
   - `?type=` → `idx_ops_dq_type`;
   - D-1 default → `idx_ops_dq_queue`.
+- **Rev 1 dry-run (17 Oct; the same setup plus 003 rev 1's M2, this spec's template over the Appendix D data, and `m3c-links.sql`):**
+  - **Rows:** M2 makes 4 changes (`EXC-M-000001` E3, `EXC-M-000002` E4-delta). M3 makes 47: `DQ-000011` KI 22.44 (24 members), `DQ-000012` KI 22.9 (4), `DQ-000013` KI 22.43 (0, `fix_pending`), `DQ-000014` `wrong_identifier` 2289, `DQ-000015` OTP (2, `fix_pending`). M3c links make 4. M4 makes 19: `DQ-000016…19`, the named 4, with 1, 3, 1 and 2 members.
+  - **Member actions:** `replace_lei_t1` 6, `review` 5, `null_and_offline_match` 13, `delete_edge` 4, `dedupe` 37, `merge_then_assign_lei` 5, `merge_013` 2, `create_entity` 1, `confirm_and_assign_lei` 1.
+  - **Events:** `created` 19, `decision_recorded` 7, `migrated` 9, `dismissed` 2, `fix_scheduled` 2, `linked` 4.
+  - **Re-runs** of M2, M3a, M3, the M3c links and M4: **0 changes each**.
 - **Limitation:** local plans only. Remote plans are confirmed at build (AC-15).
 
 ---
 
 ## 16. Build plan (Claude Code, LANE-1-ENG; ML-1012-2 commit rule)
 
-Every remote step reads `d1-today` first, avoids the FREEZES windows, and keeps 2 minutes clear of the sweep slots. **UK clocks change Sun 25 Oct:** from then the slots are 08:00, 12:00, 18:00 and 22:00 UTC, and the boost windows move by an hour in UTC. Re-read FREEZES.json on the day.
+**Calendar (ML-1017-3, A4-1):** 004 builds **locally from Mon 26** and **deploys only after 003 is live**. 003's routes go live Sat 24 and its sweep extensions and retirement Mon 26 (003 §16). The Fri 23 local prep in rev 0 is dropped, as the Task's calendar says "local build from Mon 26".
+
+**Every remote step:**
+- reads `d1-today` first;
+- records C1 deployed = repo and the previous version id;
+- re-reads `FREEZES.json` on the day;
+- keeps 2 minutes clear of the sweep slots, which from Mon 26 are 08:00, 12:00, 18:00 and 22:00 UTC (GMT).
 
 | Day | Work | Remote writes |
 |---|---|---|
-| **By Fri 16** | The Founder answers Q1–Q3. The Data-Identity Lead starts `ki-22-44-members.json`. | 0 |
-| **Fri 23 (003's buffer day, only if 003 is on track)** | `005-ops-dq.sql` local; `cases.js` DQ engine skeleton and test 1 scaffolding (local only) | 0 |
-| **Mon 26 (after 08:05 UTC; 03:30–08:00 is the seed freeze)** | `005-ops-dq.sql` remote. D-1, D-2 and the engine. Tests 1 and 2. Deploy `meridian-ops`. AC-1, AC-15 (part). | ≈ 1 + tests ≤ 50 |
-| **Tue 27** | D-3 page and test 3. Deploy. M3a, M3b, M3c. AC-11, AC-12. Hand the D-3 URL to the 007 lane. | ≈ 275 |
-| **Wed 28** | M4 (008 list). AC-6 to AC-8 with the Founder. AC-13, AC-14, AC-15. Report. **007 Phase 4 can ship its button from here** (007 §12: "by 28 Oct; else deferred"). | ≤ 630 |
-| Thu 29 | Buffer; 005 UAT uses D-1, C-1 and C-2 | 0 |
+| **Done** | Founder answers F-1 to F-3 (17 Oct). The KI 22.44 data comes from Evidence §15.3 (no export needed). | 0 |
+| **Mon 26 (local; 003's deploys 4 and 5 run the same day)** | `005-ops-dq.sql --local`. `cases.js`: the DQ engine (§7.1 with the §7.5 and §7.6 rules and the A4-3 guards), D-1, D-2, the `bond-runner` allowlist entry, the `dq_new` count. `seeds/*.json` from Appendix D, `seed-sql.mjs`, `m3c-links.sql`. Tests 1, 2 and 4. | 0 |
+| **Tue 27** | D-3 page and test 3 (local, morning). Then remote: B1, B2, B4 → `005-ops-dq.sql` → **deploy** → AC-1, AC-15 → M3a → M3 + M3c links → M4 (named 4 + 008's list, file SHA recorded) → AC-11 to AC-13, AC-17. `check-pipeline-health.js` line (local). Hand the D-3 URL to the 007 lane. | ≈ 1 + ≈ 145 + ≈ 190 + ≤ 635 |
+| **Wed 28** | Founder admits the `bond-runner` token (AC-18c). AC-6 to AC-8 with the Founder, then AC-14 and AC-20. Report. **007 Phase 4 can ship its button from here**, at the edge of 007 §12's "by 28 Oct; else deferred"; the Main Lane records the effect (ML-1017-3). | ≤ 30 |
+| **Thu 29** | Buffer; 005 UAT uses D-1, C-1 and C-2 | 0 |
+| **After 011 close-out (H-1)** | M5 (7 hand-off aggregates) | ≈ 115 |
 
 **Dependencies:**
 
 | # | Dependency |
 |---|---|
-| D-1 | 003 built, with C-1/C-2 and `idx_ops_dq_linked_exc` live, and M1 verified |
-| D-2 | A6 live (003 D-1) |
-| D-3 | 008 Pack C done and the unmatched list written |
-| D-4 | The Data-Identity Lead's KI 22.44 member file |
+| D-1 | **003 live:** routes and the `idx_ops_dq_linked_exc` / `idx_ops_exception_job_cond` indexes from Sat 24, and M1 verified Sat 24 (003 §16). **If 003's Sat 24 deploys slip, 004's Tue 27 remote day slips by the same amount, and 007's button is deferred under 007 §12** (A4-1). |
+| D-2 | A6 live (Sat 24, 003 D-1) |
+| D-3 | 008's `unmatched-issuers.json` written (Pack C done). The named 4 are seeded even without it. |
+| D-4 | H-1: LANE-11's 011 close-out lists and SHAs for M5 and the KI 22.43 comment |
 | D-5 | The 007 lane builds Phase 4 against §9.1 |
 | D-6 | 005 builds on D-1, C-1 and C-2 and adds no Worker routes (§12) |
+| D-7 | LANE-8-ENG reads the `bond-runner` token for 008's runner (its own build) |
 
 **If 004 slips past Wed 28:** 007's button is deferred (007 §12; it is not on the never-cut list). M3 and M4 still run, because the tickets matter more than the button.
 
@@ -551,8 +749,9 @@ Every remote step reads `d1-today` first, avoids the FREEZES windows, and keeps 
 |---|---|---|---|
 | `meridian-ops` 004 deploy | Errors or a read regression | `OPS_DQ_ENABLED="false"`, or redeploy the 003 version | 503s, or the routes are gone; 003 routes unaffected |
 | D-3 page only | Abuse or a page defect | `OPS_DQ_CONSUMER_ENABLED="false"` | The page says paused |
+| `bond-runner` token | Misuse or a leak | The Founder removes it from the Access policy, then revokes it. 008's runner falls back to its hand-over list (M4 re-run). | The next call gets the Access 403 |
 | `ops_dq_ticket_member` | Never expected | Leave it in place (additive; nothing reads it after a rollback). A drop needs Founder approval and an export first. | — |
-| M3/M4 seed tickets | Wrong content | `dismiss` the ticket with `not_a_problem` and a note, plus `member_update` to `not_a_problem`. Events cannot be deleted (trigger), so they stay as an honest record. A corrected seed uses a new `dedupe_key` (`ki:22.44.r2`). | C-1 shows dismissed |
+| M3/M4/M5 seed tickets | Wrong content | `dismiss` the ticket with `not_a_problem` and a note, plus `member_update` to `not_a_problem`, done by the Data-Identity Lead or the Founder (§7.5). Events cannot be deleted (trigger), so they stay as an honest record. A corrected seed uses a new `dedupe_key` (`ki:22.44.r2`). | C-1 shows dismissed |
 | M3a legacy dismissals | The Data-Identity Lead disagrees with the consolidation | C-2 `reopen` on `DQ-M-000008/9` (`open`; prior disposition in the event) | Both open again |
 
 There is no Entities, ETF or front-end change to roll back. 007's button is 007's release.
@@ -572,40 +771,53 @@ There is no Entities, ETF or front-end change to roll back. 007's button is 007'
 
 ---
 
-## 19. Open questions for the Founder (3)
+## 19. Decisions, review outcomes and hand-offs
 
-1. **Q1: Reopen KI 22.9 for a fix?** On 22 Aug you accepted the 4 bad `legal_parent` edges as `accepted_no_fix`. 006 has since confirmed that none has any GLEIF relationship behind it, and 007's navigation will show those ETFs under a company parent. **Recommended: yes.** A new aggregate ticket proposes deleting the 4 edges (≈ 16 Entities writes, a Data-Identity Lead packet after 24 Oct). Your August decision stays on record unchanged. If no, nothing is seeded.
-2. **Q2: May 008's runner raise its own `missing_entity` tickets?** It would use an Access service token, which depends on your answer to 003 Q3. **Recommended: yes**, so re-verification after October raises tickets without a manual step. If no, Ops re-loads 008's hand-over list each time.
-3. **Q3: Should new DQ tickets appear in the health-check's macOS notification?** For example, "2 new data-quality tickets". It costs one indexed count per sweep and 0 writes. **Recommended: yes**, because button reports otherwise wait for 005's console to be opened.
+**Founder questions:** none open. Q1–Q3 were answered YES on 17 Oct and are in the body as F-1 (§10.2, KI 22.9), F-2 (§8.5, §10.4) and F-3 (§9.5).
 
-### Review questions (not Founder)
+**Review questions (rev 0), as the reviewers answered them:**
 
-| # | Question | For |
+| # | Question | Outcome |
 |---|---|---|
-| RQ-1 | Accept `ops_dq_ticket_member` (new Ops table) and `idx_ops_dq_member_object`? | Architect |
-| RQ-2 | Accept the object-scoped dedupe (§9.3) instead of 007's permanent `dedupe_key`? | Architect; 007 owner (informed) |
-| RQ-3 | Accept the page path `/api/ops/admin/dq/new` (inside the existing Access prefix), its CSP, and the `X-Ops-Client` CSRF rule? | Architect |
-| RQ-4 | Confirm the prefill mapping `domain=entities` → `instrument`/`entity`, and the `ref` whitelist. | Data-Identity Lead; 007 owner (informed) |
-| RQ-5 | Confirm the `ticket_type` and `disposition` vocabularies, the KI 22.17 consolidation (dismissing `DQ-M-000008/9`), the `source_record` key formats, and the KI 22.44 member file. | Data-Identity Lead |
-| RQ-6 | Confirm M4's input format with the 008 build lane (`bonds/state/unmatched-issuers.json`). | Data-Identity Lead / LANE-8-ENG |
+| RQ-1 | `ops_dq_ticket_member` and its index | **Accepted** (REVARC) |
+| RQ-2 | Object-scoped dedupe | **Accepted** (REVARC). 007's owner is informed. |
+| RQ-3 | Page path, CSP, CSRF rule | **Accepted** (REVARC), with `base-uri 'none'` added to the CSP (§9.2) |
+| RQ-4 | Prefill mapping and `ref` whitelist | **Accepted** (REVDIL) |
+| RQ-5 | Vocabularies, KI 22.17 consolidation, key formats, KI 22.44 members | **Accepted, with changes:** `wrong_identifier` added (004-2), `null_and_offline_match` renamed (004-8), members from Evidence §15.3 (004-8), the edge key carries `source` and `created_at` (004-7) |
+| RQ-6 | M4 input format | **Accepted** (REVDIL); LANE-8-ENG confirms the path |
+
+**Hand-offs:**
+
+| # | Hand-off | Owner |
+|---|---|---|
+| H-1 | 011 close-out lists and SHAs for M5 and the KI 22.43 comment | LANE-11 (Data-Identity Lead), at 011 close-out |
+| H-2 | 013 excludes the three `do_not_merge` pairs, adds the OTP Bank pair (2019 / 467290) and the GM Financial and PepsiCo Singapore duplicate clusters as inputs, and reads `do_not_merge` from Ops | Data-Identity Lead (013 brief) / Main Lane |
+| H-3 | 008 applies the Welltower OP LLC → 2289 link only **after** the `wrong_identifier` fix on 2289 | LANE-8 / Data-Identity Lead |
+| H-4 | The fix packets this spec tracks, all ≥ Sat 24 and all Entities writes: KI 22.44 corrections, the KI 22.9 edge deletes (full identity), the 2289 `cik`, the 11 Jun stuck queue row (003 H-3) | Data-Identity Lead |
 
 ---
 
 ## Appendix A — Read pack
 
-**None needed for this spec.** Every count comes from evidence files: 37 ISINs (007 Appendix A Q5), 24 wrong LEIs (006), 4 edges (006 and 015c), and 9 legacy rows (003 read pack R1/R2, being run in T12 today).
+**None needed for this spec.** Every count comes from evidence files:
+- 37 ISINs (007 Appendix A Q5);
+- 24 wrong LEIs (006 Evidence §15.3);
+- 4 edges (006 §14.5 and 015c);
+- the 008 items (DIL14 §4);
+- 9 legacy rows (003 read pack R1/R2, run 15 Oct: N = 9).
 
-Three **build-time checks** (≤ 200 reads, run on Tue 27 before M3):
+Four **build-time checks** (≤ 250 reads, run on Tue 27 before M3):
 
 | # | Check | Why |
 |---|---|---|
-| B1 | `SELECT isin, COUNT(DISTINCT entity_id) FROM entity_isin_map WHERE isin IN (<37>) GROUP BY isin`, through `idx_entity_isin_map_isin` (≤ 80 rows) | Records how many of the 37 are still ambiguous after any 013 merges. Members whose ISIN is no longer ambiguous get `member_update` → `fixed` straight after M3a. |
-| B2 | `SELECT entity_id, lei FROM entity_master WHERE entity_id IN (<24>)`, PK (24 rows) | Confirms `current_lei` in the member file still matches live data, because 011 never overwrites an existing LEI |
-| B3 | `SELECT COUNT(*) FROM ops_data_quality_ticket WHERE legacy_source = 'entity_exceptions'`, autoindex | Must equal 003's M1 count before M3a |
+| B1 | `SELECT isin, COUNT(DISTINCT entity_id) FROM entity_isin_map WHERE isin IN (<37>) GROUP BY isin`, through `idx_entity_isin_map_isin` (≤ 80 rows) | Records how many of the 37 are still ambiguous. A member whose ISIN is no longer ambiguous gets `member_update` → `fixed` after M3a, with a note naming the change that cleared it (§7.5). If no applied packet explains it, the member gets a `comment` instead. |
+| B2 | `SELECT entity_id, lei FROM entity_master WHERE entity_id IN (<24>)`, PK (24 rows) | Confirms `current_lei` in Appendix D still matches live data, because 011 never overwrites an existing LEI. **A4-4:** the 24 ids are also compared with 013's hand-off file (the 392 twins) when it exists; any overlap is noted on the member by `comment`, and the key is not rewritten. |
+| B4 | `SELECT parent_entity_id, child_entity_id, relationship_type, source, created_at FROM entity_relationships WHERE parent_entity_id = ? AND child_entity_id = ? AND relationship_type = 'legal_parent'`, PK, × 4 | Confirms the 4 KI 22.9 edges still carry the identity in Appendix D (`source='gleif'`, `created_at` verbatim). A mismatch goes on the member as a `comment`, and the later delete must not touch that row (004-7). |
+| B3 | `SELECT COUNT(*) FROM ops_data_quality_ticket WHERE legacy_source = 'entity_exceptions'`, autoindex | Must equal 003's M1 count (9) before M3a |
 
 ---
 
-## Appendix B — Inputs read (SHA-256 at read time, 15 Oct)
+## Appendix B — Inputs read (SHA-256 at read time, 15 Oct; rev 1 additions 17 Oct at the end)
 
 | File | SHA-256 |
 |---|---|
@@ -631,8 +843,669 @@ Three **build-time checks** (≤ 200 reads, run on Tue 27 before M3):
 | `App/Ops/src/ops-api.js` | `c77973deb5d9d9d69335becee56b9e2c841f897721af3bd0a9aa39cf8c9d7f19` |
 | `App/Corporate Atlas/migrations/ma-sep-015b-entity-exceptions.sql` | `77ef2ce9949fd82eab83ec0012a0fa5e06727e23854628af7926fd30fbdbba65` |
 | `App/Corporate Atlas/migrations/ma-sep-015c-seed-known-issues.sql` | `cf006427970cb7f6068ceb0f99d72ff6240abff26ece08e97a26f73d3b0b8bf1` |
+| **Rev 1 (17 Oct):** `claude/packets/MA-OCT-003.REVARC_Report.md` | `598caa80c6298a89c7eca2edcf42739a52f558313e1d1494812964e9756e2d63` |
+| `claude/packets/MA-OCT-003.REVDIL_Report.md` | `37aaa05723471731d6415a7357808fee38ec256c600daf1349c89b5503f4f217` |
+| `claude/packets/MA-OCT-008.DIL14_Report.md` (§4) | `c517dde7b9a561870ef1123b33d55a2d99fcbdb6f3bbb197dd946691d11c9399` |
+| `claude/packets/MA-OCT-003_ReadPack_Results.md` | `93a8d4349954b85a8123e84c21fb26bc10328c36d3352271e2a1e20995f2af99` |
+| `claude/packets/MA-OCT-003.R1_Task_v1.md` | `1c3c1e6e199f903715853fa6c7d6ec8844bce1eccc5789674cf864622c0a1f1a` |
+| `claude/October_Decisions_Log.md` (17 Oct, ML-1017-1..3) | `df022fe23818d25cd5eda420db7beaf62da97c99175ccd526b9be147aafc631e` |
+| `claude/MA-OCT-006_Evidence.md` (§14.5, §15.3; same hash as rev 0) | `0d1bbf9b69f1e6a28e3bffe4f07175e500f9293c3ee5adb3f20fbdb526ddb1bc` |
+| `App/Corporate Atlas/migrations/corporate-atlas-v1.sql` (`entity_relationships` PK; queue index) | read 17 Oct |
 
 **Limits of this spec lane:**
 - No D1 access.
-- `WORK/day6/wrong_lei_detail.csv` is outside the repo and was not read, so the 24 entity ids come from the Data-Identity Lead's export (§10.2).
-- 008's unmatched count is unknown until Pack C runs.
+- The KI 22.44 members come from Evidence §15.3 in the repo. `WORK/day6/wrong_lei_detail.csv` (SHA `41502aa7…1c01` per §15.3) was not read, and is not needed.
+- 008's full unmatched list is known only when `unmatched-issuers.json` is read at build. The named 4 are seeded either way.
+
+
+---
+
+## Appendix C — Change table, rev 0 → rev 1 (MA-OCT-003.R1)
+
+**Overlaps and conflicts, and the wording taken:**
+
+| # | Meeting point | Wording taken | Why |
+|---|---|---|---|
+| 1 | DIL14 `identity_mismatch` and REVDIL `wrong_identifier` (2289 CIK) | `wrong_identifier` | REVDIL reviews 004 and gives the seed shape; the meaning is identical |
+| 2 | REVDIL 004-1 ("no entity" for GM Financial and Pfizer NL) and DIL14 DQ-3/DQ-4 (corrected: candidates exist) | `missing_entity` tickets **with candidate members** and DIL14's proposed actions. Only Welltower Inc gets `create_entity`. | DIL14 is later and checked against the 16 Oct export. It also adds PepsiCo Singapore Financing I (DQ-5), and Task item 4 lists that too. |
+| 3 | REVDIL 004-8 (members from Evidence §15.3) and rev 0 (a Data-Identity Lead export from `WORK/`) | §15.3 in the repo; the data is embedded verbatim in Appendix D | It removes a dependency, and the check (24, 6/5/13, names) holds by construction |
+| 4 | A4-2 (token scope) and 004-9 (resolve authority) | The allowlist is defined once (003 §8.5). 004 adds the `bond-runner` entry, and §7.5 holds the authority rules | One mechanism for both Founder answers (003 Q3, 004 Q2) |
+| 5 | REVDIL 004-7 (`source` in the edge key) and the `entity_relationships` PK `(parent, child, relationship_type)` | The key carries `source` **and** `created_at`; `object_ref` holds all five fields; B4 re-reads them | `source` alone cannot tell a legacy edge from an 011 edge, because both are `gleif`. `created_at` can. |
+
+| # | Source | Change | Where |
+|---|---|---|---|
+| 1 | A4-1 | Dates follow ML-1017-3: 003 live from Sat 24; 004 local from Mon 26 and remote from Tue 27; slip rule for 007's button | Header, §5, §16 (D-1) |
+| 2 | A4-2 | Worker allowlist on every admin route; `bond-runner` entry; one token per caller; admitted only after verification; storage and expiry | §8.3, §8.5, AC-18, AC-18c, §17 |
+| 3 | A4-3 | Member, `add_members` and `link_exception` changes are guarded; bump and event conditioned on the change; `NOT EXISTS` idempotency | §7.1, AC-9 |
+| 4 | A4-4 | 013 hand-off: never rewrite; read through `entity_merge_redirect`; B2 checks against 013's list | §0 item 11, §5, §7.6, §8.2 C-1, §10.6, App. A B2, AC-19 |
+| 5 | REVARC notes | CSP `base-uri 'none'` (RQ-3); five-status cap (N4-1); member keyset page (N4-2); M4 file SHA (N4-3); `fix_ref` only in the event (N4-4); N4-5 noted | §9.2, §11.1, §8.2, §10.4, §7.5 |
+| 6 | 004-1 | Named minimum set in M4 and AC-13: Welltower Inc, GM Financial, Pfizer NL (co-registrant, no parent link), plus PepsiCo Singapore Financing I | §0 item 8, §10.4, AC-13, App. D |
+| 7 | 004-2 | `wrong_identifier` type; 2289 `cik` seed; sequenced before 008's 2289 link | §7.2, §10.2, AC-17, §19 H-3 |
+| 8 | 004-3 | KI 22.43 aggregate, 0 members, `fix_ref` MA-OCT-011; recurrence goes to the enrich fix packet | §7.2 (`no_link_marker`), §10.2, AC-17 |
+| 9 | 004-4 | M5: 7 `gleif_handoff` aggregates after 011 close-out (H-1) | §10.5, AC-17, §16 |
+| 10 | 004-5 | OTP Bank `entity_merge` seed (2019 / 467290), `fix_ref` MA-OCT-013 | §10.2, AC-17, §19 H-2 |
+| 11 | 004-6 | `reopen` on `do_not_merge` tickets refused without `founder_supersession` | §0 item 10, §7.1, §7.5, AC-18 |
+| 12 | 004-7 | KI 22.9 members carry the full edge identity, `source` included | §10.2, AC-12, App. A B4 |
+| 13 | 004-8 | KI 22.44 members from Evidence §15.3 (24 = 25 less OPAP; 6/5/13); `null_and_offline_match`; 931 cites `DQ-M-000001` | §5, §7.3, §10.2, AC-12, App. D |
+| 14 | 004-9 | Resolve authority (§7.5); AC-17, AC-18 added | §0 item 10, §7.1, §7.5, AC-18 |
+| 15 | F-1 (004 Q1) | KI 22.9 aggregate now unconditional; legacy tickets linked, not changed | Header, §0, §10.2, AC-12 |
+| 16 | F-2 (004 Q2) | 008's runner raises `missing_entity` with the `bond-runner` token | Header, §0 item 8, §8.5, §10.4 |
+| 17 | F-3 (004 Q3) | `dq_new` in the sweep and the notification line; P0 | Header, §9.5, §13 R7, AC-20 |
+| 18 | Task item 4 | All listed DQ items seeded (Welltower CIK on 2289; Welltower Inc, GM Financial, Pfizer NL; PepsiCo Singapore linked to guarantor 1457; OTP pair; KI 22.44, 22.43, 22.9) | §10.2, §10.4, App. D |
+| 19 | Author's dry-run | Rev 1 seeds dry-run on the real legacy rows; all re-runs give 0 changes | §15 |
+
+---
+
+## Appendix D — Seed data, verbatim (the build writes these files byte-for-byte)
+
+**`App/Ops/seeds/m3-seeds.json`** (5 seeds; 30 members):
+
+```json
+[
+ {
+  "dedupe": "ki:22.44",
+  "type": "wrong_lei",
+  "sev": "sev2",
+  "status": "triaged",
+  "title": "KI 22.44: 24 entities carry a wrong LEI (subsidiary 18, other/predecessor 6)",
+  "summary": "23 from the June isin_direct bulk mapping, 1 unknown source (SLM). Excluded from MA-OCT-011; 011 never overwrites an existing LEI.",
+  "od": "source_record",
+  "ok": "known-issue:22.44",
+  "ref": {
+   "ki": "22.44",
+   "rc": "RC-12",
+   "members": 24
+  },
+  "src": "ma-oct-006",
+  "evidence": "MA-OCT-006 Evidence §15.3 (0d1bbf9b…db1bc; wrong_lei_detail.csv SHA 41502aa7…1c01), §14.4; D5-8, D6-4 (OPAP cleared), D6-5; Matrix rank 14.",
+  "proposal": "Per member: replace with the T1 LEI (6); review the non-T1 candidate (5); set NULL and match in the next offline GLEIF pass (13). Manual correction by a Data-Identity Lead packet after 24 Oct.",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "entity",
+    "k": "528",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "Investar Holding Corp",
+     "current_lei": "549300CPKDUJKREQRG38",
+     "correct_lei": "54930001EK2YM28LOJ08",
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "575",
+    "act": "review",
+    "ref": {
+     "name": "United Community Banks Inc/GA",
+     "current_lei": "T68X8LLAQYRNDV034K14",
+     "correct_lei": "549300GVW0FV66X3U703",
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "576",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "United Fire Group Inc",
+     "current_lei": "549300ZRC3FQZU7GNY20",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "596",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "Crescent Energy Co",
+     "current_lei": "549300WN2AGOX1011V72",
+     "correct_lei": "254900FBNP5A21Q39U97",
+     "kind": "other_or_predecessor"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "702",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Graphic Packaging Holding Co",
+     "current_lei": "SO75N4VY5NXGQSK8YQ65",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "838",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Franklin Financial Services Corp",
+     "current_lei": "5493008E3WZYM5146L29",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "890",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Carter Bankshares Inc",
+     "current_lei": "549300SO0M022D8D8358",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "899",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Oak Valley Bancorp",
+     "current_lei": "549300D2R9YSQ442G068",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "902",
+    "act": "review",
+    "ref": {
+     "name": "Chord Energy Corp",
+     "current_lei": "52990028CHK9KUB1B293",
+     "correct_lei": "529900FA4V2YNIKZ0M71",
+     "kind": "other_or_predecessor"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "927",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "ServisFirst Bancshares Inc",
+     "current_lei": "549300XSS1CPK8G7B851",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "931",
+    "act": "review",
+    "ref": {
+     "name": "SLM Corp",
+     "current_lei": "54930067J0ZNOEBRW338",
+     "correct_lei": "4K8SLPBF5DXXGPW03H93",
+     "kind": "other_or_predecessor",
+     "see_also": "DQ-M-000001 (do_not_merge 931/1216)"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "943",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Chemung Financial Corp",
+     "current_lei": "549300WU17K1CLH8VI32",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1015",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Bar Harbor Bankshares",
+     "current_lei": "549300VR3QTN4GZYUR03",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1049",
+    "act": "review",
+    "ref": {
+     "name": "Mercury General Corp",
+     "current_lei": "5493008B54WFZLDKD530",
+     "correct_lei": "5493001Q9EXPCEL4W527",
+     "kind": "other"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1134",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "Alpha Metallurgical Resources Inc",
+     "current_lei": "549300C9E158C3V6PT51",
+     "correct_lei": "254900VEBGZO2PY8R678",
+     "kind": "other_or_predecessor"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1138",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Amalgamated Financial Corp",
+     "current_lei": "254900FMBXF85WQYV433",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1157",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Mid Penn Bancorp Inc",
+     "current_lei": "254900L0MIAM922ZEC34",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1162",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Sierra Bancorp",
+     "current_lei": "5493003HTEY5OCC5SP27",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1181",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "City Holding Co",
+     "current_lei": "549300KJZ82173UB3I21",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1455",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "MDU Resources Group Inc",
+     "current_lei": "0T6SBMK3JTBI1JR36794",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1514",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "Jacobs Solutions Inc",
+     "current_lei": "549300CZ8QS1GE53O776",
+     "correct_lei": "254900E3KHXCC2C8K272",
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1803",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "APA Corp.",
+     "current_lei": "72ZZ1XRHOOU9P9X16K08",
+     "correct_lei": "549300VCIWLRHYVSHC79",
+     "kind": "other_or_predecessor"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1809",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "Old National Bancorp",
+     "current_lei": "549300AT7EB9FJAF0E61",
+     "correct_lei": "549300MMK90CL5KMVX16",
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1868",
+    "act": "review",
+    "ref": {
+     "name": "Wendy's Co/The",
+     "current_lei": "549300PQTT267ME8D359",
+     "correct_lei": "529900M0JIUCMWVKHG76",
+     "kind": "subsidiary"
+    }
+   }
+  ]
+ },
+ {
+  "dedupe": "ki:22.9",
+  "type": "bad_relationship_edge",
+  "sev": "sev3",
+  "status": "triaged",
+  "title": "KI 22.9: 4 legal_parent edges with no GLEIF relationship (MA-SEP-001 merge)",
+  "summary": "Reopened as a fix by Founder decision 17 Oct (004 F-1). The 22 Aug accepted_no_fix stays on record on DQ-M-000004…7.",
+  "od": "source_record",
+  "ok": "known-issue:22.9",
+  "ref": {
+   "ki": "22.9",
+   "rc": "RC-20",
+   "members": 4,
+   "legacy": [
+    "DQ-M-000004",
+    "DQ-M-000005",
+    "DQ-M-000006",
+    "DQ-M-000007"
+   ]
+  },
+  "src": "ma-oct-006",
+  "evidence": "MA-OCT-006 Evidence §14.5 (0d1bbf9b…db1bc); Matrix rank 10; 015c migration.",
+  "proposal": "Delete the 4 edges by full identity (parent, child, relationship_type, source, created_at); ≈ 16 Entities writes; Data-Identity Lead packet ≥ Sat 24. Never touch an edge whose source or created_at differs (e.g. an 011 edge).",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "source_record",
+    "k": "entity_relationships:1565->3:legal_parent:gleif:2026-06-10T19:51:32",
+    "act": "delete_edge",
+    "ref": {
+     "parent_entity_id": 1565,
+     "child_entity_id": 3,
+     "relationship_type": "legal_parent",
+     "source": "gleif",
+     "created_at": "2026-06-10 19:51:32",
+     "d4_rowid": 265
+    }
+   },
+   {
+    "d": "source_record",
+    "k": "entity_relationships:2247->143:legal_parent:gleif:2026-06-11T00:00:55",
+    "act": "delete_edge",
+    "ref": {
+     "parent_entity_id": 2247,
+     "child_entity_id": 143,
+     "relationship_type": "legal_parent",
+     "source": "gleif",
+     "created_at": "2026-06-11 00:00:55",
+     "d4_rowid": 267
+    }
+   },
+   {
+    "d": "source_record",
+    "k": "entity_relationships:2476->49:legal_parent:gleif:2026-06-10T20:00:59",
+    "act": "delete_edge",
+    "ref": {
+     "parent_entity_id": 2476,
+     "child_entity_id": 49,
+     "relationship_type": "legal_parent",
+     "source": "gleif",
+     "created_at": "2026-06-10 20:00:59",
+     "d4_rowid": 266
+    }
+   },
+   {
+    "d": "source_record",
+    "k": "entity_relationships:6980->194:legal_parent:gleif:2026-06-11T02:00:56",
+    "act": "delete_edge",
+    "ref": {
+     "parent_entity_id": 6980,
+     "child_entity_id": 194,
+     "relationship_type": "legal_parent",
+     "source": "gleif",
+     "created_at": "2026-06-11 02:00:56",
+     "d4_rowid": 268
+    }
+   }
+  ]
+ },
+ {
+  "dedupe": "ki:22.43",
+  "type": "no_link_marker",
+  "sev": "sev3",
+  "status": "fix_pending",
+  "fix_ref": "MA-OCT-011 (bucket C)",
+  "title": "KI 22.43: 657 NO_LINK_DECLARED markers are wrong (GLEIF has an ACTIVE parent)",
+  "summary": "Aggregate with 0 members (657 > the 500 member cap). Resolve after 011 §9 verification. Recurrence: live Phase 3 keeps writing the generic marker (H6) — stays open under the enrich fix packet.",
+  "od": "source_record",
+  "ok": "known-issue:22.43",
+  "ref": {
+   "ki": "22.43",
+   "rc": "RC-5",
+   "rows": 657
+  },
+  "src": "ma-oct-006",
+  "evidence": "MA-OCT-006 Matrix rank 3 (RC-5), ki2243_rows.csv; 657 after D7-2. 011 close-out list SHA to be added by comment (H-1).",
+  "proposal": "MA-OCT-011 bucket C writes the GLEIF reason; enrich fix packet stops the recurrence.",
+  "owner": "Data-Identity Lead",
+  "members": []
+ },
+ {
+  "dedupe": "wrong_identifier:entity:2289:cik",
+  "type": "wrong_identifier",
+  "sev": "sev2",
+  "status": "triaged",
+  "title": "Entity 2289 (Welltower OP LLC) stores Welltower Inc's CIK",
+  "summary": "cik 0000766704 belongs to Welltower Inc; Welltower OP LLC is 0001917598. Must be fixed before 008 applies its signed Welltower OP LLC -> 2289 link (008.DIL14 item 2; H-3).",
+  "od": "entity",
+  "ok": "2289",
+  "ref": {
+   "name": "Welltower OP LLC",
+   "lei": "T6IZ0MBEG5ACZDTR7D06"
+  },
+  "src": "ma-oct-008",
+  "field": "cik",
+  "obs": "0000766704",
+  "exp": "0001917598",
+  "evidence": "MA-OCT-008.DIL14 §4 DQ-1 (c517dde7…c9399); Pack C packc-b3.json / packc-c2.json.",
+  "proposal": "One Entities UPDATE of entity_master.cik (~2 writes), Data-Identity Lead, after 24 Oct, before the 2289 link.",
+  "owner": "Data-Identity Lead",
+  "members": []
+ },
+ {
+  "dedupe": "entity_merge:2019:467290",
+  "type": "entity_merge",
+  "sev": "sev3",
+  "status": "fix_pending",
+  "fix_ref": "MA-OCT-013",
+  "title": "OTP Bank: entity 2019 (operating, no LEI) and 467290 (holding, LEI 529900W3MOO00A18X956) — merge in 013",
+  "summary": "467290 was created by live Phase 3 on 6 Oct; MA-OCT-011 withheld 2019. Input for 013 (H-2).",
+  "od": "entity",
+  "ok": "2019",
+  "ref": {
+   "pair": [
+    2019,
+    467290
+   ],
+   "lei": "529900W3MOO00A18X956"
+  },
+  "src": "ma-oct-011",
+  "evidence": "MA-OCT-011.FRI_Report; RELARC N-3; REVDIL 004-5.",
+  "proposal": "Resolve the pair in MA-OCT-013 (S1); never by 004.",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "entity",
+    "k": "2019",
+    "act": "merge_013",
+    "ref": {
+     "name": "OTP Bank Nyrt",
+     "type": "operating"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "467290",
+    "act": "merge_013",
+    "ref": {
+     "type": "holding",
+     "lei": "529900W3MOO00A18X956"
+    }
+   }
+  ]
+ }
+]
+```
+
+**`App/Ops/seeds/m4-minimum.json`** (the named 4; 7 members):
+
+```json
+[
+ {
+  "dedupe": "sec_cik:0000766704",
+  "type": "missing_entity",
+  "sev": "sev4",
+  "status": "open",
+  "title": "SEC issuer Welltower Inc (CIK 0000766704) has no entity",
+  "summary": "Low priority: 0 final bond rows under its own CIK (equity skips only). Never link to Welltower OP LLC.",
+  "od": "source_record",
+  "ok": "sec_cik:0000766704",
+  "ref": {
+   "cik": "0000766704",
+   "sec_name": "Welltower Inc",
+   "lei": "254900F33BIAR82QTA19",
+   "co_registrant_of": null
+  },
+  "src": "ma-oct-008",
+  "evidence": "MA-OCT-008.DIL14 §4 DQ-2 (name search of the 16 Oct export finds only OP LLC rows 2289, 245698).",
+  "proposal": "Manual creation from GLEIF Level 1, then a manual link (008 §11.1: never automatic).",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "source_record",
+    "k": "gleif:254900F33BIAR82QTA19",
+    "act": "create_entity",
+    "ref": {
+     "name": "Welltower Inc"
+    }
+   }
+  ]
+ },
+ {
+  "dedupe": "sec_cik:0000804269",
+  "type": "missing_entity",
+  "sev": "sev3",
+  "status": "open",
+  "title": "SEC issuer GM Financial (CIK 0000804269): 3 duplicate no-LEI candidates, none linked",
+  "summary": "No entity carries LEI 5493008B6JBRUJ90QL97; three no-LEI candidate rows are themselves duplicates. Do not create a fourth row. Also an input for 013.",
+  "od": "source_record",
+  "ok": "sec_cik:0000804269",
+  "ref": {
+   "cik": "0000804269",
+   "sec_name": "General Motors Financial Company, Inc.",
+   "lei": "5493008B6JBRUJ90QL97",
+   "co_registrant_of": null
+  },
+  "src": "ma-oct-008",
+  "evidence": "MA-OCT-008.DIL14 §4 DQ-3 (corrected).",
+  "proposal": "Resolve the cluster to one survivor (S1, 013), assign the LEI by a manual Level-1 write, then a manual link.",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "entity",
+    "k": "3324",
+    "act": "merge_then_assign_lei",
+    "ref": {
+     "name": "GENERAL MOTORS FINL CO"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "30187",
+    "act": "merge_then_assign_lei",
+    "ref": {
+     "name": "General Motors Financial Co Inc"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "103981",
+    "act": "merge_then_assign_lei",
+    "ref": {
+     "name": "GENERAL MOTORS FINANCIAL COMPANY INC"
+    }
+   }
+  ]
+ },
+ {
+  "dedupe": "sec_cik:0002058265",
+  "type": "missing_entity",
+  "sev": "sev3",
+  "status": "open",
+  "title": "SEC co-registrant Pfizer Netherlands International Finance B.V. (CIK 0002058265) not linked",
+  "summary": "Co-registrant of Pfizer (L8-12). Candidate 106006 (NL, no LEI). Never link to the parent.",
+  "od": "source_record",
+  "ok": "sec_cik:0002058265",
+  "ref": {
+   "cik": "0002058265",
+   "sec_name": "Pfizer Netherlands International Finance B.V.",
+   "lei": "254900YI79T8NMNA4349",
+   "co_registrant_of": "Pfizer Inc"
+  },
+  "src": "ma-oct-008",
+  "evidence": "MA-OCT-008.DIL14 §4 DQ-4 (corrected); MA-OCT-008.AC17 L8-12.",
+  "proposal": "Confirm 106006 against GLEIF, assign the LEI manually, then a manual link.",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "entity",
+    "k": "106006",
+    "act": "confirm_and_assign_lei",
+    "ref": {
+     "name": "Pfizer Netherlands International Finance BV",
+     "country": "NL"
+    }
+   }
+  ]
+ },
+ {
+  "dedupe": "sec_cik:0002007029",
+  "type": "missing_entity",
+  "sev": "sev3",
+  "status": "open",
+  "title": "SEC issuer PepsiCo Singapore Financing I Pte. Ltd. (CIK 0002007029): rows sit under guarantor PepsiCo Inc",
+  "summary": "Its 4 bond rows are under PepsiCo Inc (entity 1457, P-1) and move under 008's R-1. Two duplicate no-LEI candidates. The link stays unmatched until resolved; never link to the guarantor.",
+  "od": "source_record",
+  "ok": "sec_cik:0002007029",
+  "ref": {
+   "cik": "0002007029",
+   "sec_name": "PepsiCo Singapore Financing I Pte. Ltd.",
+   "lei": null,
+   "co_registrant_of": null,
+   "current_wrong_link_entity": 1457
+  },
+  "src": "ma-oct-008",
+  "evidence": "MA-OCT-008.DIL14 §4 DQ-5 (new).",
+  "proposal": "008 R-1 moves the rows off 1457; resolve the duplicates to one survivor (013), then a manual link.",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "entity",
+    "k": "3367",
+    "act": "merge_then_assign_lei",
+    "ref": {
+     "name": "PEPSICO SINGAPORE FIN"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "31416",
+    "act": "merge_then_assign_lei",
+    "ref": {
+     "name": "Pepsico Singapore Financing I Pte Ltd"
+    }
+   }
+  ]
+ }
+]
+```
+
+Field key: `dedupe` → `dedupe_key`; `type` → `ticket_type`; `sev`; `status`; `od`/`ok` → `object_domain`/`object_key`; `ref` → `object_ref`; `src` → `source_system`; `field`/`obs`/`exp` → `field_name`/`observed_value`/`expected_value`; `proposal` → `proposed_resolution`; `owner` → `owner_role`; `fix_ref` → the `fix_scheduled` event only. Members: `d`/`k` → `object_domain`/`object_key`; `act` → `proposed_action`; `ref` → `object_ref`.
