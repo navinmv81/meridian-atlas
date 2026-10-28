@@ -1,0 +1,2 @@
+# MA-OCT-008 CR1: runner state (flags, run log, cursor, document cache, batch SQL, outbox) is never committed.
+state/
