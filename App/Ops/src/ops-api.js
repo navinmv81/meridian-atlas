@@ -59,6 +59,7 @@
 
 import { computeLateness, intendedDrift, MAX_LOOKBACK_DAYS } from './lateness.js';
 import { adminRouteId, handleCases, serviceGate } from './cases.js';   // MA-OCT-003 routes
+import { autoResolve, conditionFindings, dailyChecks, firstSweepToday, frozenBranches, rekeyConditions, suppress } from './sweep-ext.js';   // MA-OCT-003 sweep
 
 const DAILY_WRITE_LIMIT = 80000; // matches holdings-pipeline.js's shared guard
 
@@ -627,7 +628,7 @@ async function ingestRunEvent(request, env) {
 // Jobs without an emitter read nothing extra (their slots are `unobserved`).
 
 const L2_SQL = `SELECT run_id, phase, event_type, trigger, started_at, ended_at, cursor_after,
-                       items_attempted, items_progressed, detail, end_only
+                       items_attempted, items_progressed, error_class, detail, end_only
                 FROM ops_job_run WHERE job_id = ? AND started_at >= ? ORDER BY started_at`;
 
 function lookbackWindow(url) {
@@ -807,18 +808,38 @@ async function sweep(request, env) {
   const state = Object.fromEntries(res[1].results.map(r => [r.key, r.value]));
   const findings = [];
   let raisedToday = 0;
+  const gleifOn = env.OPS_SWEEP_GLEIF_CHECKS !== 'false';               // MA-OCT-003 §11.3 switch
+  const latByJob = new Map();                                          // MA-OCT-003 §9.4 input
+  let sweepRows = [];
   emitting.forEach((j, i) => {
     const runRows = res[i + 2].results;
     if (j.job_id === SWEEP_JOB_ID) {
+      sweepRows = runRows;
       for (const r of runRows) {
         if (r.phase !== 'end' || !String(r.started_at).startsWith(today)) continue;
         try { raisedToday += Number(JSON.parse(r.detail || '{}')?.metrics?.raised) || 0; } catch { /* ignore */ }
       }
     }
     try {
-      findings.push(...jobFindings(j, computeLateness(j, runRows, pauses, now, days), runRows));
+      const lat = computeLateness(j, runRows, pauses, now, days);
+      latByJob.set(j.job_id, lat);
+      let jf = jobFindings(j, lat, runRows);
+      if (gleifOn) {                                                   // MA-OCT-003 §9.3 E1, E5, E6
+        const c = conditionFindings(j, runRows, today);
+        if (c.e1 && !frozenBranches(runRows).cursor) jf = jf.filter(f => f.type !== 'job_frozen');   // E1 replaces the F4 branch
+        jf.push(...c.findings);
+      }
+      findings.push(...jf);
     } catch (err) { console.log(`[ops-sweep] lateness error for ${j.job_id}: ${err && err.message}`); }
   });
+  let gleifChecks = { e2: null, e4: null };                            // MA-OCT-003 §9.3 E2, E4 (once a UTC day)
+  if (gleifOn && firstSweepToday(sweepRows, today)) {
+    try {
+      const dc = await dailyChecks(env, reg, now, today, meta);
+      findings.push(...dc.findings);
+      gleifChecks = { e2: dc.e2, e4: dc.e4 };
+    } catch (err) { console.log(`[ops-sweep] daily GLEIF checks failed: ${err && err.message}`); }
+  }
 
   const hold = state.hold_all_jobs === 'true';
   if (hold) findings.push({ type: 'hold_active', severity: 'sev2', dedupe_key: `hold_active:${today}`, title: 'hold_all_jobs is TRUE', summary: 'All D1-writing pipelines are halted (shared kill switch).' });
@@ -841,7 +862,10 @@ async function sweep(request, env) {
                 last_run_status: state.last_run_status ?? null, sunday, sunday_writes: sundayWrites };
 
   // 5. Raise only NEW findings: dedupe pre-check (unique-index probes), then cap.
-  const uniq = [...new Map(findings.map(f => [f.dedupe_key, f])).values()];
+  // MA-OCT-003 §9.1: condition findings are keyed per UTC day, then S2 suppresses an open / snoozed case.
+  rekeyConditions(findings, today);
+  const sup = await suppress(env, [...new Map(findings.map(f => [f.dedupe_key, f])).values()], now, meta);
+  const uniq = sup.kept;
   let existing = new Set();
   for (let i = 0; i < uniq.length; i += 50) {
     const chunk = uniq.slice(i, i + 50).map(f => f.dedupe_key);
@@ -892,13 +916,22 @@ async function sweep(request, env) {
     }
   }
 
+  // MA-OCT-003 §9.4 (F-1): auto-resolve replayed job_missed; own cap (20), counted apart from raises.
+  let ar = { auto_resolved: [], skipped_reopened: 0 };
+  if (env.OPS_SWEEP_AUTORESOLVE === 'true') {
+    try { ar = await autoResolve(env, latByJob, emitter, now, meta); }
+    catch (err) { console.log(`[ops-sweep] auto-resolve failed: ${err && err.message}`); }
+  }
+
   // 6. Open counts (covering idx_ops_exception_queue).
   const oc = meta(await env.DB.prepare(`SELECT severity, COUNT(*) AS n FROM ops_exception WHERE status = 'open' GROUP BY severity`).all()).results;
   return jsonPrivate({
     ok: true, run_id: body.run_id, lookback_days: days, hold_all_jobs: hold,
     headroom: d1 ? { rows_written: d1.rowsWritten, daily_cap: d1.daily_cap, headroom } : null,
-    etf, findings: uniq.length, already_open: existing.size, new: raised, raised: raised.length,
+    etf, findings: uniq.length + sup.suppressed, already_open: existing.size + sup.suppressed, new: raised, raised: raised.length,
     overflow, raised_today_before: raisedToday, daily_cap: dailyCap,
+    suppressed: sup.suppressed, s2_rows_read: sup.s2, gleif_checks: gleifChecks,
+    auto_resolved: ar.auto_resolved, autoresolve_skipped_reopened: ar.skipped_reopened,
     open_counts: Object.fromEntries(oc.map(r => [r.severity, r.n])), rows_read: rowsRead
   });
 }

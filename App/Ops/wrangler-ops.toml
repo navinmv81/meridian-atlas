@@ -51,3 +51,8 @@ OPS_SWEEP_DAILY_RAISE_CAP = "100"
 #    "actions":{"EXC":["acknowledge","assign","comment","set_severity","resolve","dismiss","reopen"],"DQ":["comment","assign","triage"]}}}
 OPS_CASES_ENABLED = "true"
 OPS_SERVICE_ACTORS = '{"0b8216d5b404b87731353bd452829e99.access":{"label":"ops-script","routes":["E-1","E-2","C-1","C-2"],"actions":{"EXC":["acknowledge","assign","comment","set_severity","resolve","dismiss","reopen"],"DQ":["comment","assign","triage"]}}}'
+# MA-OCT-003 sweep extensions (spec rev 1 §9, §11.3) — deploy 4 (Wed 28, after deploy 3's S-3 proof).
+# OPS_SWEEP_GLEIF_CHECKS="false" turns off E1, E2, E4, E5, E6 (0 extra reads). OPS_SWEEP_AUTORESOLVE must be
+# exactly "true" for §9.4 auto-resolve (F-1); "false" (or absent) turns it off with 0 reads.
+OPS_SWEEP_GLEIF_CHECKS = "true"
+OPS_SWEEP_AUTORESOLVE = "true"
