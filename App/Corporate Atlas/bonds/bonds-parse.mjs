@@ -21,7 +21,7 @@
 //   N-3    the audit title prefers the cover's offering line and drops EDGAR header tokens.
 //   L8-12  co-registrant issuers are resolved by the runner (coverIssuers() below names them).
 
-export const PARSER_VERSION = 'bonds-1.1.0';
+export const PARSER_VERSION = 'bonds-1.2.0';   // 1.2.0: DIL14 R-2 floating-spread wordings (MA-OCT-THU29.ENG8)
 
 // ── Visible text (R1) ────────────────────────────────────────────────────
 
@@ -364,23 +364,29 @@ function findSpread(body, t, single) {
   else if (t.rateType === 'floating') re = /(?<!to[- ])Floating Rate (?:Notes|Debentures|Senior Notes|Global Notes|Medium-Term Notes)/gi;
   else re = new RegExp(`(?<![\\d.])${couponRe(t.coupon)}`, 'g');
   let m;
-  while ((m = re.exec(body)) && anchors.length < 60) anchors.push(m.index);
+  while ((m = re.exec(body)) && anchors.length < 150) anchors.push(m.index);   // R-2 (1.2.0): was 60; Home Depot's own mention is the 74th
   if (!anchors.length && single) anchors.push(0);
-  const stop = single ? null : t.rateType === 'floating' ? /Fixed[- ]to[- ]Floating|Fixed Rate Notes|\d\.\d{2,4}\s?% (?:Fixed|Senior|Notes)/i : /(?<!to[- ])Floating Rate (?:Notes|Debentures)|\d\.\d{2,4}\s?%/;
+  // R-2 (1.2.0): a rate preceded by "plus" / "Spread of" is this tranche's own spread, never the next tranche's coupon.
+  const NOT_SPREAD = '(?<!(?:plus|\\+|[Ss]pread of)\\s{0,3})';
+  const stop = single ? null : t.rateType === 'floating' ? new RegExp(`Fixed[- ]to[- ]Floating|Fixed Rate Notes|${NOT_SPREAD}\\d\\.\\d{2,4}\\s?% (?:Fixed|Senior|Notes)`, 'i')
+    : new RegExp(`(?<!to[- ])Floating Rate (?:Notes|Debentures)|${NOT_SPREAD}\\d\\.\\d{2,4}\\s?%`);
   const pats = [
-    /(?:Compounded SOFR|SOFR(?: Index)?|Term SOFR|EURIBOR|SONIA|benchmark rate)[^.%]{0,120}?(?:plus|\+)\s*(?:a spread of\s*)?(\d{1,2}\.\d{1,4})\s?%/i,
+    /(?:Compounded SOFR|SOFR(?: Index)?|Term SOFR|EURIBOR|SONIA|benchmark rate|base rate)[^.%]{0,120}?(?:plus|\+)\s*(?:a spread of\s*)?(\d{1,2}\.\d{1,4})\s?%/i,   // R-2: + "base rate" (Capital One)
     /(?:plus|\+)\s*(?:a spread of\s*)?(\d{1,3}(?:\.\d+)?)\s*basis points/i,
     /Spread(?:\s*\([^)]{0,20}\))?\s*:?\s*(?:plus|\+)?\s*(\d{1,3}(?:\.\d+)?)\s*basis points/i,
     /Spread(?:\s*\([^)]{0,20}\))?\s*:?\s*(?:plus|\+)\s*(\d{1,2}\.\d{1,4})\s?%/i
   ];
-  for (const a of anchors) {
-    let win = body.slice(a, a + 1200);
+  // R-2 (1.2.0): the labelled term-sheet field ("Spread: +65 basis points", Toyota MTN) may sit further from
+  // the tranche anchor than prose does; it alone is searched in a wider window, still cut at the next tranche.
+  const FIELD = /Spread\s*:\s*(?:plus|\+)?\s*(\d{1,3}(?:\.\d+)?)\s*basis points/i;
+  for (const wide of [false, true]) for (const a of anchors) {
+    let win = body.slice(a, a + (wide ? 3000 : 1200));
     if (stop) {
       const skip = t.rateType === 'floating' ? 20 : couponRe(t.coupon).length;   // past the anchor itself
       const s = win.slice(skip).search(stop);
       if (s >= 0) win = win.slice(0, skip + s);
     }
-    for (const [i, p] of pats.entries()) {
+    for (const [i, p] of (wide ? [[2, FIELD]] : pats.entries())) {
       const x = win.match(p);
       if (x) {
         const v = Number(x[1]);

@@ -262,3 +262,29 @@ test('L8-12: co-registrant issuers on the cover are named; two names = mixed cov
   assert.deepEqual(coverIssuers('Welltower OP LLC $400,000,000 4.500% Notes due 2030 Fully and Unconditionally Guaranteed by Welltower Inc. Welltower OP LLC').names, ['Welltower OP LLC'], 'guarantor name is not a second issuer');
   assert.deepEqual(coverIssuers('Apple Inc. $1,500,000,000 4.000% Notes due 2028'), { names: [], guaranteed: false });
 });
+
+// MA-OCT-THU29.ENG8 — DIL14 R-2 (P-2): the three missed floating-spread wordings + benchmark (parser 1.2.0).
+const tr = (r, seq) => r.rows.find(x => x.tranche_seq === seq);
+test('R-2 row 43/44: Toyota MTN term-sheet field "Spread: +NN basis points" → spread + SOFR', () => {
+  for (const [n, bps] of [['toyota-424b2-mtn-frn-2026-03-11', 65], ['toyota-424b2-mtn-frn-2026-05-12', 48]]) {
+    const x = tr(parse(n), 1);
+    assert.equal(x.rate_type, 'floating', n); assert.equal(x.spread_bps, bps, n); assert.equal(x.benchmark, 'SOFR', n);
+    assert.equal(x.coupon_rate, null, n); assert.equal(x.filing_status, 'final', n);
+  }
+});
+test('R-2 row 46: Capital One "base rate … plus 2.260%" on the fixed-to-floating leg → 226 bps; coupon 6.051% kept', () => {
+  const r = parse('capone-424b2-ftf-2024-01-30');
+  const x = tr(r, 2); assert.equal(x.rate_type, 'fixed_to_floating'); assert.equal(x.coupon_rate, 6.051); assert.equal(x.spread_bps, 226); assert.equal(x.benchmark, 'SOFR');
+  assert.equal(tr(r, 1).spread_bps, 191);                 // 2030 notes "plus 1.905%" (integer bps column)
+});
+test('R-2 American Express fixed-to-floating: the spread right after the coupon is not cut off as the next tranche', () => {
+  const r = parse('amex-424b2-ftf-2026-02-04');
+  assert.deepEqual([1, 2, 3].map(s => [tr(r, s).rate_type, tr(r, s).spread_bps, tr(r, s).benchmark]),
+    [['fixed_to_floating', 58, 'SOFR'], ['fixed_to_floating', 87, 'SOFR'], ['floating', 59, 'SOFR']]);
+  assert.deepEqual([tr(r, 1).coupon_rate, tr(r, 2).coupon_rate], [4.009, 4.456]);
+});
+test('R-2 Home Depot: the tranche\'s own "Compounded SOFR plus 0.330%" past the 60th anchor → 33 bps', () => {
+  const x = tr(parse('homedepot-424b2-frn-2024-06-18'), 1);
+  assert.equal(x.rate_type, 'floating'); assert.equal(x.spread_bps, 33); assert.equal(x.benchmark, 'SOFR');
+});
+test('R-2: parser version is bonds-1.2.0', () => { assert.equal(parse('toyota-424b2-mtn-frn-2026-03-11').rows[0].parser_version, 'bonds-1.2.0'); });
