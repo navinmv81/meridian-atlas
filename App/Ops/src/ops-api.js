@@ -7,7 +7,9 @@
 // Board, Release Ledger, operational events, release drift — 4 public GETs and
 // 4 admin POSTs) moved to the meridian-control Worker (src/control-api.js), same
 // paths. This Worker served 7 endpoints plus 2 rules after A6; MA-OCT-003 added 4 (src/cases.js) and
-// MA-OCT-004 adds 3 (D-1, D-2, D-3), so 14 of the 15-endpoint ceiling. Before 003 these were:
+// MA-OCT-004 adds 3 (D-1, D-2, D-3) and MA-OCT-005 adds GET /api/ops/admin/console (the
+// operator console shell, src/console-page.js), so 15 of the 15-endpoint ceiling: no headroom.
+// The next route needs a Worker split or the fold of D-3 into the console (005 RQ-1). Before 003:
 //   GET /api/ops/budget-risk, /api/ops/openfigi-status, /api/ops/cf/invocations,
 //       /api/ops/cf/d1-today; GET /api/ops/admin/jobs;
 //   POST /api/ops/ingest/run-event, /api/ops/ingest/sweep;
@@ -61,6 +63,7 @@
 import { computeLateness, intendedDrift, MAX_LOOKBACK_DAYS } from './lateness.js';
 import { adminRouteId, handleCases, serviceGate } from './cases.js';   // MA-OCT-003 routes
 import { autoResolve, conditionFindings, dailyChecks, firstSweepToday, frozenBranches, rekeyConditions, suppress } from './sweep-ext.js';   // MA-OCT-003 sweep
+import { renderConsoleShell } from './console-page.js';                // MA-OCT-005 console shell
 
 const DAILY_WRITE_LIMIT = 80000; // matches holdings-pipeline.js's shared guard
 
@@ -816,8 +819,11 @@ async function sweep(request, env) {
     const runRows = res[i + 2].results;
     if (j.job_id === SWEEP_JOB_ID) {
       sweepRows = runRows;
-      for (const r of runRows) {   // MA-OCT-004 §9.5: the previous health-check start, from rows L2 already read
-        if (r.phase === 'start' && r.run_id !== body.run_id && (!prevSweepStart || r.started_at > prevSweepStart)) prevSweepStart = r.started_at;
+      // MA-OCT-004 §9.5: the previous health-check start, from rows L2 already read. Either phase counts:
+      // an 'end' row carries the run's started_at too, and a 'start' can arrive late from the runner's
+      // outbox (Fri 30: the 08:00Z start reached Ops at 12:00:06Z), so 'start' alone could skip a run.
+      for (const r of runRows) {
+        if (r.run_id !== body.run_id && (!prevSweepStart || r.started_at > prevSweepStart)) prevSweepStart = r.started_at;
       }
       for (const r of runRows) {
         if (r.phase !== 'end' || !String(r.started_at).startsWith(today)) continue;
@@ -956,6 +962,9 @@ async function handleAdmin(request, env, url, path, method) {
   if (caseResp) return caseResp;
 
   if (path === '/api/ops/admin/jobs' && method === 'GET') return await listJobs(env, url);
+  // MA-OCT-005 (Option B): the operator console shell, 0 D1. Human-only: its route id is 'other',
+  // which serviceGate above refuses to every service token (N-6).
+  if (path === '/api/ops/admin/console' && method === 'GET') return renderConsoleShell();
   return jsonPrivate({ ok: false, error: 'not found' }, 404);
 }
 

@@ -156,6 +156,14 @@ check('[AC-20] after a new ticket: dq_new = 1 (older and triaged tickets exclude
   && count(`SELECT COUNT(*) n FROM ops_data_quality_ticket`) === 3, withDq.body.dq_new);
 const plan = db.prepare(`EXPLAIN QUERY PLAN SELECT COUNT(*) AS n FROM ops_data_quality_ticket WHERE status = 'open' AND severity IN ('sev1','sev2','sev3','sev4') AND opened_at >= ?`).all('x').map(r => r.detail).join(' | ');
 check('[AC-20] EXPLAIN: covering idx_ops_dq_queue (status=? AND severity=? AND opened_at>?)', /SEARCH ops_data_quality_ticket USING COVERING INDEX idx_ops_dq_queue \(status=\? AND severity=\? AND opened_at>\?\)/.test(plan), plan);
+// MA-OCT-SAT31.ENG4 (004.GOLIVE §7 item 2): a later run whose 'start' event has not arrived yet (outbox replay;
+// live case: Fri 30 08:00Z start received 12:00:06Z) but whose 'end' row has. Its end row carries the same
+// started_at, so dq_since must be that run's start, not the one before it.
+db.prepare(`INSERT INTO ops_job_run (run_id, phase, event_type, job_id, emitter_id, trigger, started_at, ended_at, detail, end_only, contract_version)
+            VALUES ('hc-late', 'end', 'success', 'local.health-check', 'health-check-local', 'launchd', '2026-10-19T10:00:02Z', '2026-10-19T10:00:06Z', '{}', 0, 1)`).run();
+const late = await sweepCall();
+check('[dq_since] previous run with only its end row on record (start replayed late) → dq_since = that run\'s start; the newer ticket window narrows (dq_new 1 → 0)',
+  late.body.dq_since === '2026-10-19T10:00:02Z' && late.body.dq_new === 0, { since: late.body.dq_since, dq_new: late.body.dq_new });
 
 console.log(`\n${pass} passed, ${fail} failed`);
 console.log(fail ? 'FAILED' : 'ALL PASSED');
