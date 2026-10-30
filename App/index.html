@@ -1101,11 +1101,20 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 <script>
 // MA-OCT-007 hash router (spec rev 1.4 §3.3; R7-6, R7-10, N7-13). Parses the hash and
 // dispatches `ma:route`; it imports nothing and renders nothing (domain modules listen).
-// detail: { type: 'entity'|'instrument', id, from, mode: 'cold'|'typed'|'pop', depth }
+// detail: { type: 'entity'|'instrument'|'fi'|'fi_cik'|'bond', id, from, mode: 'cold'|'typed'|'pop', depth }
 // History entries pushed by ma-entities.js carry state { maNav: depth }; the base
 // panel is depth 0. A popstate never shows the invalid-link toast.
 (function () {
   function parse(hash) {
+    // MA-OCT-010: #/fi, #/fi/cik/{10 digits}, #/bond/{accession}/{seq} (a filing-tranche record, not an instrument).
+    const fi = /^#\/(fi|fi\/cik\/(\d{10})|bond\/(\d{10}-\d{2}-\d{6}\/[1-9]\d{0,5}))(?:\?(.*))?$/.exec(hash || '');
+    if (fi) {
+      let from = null;
+      try { from = new URLSearchParams(fi[4] || '').get('from'); } catch (e) { from = null; }
+      if (fi[2]) return { type: 'fi_cik', id: fi[2], from };
+      if (fi[3]) return { type: 'bond', id: fi[3], from };
+      return { type: 'fi', id: null, from };
+    }
     const m = /^#\/(entity|instrument)\/([^?]+)(?:\?(.*))?$/.exec(hash || '');
     if (!m) return null;
     let id;
@@ -1182,6 +1191,7 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 <button class="btn action-tile" id="dcfTabBtn" onclick="openDCF()" title="Discounted Cash Flow">DCF</button>
 <button class="btn action-tile" id="etfHoldingsBtn" onclick="openEtfHoldings()" title="ETF Portfolio Holdings">ETF Holdings</button>
 <button class="btn action-tile" id="corpAtlasBtn" onclick="openCorporateAtlas()" title="Corporate Atlas · Legal Entity Graph">Corporate Atlas</button>
+<button class="btn action-tile" id="fiBtn" onclick="openFixedIncome()" title="Fixed Income · SEC bond issuance data">Fixed Income</button>
 <button class="btn action-tile" id="opsBtn" onclick="openOps()" title="System Operations · Pipeline Health">OPS</button>
 <button class="btn" id="darkbtn" onclick="toggleDark()" title="Toggle dark mode">◑ Dark</button>
 <button class="btn on" id="abtn" onclick="toggleAuto()">Auto</button>

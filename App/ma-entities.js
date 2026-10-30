@@ -914,6 +914,9 @@ ${entity.expiration_date ? `Effective: ${entity.expiration_date.slice(0,10)}.` :
         <div style="color:var(--dim);font-size:11px">Loading linked instruments…</div>
       </div>
 
+      <!-- Bonds (MA-OCT-010): hidden unless the issuer has a linked SEC filer CIK -->
+      <div style="display:none;margin:0 16px 16px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)" id="issuer-bonds-section-${entity.entity_id}"></div>
+
       <!-- Issuer panels: 13F ownership / financials / 8-K events / filing timeline -->
       <!-- Populated by ent_injectIssuerPanels() — called from both showEntityDetail
            (Galaxy/Search entry points) and showEntityOverlay (ETF Holdings entry point) -->
@@ -1033,6 +1036,7 @@ async function showEntityDetail(entityId, breadcrumbLabel) {
   if (redirect) _navInsertAfterBreadcrumb(main, _navRedirectNoticeHtml(redirect, entity));
   _loadEntityExposureStrip(entityId, entity);
   _loadLinkedInstruments(entityId);
+  _loadIssuerBonds(entityId);
 
   // Load Issuer page panels (13F ownership / financials / events / filings).
   // Previously only wired into showEntityOverlay (the ETF-holdings click
@@ -1674,7 +1678,11 @@ function _navDisplayIds(ids) {
 }
 
 function _navHash(kind, id, from) {
-  const base = kind === 'entity' ? `#/entity/${id}` : `#/instrument/${encodeURIComponent(id)}`;
+  const base = kind === 'entity' ? `#/entity/${id}`
+    : kind === 'fi' ? '#/fi'
+    : kind === 'fi_cik' ? `#/fi/cik/${id}`
+    : kind === 'bond' ? `#/bond/${id}`
+    : `#/instrument/${encodeURIComponent(id)}`;
   return from ? `${base}?from=${encodeURIComponent(from)}` : base;
 }
 
@@ -1711,9 +1719,19 @@ async function _navOpen(kind, id, opts = {}) {
   const hash = _navHash(kind, id, opts.from);
   if (opts.history === 'push') history.pushState({ maNav: _navStack.length }, '', hash);
   else if (opts.history === 'replace') history.replaceState({ maNav: _navStack.length }, '', hash);
-  if (kind === 'entity') await _navRenderEntity(layer, opts);
-  else await _navRenderInstrument(layer, opts);
+  await _navRender(layer, opts);
   return layer;
+}
+
+// One renderer per layer kind (007: entity, instrument; MA-OCT-010: fi, fi_cik, bond).
+function _navRender(layer, opts) {
+  switch (layer.kind) {
+    case 'entity': return _navRenderEntity(layer, opts);
+    case 'fi': return _navRenderFiDirectory(layer, opts);
+    case 'fi_cik': return _navRenderFiCik(layer, opts);
+    case 'bond': return _navRenderBond(layer, opts);
+    default: return _navRenderInstrument(layer, opts);
+  }
 }
 
 function _navIsTop(layer) {
@@ -1799,6 +1817,7 @@ async function _navRenderEntity(layer, opts) {
   _navInsertAfterBreadcrumb(el, _navRedirectNoticeHtml(redirect, entity) + _navProvenanceHtml(opts.navlink));
   _loadEntityExposureStrip(eid, entity, el);
   _loadLinkedInstruments(eid, el);
+  _loadIssuerBonds(eid, el);
   ent_injectIssuerPanels(eid, el);
 }
 
@@ -1847,7 +1866,7 @@ function _navRetry(depth) {
   const layer = _navStack[depth - 1];
   if (!layer) return;
   const opts = { ...(layer.retryOpts || {}), prefetched: null };
-  if (layer.kind === 'entity') _navRenderEntity(layer, opts); else _navRenderInstrument(layer, opts);
+  _navRender(layer, opts);
 }
 
 // ── Instrument card (§4.1, §5.3, §5.4) ──────────────────────────────────────
@@ -1872,9 +1891,14 @@ function _navExplain(nl) {
     case 'low_confidence': return c.source === 'heuristic'
       ? `Name-based match (heuristic), score ${c.confidence} — not verified by an identifier.`
       : `Linked by ${_navSourceLabel(c.source)} with a low score (${c.confidence}).`;
-    case 'ambiguous': return nl.reason === 'source_conflict'
-      ? 'Our sources disagree about the issuer. Choose one.'
-      : 'Several issuers share this ISIN. Choose one.';
+    // M9-3: "Choose one" only when there are at least 2 candidates to choose from (a key filed
+    // under 2 CIKs is source_conflict with 0–1 candidates, MA-OCT-009 §4.3).
+    case 'ambiguous': {
+      const choose = (nl.candidates || []).length >= 2 ? ' Choose one.' : '';
+      return nl.reason === 'source_conflict'
+        ? `Our sources disagree about the issuer.${choose}`
+        : `Several issuers share this ISIN.${choose}`;
+    }
     default:
       if (nl.placeholder_key) return 'No unique identifier for this holding (for example cash or a derivative).';
       if (nl.reason === 'lei_only') return `The issuer's LEI (${nl.lei || '—'}) is known, but the issuer isn't in Meridian Atlas yet.`;
@@ -1942,7 +1966,7 @@ async function _navRenderInstrument(layer, opts) {
   let body;
   if (nl.state === 'matched' || nl.state === 'low_confidence') body = _navCandidateHtml(cands[0], nl, true);
   else if (nl.state === 'ambiguous') {
-    body = `<div style="font-size:10px;color:var(--dim);margin-bottom:4px">${cands.length} candidate issuers — none is selected for you</div>` +
+    body = (cands.length >= 2 ? `<div style="font-size:10px;color:var(--dim);margin-bottom:4px">${cands.length} candidate issuers — none is selected for you</div>` : '') +
       cands.map(c => _navCandidateHtml(c, nl, true)).join('') +
       (nl.candidates_truncated ? `<div style="font-size:10px;color:var(--muted);padding-top:6px">More candidates exist than are shown.</div>` : '');
   } else body = '';
@@ -1994,6 +2018,357 @@ document.addEventListener('ma:open-instrument', async e => {
     _navOpen('instrument', key, { history: 'push', from: d.from || null, isin: d.isin, prefetched: r });
   }
 });
+
+// ── MA-OCT-010: Fixed Income (spec 009/010 rev 1 §7) ─────────────────────────
+// Bonds section on the issuer layer, and three 007 layers: bond detail (#/bond/{accession}/{seq}),
+// the directory (#/fi) and an unlinked filer (#/fi/cik/{cik}). Reads only, via data_entitiesGet
+// (009's /api/fi/* routes). The bond route names a filing-tranche record, never an instrument_key.
+// With the serving gate closed every surface shows only the quality-check notice and the disclosure.
+
+const _FI_DISCLOSURE = 'Issuance and reference data from SEC filings. Not live prices or yields.';
+const _FI_CLOSED = "Bond data is being quality-checked and isn't shown yet.";
+const _FI_MISSING = "Fixed Income data isn't available yet.";
+const _FI_OUTAGE = "Couldn't reach Corporate Atlas.";
+const _FI_CCY = { USD: '$', EUR: '€', GBP: '£', JPY: '¥' };
+
+function _fiStyleOnce() {
+  if (typeof document === 'undefined' || !document.head || document.getElementById('fi-style')) return;
+  const st = document.createElement('style');
+  st.id = 'fi-style';
+  st.textContent = `.fi-row{display:grid;grid-template-columns:92px 1.4fr 1fr 1.2fr 1.2fr 1.4fr 84px 110px;gap:4px 10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2);cursor:pointer}
+.fi-row:hover{background:var(--bg2)}.fi-head{cursor:default;font-size:9px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}.fi-head:hover{background:none}
+@media (max-width:640px){.fi-row{grid-template-columns:1fr 1fr}.fi-head{display:none}.fi-row>.fi-opt{display:none}}
+.fi-ladder{display:flex;align-items:flex-end;gap:6px;overflow-x:auto;padding:4px 0 2px;max-width:100%}
+.fi-bar{flex:0 0 auto;min-width:44px;text-align:center;font-size:9px;color:var(--muted)}`;
+  document.head.appendChild(st);
+}
+
+function _fiDisclosureHtml() {
+  return `<div role="note" style="font-size:10px;color:var(--muted);margin:6px 0">${_esc(_FI_DISCLOSURE)}</div>`;
+}
+function _fiNoticeHtml(msg) {
+  return `<div style="color:var(--text2);font-size:12px;margin:6px 0">${_esc(msg)}</div>`;
+}
+function _fiRetryHtml(fn) {
+  return `<div style="color:var(--text2);font-size:12px;margin:6px 0">${_esc(_FI_OUTAGE)} <button onclick="${fn}" style="background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:2px 8px;border-radius:var(--r);cursor:pointer">↻ Retry</button></div>`;
+}
+
+// §7.4 honest labels.
+function _fiCoupon(b) {
+  if (b.rate_type === 'floating' || b.rate_type === 'fixed_to_floating') {
+    const bench = b.benchmark || null;
+    if (b.spread_bps == null) return `${bench || 'Floating'} · spread not parsed — see filing`;
+    return `${bench || 'Floating'} + ${Number(b.spread_bps)} bp`;
+  }
+  return b.coupon_rate == null ? '—' : `${Number(b.coupon_rate).toFixed(3)}%`;
+}
+function _fiRateLabel(b) {
+  return b.rate_label || ({ fixed: 'Fixed coupon', floating: 'Floating', fixed_to_floating: 'Fixed-to-floating' })[b.rate_type] || '—';
+}
+function _fiMoney(amount, ccy) {
+  if (amount == null) return '—';
+  const n = Math.round(Number(amount)).toLocaleString('en-US');
+  const sym = _FI_CCY[ccy];
+  return sym ? `${sym}${n}` : `${ccy || ''} ${n}`.trim();
+}
+function _fiSeniority(b) {
+  return b.seniority ? b.seniority : 'Not parsed — see filing';
+}
+function _fiChip(conf) {
+  const c = Number(conf);
+  const check = c < 80;
+  const col = check ? '#D99C3D' : '#2D9C75';
+  return `<span style="border:1px solid ${col}60;background:${col}18;color:${col};border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700;white-space:nowrap">${check ? 'Check source' : 'High'} · ${_esc(c)}</span>`;
+}
+// §7.3 (DIL N-5): boilerplate or over-long tranche labels give way to a generated title.
+function _fiTitle(b) {
+  const label = (b.tranche_label || '').trim();
+  if (label && label.length <= 120 && !/PROSPECTUS|SUPPLEMENT|Dated/i.test(label)) return label;
+  const type = b.rate_type === 'floating' ? 'Floating Rate Notes' : b.rate_type === 'fixed_to_floating' ? 'Fixed-to-Floating Notes' : 'Notes';
+  const cpn = b.rate_type === 'fixed' && b.coupon_rate != null ? `${Number(b.coupon_rate).toFixed(3)}% ` : '';
+  return `${cpn}${type} due ${_navFmtDate(b.maturity_date)}`;
+}
+function _fiBondId(b) { return `${b.accession_number}/${Number(b.tranche_seq)}`; }
+
+// M9-4: F1's freshness.latest_filing_date covers one response only, so it is never shown as the
+// issuer's latest filing. The page shows the latest filing among the rows on screen, labelled so.
+function _fiShownLatest(rows) {
+  return (rows || []).reduce((m, b) => (b.filing_date && (!m || b.filing_date > m) ? b.filing_date : m), null);
+}
+function _fiFreshnessHtml(f, rows) {
+  const shown = _fiShownLatest(rows);
+  return `<div style="font-size:10px;color:var(--muted);margin-bottom:2px" title="Updated within the last hour">Last checked with SEC ${_esc(_navFmtDate(f && f.last_polled_at) || '—')}${shown ? ` · latest filing among the bonds shown ${_esc(_navFmtDate(shown))}` : ''}</div>`;
+}
+
+function _fiTableHtml(st) {
+  const multi = st.ciks.length > 1;
+  const head = `<div class="fi-row fi-head"><div>Maturity</div><div>Coupon / spread</div><div class="fi-opt">Type</div><div>Principal</div><div class="fi-opt">Seniority</div><div class="fi-opt">Tranche</div><div class="fi-opt">Filed</div><div>Confidence</div></div>`;
+  const rows = st.rows.map(b => `<div class="fi-row" role="link" tabindex="0" data-bond="${_esc(_fiBondId(b))}" data-page="${Number(b._page)}" onclick="_fiOpenBondRow(this)" onkeydown="if(event.key==='Enter')_fiOpenBondRow(this)">
+      <div><strong>${_esc(_navFmtDate(b.maturity_date))}</strong></div>
+      <div>${_esc(_fiCoupon(b))}</div>
+      <div class="fi-opt">${_esc(_fiRateLabel(b))}</div>
+      <div>${_esc(_fiMoney(b.principal_amount, b.currency))}</div>
+      <div class="fi-opt">${_esc(_fiSeniority(b))}</div>
+      <div class="fi-opt" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(_fiTitle(b))}${multi ? `<div style="font-size:9px;color:var(--muted)">Filed by ${_esc(st.cikName[b.cik] || b.cik)}</div>` : ''}</div>
+      <div class="fi-opt">${_esc(_navFmtDate(b.filing_date))}</div>
+      <div>${_fiChip(b.parse_confidence)}</div>
+    </div>`).join('');
+  return head + rows;
+}
+
+function _fiLadderHtml(years) {
+  if (!years || !years.length) return '';
+  const max = Math.max(...years.map(y => y.securities), 1);
+  const bars = years.map(y => {
+    const other = Object.entries(y.other_currencies || {}).map(([c, n]) => `${_esc(c)} ${Number(n)}`).join(' · ');
+    return `<div class="fi-bar" title="${_esc(y.year)}">
+      <div style="font-size:9px;color:var(--text2)">${Number(y.securities)} ${y.securities === 1 ? 'security' : 'securities'}</div>
+      <div style="height:${Math.max(4, Math.round(60 * y.securities / max))}px;background:var(--blue);opacity:.7;border-radius:2px 2px 0 0;margin:2px auto 0;width:28px"></div>
+      <div style="font-weight:700;color:var(--text2)">${_esc(y.year)}</div>
+      ${y.principal_usd ? `<div>USD ${_esc(_fiMoney(y.principal_usd, 'USD').slice(1))}<br><span style="font-size:8px">(single-filing securities)</span></div>` : ''}
+      ${y.reopened ? `<div>${Number(y.reopened)} reopened</div>` : ''}
+      ${other ? `<div>${other}</div>` : ''}
+    </div>`;
+  }).join('');
+  return `<div style="font-size:9px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin:8px 0 2px">Maturity ladder · outstanding</div><div class="fi-ladder">${bars}</div>`;
+}
+
+// §7.2 Bonds section on the issuer layer (same shape as _loadLinkedInstruments).
+async function _loadIssuerBonds(entityId, root) {
+  const section = _navFind(root, `issuer-bonds-section-${entityId}`);
+  if (!section) return;
+  _fiStyleOnce();
+  section._fi = { entityId, rows: [], cursor: null, pages: 0, matured: false, ciks: [], cikName: {}, gate: null, freshness: null, years: null, error: null };
+  await _fiBondsLoadPage(section, true);
+}
+
+async function _fiBondsLoadPage(section, first) {
+  const st = section._fi;
+  st.error = null;
+  if (first) { st.rows = []; st.cursor = null; st.pages = 0; }
+  const btn = section.querySelector('.fi-more');
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+  const q = `?limit=25&include_matured=${st.matured ? 1 : 0}${st.cursor ? `&cursor=${encodeURIComponent(st.cursor)}` : ''}`;
+  const [r, l] = await Promise.all([
+    data_entitiesGet(`/api/fi/issuers/${st.entityId}/bonds${q}`),
+    first && st.years === null ? data_entitiesGet(`/api/fi/issuers/${st.entityId}/ladder`) : Promise.resolve(null)
+  ]);
+  if (!section.isConnected) return;
+  if (_navIsOutage(r)) { st.error = 'outage'; _fiBondsRender(section); return; }
+  if (r.status === 422) { st.error = 'too_many'; _fiBondsRender(section); return; }
+  const d = r.ok && r.data ? r.data : null;
+  if (!d || !d.has_bond_link) { section.style.display = 'none'; return; }   // most entities: no section at all
+  st.gate = d.gate;
+  if (d.coverage && d.coverage.available === false) st.error = 'missing';
+  st.ciks = d.ciks || [];
+  st.ciks.forEach(c => { st.cikName[c.cik] = c.issuer_name; });
+  st.freshness = d.freshness || st.freshness;
+  (d.bonds || []).forEach(b => st.rows.push({ ...b, _page: st.pages + 1 }));
+  st.cursor = d.next_cursor || null;
+  st.pages++;
+  if (l && l.ok && l.data && l.data.gate === 'open') st.years = l.data.years || [];
+  _fiBondsRender(section);
+}
+
+function _fiToggleMatured(section) {
+  section._fi.matured = !section._fi.matured;
+  _fiBondsLoadPage(section, true);
+}
+
+function _fiBondsRender(section) {
+  const st = section._fi;
+  section.style.display = '';
+  const sel = "this.closest('[id^=issuer-bonds-section-]')";
+  const title = `<div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Bonds · <span style="font-weight:400;text-transform:none;letter-spacing:0">SEC issuance data</span></div>`;
+  if (st.error === 'outage' && !st.pages) { section.innerHTML = title + _fiRetryHtml(`_fiBondsLoadPage(${sel}, true)`); return; }
+  if (st.error === 'too_many') { section.innerHTML = title + _fiNoticeHtml('Bond data unavailable for this issuer.') + _fiDisclosureHtml(); return; }
+  if (st.error === 'missing') { section.innerHTML = title + _fiNoticeHtml(_FI_MISSING); return; }
+  if (st.gate !== 'open') { section.innerHTML = title + _fiNoticeHtml(_FI_CLOSED) + _fiDisclosureHtml(); return; }
+  const f = st.freshness || {};
+  const fresh = _fiFreshnessHtml(f, st.rows);
+  const toggle = `<button onclick="_fiToggleMatured(${sel})" style="background:none;border:none;color:var(--blue);font-size:10px;cursor:pointer;padding:0">${st.matured ? 'Hide matured' : 'Show matured'}</button>`;
+  let body;
+  if (!st.rows.length && !st.cursor) {
+    body = `<div style="color:var(--dim);font-size:11px;margin:6px 0">${st.matured ? 'No bonds in Meridian Atlas for this issuer.' : 'No outstanding bonds in Meridian Atlas for this issuer.'} ${toggle}</div>`;
+  } else {
+    const more = st.cursor
+      ? `<button class="fi-more" onclick="_fiBondsLoadPage(${sel}, false)" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:4px 10px;border-radius:var(--r);cursor:pointer">${st.error === 'outage' ? "Couldn't load more · Retry" : 'Show 25 more ↓'}</button>`
+      : '';
+    body = `<div style="text-align:right">${toggle}</div><div style="border-top:1px solid var(--border)">${_fiTableHtml(st)}</div>${more}`;
+  }
+  section.innerHTML = title + fresh + _fiDisclosureHtml() + (st.matured ? '' : _fiLadderHtml(st.years)) + body;
+}
+
+function _fiOpenBondRow(rowEl) {
+  const section = rowEl.closest ? rowEl.closest('[id^=issuer-bonds-section-]') : null;
+  const eid = section && section._fi ? section._fi.entityId : null;
+  // Issuer-layer rows carry from = entity:{id}:{page}; CIK-layer rows have no entity.
+  _navOpen('bond', rowEl.dataset.bond, { history: 'push', from: eid ? `entity:${eid}:${rowEl.dataset.page}` : null });
+}
+
+function openFixedIncome() {
+  _navOpen('fi', null, { history: 'push' });
+}
+
+function _fiTermRow(label, value, mono) {
+  return value == null || value === '' ? '' : `<div><span style="color:var(--dim)">${_esc(label)}</span> <span${mono ? ' style="font-family:var(--mono);font-size:10px"' : ''}>${_esc(value)}</span></div>`;
+}
+
+// §7.3 Bond detail layer. The filer CIK shown is the bond's own (bond_issuer_link.cik), never
+// entity_master.cik; an unmatched filer shows no LEI; no guarantor in v1 (DIL M-8, N-6).
+async function _navRenderBond(layer, opts) {
+  const el = layer.el;
+  _fiStyleOnce();
+  layer.title = layer.title || 'Bond';
+  el.innerHTML = _navShell(layer, `<div style="color:var(--dim);font-size:12px;padding:16px">Loading bond…</div>`);
+  const [acc, seq] = String(layer.id).split('/');
+  const r = await data_entitiesGet(`/api/fi/bonds/${encodeURIComponent(acc)}/${encodeURIComponent(seq)}`);
+  if (!el.isConnected) return;
+  if (_navIsOutage(r)) { _navRenderNetworkError(layer, opts); return; }
+  if (r.status === 400) { el.innerHTML = _navShell(layer, `<div style="color:var(--text2);font-size:13px">That link isn't valid.</div>`); return; }
+  if (r.status === 404 || !r.ok || !r.data) { el.innerHTML = _navShell(layer, _fiNoticeHtml("This bond isn't available.") + _fiDisclosureHtml()); return; }
+  const d = r.data;
+  if (d.coverage && d.coverage.available === false) { el.innerHTML = _navShell(layer, _fiNoticeHtml(_FI_MISSING)); return; }
+  if (d.gate !== 'open' || !d.bond) { el.innerHTML = _navShell(layer, _fiNoticeHtml(_FI_CLOSED) + _fiDisclosureHtml()); return; }
+  const b = d.bond, nl = d.issuer || {}, filer = d.filer || {};
+  layer.title = _fiTitle(b);
+  const ids = _navDisplayIds({ isin: b.isin, cusip: b.cusip });
+  const rate = b.rate_type === 'fixed' ? _fiTermRow('Coupon', _fiCoupon(b)) : _fiTermRow('Benchmark + spread', _fiCoupon(b));
+  const terms = [
+    _fiTermRow('Principal', `${_fiMoney(b.principal_amount, b.currency)}${b.principal_amount != null && b.currency ? ` ${b.currency}` : ''}`),
+    rate, _fiTermRow('Rate type', _fiRateLabel(b)), _fiTermRow('Maturity', _navFmtDate(b.maturity_date)), _fiTermRow('Seniority', _fiSeniority(b)),
+    _fiTermRow('Security class', b.security_class), _fiTermRow('Form', b.form_type), _fiTermRow('Filed', _navFmtDate(b.filing_date)),
+    _fiTermRow('Accession', b.accession_number, true), ids.isin ? _fiTermRow('ISIN', ids.isin, true) : '', ids.cusip ? _fiTermRow('CUSIP', ids.cusip, true) : ''
+  ].join('');
+  const quality = `<div style="font-size:11px;color:var(--text2);margin:10px 0 2px">Parse confidence ${_esc(b.parse_confidence)} ${_fiChip(b.parse_confidence)}</div>
+    ${b.check_source ? `<div style="font-size:11px;color:#D99C3D">Check the filing: some terms were parsed with lower confidence.</div>` : ''}
+    <div style="font-size:9px;color:var(--muted)">Parser ${_esc(b.parser_version || '—')} · ingested ${_esc(_navFmtDate(b.ingested_at) || '—')}</div>`;
+  const c = (nl.candidates || [])[0];
+  let issuer;
+  if (c) {
+    issuer = _navCandidateHtml(c, nl, false) +
+      `<button data-entity="${Number(c.entity_id)}" data-name="${_esc(c.name || '')}" data-bond="${_esc(layer.id)}" onclick="_fiOpenIssuer(this)" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:4px 10px;border-radius:var(--r);cursor:pointer">Open issuer →</button>` +
+      (nl.state === 'ambiguous' ? `<div style="font-size:10px;color:var(--muted);margin-top:6px">This security also appears in a filing by another filer.</div>` : '');
+  } else {
+    issuer = `<div style="font-size:12px;color:var(--text2)">Issuer not linked to Corporate Atlas yet · ${_esc(filer.issuer_name || '')} (CIK ${_esc(filer.cik || b.cik)})</div>
+      <a href="#/fi/cik/${_esc(filer.cik || b.cik)}" onclick="event.preventDefault();_navOpen('fi_cik', ${_esc(JSON.stringify(filer.cik || b.cik))}, { history: 'push' })" style="color:var(--blue);font-size:11px">All bonds from this filer →</a>`;
+  }
+  const others = b.other_filings > 0 ? `<div style="font-size:11px;color:var(--text2);margin:6px 0">Also filed in ${Number(b.other_filings)} other filing${b.other_filings === 1 ? '' : 's'}.</div>` : '';
+  const viewInstr = b.instrument_key
+    ? `<a href="${_esc(_navHash('instrument', b.instrument_key, null))}" onclick="event.preventDefault();_navOpen('instrument', ${_esc(JSON.stringify(b.instrument_key))}, { history: 'push', from: ${_esc(JSON.stringify(`bond:${layer.id}`))} })" style="color:var(--blue);font-size:11px">View instrument</a>`
+    : '';
+  el.innerHTML = _navShell(layer, `
+    <div style="padding:18px 20px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)">
+      <h2 style="margin:0 0 4px;font-size:16px;font-weight:700;color:var(--text)">${_esc(layer.title)}</h2>
+      ${_fiDisclosureHtml()}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 20px;font-size:11px;color:var(--text2);line-height:1.8;margin:8px 0">${terms}</div>
+      ${others}
+      <div style="margin:8px 0"><a href="${_esc(b.source_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-size:11px">View filing on SEC.gov ↗</a>${viewInstr ? ' · ' + viewInstr : ''}</div>
+      ${quality}
+      <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin:16px 0 4px">Filer · CIK ${_esc(filer.cik || b.cik)}</div>
+      ${issuer}
+    </div>`);
+}
+
+function _fiOpenIssuer(btn) {
+  _navOpen('entity', Number(btn.dataset.entity), { history: 'push', from: `bond:${btn.dataset.bond}`, lastName: btn.dataset.name || '' });
+}
+
+// §7.6 Directory (#/fi). CIK shown = bond_issuer_link.cik (DIL M-8).
+async function _navRenderFiDirectory(layer, opts) {
+  const el = layer.el;
+  layer.title = 'Fixed Income';
+  el.innerHTML = _navShell(layer, `<div style="color:var(--dim);font-size:12px;padding:16px">Loading Fixed Income…</div>`);
+  const r = await data_entitiesGet('/api/fi/coverage');
+  if (!el.isConnected) return;
+  if (_navIsOutage(r)) { _navRenderNetworkError(layer, opts); return; }
+  const d = r.ok ? r.data : null;
+  const head = `<h2 style="margin:0 0 4px;font-size:16px;font-weight:700;color:var(--text)">Fixed Income</h2>`;
+  if (!d || (d.coverage && d.coverage.available === false)) { el.innerHTML = _navShell(layer, head + _fiNoticeHtml(_FI_MISSING)); return; }
+  if (d.gate !== 'open') { el.innerHTML = _navShell(layer, head + _fiNoticeHtml(_FI_CLOSED) + _fiDisclosureHtml()); return; }
+  const t = d.totals || {};
+  layer._fiIssuers = d.issuers || [];
+  const depth = _navStack.indexOf(layer) + 1;
+  el.innerHTML = _navShell(layer, `${head}
+    <div style="font-size:11px;color:var(--text2)">${Number(t.issuers || 0)} issuers · ${Number(t.finals || 0).toLocaleString()} bonds · ${Number(t.unmatched || 0)} not linked yet</div>
+    <div style="font-size:10px;color:var(--muted)" title="Updated within the last hour">Last checked with SEC ${_esc(_navFmtDate(d.as_of) || '—')}</div>
+    ${_fiDisclosureHtml()}
+    <input class="fi-filter" type="search" aria-label="Filter issuers" placeholder="Filter by name or CIK…" oninput="_fiFilterDirectory(${depth}, this.value)"
+      style="width:100%;max-width:420px;box-sizing:border-box;margin:8px 0;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:12px">
+    <div class="fi-dir-rows">${_fiDirectoryRowsHtml(layer._fiIssuers)}</div>`);
+}
+
+function _fiDirectoryRowsHtml(list) {
+  if (!list.length) return `<div style="color:var(--dim);font-size:11px">No matches.</div>`;
+  return list.map(i => {
+    const linked = i.entity_id != null;
+    const chip = linked ? `<span style="border:1px solid #2D9C7560;color:#2D9C75;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700">Linked</span>`
+      : `<span style="border:1px solid #88888860;color:#888;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700">Not linked yet</span>`;
+    const open = linked ? `_navOpen('entity', ${Number(i.entity_id)}, { history: 'push', lastName: ${_esc(JSON.stringify(i.issuer_name || ''))} })`
+      : `_navOpen('fi_cik', ${_esc(JSON.stringify(i.cik))}, { history: 'push' })`;
+    return `<div class="fi-dir-row" role="link" tabindex="0" onclick="${open}" onkeydown="if(event.key==='Enter'){${open}}" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2);cursor:pointer">
+      <div style="flex:1 1 220px;min-width:0"><strong style="color:var(--text)">${_esc(i.issuer_name)}</strong> <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">CIK ${_esc(i.cik)}</span></div>
+      ${chip}
+      <div style="flex:0 0 auto">${Number(i.finals)} bonds</div>
+      <div style="flex:0 0 auto;color:var(--dim)">latest filing ${_esc(_navFmtDate(i.latest_filing) || '—')}</div>
+      <div style="flex:0 0 auto;color:var(--dim)">checked ${_esc(_navFmtDate(i.last_polled_at) || '—')}</div>
+    </div>`;
+  }).join('');
+}
+
+function _fiFilterDirectory(depth, value) {
+  const layer = _navStack[depth - 1];
+  if (!layer) return;
+  const q = String(value || '').trim().toUpperCase();
+  const list = (layer._fiIssuers || []).filter(i => !q || String(i.issuer_name).toUpperCase().includes(q) || String(i.cik).includes(q));
+  const out = layer.el.querySelector('.fi-dir-rows');
+  if (out) out.innerHTML = _fiDirectoryRowsHtml(list);
+}
+
+// §7.1 Unlinked filer layer (#/fi/cik/{cik}) — F1b.
+async function _navRenderFiCik(layer, opts) {
+  const el = layer.el;
+  _fiStyleOnce();
+  layer.title = layer.title || `CIK ${layer.id}`;
+  el.innerHTML = _navShell(layer, `<div style="color:var(--dim);font-size:12px;padding:16px">Loading filer…</div>`);
+  layer._fi = { cik: String(layer.id), rows: [], cursor: null, pages: 0, ciks: [], cikName: {} };
+  await _fiCikLoadPage(layer, opts, true);
+}
+
+async function _fiCikLoadPage(layer, opts, first) {
+  const el = layer.el, st = layer._fi;
+  const q = `?limit=25${!first && st.cursor ? `&cursor=${encodeURIComponent(st.cursor)}` : ''}`;
+  if (first) { st.rows = []; st.cursor = null; st.pages = 0; }
+  const r = await data_entitiesGet(`/api/fi/ciks/${encodeURIComponent(st.cik)}/bonds${q}`);
+  if (!el.isConnected) return;
+  if (_navIsOutage(r)) { _navRenderNetworkError(layer, opts); return; }
+  if (r.status === 400) { el.innerHTML = _navShell(layer, `<div style="color:var(--text2);font-size:13px">That link isn't valid.</div>`); return; }
+  const d = r.ok ? r.data : null;
+  if (!d || (d.coverage && d.coverage.available === false)) { el.innerHTML = _navShell(layer, _fiNoticeHtml(_FI_MISSING)); return; }
+  if (d.gate !== 'open') { el.innerHTML = _navShell(layer, _fiNoticeHtml(_FI_CLOSED) + _fiDisclosureHtml()); return; }
+  if (!d.has_bond_link) { el.innerHTML = _navShell(layer, _fiNoticeHtml('No bonds in Meridian Atlas for this filer.') + _fiDisclosureHtml()); return; }
+  st.ciks = d.ciks || [];
+  const link = st.ciks[0] || {};
+  layer.title = link.issuer_name || layer.title;
+  (d.bonds || []).forEach(b => st.rows.push({ ...b, _page: st.pages + 1 }));
+  st.cursor = d.next_cursor || null;
+  st.pages++;
+  const f = d.freshness || {};
+  const more = st.cursor ? `<button class="fi-more" onclick="_fiCikMore(${_navStack.indexOf(layer) + 1})" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:4px 10px;border-radius:var(--r);cursor:pointer">Show 25 more ↓</button>` : '';
+  const table = st.rows.length || st.cursor ? `<div style="border-top:1px solid var(--border);margin-top:8px">${_fiTableHtml(st)}</div>${more}`
+    : `<div style="color:var(--dim);font-size:11px;margin:6px 0">No outstanding bonds in Meridian Atlas for this filer.</div>`;
+  el.innerHTML = _navShell(layer, `
+    <h2 style="margin:0 0 4px;font-size:16px;font-weight:700;color:var(--text)">${_esc(link.issuer_name || '')} <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">CIK ${_esc(link.cik || st.cik)}</span></h2>
+    <div style="font-size:12px;color:var(--text2)">Issuer not linked to Corporate Atlas yet.</div>
+    ${_fiFreshnessHtml(f, st.rows)}
+    ${_fiDisclosureHtml()}
+    ${table}`);
+}
+
+function _fiCikMore(depth) {
+  const layer = _navStack[depth - 1];
+  if (layer) _fiCikLoadPage(layer, layer.retryOpts || {}, false);
+}
 
 // §3.3 routes (the router in index.html dispatches; see its header comment).
 document.addEventListener('ma:route', e => {

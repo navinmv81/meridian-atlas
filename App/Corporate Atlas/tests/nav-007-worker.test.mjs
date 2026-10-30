@@ -54,8 +54,11 @@ function buildDb({ redirectTable = true, bondTables = true } = {}) {
     CREATE TABLE bond_issuer_link (cik TEXT PRIMARY KEY, entity_id INTEGER NULL, link_method TEXT NOT NULL, confidence INTEGER NOT NULL,
       issuer_name TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active', linked_at TEXT NOT NULL, verified_at TEXT NULL);
     CREATE TABLE bond_issuance (accession_number TEXT NOT NULL, tranche_seq INTEGER NOT NULL, cik TEXT NOT NULL, instrument_key TEXT NULL,
-      filing_status TEXT NOT NULL, maturity_date TEXT NULL, PRIMARY KEY (accession_number, tranche_seq));
+      filing_status TEXT NOT NULL, maturity_date TEXT NULL, parse_confidence INTEGER NOT NULL DEFAULT 95, PRIMARY KEY (accession_number, tranche_seq));
     CREATE INDEX idx_bi_instrument ON bond_issuance(instrument_key) WHERE instrument_key IS NOT NULL;
+    -- MA-OCT-009 §4.3: R1f reads bonds only through an open fi_serving_gate; T9 runs with the gate open.
+    CREATE TABLE fi_serving_gate (id INTEGER PRIMARY KEY, state TEXT NOT NULL, changed_at TEXT NOT NULL, changed_by TEXT NOT NULL, evidence TEXT NOT NULL);
+    INSERT INTO fi_serving_gate VALUES (1, 'open', '2026-10-29T00:00:00Z', 'test', 'fixture');
   `);
 
   const ent = db.prepare(`INSERT INTO entity_master (entity_id, name, lei, type, entity_status) VALUES (?, ?, ?, ?, 'ACTIVE')`);
@@ -104,7 +107,7 @@ function buildDb({ redirectTable = true, bondTables = true } = {}) {
   im.run('CUSIP:594918AB0', 'MICROSOFT BOND', null, null, '594918AB0', 'DBT');
   // bond (R1f)
   if (bondTables) {
-    db.prepare(`INSERT INTO bond_issuance VALUES ('0000001-26-000001', 1, '0000789019', 'CUSIP:594918BX1', 'final', '2036-01-01')`).run();
+    db.prepare(`INSERT INTO bond_issuance VALUES ('0000001-26-000001', 1, '0000789019', 'CUSIP:594918BX1', 'final', '2036-01-01', 95)`).run();
     db.prepare(`INSERT INTO bond_issuer_link VALUES ('0000789019', 1, 'cik', 95, 'MICROSOFT CORP', 'active', '2026-10-15T00:00:00Z', NULL)`).run();
   }
   // paging: entity 5 has 60 instruments; entity 6 has 1,005

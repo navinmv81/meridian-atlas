@@ -585,18 +585,24 @@ async function handleInstrument(env, rawKey, url) {
   }
 
   // Step 3a: R1f bond candidate (008's tables; missing table = no candidate).
-  let bond = null;
-  try {
-    const bi = await env.DB.prepare(
-      `SELECT cik FROM bond_issuance WHERE instrument_key = ? AND filing_status = 'final' LIMIT 1`
-    ).bind(key).first();
-    if (bi) {
-      bond = await env.DB.prepare(
-        `SELECT entity_id, link_method, confidence, linked_at, verified_at FROM bond_issuer_link WHERE cik = ?`
-      ).bind(bi.cik).first();
+  // MA-OCT-009 §4.3: only when fi_serving_gate is open, only served rows, and a key
+  // filed under 2 CIKs is a source_conflict (never an arbitrary pick).
+  let bond = null, bondConflict = false;
+  const gate = await fiGate(env);
+  if (gate.open) {
+    try {
+      const bi = await env.DB.prepare(
+        `SELECT DISTINCT cik FROM bond_issuance WHERE instrument_key = ? AND filing_status = 'final' AND parse_confidence >= ${FI_MIN_CONFIDENCE} LIMIT 2`
+      ).bind(key).all();
+      const ciks = bi.results ?? [];
+      if (ciks.length === 1) {
+        bond = await env.DB.prepare(
+          `SELECT entity_id, link_method, confidence, linked_at, verified_at FROM bond_issuer_link WHERE cik = ?`
+        ).bind(ciks[0].cik).first();
+      } else if (ciks.length > 1) bondConflict = true;
+    } catch (e) {
+      if (!navIsMissingTable(e)) throw e;
     }
-  } catch (e) {
-    if (!navIsMissingTable(e)) throw e;
   }
 
   // Mapping rows that can become candidates.
@@ -658,7 +664,10 @@ async function handleInstrument(env, rawKey, url) {
 
   // Step 6: state and reason (N7-11: isin_duplicate wins when both hold).
   let state, reason = null;
-  if (candidates.length === 0) {
+  if (bondConflict) {
+    state = 'ambiguous';
+    reason = 'source_conflict';
+  } else if (candidates.length === 0) {
     state = 'unmatched';
     reason = anyUnresolved ? 'redirect_unresolved' : leiOnly ? 'lei_only' : !im ? 'not_in_universe' : 'no_mapping';
   } else if (candidates.length === 1) {
@@ -894,6 +903,393 @@ async function handleIssuerPanels(env, entityId) {
   return json({ ownership, financials, events, filings, overlap });
 }
 
+// --- MA-OCT-009: Fixed Income routes (spec rev 1 §4–§6) ---------------------------
+// F1  GET /api/fi/issuers/:entity_id/bonds?limit=&cursor=&include_matured=
+// F1b GET /api/fi/ciks/:cik/bonds?…
+// F2  GET /api/fi/bonds/:accession_number/:tranche_seq
+// F3  GET /api/fi/coverage
+// F4  GET /api/fi/issuers/:entity_id/ladder
+// Every request reads fi_serving_gate first. Closed (or missing) → bodies with no CIK,
+// issuer name, count or bond row; F1/F1b keep only has_bond_link (§4.2). Reads only,
+// 0 writes. Responses go through fi_json() so json() and the R1–R4 headers stay as 007 shipped.
+
+const FI_DATA_TYPE = 'issuance_reference';
+const FI_MIN_CONFIDENCE = 60;         // served-row rule (§5.1); minimum final today is 70
+const FI_CHECK_SOURCE_BELOW = 80;
+const FI_MAX_CIKS = 10;               // > 10 linked CIKs → 422 (Architect N-5)
+const FI_CACHE_TTL = 3600;            // F3/F4 Worker cache (§5.7)
+const FI_BROWSER_CC = 'public, max-age=60';
+const FI_BOND_COLS = `accession_number, tranche_seq, cik, instrument_key, isin, cusip, tranche_label, security_class,
+       rate_type, coupon_rate, spread_bps, benchmark, principal_amount, currency, maturity_date,
+       seniority, form_type, filing_date, source_url, parse_confidence`;
+const FI_RATE_LABEL = { fixed: 'Fixed coupon', floating: 'Floating', fixed_to_floating: 'Fixed-to-floating' };
+
+function fi_json(data, status = 200, cacheControl = 'no-store', extra = {}) {
+  return new Response(JSON.stringify(data), { status, headers: { ...CORS, 'Cache-Control': cacheControl, ...extra } });
+}
+
+function fiErr(msg, status) {
+  return fi_json({ error: msg }, status);
+}
+
+// §4.1 read. Missing table or row, or any state other than 'open' → closed.
+// Any other D1 error propagates → 500 from the router (outage, still no data).
+async function fiGate(env) {
+  let row;
+  try {
+    row = await env.DB.prepare(`SELECT state, changed_at FROM fi_serving_gate WHERE id = 1`).first();
+  } catch (e) {
+    if (navIsMissingTable(e)) return { open: false, state: 'closed', changed_at: null };
+    throw e;
+  }
+  const open = !!row && row.state === 'open';
+  return { open, state: open ? 'open' : 'closed', changed_at: row?.changed_at ?? null };
+}
+
+function fiUnavailable(extra) {
+  return fi_json({ data_type: FI_DATA_TYPE, gate: 'open', ...extra, coverage: { available: false } });
+}
+
+function fiBondRow(r) {
+  return {
+    ...r,
+    check_source: Number(r.parse_confidence) < FI_CHECK_SOURCE_BELOW,
+    rate_label: FI_RATE_LABEL[r.rate_type] ?? null,
+  };
+}
+
+const fiServed = r => Number(r.parse_confidence) >= FI_MIN_CONFIDENCE;
+const fiTuple = r => [r.maturity_date, r.accession_number, Number(r.tranche_seq)];
+function fiCmp(a, b) {
+  for (let i = 0; i < 3; i++) { if (a[i] < b[i]) return -1; if (a[i] > b[i]) return 1; }
+  return 0;
+}
+
+function fiEncodeCursor(t) {
+  return btoa(JSON.stringify(t)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function fiDecodeCursor(s) {
+  if (s.length > 200 || !/^[A-Za-z0-9_-]+$/.test(s)) return null;
+  let t;
+  try { t = JSON.parse(atob(s.replace(/-/g, '+').replace(/_/g, '/'))); } catch { return null; }
+  if (!Array.isArray(t) || t.length !== 3 || typeof t[0] !== 'string' || typeof t[1] !== 'string' || !Number.isInteger(t[2])) return null;
+  return t;
+}
+
+function fiTodayUtc() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// F1/F1b paging parameters (§5.2 steps 6–7). Returns { error } or { limit, start }.
+function fiPageParams(url) {
+  const rawLimit = url.searchParams.get('limit');
+  let limit = NAV_PAGE_DEFAULT;
+  if (rawLimit !== null && rawLimit !== '') {
+    if (!/^\d+$/.test(rawLimit)) return { error: 'limit must be an integer' };
+    limit = Math.min(Math.max(parseInt(rawLimit, 10), 1), NAV_PAGE_MAX);
+  }
+  const im = url.searchParams.get('include_matured') ?? '0';
+  if (im !== '0' && im !== '1') return { error: 'include_matured must be 0 or 1' };
+  const base = im === '1' ? ['', '', -1] : [fiTodayUtc(), '', -1];
+  const rawCursor = url.searchParams.get('cursor') ?? '';
+  let start = base;
+  if (rawCursor !== '') {
+    const t = fiDecodeCursor(rawCursor);
+    if (!t) return { error: 'Invalid cursor' };
+    if (fiCmp(t, base) > 0) start = t;
+  }
+  return { limit, start };
+}
+
+// §5.2 step 4 + 5: one keyset statement per CIK in one batch (limit + 1 rows each), then the
+// merge. A consumed row is returned (≥ 60) or dropped (< 60). Stop at `limit` returned rows,
+// or once a CIK that still had more rows has had its buffer fully consumed (the merge order
+// past that point is unknown). next_cursor = the last row consumed, never the largest fetched.
+async function fiBondPage(env, ciks, limit, start) {
+  const stmt = `SELECT ${FI_BOND_COLS}
+    FROM bond_issuance
+    WHERE cik = ? AND filing_status = 'final'
+      AND (maturity_date, accession_number, tranche_seq) > (?, ?, ?)
+    ORDER BY maturity_date, accession_number, tranche_seq
+    LIMIT ?`;
+  const res = await env.DB.batch(ciks.map(c => env.DB.prepare(stmt).bind(c, start[0], start[1], start[2], limit + 1)));
+  const lists = res.map(r => r.results ?? []);
+  const more = lists.map(l => l.length > limit);
+  const pos = lists.map(() => 0);
+  const bonds = [];
+  let last = null, latestFiling = null;
+  for (const l of lists) for (const r of l) if (!latestFiling || r.filing_date > latestFiling) latestFiling = r.filing_date;
+  while (bonds.length < limit) {
+    if (lists.some((l, i) => more[i] && pos[i] >= l.length)) break;
+    let best = -1;
+    for (let i = 0; i < lists.length; i++) {
+      if (pos[i] >= lists[i].length) continue;
+      if (best < 0 || fiCmp(fiTuple(lists[i][pos[i]]), fiTuple(lists[best][pos[best]])) < 0) best = i;
+    }
+    if (best < 0) break;
+    const row = lists[best][pos[best]++];
+    last = row;
+    if (fiServed(row)) bonds.push(fiBondRow(row));
+  }
+  const exhausted = lists.every((l, i) => !more[i] && pos[i] >= l.length);
+  return { bonds, next_cursor: exhausted || !last ? null : fiEncodeCursor(fiTuple(last)), latest_filing_date: latestFiling };
+}
+
+function fiLinkOut(l) {
+  return { cik: l.cik, issuer_name: l.issuer_name, link_method: l.link_method, confidence: l.confidence, last_polled_at: l.last_polled_at ?? null };
+}
+
+function fiMaxPolled(links) {
+  return links.reduce((m, l) => (l.last_polled_at && (!m || l.last_polled_at > m) ? l.last_polled_at : m), null);
+}
+
+// Linked CIKs of an entity (§5.2 step 3; idx_bil_entity). The identity rule (DIL M-6):
+// these are always the entity's own filer CIKs, never a subsidiary's or guarantor's.
+async function fiEntityLinks(env, eid) {
+  const r = await env.DB.prepare(
+    `SELECT cik, issuer_name, link_method, confidence, last_polled_at FROM bond_issuer_link WHERE entity_id = ?`
+  ).bind(eid).all();
+  return r.results ?? [];
+}
+
+// F1
+async function handleFiIssuerBonds(env, entityId, url) {
+  if (!/^[1-9]\d{0,9}$/.test(entityId)) return fiErr('Invalid entity_id', 400);
+  const id = parseInt(entityId, 10);
+  const p = fiPageParams(url);
+  if (p.error) return fiErr(p.error, 400);
+  const gate = await fiGate(env);
+  const r = await navResolveEntity(env, id);
+  if (r.state !== 'resolved') return navUnresolvedResponse(id, r);
+  const closed = { data_type: FI_DATA_TYPE, gate: 'closed', ciks: [], bonds: [] };
+  let links;
+  try { links = await fiEntityLinks(env, r.resolvedId); } catch (e) {
+    if (!navIsMissingTable(e)) throw e;
+    return gate.open ? fiUnavailable({ has_bond_link: false, ciks: [], bonds: [] }) : fi_json({ ...closed, has_bond_link: false, coverage: { available: false } });
+  }
+  if (!gate.open) return fi_json({ ...closed, has_bond_link: links.length > 0 });
+  if (links.length > FI_MAX_CIKS) return fiErr('too_many_ciks', 422);
+  const head = { data_type: FI_DATA_TYPE, gate: 'open', entity_id: r.resolvedId, redirect: r.redirect };
+  if (!links.length) return fi_json({ ...head, has_bond_link: false, ciks: [], bonds: [], next_cursor: null }, 200, FI_BROWSER_CC);
+  let page;
+  try { page = await fiBondPage(env, links.map(l => l.cik), p.limit, p.start); } catch (e) {
+    if (!navIsMissingTable(e)) throw e;
+    return fiUnavailable({ has_bond_link: true, ciks: [], bonds: [] });
+  }
+  return fi_json({
+    ...head, has_bond_link: true, ciks: links.map(fiLinkOut), bonds: page.bonds, next_cursor: page.next_cursor, limit: p.limit,
+    freshness: { last_polled_at: fiMaxPolled(links), latest_filing_date: page.latest_filing_date },
+  }, 200, FI_BROWSER_CC);
+}
+
+// F1b: one CIK, for filers with no entity link (§5.3).
+async function handleFiCikBonds(env, cik, url) {
+  if (!/^\d{10}$/.test(cik)) return fiErr('Invalid cik', 400);
+  const p = fiPageParams(url);
+  if (p.error) return fiErr(p.error, 400);
+  const gate = await fiGate(env);
+  const closed = { data_type: FI_DATA_TYPE, gate: 'closed', ciks: [], bonds: [] };
+  let link;
+  try {
+    link = await env.DB.prepare(
+      `SELECT cik, issuer_name, link_method, confidence, last_polled_at FROM bond_issuer_link WHERE cik = ?`
+    ).bind(cik).first();
+  } catch (e) {
+    if (!navIsMissingTable(e)) throw e;
+    return gate.open ? fiUnavailable({ has_bond_link: false, ciks: [], bonds: [] }) : fi_json({ ...closed, has_bond_link: false, coverage: { available: false } });
+  }
+  if (!gate.open) return fi_json({ ...closed, has_bond_link: !!link });
+  const head = { data_type: FI_DATA_TYPE, gate: 'open', entity_id: null };
+  if (!link) return fi_json({ ...head, has_bond_link: false, ciks: [], bonds: [], next_cursor: null }, 200, FI_BROWSER_CC);
+  let page;
+  try { page = await fiBondPage(env, [link.cik], p.limit, p.start); } catch (e) {
+    if (!navIsMissingTable(e)) throw e;
+    return fiUnavailable({ has_bond_link: true, ciks: [], bonds: [] });
+  }
+  return fi_json({
+    ...head, has_bond_link: true, ciks: [fiLinkOut(link)], bonds: page.bonds, next_cursor: page.next_cursor, limit: p.limit,
+    freshness: { last_polled_at: link.last_polled_at ?? null, latest_filing_date: page.latest_filing_date },
+  }, 200, FI_BROWSER_CC);
+}
+
+// F2 (§5.4). The issuer is the bond's own filer (its cik → bond_issuer_link); the LEI is
+// only the linked entity's entity_master.lei (DIL M-8). No guarantor in v1.
+async function handleFiBond(env, accession, rawSeq) {
+  if (!/^\d{10}-\d{2}-\d{6}$/.test(accession) || !/^[1-9]\d{0,5}$/.test(rawSeq)) return fiErr('Invalid bond id', 400);
+  const seq = parseInt(rawSeq, 10);
+  const gate = await fiGate(env);
+  if (!gate.open) return fi_json({ data_type: FI_DATA_TYPE, gate: 'closed', bond: null, issuer: null });
+  let row;
+  try {
+    row = await env.DB.prepare(
+      `SELECT ${FI_BOND_COLS}, filing_status, parser_version, ingested_at FROM bond_issuance WHERE accession_number = ? AND tranche_seq = ?`
+    ).bind(accession, seq).first();
+  } catch (e) {
+    if (!navIsMissingTable(e)) throw e;
+    return fiUnavailable({ bond: null, issuer: null });
+  }
+  if (!row || row.filing_status !== 'final' || !fiServed(row)) return fiErr('not_found', 404);
+  const link = await env.DB.prepare(
+    `SELECT cik, entity_id, link_method, confidence, issuer_name, linked_at, verified_at FROM bond_issuer_link WHERE cik = ?`
+  ).bind(row.cik).first();
+
+  let other_filings = 0, multiCik = false;
+  if (row.instrument_key) {
+    const c = await env.DB.prepare(
+      `SELECT COUNT(*) AS n, COUNT(DISTINCT cik) AS ciks FROM bond_issuance
+       WHERE instrument_key = ? AND filing_status = 'final' AND parse_confidence >= ${FI_MIN_CONFIDENCE}`
+    ).bind(row.instrument_key).first();
+    other_filings = Math.max(Number(c?.n ?? 1) - 1, 0);
+    multiCik = Number(c?.ciks ?? 1) > 1;
+  }
+
+  let candidates = [], state = 'unmatched', reason = 'no_mapping';
+  if (link && link.entity_id != null) {
+    const r = await navResolveEntity(env, Number(link.entity_id));
+    if (r.state === 'resolved') {
+      const mrow = { source: 'sec_bond', source_table: 'bond_issuer_link', confidence: link.confidence, as_of: link.verified_at || link.linked_at };
+      candidates = [{ ...navCandidate(r.entity, mrow, r.redirect), also_sources: [] }];
+      state = candidates[0].confidence_band === 'low' ? 'low_confidence' : 'matched';
+      reason = null;
+    } else reason = 'redirect_unresolved';
+  }
+  if (multiCik) { state = 'ambiguous'; reason = 'source_conflict'; }
+
+  const { filing_status, parser_version, ingested_at, ...terms } = row;
+  return fi_json({
+    data_type: FI_DATA_TYPE, gate: 'open',
+    bond: { ...fiBondRow(terms), parser_version, ingested_at, other_filings },
+    filer: { cik: row.cik, issuer_name: link?.issuer_name ?? null },
+    issuer: {
+      instrument_key: row.instrument_key ?? null,
+      identifiers: { isin: row.isin ?? null, cusip: row.cusip ?? null, ticker: null },
+      asset_type: 'DBT',
+      name: row.tranche_label ?? null,
+      state, reason, candidates,
+      as_of: candidates[0]?.as_of ?? null,
+    },
+  }, 200, FI_BROWSER_CC);
+}
+
+// §5.7: F3/F4 Worker cache, key = URL + gate state + gate changed_at, so a body cached
+// before a close can never come back after a reopen. Closed / missing-table bodies are
+// never cached. On workers.dev the Cache API may be a no-op (M-6): x-fi-cache says which.
+function fiCacheKey(url, gate) {
+  const u = new URL(url.toString());
+  u.searchParams.set('__fi_gate', `${gate.state}|${gate.changed_at ?? ''}`);
+  return new Request(u.toString(), { method: 'GET' });
+}
+function fiCache() {
+  return typeof caches !== 'undefined' && caches && caches.default ? caches.default : null;
+}
+async function fiCached(url, gate, ctx, build) {
+  const cache = fiCache();
+  const key = fiCacheKey(url, gate);
+  if (cache) {
+    const hit = await cache.match(key);
+    if (hit) {
+      const h = new Headers(hit.headers);
+      h.set('Cache-Control', FI_BROWSER_CC);
+      h.set('x-fi-cache', 'hit');
+      return new Response(hit.body, { status: hit.status, headers: h });
+    }
+  }
+  const { body, cacheable } = await build();
+  const res = fi_json(body, 200, cacheable ? FI_BROWSER_CC : 'no-store', { 'x-fi-cache': 'miss' });
+  if (cache && cacheable) {
+    const stored = fi_json(body, 200, `public, max-age=${FI_CACHE_TTL}`, { 'x-fi-cache': 'miss' });
+    const put = cache.put(key, stored);
+    if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(put); else await put;
+  }
+  return res;
+}
+
+const fiLinkBand = l => (l.link_method === 'unmatched' || l.entity_id == null ? 'unmatched' : navBand('sec_bond', l.confidence));
+
+// F3 (§5.5). Open gate only; ≈ 2.4k reads uncached.
+async function handleFiCoverage(env, url, ctx) {
+  const gate = await fiGate(env);
+  if (!gate.open) return fi_json({ data_type: FI_DATA_TYPE, gate: 'closed', issuers: [], totals: null });
+  return fiCached(url, gate, ctx, async () => {
+    let res;
+    try {
+      res = await env.DB.batch([
+        env.DB.prepare(`SELECT cik, issuer_name, entity_id, link_method, confidence, last_polled_at FROM bond_issuer_link`),
+        env.DB.prepare(`SELECT cik, COUNT(*) AS finals, MAX(filing_date) AS latest_filing
+          FROM bond_issuance WHERE filing_status = 'final' AND parse_confidence >= ${FI_MIN_CONFIDENCE} GROUP BY cik`),
+        env.DB.prepare(`SELECT COUNT(*) AS n FROM (SELECT instrument_key FROM bond_issuance
+          WHERE filing_status = 'final' AND parse_confidence >= ${FI_MIN_CONFIDENCE} AND instrument_key IS NOT NULL
+          GROUP BY instrument_key HAVING COUNT(DISTINCT cik) > 1)`),
+      ]);
+    } catch (e) {
+      if (!navIsMissingTable(e)) throw e;
+      return { body: { data_type: FI_DATA_TYPE, gate: 'open', issuers: [], totals: null, coverage: { available: false } }, cacheable: false };
+    }
+    const links = res[0].results ?? [];
+    const counts = new Map((res[1].results ?? []).map(c => [c.cik, c]));
+    const issuers = links.map(l => ({
+      cik: l.cik, issuer_name: l.issuer_name, entity_id: l.entity_id ?? null, link_method: l.link_method, band: fiLinkBand(l),
+      finals: Number(counts.get(l.cik)?.finals ?? 0), latest_filing: counts.get(l.cik)?.latest_filing ?? null, last_polled_at: l.last_polled_at ?? null,
+    })).sort((a, b) => String(a.issuer_name).localeCompare(String(b.issuer_name)) || a.cik.localeCompare(b.cik));
+    const linked = issuers.filter(i => i.entity_id != null).length;
+    return {
+      body: {
+        data_type: FI_DATA_TYPE, gate: 'open', issuers,
+        totals: { issuers: issuers.length, linked, unmatched: issuers.length - linked, finals: issuers.reduce((s, i) => s + i.finals, 0) },
+        multi_cik_keys: Number(res[2].results?.[0]?.n ?? 0),
+        as_of: fiMaxPolled(links),
+      },
+      cacheable: true,
+    };
+  });
+}
+
+// F4 (§5.6). Distinct securities per maturity year (instrument_key, else accession+tranche);
+// principal_usd only for USD securities filed once; reopened = securities filed more than once.
+async function handleFiLadder(env, entityId, url, ctx) {
+  if (!/^[1-9]\d{0,9}$/.test(entityId)) return fiErr('Invalid entity_id', 400);
+  const id = parseInt(entityId, 10);
+  const gate = await fiGate(env);
+  const r = await navResolveEntity(env, id);
+  if (r.state !== 'resolved') return navUnresolvedResponse(id, r);
+  if (!gate.open) return fi_json({ data_type: FI_DATA_TYPE, gate: 'closed', years: [] });
+  let links;
+  try { links = await fiEntityLinks(env, r.resolvedId); } catch (e) {
+    if (!navIsMissingTable(e)) throw e;
+    return fiUnavailable({ years: [] });
+  }
+  if (links.length > FI_MAX_CIKS) return fiErr('too_many_ciks', 422);
+  const ladderUrl = new URL(url.toString());          // requested id: the body carries its redirect
+  ladderUrl.searchParams.set('__d', fiTodayUtc());   // the outstanding cut-off is part of the key
+  const head = { data_type: FI_DATA_TYPE, gate: 'open', entity_id: r.resolvedId, redirect: r.redirect };
+  if (!links.length) return fi_json({ ...head, years: [] }, 200, FI_BROWSER_CC);
+  const res = await fiCached(ladderUrl, gate, ctx, async () => {
+    const stmt = `SELECT substr(maturity_date, 1, 4) AS y, currency, instrument_key, accession_number, tranche_seq, principal_amount, parse_confidence
+      FROM bond_issuance
+      WHERE cik = ? AND filing_status = 'final' AND maturity_date >= ?
+      ORDER BY maturity_date, accession_number, tranche_seq`;
+    const out = await env.DB.batch(links.map(l => env.DB.prepare(stmt).bind(l.cik, fiTodayUtc())));
+    const secs = new Map();
+    for (const rs of out) for (const x of rs.results ?? []) {
+      if (!fiServed(x)) continue;
+      const k = x.instrument_key || `${x.accession_number}#${x.tranche_seq}`;
+      if (!secs.has(k)) secs.set(k, { y: x.y, currency: x.currency, principal: x.principal_amount, filings: new Set() });
+      secs.get(k).filings.add(x.accession_number);
+    }
+    const years = new Map();
+    for (const s of secs.values()) {
+      if (!years.has(s.y)) years.set(s.y, { year: s.y, securities: 0, principal_usd: 0, reopened: 0, other_currencies: {} });
+      const yr = years.get(s.y);
+      yr.securities++;
+      if (s.filings.size > 1) yr.reopened++;
+      else if (s.currency === 'USD' && s.principal != null) yr.principal_usd += Number(s.principal);
+      if (s.currency !== 'USD') yr.other_currencies[s.currency] = (yr.other_currencies[s.currency] ?? 0) + 1;
+    }
+    return { body: { ...head, years: [...years.values()].sort((a, b) => a.year.localeCompare(b.year)) }, cacheable: true };
+  });
+  return res;
+}
+
 export default {
   async fetch(request, env, ctx) {
     // Preflight
@@ -937,6 +1333,17 @@ export default {
 
       const exposureMatch = path.match(/^\/api\/entities\/(\d+)\/exposure$/);
       if (exposureMatch) return await handleExposure(env, exposureMatch[1]);
+
+      // MA-OCT-009 Fixed Income (F1, F1b, F2, F3, F4). GET only.
+      if (path.startsWith('/api/fi/') && request.method === 'GET') {
+        if (path === '/api/fi/coverage') return await handleFiCoverage(env, url, ctx);
+        const fiIssuer = path.match(/^\/api\/fi\/issuers\/([^/]+)\/(bonds|ladder)$/);
+        if (fiIssuer) return fiIssuer[2] === 'bonds' ? await handleFiIssuerBonds(env, fiIssuer[1], url) : await handleFiLadder(env, fiIssuer[1], url, ctx);
+        const fiCik = path.match(/^\/api\/fi\/ciks\/([^/]+)\/bonds$/);
+        if (fiCik) return await handleFiCikBonds(env, fiCik[1], url);
+        const fiBond = path.match(/^\/api\/fi\/bonds\/([^/]+)\/([^/]+)$/);
+        if (fiBond) return await handleFiBond(env, fiBond[1], fiBond[2]);
+      }
 
       // MA-OCT-003 R-3: the legacy exception surfaces (MA-SEP-012b /admin/exceptions, MA-SEP-015b /exceptions,
       // /exceptions/ui, /exceptions/:id) moved to meridian-ops /api/ops/admin/cases. Any path equal to or under
