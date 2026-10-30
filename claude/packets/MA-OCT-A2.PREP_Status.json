@@ -1,0 +1,23 @@
+{
+  "packet": "MA-OCT-A2.PREP",
+  "state": "CLOSED",
+  "owner": "LANE-11-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-A2.PREP_Control_v1.md",
+    "sha256": "3b296a27fae362ab0656dafb6ef931e8c18d7a0975bf12330da8b062e32f9f04"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-A2.PREP_Task_v1.md",
+    "sha256": "f3000cd901220a475304828561059a613e2876c6cc4f63a54379cfc5455b3bd8"
+  },
+  "blocker": null,
+  "usage_class": "heavy",
+  "updated": "2026-10-29T20:35Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "41a0644b09ae460591112635424aebd28682c562b04b44d75fbb0360fbda0a6b"
+  },
+  "superseded_by": "MA-OCT-A2.BUILD"
+}

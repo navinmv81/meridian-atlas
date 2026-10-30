@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-FRI30.ENG1",
+  "state": "READY",
+  "owner": "LANE-1-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-FRI30.ENG1_Control_v1.md",
+    "sha256": "4d512ceafd14167b1f8218e57063a82c34b99a156e2694e9e8edfe350bf80838"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-FRI30.ENG1_Task_v1.md",
+    "sha256": "9f5d5f012785a70df0c71181e8035eae4345757150ebf59731aad0c92a43466d"
+  },
+  "blocker": null,
+  "usage_class": "heavy",
+  "updated": "2026-10-30T07:00Z",
+  "updated_by": "Main Lane"
+}

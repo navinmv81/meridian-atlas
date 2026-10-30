@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-009.SPEC1",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-7",
   "write_owner": "Engineering Lead (LANE-7)",
   "control": {
@@ -15,6 +15,9 @@
   },
   "blocker": null,
   "usage_class": "medium",
-  "updated": "2026-10-28T19:45Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-10-29T07:20Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256_prefix": "7eefc542cc995908"
+  }
 }

@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-FRI30.DIL",
+  "state": "READY",
+  "owner": "LANE-11",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-FRI30.DIL_Control_v1.md",
+    "sha256": "98b63faf9bd06de8004f911eda1448dcc3dec916b9b85d8474ed964f2c838035"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-FRI30.DIL_Task_v1.md",
+    "sha256": "0c8d62c4ae81f71a04f9d3ab83258335c96970410b491bd2aaa181612dad06af"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-30T07:00Z",
+  "updated_by": "Main Lane"
+}

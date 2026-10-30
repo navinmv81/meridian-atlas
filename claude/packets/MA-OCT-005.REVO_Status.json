@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-005.REVO",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-1-OPS",
   "write_owner": "Operations Lead (LANE-1-OPS)",
   "control": {
@@ -15,6 +15,9 @@
   },
   "blocker": null,
   "usage_class": "medium",
-  "updated": "2026-10-27T07:45Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-10-29T07:20Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256_prefix": "39fca5daa131d9d6"
+  }
 }

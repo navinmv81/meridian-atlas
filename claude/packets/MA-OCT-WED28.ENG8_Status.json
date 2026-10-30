@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-WED28.ENG8",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-8-ENG",
   "write_owner": "Engineering Lead (LANE-8-ENG)",
   "control": {
@@ -15,6 +15,9 @@
   },
   "blocker": null,
   "usage_class": "heavy",
-  "updated": "2026-10-28T19:45Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-10-29T07:30Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "edeaaddecf183a34ea8d92dab9497233f0d62798fdfc6f069f2f4b454a10d715"
+  }
 }

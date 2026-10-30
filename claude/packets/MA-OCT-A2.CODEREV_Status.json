@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-A2.CODEREV",
+  "state": "READY",
+  "owner": "REVIEW-A",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-A2.CODEREV_Control_v1.md",
+    "sha256": "029d49610713a2fc1bce99dc700c2d1ab67fd046b6649a5e5608952b7d050e2c"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-A2.CODEREV_Task_v1.md",
+    "sha256": "6579adbbba4a41a7582c63b0fee476c747fe2f659ae53359a829db478fabbba7"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-30T07:00Z",
+  "updated_by": "Main Lane"
+}

@@ -1,0 +1,5 @@
+# MA-OCT-013.REVE — Task v1 (immutable): ETF Product Lead review of the 013 spec
+
+Review `claude/MA-OCT-013_Spec.md` rev 0 `9a7466775ab8e91cc5ad70458d789138fa95d41a147d4b585ab20aeb1add69a3` (report `d06c5e5bb8bb6f97950e7b5863224d56a6a2584f5201b9d49d680d313990c19d`) as **ETF Product Lead**. Founder decisions (ML-1029-4, do not re-open): Q1 Mon 2-only 013 cap 33k writes, account ≤ 70k; Q2 LEI-bearing row survives (50 three-way + OTP), 642 optional rows → November; Q3 6 cross-pair LEIs → November adjudication. 013 runs **Mon 2 after 08:00Z**, after A2's Sat run (A2 may be partial; 013 must work on post-011 or partial-A2 state). Focus: ETF-domain impact: no ETF table written; the 74 instrument-link repoints and their effect on ETF exposure/overlap reads; `fund_entity_link` untouched; ETF API contracts unchanged. Doc-only: no D1, no deploys, no git writes, no secrets. Verdict PASS / PASS WITH NOTES / FAIL, findings BLOCKER / MUST-FIX before run / NOTE.
+
+Write the review and `claude/packets/MA-OCT-013.REVE_Report.md`. Reply **"MA-OCT-013.REVE reported"**. Due by Sat 31 18:00Z.

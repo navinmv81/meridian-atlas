@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-BUILD.REVA",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-BUILD.REVA_Control_v1.md",
+    "sha256": "0e3f6288d3680fc7c4d4e86fc30cbaa8276f4f137f57cb630c4445132bf115f6"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-BUILD.REVA_Task_v1.md",
+    "sha256": "fa563ec2d17db607406e8aede6d4d4d10b012f0ca616d299b2a4e75408d3758c"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-30T07:00Z",
+  "updated_by": "Main Lane"
+}

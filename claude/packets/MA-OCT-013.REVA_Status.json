@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-013.REVA",
+  "state": "READY",
+  "owner": "REVIEW-A",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-013.REVA_Control_v1.md",
+    "sha256": "fbc36aed91ac535f8b9b049b3754b718d03b2665924e03a4b1ef54d2a48d236d"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-013.REVA_Task_v1.md",
+    "sha256": "89b3652dab62b16d468e29e0c68c7e300bc23911eda4ae3d2ca63c18f40c09f7"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-30T07:00Z",
+  "updated_by": "Main Lane"
+}

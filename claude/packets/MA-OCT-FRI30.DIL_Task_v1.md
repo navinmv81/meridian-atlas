@@ -1,0 +1,12 @@
+# MA-OCT-FRI30.DIL — Task v1 (immutable): AC12 re-adjudication + A2 G-2 sample (150) + L-A2-1
+
+Governing: DIL14 `c517dde7b9a561870ef1123b33d55a2d99fcbdb6f3bbb197dd946691d11c9399` §5 (AC12); THU29.ENG8 report `52699fea9fa71b302293f85fd1291d03ad7ed12317a607c015772b065e61f5ad` (R-1 in-place CIK re-point, R-2 row-preserving re-parse — both deviations for you to confirm — and the step-4 evidence pack, incl. 3 Comcast + 4 cover-checked filings); 009 spec rev 1 §4 (gate opening rule); A2.BUILD report `e2cf858e2bfaba09c1aee965bd94bda5a9928725e0778640e0f21014e388caa0` and run docs `ce53933678e431e2cf28fc86fbc0f5e12c030c3d86ebcecea2441df82fe625e7` (F-4/F-5).
+
+Do:
+1. **AC12 re-adjudication:** confirm or reject R-1 and R-2 methods; review the R-3 evidence; give **AC12 PASS / FAIL** with evidence. If PASS, write the exact gate-opening statement and read-back for an engineering lane, to run **only after the Founder acknowledges** (and after the 009 deploy is live). Do not open it.
+2. **A2 G-2:** run (or have produced) the deterministic `g2-draw` per F-4; adjudicate all **150** rows (0 errors required); write the F-5 file with `sample_sha256`; copy the sample + adjudication to `claude/relays/a2/` so the Ops spot-check (≥ 15 rows, a different reader, Sat morning) can read them.
+3. **L-A2-1:** confirm the currency-name FUND clause, or rule 2488 out of R-FUND's expected list; the excluded total must stay 28.
+
+**Standing rules:** Wrangler only `/usr/local/bin/wrangler` 4.96.0 (never `npx`); pre-flight `wrangler whoami`. `claude/relays/FREEZES.json` is now `4d8202bbaf2cb9f854fc3870f3c4f624af963c6d3972467f5aeb2b5d9019d7fc` (A2 window re-pinned to **Sat 31 07:10Z → Sun 1 00:10Z**, ML-1030-1; today's freezes: 07:55–08:05, 10:45–11:15, 11:45–12:15, 16:45–17:15, 17:45–18:15, 23:50–00:10 UTC; sweep ≈ 22:00Z). **One production change at a time** across lanes: announce "starting <change>" with UTC time in your report log and check `claude/packets/*_Report.md` of the other Fri lanes for an open change first. Production steps end by 23:45Z. ML-1024-1: never read the contents of `~/.meridian-secrets/*`, `.env*`, `*.secret`. Stop before any macOS permission prompt (ML-1013-3). Explicit-path staging only; never `git add -A`; never `September-2026`; never touch `13F Seed/gleif-seed.js`, `.env.*`, `.claude/settings.local.json`. D1 writes guarded and batched, three-point check first. Own worktree only.
+
+Write `claude/packets/MA-OCT-FRI30.DIL_Report.md`. Reply **"MA-OCT-FRI30.DIL reported"**.

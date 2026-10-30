@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-004.GOLIVE",
+  "state": "READY",
+  "owner": "LANE-4-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-004.GOLIVE_Control_v1.md",
+    "sha256": "fe2f17fda2436172675bb97f78d1e30c2fb90b99f38a8241485c06e89fc84241"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-004.GOLIVE_Task_v1.md",
+    "sha256": "87b684a6354cacdd5c684f6b67d33ada70d4a8b9ab078ed89080bb05f45203da"
+  },
+  "blocker": null,
+  "usage_class": "heavy",
+  "updated": "2026-10-30T07:00Z",
+  "updated_by": "Main Lane"
+}

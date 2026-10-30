@@ -1,0 +1,32 @@
+{
+  "packet": "MA-OCT-A2.BUILD",
+  "state": "CLOSED",
+  "owner": "LANE-11-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-A2.BUILD_Control_v1.md",
+    "sha256": "6334e9410bf1a81c0db1f2d02088984edc92b448155fa5fc4b8faaadd1ae8bee"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-A2.BUILD_Task_v1.md",
+    "sha256": "a14e6f94edb5bbeb80a74d9cd4f624ee0c2c5b1c90a858de1f6da35b9c2858eb"
+  },
+  "blocker": null,
+  "usage_class": "heavy",
+  "updated": "2026-10-30T07:00Z",
+  "updated_by": "LANE-11-ENG",
+  "founder_approval": {
+    "text": "A2 option A",
+    "at": "2026-10-29"
+  },
+  "report": {
+    "file": "MA-OCT-A2.BUILD_Report.md",
+    "sha256": "e2cf858e2bfaba09c1aee965bd94bda5a9928725e0778640e0f21014e388caa0"
+  },
+  "run_docs": {
+    "file": "MA-OCT-A2.BUILD_RunDocs.md",
+    "sha256": "ce53933678e431e2cf28fc86fbc0f5e12c030c3d86ebcecea2441df82fe625e7"
+  },
+  "outcome": "Steps 1-6 done; C-3 tested before 14:00Z. A2 suite 21/21, 011 suite 42/42; dry run A 3648/ECA 44/EA 296/Q 3648; Sat 31 cap fits A-001..A-011+Q; rest to November. Awaiting Architect C-3/C-4 review."
+}

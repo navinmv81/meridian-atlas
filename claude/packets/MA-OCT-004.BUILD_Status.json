@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-004.BUILD",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-4-ENG",
   "write_owner": "Engineering Lead (LANE-4-ENG)",
   "control": {
@@ -15,6 +15,6 @@
   },
   "blocker": null,
   "usage_class": "heavy",
-  "updated": "2026-10-28T19:45Z",
+  "updated": "2026-10-29T19:55Z",
   "updated_by": "Main Lane"
 }

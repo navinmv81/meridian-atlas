@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-013.REVO",
+  "state": "READY",
+  "owner": "LANE-1-OPS",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-013.REVO_Control_v1.md",
+    "sha256": "ac35abcd48a3c0ff46ada3ed2e9ba4122ef3dd6b62c052feeec43475d3d515e7"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-013.REVO_Task_v1.md",
+    "sha256": "d5b337ab7ed19638b9e9927d748e174704ca1c2042524d776249996d11fc244e"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-30T07:00Z",
+  "updated_by": "Main Lane"
+}

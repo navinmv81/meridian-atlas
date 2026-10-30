@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-013.REVE",
+  "state": "READY",
+  "owner": "ETF-PL",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-013.REVE_Control_v1.md",
+    "sha256": "7574397de7fc870097b1ab8d87bb460860f50f4f8fbc517ed0050ca4bf51f094"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-013.REVE_Task_v1.md",
+    "sha256": "48dc21803b6b9a3fb1d7fef23ef176bcdb1cdaefa67f4c858f9f296a571aa737"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-30T07:00Z",
+  "updated_by": "Main Lane"
+}

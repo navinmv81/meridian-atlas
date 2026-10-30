@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-009.BUILD",
+  "state": "CLOSED",
+  "owner": "LANE-1-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-009.BUILD_Control_v1.md",
+    "sha256": "4f043a5e4a2f0341c9525c18139d9af45b4772c8d6bc9a191810eddb9dfbe445"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-009.BUILD_Task_v1.md",
+    "sha256": "e5a3e6ad8e2ce6ba9107f73b0399e7ed607e04dbd32eccf525a02ee06983695b"
+  },
+  "blocker": null,
+  "usage_class": "heavy",
+  "updated": "2026-10-29T19:55Z",
+  "updated_by": "Main Lane"
+}
