@@ -25,6 +25,8 @@ const srv = await new Promise(res => { const s = createServer((req, resp) => {
     got.push({ path: req.url, emitter: req.headers['x-ops-emitter'], body, at: Date.now() });
     if (req.url.endsWith('/run-event')) { resp.writeHead(runEventStatus, { 'Content-Type': 'application/json' }); return resp.end('{"ok":true,"recorded":true}'); }
     if (mode === '500') { resp.writeHead(500); return resp.end('{"ok":false}'); }
+    if (mode === 'dq') { resp.writeHead(200, { 'Content-Type': 'application/json' }); return resp.end(JSON.stringify({ ok: true, run_id: body.run_id, hold_all_jobs: false, headroom: { headroom: 99000 },
+      findings: 0, already_open: 3, new: [], raised: 0, overflow: 0, open_counts: { sev3: 3 }, dq_new: 2, dq_since: '2026-10-29T08:00:00Z', rows_read: 242 })); }
     if (mode === '202') { resp.writeHead(202, { 'Content-Type': 'application/json' }); return resp.end('{"ok":true,"swept":false,"reason":"sweep_disabled"}'); }
     const fresh = mode === 'findings' ? [{ case_ref: 'EXC-S-AAA', type: 'job_missed', severity: 'sev3', title: 'local.entities-enrich-boost missed its 2026-10-13T10:50Z slot' },
                                          { case_ref: 'EXC-S-BBB', type: 'hold_active', severity: 'sev2', title: 'hold_all_jobs is TRUE' }] : [];
@@ -76,6 +78,11 @@ mode = 'findings';
 r = await run({ OPS_TRIGGER: 'launchd' });
 check('[findings] one notification: count by severity + titles', /notification suppressed\) Meridian Atlas — Needs Attention: 2 new \(1 sev2, 1 sev3\): /.test(r.out), r.out);
 check('[findings] metrics.raised = 2; trigger launchd', events(r)[1]?.detail?.metrics?.raised === 2 && events(r).every(e => e.trigger === 'launchd'), events(r));
+
+// MA-OCT-004 AC-20 (F-3): dq_new > 0 adds one line to the existing notification; dq_new 0 stays silent (clean run above).
+mode = 'dq';
+r = await run();
+check('[AC-20] dq_new = 2 → one notification carrying "2 new data-quality tickets."', /notification suppressed\) Meridian Atlas — Needs Attention: 2 new data-quality tickets\./.test(r.out), r.out);
 
 // 3. Sweep switched off (202) → skipped, exit 0, no notification.
 mode = '202';

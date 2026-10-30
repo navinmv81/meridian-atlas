@@ -1,0 +1,452 @@
+[
+ {
+  "dedupe": "ki:22.44",
+  "type": "wrong_lei",
+  "sev": "sev2",
+  "status": "triaged",
+  "title": "KI 22.44: 24 entities carry a wrong LEI (subsidiary 18, other/predecessor 6)",
+  "summary": "23 from the June isin_direct bulk mapping, 1 unknown source (SLM). Excluded from MA-OCT-011; 011 never overwrites an existing LEI.",
+  "od": "source_record",
+  "ok": "known-issue:22.44",
+  "ref": {
+   "ki": "22.44",
+   "rc": "RC-12",
+   "members": 24
+  },
+  "src": "ma-oct-006",
+  "evidence": "MA-OCT-006 Evidence §15.3 (0d1bbf9b…db1bc; wrong_lei_detail.csv SHA 41502aa7…1c01), §14.4; D5-8, D6-4 (OPAP cleared), D6-5; Matrix rank 14.",
+  "proposal": "Per member: replace with the T1 LEI (6); review the non-T1 candidate (5); set NULL and match in the next offline GLEIF pass (13). Manual correction by a Data-Identity Lead packet after 24 Oct.",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "entity",
+    "k": "528",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "Investar Holding Corp",
+     "current_lei": "549300CPKDUJKREQRG38",
+     "correct_lei": "54930001EK2YM28LOJ08",
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "575",
+    "act": "review",
+    "ref": {
+     "name": "United Community Banks Inc/GA",
+     "current_lei": "T68X8LLAQYRNDV034K14",
+     "correct_lei": "549300GVW0FV66X3U703",
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "576",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "United Fire Group Inc",
+     "current_lei": "549300ZRC3FQZU7GNY20",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "596",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "Crescent Energy Co",
+     "current_lei": "549300WN2AGOX1011V72",
+     "correct_lei": "254900FBNP5A21Q39U97",
+     "kind": "other_or_predecessor"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "702",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Graphic Packaging Holding Co",
+     "current_lei": "SO75N4VY5NXGQSK8YQ65",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "838",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Franklin Financial Services Corp",
+     "current_lei": "5493008E3WZYM5146L29",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "890",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Carter Bankshares Inc",
+     "current_lei": "549300SO0M022D8D8358",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "899",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Oak Valley Bancorp",
+     "current_lei": "549300D2R9YSQ442G068",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "902",
+    "act": "review",
+    "ref": {
+     "name": "Chord Energy Corp",
+     "current_lei": "52990028CHK9KUB1B293",
+     "correct_lei": "529900FA4V2YNIKZ0M71",
+     "kind": "other_or_predecessor"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "927",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "ServisFirst Bancshares Inc",
+     "current_lei": "549300XSS1CPK8G7B851",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "931",
+    "act": "review",
+    "ref": {
+     "name": "SLM Corp",
+     "current_lei": "54930067J0ZNOEBRW338",
+     "correct_lei": "4K8SLPBF5DXXGPW03H93",
+     "kind": "other_or_predecessor",
+     "see_also": "DQ-M-000001 (do_not_merge 931/1216)"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "943",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Chemung Financial Corp",
+     "current_lei": "549300WU17K1CLH8VI32",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1015",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Bar Harbor Bankshares",
+     "current_lei": "549300VR3QTN4GZYUR03",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1049",
+    "act": "review",
+    "ref": {
+     "name": "Mercury General Corp",
+     "current_lei": "5493008B54WFZLDKD530",
+     "correct_lei": "5493001Q9EXPCEL4W527",
+     "kind": "other"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1134",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "Alpha Metallurgical Resources Inc",
+     "current_lei": "549300C9E158C3V6PT51",
+     "correct_lei": "254900VEBGZO2PY8R678",
+     "kind": "other_or_predecessor"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1138",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Amalgamated Financial Corp",
+     "current_lei": "254900FMBXF85WQYV433",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1157",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Mid Penn Bancorp Inc",
+     "current_lei": "254900L0MIAM922ZEC34",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1162",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "Sierra Bancorp",
+     "current_lei": "5493003HTEY5OCC5SP27",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1181",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "City Holding Co",
+     "current_lei": "549300KJZ82173UB3I21",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1455",
+    "act": "null_and_offline_match",
+    "ref": {
+     "name": "MDU Resources Group Inc",
+     "current_lei": "0T6SBMK3JTBI1JR36794",
+     "correct_lei": null,
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1514",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "Jacobs Solutions Inc",
+     "current_lei": "549300CZ8QS1GE53O776",
+     "correct_lei": "254900E3KHXCC2C8K272",
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1803",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "APA Corp.",
+     "current_lei": "72ZZ1XRHOOU9P9X16K08",
+     "correct_lei": "549300VCIWLRHYVSHC79",
+     "kind": "other_or_predecessor"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1809",
+    "act": "replace_lei_t1",
+    "ref": {
+     "name": "Old National Bancorp",
+     "current_lei": "549300AT7EB9FJAF0E61",
+     "correct_lei": "549300MMK90CL5KMVX16",
+     "kind": "subsidiary"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "1868",
+    "act": "review",
+    "ref": {
+     "name": "Wendy's Co/The",
+     "current_lei": "549300PQTT267ME8D359",
+     "correct_lei": "529900M0JIUCMWVKHG76",
+     "kind": "subsidiary"
+    }
+   }
+  ]
+ },
+ {
+  "dedupe": "ki:22.9",
+  "type": "bad_relationship_edge",
+  "sev": "sev3",
+  "status": "triaged",
+  "title": "KI 22.9: 4 legal_parent edges with no GLEIF relationship (MA-SEP-001 merge)",
+  "summary": "Reopened as a fix by Founder decision 17 Oct (004 F-1). The 22 Aug accepted_no_fix stays on record on DQ-M-000004…7.",
+  "od": "source_record",
+  "ok": "known-issue:22.9",
+  "ref": {
+   "ki": "22.9",
+   "rc": "RC-20",
+   "members": 4,
+   "legacy": [
+    "DQ-M-000004",
+    "DQ-M-000005",
+    "DQ-M-000006",
+    "DQ-M-000007"
+   ]
+  },
+  "src": "ma-oct-006",
+  "evidence": "MA-OCT-006 Evidence §14.5 (0d1bbf9b…db1bc); Matrix rank 10; 015c migration.",
+  "proposal": "Delete the 4 edges by full identity (parent, child, relationship_type, source, created_at); ≈ 16 Entities writes; Data-Identity Lead packet ≥ Sat 24. Never touch an edge whose source or created_at differs (e.g. an 011 edge).",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "source_record",
+    "k": "entity_relationships:1565->3:legal_parent:gleif:2026-06-10T19:51:32",
+    "act": "delete_edge",
+    "ref": {
+     "parent_entity_id": 1565,
+     "child_entity_id": 3,
+     "relationship_type": "legal_parent",
+     "source": "gleif",
+     "created_at": "2026-06-10 19:51:32",
+     "d4_rowid": 265
+    }
+   },
+   {
+    "d": "source_record",
+    "k": "entity_relationships:2247->143:legal_parent:gleif:2026-06-11T00:00:55",
+    "act": "delete_edge",
+    "ref": {
+     "parent_entity_id": 2247,
+     "child_entity_id": 143,
+     "relationship_type": "legal_parent",
+     "source": "gleif",
+     "created_at": "2026-06-11 00:00:55",
+     "d4_rowid": 267
+    }
+   },
+   {
+    "d": "source_record",
+    "k": "entity_relationships:2476->49:legal_parent:gleif:2026-06-10T20:00:59",
+    "act": "delete_edge",
+    "ref": {
+     "parent_entity_id": 2476,
+     "child_entity_id": 49,
+     "relationship_type": "legal_parent",
+     "source": "gleif",
+     "created_at": "2026-06-10 20:00:59",
+     "d4_rowid": 266
+    }
+   },
+   {
+    "d": "source_record",
+    "k": "entity_relationships:6980->194:legal_parent:gleif:2026-06-11T02:00:56",
+    "act": "delete_edge",
+    "ref": {
+     "parent_entity_id": 6980,
+     "child_entity_id": 194,
+     "relationship_type": "legal_parent",
+     "source": "gleif",
+     "created_at": "2026-06-11 02:00:56",
+     "d4_rowid": 268
+    }
+   }
+  ]
+ },
+ {
+  "dedupe": "ki:22.43",
+  "type": "no_link_marker",
+  "sev": "sev3",
+  "status": "fix_pending",
+  "fix_ref": "MA-OCT-011 (bucket C)",
+  "title": "KI 22.43: 657 NO_LINK_DECLARED markers are wrong (GLEIF has an ACTIVE parent)",
+  "summary": "Aggregate with 0 members (657 > the 500 member cap). Resolve after 011 §9 verification. Recurrence: live Phase 3 keeps writing the generic marker (H6) — stays open under the enrich fix packet.",
+  "od": "source_record",
+  "ok": "known-issue:22.43",
+  "ref": {
+   "ki": "22.43",
+   "rc": "RC-5",
+   "rows": 657
+  },
+  "src": "ma-oct-006",
+  "evidence": "MA-OCT-006 Matrix rank 3 (RC-5), ki2243_rows.csv; 657 after D7-2. 011 close-out list SHA to be added by comment (H-1).",
+  "proposal": "MA-OCT-011 bucket C writes the GLEIF reason; enrich fix packet stops the recurrence.",
+  "owner": "Data-Identity Lead",
+  "members": []
+ },
+ {
+  "dedupe": "wrong_identifier:entity:2289:cik",
+  "type": "wrong_identifier",
+  "sev": "sev2",
+  "status": "triaged",
+  "title": "Entity 2289 (Welltower OP LLC) stores Welltower Inc's CIK",
+  "summary": "cik 0000766704 belongs to Welltower Inc; Welltower OP LLC is 0001917598. Must be fixed before 008 applies its signed Welltower OP LLC -> 2289 link (008.DIL14 item 2; H-3).",
+  "od": "entity",
+  "ok": "2289",
+  "ref": {
+   "name": "Welltower OP LLC",
+   "lei": "T6IZ0MBEG5ACZDTR7D06"
+  },
+  "src": "ma-oct-008",
+  "field": "cik",
+  "obs": "0000766704",
+  "exp": "0001917598",
+  "evidence": "MA-OCT-008.DIL14 §4 DQ-1 (c517dde7…c9399); Pack C packc-b3.json / packc-c2.json.",
+  "proposal": "One Entities UPDATE of entity_master.cik (~2 writes), Data-Identity Lead, after 24 Oct, before the 2289 link.",
+  "owner": "Data-Identity Lead",
+  "members": []
+ },
+ {
+  "dedupe": "entity_merge:2019:467290",
+  "type": "entity_merge",
+  "sev": "sev3",
+  "status": "fix_pending",
+  "fix_ref": "MA-OCT-013",
+  "title": "OTP Bank: entity 2019 (operating, no LEI) and 467290 (holding, LEI 529900W3MOO00A18X956) — merge in 013",
+  "summary": "467290 was created by live Phase 3 on 6 Oct; MA-OCT-011 withheld 2019. Input for 013 (H-2).",
+  "od": "entity",
+  "ok": "2019",
+  "ref": {
+   "pair": [
+    2019,
+    467290
+   ],
+   "lei": "529900W3MOO00A18X956"
+  },
+  "src": "ma-oct-011",
+  "evidence": "MA-OCT-011.FRI_Report; RELARC N-3; REVDIL 004-5.",
+  "proposal": "Resolve the pair in MA-OCT-013 (S1); never by 004.",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "entity",
+    "k": "2019",
+    "act": "merge_013",
+    "ref": {
+     "name": "OTP Bank Nyrt",
+     "type": "operating"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "467290",
+    "act": "merge_013",
+    "ref": {
+     "type": "holding",
+     "lei": "529900W3MOO00A18X956"
+    }
+   }
+  ]
+ }
+]

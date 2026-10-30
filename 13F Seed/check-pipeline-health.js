@@ -178,6 +178,8 @@ async function main() {
       const bySev = ['sev1', 'sev2', 'sev3'].map(s => [s, fresh.filter(n => n.severity === s).length]).filter(([, n]) => n).map(([s, n]) => `${n} ${s}`).join(', ');
       lines.push(`${fresh.length} new (${bySev}): ` + fresh.slice(0, 3).map(n => n.title).join(' · '));
     }
+    const dqNew = Number(b.dq_new) || 0;   // MA-OCT-004 §9.5 (F-3): one line, only when new DQ tickets exist
+    if (dqNew > 0) lines.push(`${dqNew} new data-quality ticket${dqNew === 1 ? '' : 's'}.`);
     const openHigh = metrics.open_sev1 + metrics.open_sev2;
     if (new Date().getHours() === 18 && openHigh > 0) lines.push(`Open sev1/sev2 cases: ${openHigh}.`);
     if (lines.length) notify('Meridian Atlas — Needs Attention', lines.join(' | '), fresh.some(n => n.severity !== 'sev3'));

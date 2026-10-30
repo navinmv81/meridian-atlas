@@ -26,6 +26,7 @@ const db = new DatabaseSync(':memory:');
 db.exec(read('migrations/002-ops-control-plane.sql'));
 db.exec(read('migrations/003-ops-job-pause.sql'));
 db.exec(read('migrations/004-ops-cases.sql'));
+db.exec(read('migrations/005-ops-dq.sql'));   // MA-OCT-004
 db.exec(`INSERT INTO ops_job_registry (job_id, display_name, domain, owner_role, execution_mode, emitter_id, notes)
          VALUES ('ops.ingest','Ops ingest global switch','Ops','Operations Lead','control',NULL,'control');
          INSERT INTO ops_job_registry (job_id, display_name, domain, owner_role, execution_mode, source_path, emitter_id, expected_max_duration_s)
@@ -146,7 +147,7 @@ check('[BREVA N-1] entry listing an unknown route id → 403 service_not_allowed
 const okE1 = await call('GET', '/api/ops/admin/exceptions', { token: SVC_OPS });
 check('[BREVA N-1] the canonical four-route entry still reaches E-1 (200)', okE1.status === 200, okE1.status);
 const dqComment = await act('DQ-M-000004', { action: 'comment', expected_status: 'open', note: 'x' }, { token: SVC_OPS, headers: { 'X-Ops-Client': 'script' } });
-check('[AC-1b] ops-script comment on a DQ- ref passes the allowlist, then 409 dq_actions_arrive_with_ma_oct_004 (0 writes)', dqComment.status === 409 && dqComment.body.error === 'dq_actions_arrive_with_ma_oct_004' && dqComment.d1 === 0, dqComment);
+check('[AC-1b] ops-script comment on a DQ- ref passes the allowlist and is applied by the 004 DQ engine (200, actor service:ops-script)', dqComment.status === 200 && dqComment.body.event === 'commented', dqComment);
 const svcAck = await act('EXC-S-0000000000A2', { action: 'acknowledge', expected_status: 'open' }, { token: SVC_OPS, headers: { 'X-Ops-Client': 'script' } });
 const svcEv = events('EXC-S-0000000000A2').at(-1);
 check('[AC-1b] ops-script acknowledge on an EXC- ref → 200, actor service:ops-script, common_name in payload (N3-3)',

@@ -1,0 +1,148 @@
+[
+ {
+  "dedupe": "sec_cik:0000766704",
+  "type": "missing_entity",
+  "sev": "sev4",
+  "status": "open",
+  "title": "SEC issuer Welltower Inc (CIK 0000766704) has no entity",
+  "summary": "Low priority: 0 final bond rows under its own CIK (equity skips only). Never link to Welltower OP LLC.",
+  "od": "source_record",
+  "ok": "sec_cik:0000766704",
+  "ref": {
+   "cik": "0000766704",
+   "sec_name": "Welltower Inc",
+   "lei": "254900F33BIAR82QTA19",
+   "co_registrant_of": null
+  },
+  "src": "ma-oct-008",
+  "evidence": "MA-OCT-008.DIL14 §4 DQ-2 (name search of the 16 Oct export finds only OP LLC rows 2289, 245698).",
+  "proposal": "Manual creation from GLEIF Level 1, then a manual link (008 §11.1: never automatic).",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "source_record",
+    "k": "gleif:254900F33BIAR82QTA19",
+    "act": "create_entity",
+    "ref": {
+     "name": "Welltower Inc"
+    }
+   }
+  ]
+ },
+ {
+  "dedupe": "sec_cik:0000804269",
+  "type": "missing_entity",
+  "sev": "sev3",
+  "status": "open",
+  "title": "SEC issuer GM Financial (CIK 0000804269): 3 duplicate no-LEI candidates, none linked",
+  "summary": "No entity carries LEI 5493008B6JBRUJ90QL97; three no-LEI candidate rows are themselves duplicates. Do not create a fourth row. Also an input for 013.",
+  "od": "source_record",
+  "ok": "sec_cik:0000804269",
+  "ref": {
+   "cik": "0000804269",
+   "sec_name": "General Motors Financial Company, Inc.",
+   "lei": "5493008B6JBRUJ90QL97",
+   "co_registrant_of": null
+  },
+  "src": "ma-oct-008",
+  "evidence": "MA-OCT-008.DIL14 §4 DQ-3 (corrected).",
+  "proposal": "Resolve the cluster to one survivor (S1, 013), assign the LEI by a manual Level-1 write, then a manual link.",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "entity",
+    "k": "3324",
+    "act": "merge_then_assign_lei",
+    "ref": {
+     "name": "GENERAL MOTORS FINL CO"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "30187",
+    "act": "merge_then_assign_lei",
+    "ref": {
+     "name": "General Motors Financial Co Inc"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "103981",
+    "act": "merge_then_assign_lei",
+    "ref": {
+     "name": "GENERAL MOTORS FINANCIAL COMPANY INC"
+    }
+   }
+  ]
+ },
+ {
+  "dedupe": "sec_cik:0002058265",
+  "type": "missing_entity",
+  "sev": "sev3",
+  "status": "open",
+  "title": "SEC co-registrant Pfizer Netherlands International Finance B.V. (CIK 0002058265) not linked",
+  "summary": "Co-registrant of Pfizer (L8-12). Candidate 106006 (NL, no LEI). Never link to the parent.",
+  "od": "source_record",
+  "ok": "sec_cik:0002058265",
+  "ref": {
+   "cik": "0002058265",
+   "sec_name": "Pfizer Netherlands International Finance B.V.",
+   "lei": "254900YI79T8NMNA4349",
+   "co_registrant_of": "Pfizer Inc"
+  },
+  "src": "ma-oct-008",
+  "evidence": "MA-OCT-008.DIL14 §4 DQ-4 (corrected); MA-OCT-008.AC17 L8-12.",
+  "proposal": "Confirm 106006 against GLEIF, assign the LEI manually, then a manual link.",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "entity",
+    "k": "106006",
+    "act": "confirm_and_assign_lei",
+    "ref": {
+     "name": "Pfizer Netherlands International Finance BV",
+     "country": "NL"
+    }
+   }
+  ]
+ },
+ {
+  "dedupe": "sec_cik:0002007029",
+  "type": "missing_entity",
+  "sev": "sev3",
+  "status": "open",
+  "title": "SEC issuer PepsiCo Singapore Financing I Pte. Ltd. (CIK 0002007029): rows sit under guarantor PepsiCo Inc",
+  "summary": "Its 4 bond rows are under PepsiCo Inc (entity 1457, P-1) and move under 008's R-1. Two duplicate no-LEI candidates. The link stays unmatched until resolved; never link to the guarantor.",
+  "od": "source_record",
+  "ok": "sec_cik:0002007029",
+  "ref": {
+   "cik": "0002007029",
+   "sec_name": "PepsiCo Singapore Financing I Pte. Ltd.",
+   "lei": null,
+   "co_registrant_of": null,
+   "current_wrong_link_entity": 1457
+  },
+  "src": "ma-oct-008",
+  "evidence": "MA-OCT-008.DIL14 §4 DQ-5 (new).",
+  "proposal": "008 R-1 moves the rows off 1457; resolve the duplicates to one survivor (013), then a manual link.",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "entity",
+    "k": "3367",
+    "act": "merge_then_assign_lei",
+    "ref": {
+     "name": "PEPSICO SINGAPORE FIN"
+    }
+   },
+   {
+    "d": "entity",
+    "k": "31416",
+    "act": "merge_then_assign_lei",
+    "ref": {
+     "name": "Pepsico Singapore Financing I Pte Ltd"
+    }
+   }
+  ]
+ }
+]

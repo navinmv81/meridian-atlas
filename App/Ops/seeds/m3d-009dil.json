@@ -1,0 +1,405 @@
+[
+ {
+  "dedupe": "dil009:d2:caterpillar_tranche_labels",
+  "type": "data_error",
+  "sev": "sev3",
+  "status": "triaged",
+  "title": "37 Caterpillar Financial bond finals carry prospectus-cover boilerplate as tranche_label",
+  "summary": "All 37 are CIK 0000764764 finals whose tranche_label is cover text (\"…PROSPECTUS SUPPLEMENT Dated…\"). 009 shows the generated title instead (N-5) until the parser is fixed.",
+  "od": "source_record",
+  "ok": "review:MA-OCT-009-DIL:D-2",
+  "ref": {
+   "review": "MA-OCT-009 DIL review D-2 / N-5",
+   "cik": "0000764764",
+   "issuer": "Caterpillar Financial Services Corporation",
+   "rows": 37,
+   "rule": "tranche_label matches PROSPECTUS|SUPPLEMENT|Dated or is longer than 120 characters"
+  },
+  "src": "ma-oct-008",
+  "evidence": "claude/MA-OCT-009_010_DIL_Review.md fact 5, N-5, D-2 (5bb8b8c7…5d58); member list from 008 export bonds/state/finals-2026-10-16.json (28d32b35…e263), re-checked by B5 before the seed run.",
+  "proposal": "Fix cover-title extraction in the 008 parser, then re-parse the 37 rows (008 fix packet; Bonds-domain writes, not 004).",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "bond",
+    "k": "0001104659-24-000426#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAE0",
+     "label_head": "o PROSPECTUS SUPPLEMENT Dated March 29, "
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-026626#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAF7",
+     "label_head": "o PROSPECTUS SUPPLEMENT Dated March 29, "
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-026627#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAJ9",
+     "label_head": "o PROSPECTUS SUPPLEMENT Dated March 29, "
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-026628#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAK6",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-058131#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAM2",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-058133#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAL4",
+     "label_head": "o PROSPECTUS SUPPLEMENT Dated March 29, "
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-088587#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAR1",
+     "label_head": "o PROSPECTUS SUPPLEMENT Dated March 29, "
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-088588#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAQ3",
+     "label_head": "o PROSPECTUS SUPPLEMENT Dated March 29, "
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-088589#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAN0",
+     "label_head": "o PROSPECTUS SUPPLEMENT Dated March 29, "
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-088590#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAP5",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-088828#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAP5",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-105055#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAA8",
+     "label_head": "o PROSPECTUS SUPPLEMENT Dated March 29, "
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-116933#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAU4",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 29, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-116937#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAS9",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 29, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-116938#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAT7",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-25-001413#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAW0",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-25-001417#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAV2",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 29, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-25-001420#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAX8",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 29, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-25-017030#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAY6",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 29, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-25-017031#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UAZ3",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-25-064805#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UBA7",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-25-076244#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UBB5",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 29, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-25-076245#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UBC3",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-25-109322#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UBD1",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 29, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-25-109324#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UBE9",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-000774#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UBG4",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-000776#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UBF6",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 29, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-000778#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UBH2",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 29, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-017130#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UBK5",
+     "label_head": "ECTUS SUPPLEMENT Dated March 29, 2023 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-017131#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913UBJ8",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 29, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-058796#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913V2B3",
+     "label_head": "ECTUS SUPPLEMENT Dated March 27, 2026 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-058799#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913V2A5",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 27, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-058800#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913V2C1",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 27, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-058801#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913V2D9",
+     "label_head": "PROSPECTUS SUPPLEMENT Dated March 27, 20"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-093472#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913V2F4",
+     "label_head": "ECTUS SUPPLEMENT Dated March 27, 2026 an"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-093473#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913V2E7",
+     "label_head": "o PROSPECTUS SUPPLEMENT Dated March 27, "
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-26-095146#1",
+    "act": "none",
+    "ref": {
+     "instrument_key": "CUSIP:14913V2E7",
+     "label_head": "o PROSPECTUS SUPPLEMENT Dated March 27, "
+    }
+   }
+  ]
+ },
+ {
+  "dedupe": "dil009:d3:cusip:14913UAP5",
+  "type": "data_error",
+  "sev": "sev3",
+  "status": "triaged",
+  "title": "CUSIP 14913UAP5 is stored twice (two 424B3 accessions, same date, $500m each)",
+  "summary": "Accessions 0001104659-24-088590 and 0001104659-24-088828 (both filed 2024-08-13) carry the same Caterpillar Financial floating-rate note; the duplicate inflates bond coverage and principal.",
+  "od": "instrument",
+  "ok": "CUSIP:14913UAP5",
+  "ref": {
+   "review": "MA-OCT-009 DIL review D-3",
+   "cik": "0000764764",
+   "cusip": "14913UAP5",
+   "principal_amount": 500000000,
+   "filing_date": "2024-08-13"
+  },
+  "src": "ma-oct-008",
+  "evidence": "claude/MA-OCT-009_010_DIL_Review.md fact 2, D-3 (5bb8b8c7…5d58); rows from 008 export bonds/state/finals-2026-10-16.json (28d32b35…e263), re-checked by B6 before the seed run.",
+  "proposal": "Decide which filing is authoritative (duplicate or amended filing), then mark the other row in a 008 fix packet (Bonds-domain write, not 004).",
+  "owner": "Data-Identity Lead",
+  "members": [
+   {
+    "d": "bond",
+    "k": "0001104659-24-088590#1",
+    "act": "review",
+    "ref": {
+     "accession_number": "0001104659-24-088590",
+     "tranche_seq": 1,
+     "filing_date": "2024-08-13",
+     "principal_amount": 500000000,
+     "source_url": "https://www.sec.gov/Archives/edgar/data/764764/000110465924088590/tm2421463d7_424b3.htm"
+    }
+   },
+   {
+    "d": "bond",
+    "k": "0001104659-24-088828#1",
+    "act": "review",
+    "ref": {
+     "accession_number": "0001104659-24-088828",
+     "tranche_seq": 1,
+     "filing_date": "2024-08-13",
+     "principal_amount": 500000000,
+     "source_url": "https://www.sec.gov/Archives/edgar/data/764764/000110465924088828/tm2421463d9_424b3.htm"
+    }
+   }
+  ]
+ }
+]

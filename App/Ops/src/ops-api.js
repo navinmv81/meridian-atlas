@@ -6,7 +6,8 @@
 // MA-OCT-002a A6 (spec 002 rev 1.3 §13, CR-1): the governance routes (Sprint
 // Board, Release Ledger, operational events, release drift — 4 public GETs and
 // 4 admin POSTs) moved to the meridian-control Worker (src/control-api.js), same
-// paths. This Worker now serves 7 endpoints plus 2 rules:
+// paths. This Worker served 7 endpoints plus 2 rules after A6; MA-OCT-003 added 4 (src/cases.js) and
+// MA-OCT-004 adds 3 (D-1, D-2, D-3), so 14 of the 15-endpoint ceiling. Before 003 these were:
 //   GET /api/ops/budget-risk, /api/ops/openfigi-status, /api/ops/cf/invocations,
 //       /api/ops/cf/d1-today; GET /api/ops/admin/jobs;
 //   POST /api/ops/ingest/run-event, /api/ops/ingest/sweep;
@@ -807,7 +808,7 @@ async function sweep(request, env) {
   const pauses = res[0].results;
   const state = Object.fromEntries(res[1].results.map(r => [r.key, r.value]));
   const findings = [];
-  let raisedToday = 0;
+  let raisedToday = 0, prevSweepStart = null;
   const gleifOn = env.OPS_SWEEP_GLEIF_CHECKS !== 'false';               // MA-OCT-003 §11.3 switch
   const latByJob = new Map();                                          // MA-OCT-003 §9.4 input
   let sweepRows = [];
@@ -815,6 +816,9 @@ async function sweep(request, env) {
     const runRows = res[i + 2].results;
     if (j.job_id === SWEEP_JOB_ID) {
       sweepRows = runRows;
+      for (const r of runRows) {   // MA-OCT-004 §9.5: the previous health-check start, from rows L2 already read
+        if (r.phase === 'start' && r.run_id !== body.run_id && (!prevSweepStart || r.started_at > prevSweepStart)) prevSweepStart = r.started_at;
+      }
       for (const r of runRows) {
         if (r.phase !== 'end' || !String(r.started_at).startsWith(today)) continue;
         try { raisedToday += Number(JSON.parse(r.detail || '{}')?.metrics?.raised) || 0; } catch { /* ignore */ }
@@ -925,6 +929,11 @@ async function sweep(request, env) {
 
   // 6. Open counts (covering idx_ops_exception_queue).
   const oc = meta(await env.DB.prepare(`SELECT severity, COUNT(*) AS n FROM ops_exception WHERE status = 'open' GROUP BY severity`).all()).results;
+  // MA-OCT-004 §9.5 (F-3): DQ tickets opened since the previous sweep's start (24 h if none on record). Covering
+  // idx_ops_dq_queue (status=? AND severity=? AND opened_at>?): ≤ 1 + new rows read, 0 writes.
+  const dqSince = prevSweepStart || new Date(now - 86400000).toISOString();
+  const dqNew = meta(await env.DB.prepare(`SELECT COUNT(*) AS n FROM ops_data_quality_ticket
+                                           WHERE status = 'open' AND severity IN ('sev1','sev2','sev3','sev4') AND opened_at >= ?`).bind(dqSince).all()).results[0]?.n ?? 0;
   return jsonPrivate({
     ok: true, run_id: body.run_id, lookback_days: days, hold_all_jobs: hold,
     headroom: d1 ? { rows_written: d1.rowsWritten, daily_cap: d1.daily_cap, headroom } : null,
@@ -932,7 +941,7 @@ async function sweep(request, env) {
     overflow, raised_today_before: raisedToday, daily_cap: dailyCap,
     suppressed: sup.suppressed, s2_rows_read: sup.s2, gleif_checks: gleifChecks,
     auto_resolved: ar.auto_resolved, autoresolve_skipped_reopened: ar.skipped_reopened,
-    open_counts: Object.fromEntries(oc.map(r => [r.severity, r.n])), rows_read: rowsRead
+    open_counts: Object.fromEntries(oc.map(r => [r.severity, r.n])), dq_new: dqNew, dq_since: dqSince, rows_read: rowsRead
   });
 }
 

@@ -50,9 +50,16 @@ OPS_SWEEP_DAILY_RAISE_CAP = "100"
 #   {"<client-id>.access":{"label":"ops-script","routes":["E-1","E-2","C-1","C-2"],
 #    "actions":{"EXC":["acknowledge","assign","comment","set_severity","resolve","dismiss","reopen"],"DQ":["comment","assign","triage"]}}}
 OPS_CASES_ENABLED = "true"
-OPS_SERVICE_ACTORS = '{"0b8216d5b404b87731353bd452829e99.access":{"label":"ops-script","routes":["E-1","E-2","C-1","C-2"],"actions":{"EXC":["acknowledge","assign","comment","set_severity","resolve","dismiss","reopen"],"DQ":["comment","assign","triage"]}}}'
+# MA-OCT-004 §8.5 (F-2): bond-runner → D-2 only, types [missing_entity]. Replace __BOND_RUNNER_CLIENT_ID__ with the
+# Founder-created token's Client ID before the 004 deploy; a placeholder matches no token (fail closed).
+OPS_SERVICE_ACTORS = '{"0b8216d5b404b87731353bd452829e99.access":{"label":"ops-script","routes":["E-1","E-2","C-1","C-2"],"actions":{"EXC":["acknowledge","assign","comment","set_severity","resolve","dismiss","reopen"],"DQ":["comment","assign","triage"]}},"__BOND_RUNNER_CLIENT_ID__.access":{"label":"bond-runner","routes":["D-2"],"types":["missing_entity"]}}'
 # MA-OCT-003 sweep extensions (spec rev 1 §9, §11.3) — deploy 4 (Wed 28, after deploy 3's S-3 proof).
 # OPS_SWEEP_GLEIF_CHECKS="false" turns off E1, E2, E4, E5, E6 (0 extra reads). OPS_SWEEP_AUTORESOLVE must be
 # exactly "true" for §9.4 auto-resolve (F-1); "false" (or absent) turns it off with 0 reads.
 OPS_SWEEP_GLEIF_CHECKS = "true"
 OPS_SWEEP_AUTORESOLVE = "true"
+# MA-OCT-004 §11.4 kill switches (+ deploy): OPS_DQ_ENABLED="false" → D-1/D-2/D-3 and DQ C-2 503 before D1;
+# OPS_DQ_CONSUMER_ENABLED="false" → D-3 "Reporting is paused", D-2 via=nav-007 503. Daily create cap (N4-1).
+OPS_DQ_ENABLED = "true"
+OPS_DQ_CONSUMER_ENABLED = "true"
+OPS_DQ_DAILY_CREATE_CAP = "100"
