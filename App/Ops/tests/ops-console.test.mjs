@@ -6,7 +6,7 @@
 // seed batches (M3a, M3, M3c, M4) — the "local D1" of Task item 3. Access is real: RS256 JWTs signed here.
 // Covers request building (headers, a fresh request_id, the same one on retry, expected_status, actor_role),
 // legal actions, the Fixed gate, protected reopen, member edits (expected_member_status), every response-map
-// row, escaping, unknown codes, keyset Load more, the launcher card, the Health poll rules (M-2, M-3), the
+// row, escaping, unknown codes, keyset Load more, the terminal fallback (OPS.A), the Health poll rules (M-2, M-3), the
 // enrichment wording, Board/Ledger read-only, and the AC-12 static checks.
 // No network, no remote D1.   Usage: node App/Ops/tests/ops-console.test.mjs   (FE_DIR=<dir> to test another copy)
 
@@ -127,6 +127,7 @@ function makeWorld({ consoleMode = true, hidden = false } = {}) {
     querySelector: () => null, querySelectorAll: () => [],
     addEventListener(t, f) { (docListeners[t] ||= []).push(f); }
   };
+  const opened = [];   // window.open calls (MA-OCT-OPS.A: the terminal fallback)
   const ctx = {
     console: { ...console, error() {}, warn() {} }, setTimeout, clearTimeout, URLSearchParams, JSON, Promise, Error, TypeError,
     crypto: { randomUUID, getRandomValues: a => webcrypto.getRandomValues(a) },
@@ -138,6 +139,7 @@ function makeWorld({ consoleMode = true, hidden = false } = {}) {
     setInterval: (f, ms) => { const id = nextTimer++; intervals.set(id, ms); return id; },
     clearInterval: id => intervals.delete(id),
     addEventListener(t, f) { (winListeners[t] ||= []).push(f); },
+    open: (u, t, f) => { opened.push([String(u), t, f]); return null; },
     fetch: async (url, init = {}) => {
       const u = new URL(String(url));
       const rec = { url: u.pathname + u.search, host: u.host, method: init.method || 'GET', headers: { ...(init.headers || {}) }, body: init.body ? JSON.parse(init.body) : undefined, redirect: init.redirect, credentials: init.credentials };
@@ -162,7 +164,7 @@ function makeWorld({ consoleMode = true, hidden = false } = {}) {
   vm.createContext(ctx);
   for (const f of ['ma-data.js', 'ma-ops.js']) vm.runInContext(read(APP, f), ctx, { filename: f });
   const run = code => vm.runInContext(code, ctx);
-  return { ctx, run, sent, intervals, storage, doc, setFault: f => { netFault = f; }, fireDoc: t => (docListeners[t] || []).forEach(f => f()) };
+  return { ctx, run, sent, intervals, storage, doc, opened, setFault: f => { netFault = f; }, fireDoc: t => (docListeners[t] || []).forEach(f => f()) };
 }
 const tick = () => new Promise(r => setTimeout(r, 0));
 const settle = async () => { for (let i = 0; i < 20; i++) await tick(); };
@@ -387,38 +389,37 @@ const settle = async () => { for (let i = 0; i < 20; i++) await tick(); };
   check('[M-4d] protected reopen sends founder_supersession {reference, decided_at}', okReopen.body && okReopen.body.founder_supersession.reference === 'ML-1031-1' && okReopen.body.founder_supersession.decided_at === '2026-10-31', okReopen);
 }
 
-// ======================= terminal: launcher card, Health poll, enrichment, Board/Ledger =======================
+// ======================= terminal fallback, Health poll, enrichment, Board/Ledger (MA-OCT-OPS.A) =======================
 {
+  // The terminal no longer loads ma-ops.js (OPS is a link). Loaded outside the console anyway, openOps() opens the console.
   const t = makeWorld({ consoleMode: false });
   await t.run(`openOps()`); await settle();
-  check('[M-2] terminal: opening the panel reads ops-health once and starts the 10-min poll (unchanged)', t.sent.filter(s => s.host === 'meridian-proxy.navinmv1981.workers.dev').length === 1
-    && [...t.intervals.values()].includes(600000), [...t.intervals.values()]);
-  const ht = t.run(`document.getElementById('ops-tab-health').innerHTML`);
-  check('[ML-1026-1] null enrichment counts → "Enrichment counts removed (ML-1025-3)", never "0 enriched · 0 pending"', /Enrichment counts removed \(ML-1025-3\)/.test(ht) && !/0 enriched/.test(ht), null);
-  t.doc.hidden = true; t.fireDoc('visibilitychange');
-  check('[M-2] a hidden document stops the poll', t.intervals.size === 0, [...t.intervals.values()]);
-  t.doc.hidden = false; t.fireDoc('visibilitychange');
-  check('[M-2] visible again → one refresh and the poll restarts', t.intervals.size === 1, null);
-  await t.run(`ops_switchTab('cases')`); await settle();
-  const adminCalls = t.sent.filter(s => s.url.startsWith('/api/ops/admin')).length;
-  check('[AC-1] terminal Cases tab: the launcher card ("Operator console — sign-in required", new tab, rel=noopener); no admin call',
-    /Operator console — sign-in required/.test(t.run(`document.getElementById('ops-tab-cases').innerHTML`)) && /target="_blank" rel="noopener"/.test(t.run(`document.getElementById('ops-tab-cases').innerHTML`))
-    && /\/api\/ops\/admin\/console/.test(t.run(`document.getElementById('ops-tab-cases').innerHTML`)) && adminCalls === 0, adminCalls);
+  check('[OPS.A] outside the console, openOps() opens the console in a new tab (noopener) — no panel, no request, no poll',
+    t.opened.length === 1 && t.opened[0][0] === 'https://meridian-ops.navinmv1981.workers.dev/api/ops/admin/console' && t.opened[0][1] === '_blank' && t.opened[0][2] === 'noopener'
+    && t.run(`document.getElementById('ops-panel')`) === null && t.sent.length === 0 && t.intervals.size === 0, { opened: t.opened, sent: t.sent.length });
 
   const c = makeWorld();
   await c.run(`openOps({ console: true })`); await settle();
   await c.run(`ops_switchTab('health')`); await settle();
-  check('[M-3] console: Health tab → one ops-health read and the poll starts', c.sent.filter(s => s.host === 'meridian-proxy.navinmv1981.workers.dev').length === 1 && c.intervals.size === 1, null);
+  check('[M-3] console: Health tab → one ops-health read and the 10-min poll starts', c.sent.filter(s => s.host === 'meridian-proxy.navinmv1981.workers.dev').length === 1
+    && [...c.intervals.values()].includes(600000), [...c.intervals.values()]);
+  const ht = c.run(`document.getElementById('ops-tab-health').innerHTML`);
+  check('[ML-1026-1] null enrichment counts → "Enrichment counts removed (ML-1025-3)", never "0 enriched · 0 pending"', /Enrichment counts removed \(ML-1025-3\)/.test(ht) && !/0 enriched/.test(ht), null);
+  check('[OPS.A] the console Health view has no close button (nothing to close back to)', !/ops-close-btn/.test(ht), null);
+  c.doc.hidden = true; c.fireDoc('visibilitychange');
+  check('[M-2] a hidden document stops the poll', c.intervals.size === 0, [...c.intervals.values()]);
+  c.doc.hidden = false; c.fireDoc('visibilitychange');
+  check('[M-2] visible again on Health → one refresh and the poll restarts', c.intervals.size === 1 && c.sent.filter(s => s.host === 'meridian-proxy.navinmv1981.workers.dev').length === 2, null);
   await c.run(`ops_switchTab('dq')`); await settle();
   check('[M-3] console: leaving Health stops the poll', c.intervals.size === 0, null);
   c.doc.hidden = false; c.fireDoc('visibilitychange');
-  check('[M-3] console: becoming visible on an admin tab does not read ops-health', c.sent.filter(s => s.host === 'meridian-proxy.navinmv1981.workers.dev').length === 1 && c.intervals.size === 0, null);
+  check('[M-3] console: becoming visible on an admin tab does not read ops-health', c.sent.filter(s => s.host === 'meridian-proxy.navinmv1981.workers.dev').length === 2 && c.intervals.size === 0, null);
   c.run(`ops_renderSprintBoard([{ ticket_id: 'MA-OCT-005', domain: 'Ops', owner_role: 'Engineering Lead', title: 'Console', stage: 'ENG_IMPLEMENT' }])`);
   c.run(`ops_renderReleaseLedger([{ release_id: 'R-1', change_summary: 's', d1_migration_status: 'n/a', worker_deploy_status: 'n/a', frontend_push_status: 'n/a', status: 'READY' }])`);
   const sb = c.run(`document.getElementById('ops-tab-sprint').innerHTML`), rl = c.run(`document.getElementById('ops-tab-release').innerHTML`);
   check('[AC-13] Sprint Board and Release Ledger: data shown, no action buttons, read-only footnote', sb.includes('MA-OCT-005') && rl.includes('R-1') && !/Change stage|Record event/.test(sb + rl)
     && sb.includes('Read-only. Changes are made by the Main Lane.') && rl.includes('Read-only. Changes are made by the Main Lane.'), null);
-  check('[§6.2] localStorage holds only ops_last_tab and ops_acting_role', [...c.storage.keys(), ...t.storage.keys()].every(k => ['ops_last_tab', 'ops_acting_role'].includes(k)), [...c.storage.keys()]);
+  check('[§6.2] localStorage holds only ops_acting_role', [...c.storage.keys(), ...t.storage.keys()].every(k => k === 'ops_acting_role'), [...c.storage.keys()]);
 }
 
 // ======================= static checks (§10.2, AC-12, M-1) =======================
@@ -429,8 +430,8 @@ const settle = async () => { for (let i = 0; i < 20; i++) await tick(); };
   check('[§10.2] no fetch( in ma-ops.js (network only through ma-data.js)', !/\bfetch\(/.test(code(ops)), null);
   check('[M-1] no inline event handler attribute (on…=) emitted by ma-ops.js', !/\son[a-z]+\s*=\s*["'`$]/i.test(code(ops)), (code(ops).match(/\son[a-z]+\s*=\s*["'`$].{0,40}/i) || [])[0]);
   const keys = [...code(ops).matchAll(/_opsPref\('([^']+)'/g)].map(m => m[1]);
-  check('[AC-12] only two localStorage keys used: ops_last_tab, ops_acting_role; no direct localStorage outside _opsPref',
-    new Set(keys).size === 2 && keys.every(k => ['ops_last_tab', 'ops_acting_role'].includes(k)) && (code(ops).match(/localStorage\./g) || []).length === 2, keys);
+  check('[AC-12] one localStorage key used: ops_acting_role; no direct localStorage outside _opsPref',
+    new Set(keys).size === 1 && keys[0] === 'ops_acting_role' && (code(ops).match(/localStorage\./g) || []).length === 2, keys);
   const secret = /Cf-Access-Jwt|CF_Authorization|client_secret|\.meridian-secrets|OPS_INGEST/;
   const front = readdirSync(new URL('./', APP)).filter(f => /\.(js|html)$/.test(f)).map(f => [`App/${f}`, read(APP, f)]);
   const docsDir = new URL('docs/', ROOT);

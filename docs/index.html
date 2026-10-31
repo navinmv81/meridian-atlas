@@ -96,6 +96,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .btn{background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-family:var(--sans);font-size:10.5px;font-weight:500;padding:3px 8px;border-radius:var(--r);cursor:pointer;transition:all .15s ease;white-space:nowrap}
 .btn:hover{background:var(--bg4);border-color:var(--border2);color:var(--text)}
 .btn.on{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
+/* MA-OCT-OPS.A: the OPS link (to the signed-in console) looks like the other header tiles */
+a.btn{display:inline-block;text-decoration:none}
 #rbtn{padding:3px 8px;font-size:11px}
 .spin{display:inline-block;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -1097,7 +1099,6 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 <script src="ma-dcf.js"></script>
 <script src="ma-13f.js"></script>
 <script src="ma-entities.js"></script>
-<script src="ma-ops.js"></script>
 <script>
 // MA-OCT-007 hash router (spec rev 1.4 §3.3; R7-6, R7-10, N7-13). Parses the hash and
 // dispatches `ma:route`; it imports nothing and renders nothing (domain modules listen).
@@ -1192,7 +1193,7 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 <button class="btn action-tile" id="etfHoldingsBtn" onclick="openEtfHoldings()" title="ETF Portfolio Holdings">ETF Holdings</button>
 <button class="btn action-tile" id="corpAtlasBtn" onclick="openCorporateAtlas()" title="Corporate Atlas · Legal Entity Graph">Corporate Atlas</button>
 <button class="btn action-tile" id="fiBtn" onclick="openFixedIncome()" title="Fixed Income · SEC bond issuance data">Fixed Income</button>
-<button class="btn action-tile" id="opsBtn" onclick="openOps()" title="System Operations · Pipeline Health">OPS</button>
+<a class="btn action-tile" id="opsBtn" href="https://meridian-ops.navinmv1981.workers.dev/api/ops/admin/console" target="_blank" rel="noopener" title="Operator console · sign-in required · opens in a new tab">OPS</a>
 <button class="btn" id="darkbtn" onclick="toggleDark()" title="Toggle dark mode">◑ Dark</button>
 <button class="btn on" id="abtn" onclick="toggleAuto()">Auto</button>
 <button class="btn" id="rbtn" onclick="doRefresh()"><span id="ricon">↻</span></button>

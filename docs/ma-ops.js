@@ -1,17 +1,23 @@
 // ma-ops.js — Meridian Atlas Ops Visibility Panel
 // Pure vanilla JS + inline SVG/CSS. No external dependencies.
+//
+// MA-OCT-OPS.A (Founder "Ops option A", ML-1031-4): this file runs only inside the signed-in
+// operator console (GET /api/ops/admin/console on meridian-ops, which loads it from GitHub Pages).
+// The public terminal no longer loads it: its OPS button is a link to the console, so there is no
+// anonymous Ops panel. The console holds all seven views: System Health, Cases, DQ Tickets,
+// Drift & Budget, Events, Sprint Board (read-only) and Release Ledger (read-only).
 
 const OPS_HEALTH_PATH = '/api/ops-health';   // on meridian-proxy, through data_proxyGet (ma-data.js)
 const OPS_POLL_MS = 10 * 60 * 1000; // 10 minutes
 
 // MA-OCT-005 (spec rev 0 §4.2, Option B): true when this file runs inside the operator
 // console shell served by meridian-ops (/api/ops/admin/console). The shell sets the flag
-// before loading this file; the terminal (GitHub Pages) never does. The shell checks
-// OPS_CONSOLE_SUPPORTED so an older ma-ops.js shows "arrives with the 2 Nov release" (M-6).
+// before loading this file. The shell checks OPS_CONSOLE_SUPPORTED so an older ma-ops.js shows
+// "arrives with the 2 Nov release" (M-6). Loaded anywhere else, openOps() opens the console instead.
 const OPS_CONSOLE_MODE = window.MA_OPS_CONSOLE === true;
 window.OPS_CONSOLE_SUPPORTED = true;
 
-// localStorage holds only these two keys, as conveniences, never authority (§6.2, AC-12).
+// localStorage holds only ops_acting_role, as a convenience, never authority (§6.2, AC-12).
 function _opsPref(key, value) {
   try {
     if (value === undefined) return localStorage.getItem(key);
@@ -46,10 +52,10 @@ let _opsActiveTab = null;
 // MA-OCT-MON26.ENG1 (ML-1025-3): poll /api/ops-health only while the tab is visible. A hidden tab
 // stops the 10-min interval; becoming visible again refreshes once at once and restarts it. Closing
 // the panel clears it as before. (A background tab left open all day was the 144-polls/day case.)
-// MA-OCT-005 M-3: in the console shell the poll also runs only while Health is the active tab, so
-// the default Cases tab (and every admin tab) never reads /api/ops-health (491 reads a call).
+// MA-OCT-005 M-3: the poll also runs only while Health is the active tab, so the default Cases tab
+// (and every admin tab) never reads /api/ops-health (491 reads a call).
 function _opsHealthWanted() {
-  return !document.hidden && (!OPS_CONSOLE_MODE || _opsActiveTab === 'health');
+  return !document.hidden && _opsActiveTab === 'health';
 }
 function _opsStartPoll() {
   if (!_opsPollTimer && _opsHealthWanted()) _opsPollTimer = setInterval(() => openOps({ skipCreate: true }), OPS_POLL_MS);
@@ -242,8 +248,6 @@ function _renderOpsPanel(data) {
       <div style="font-size:20px;font-weight:700;letter-spacing:0.05em;color:${OPS_COLORS.teal};">
         MERIDIAN ATLAS — OPS
       </div>
-      <button id="ops-close-btn" style="background:none;border:none;color:${OPS_COLORS.textDim};
-        font-size:28px;line-height:1;cursor:pointer;padding:4px 12px;" title="Close">&times;</button>
     </div>
 
     <!-- SECTION 1 — PIPELINE HEALTH -->
@@ -394,28 +398,24 @@ function _renderOpsPanel(data) {
     </div>
   `;
 
-  _opsWireClose(panel);
-
   const refreshBtn = panel.querySelector('#ops-refresh-btn');
   if (refreshBtn) refreshBtn.addEventListener('click', () => openOps({ skipCreate: true }));
 }
 
-// The console shell is its own browser tab, so it has nothing to close back to.
-function _opsWireClose(panel) {
-  const closeBtn = panel.querySelector('#ops-close-btn');
-  if (!closeBtn) return;
-  if (OPS_CONSOLE_MODE) closeBtn.remove();
-  else closeBtn.addEventListener('click', closeOps);
-}
-
 async function openOps(opts) {
   opts = opts || {};
+  // MA-OCT-OPS.A: no anonymous Ops panel outside the console shell; open the console instead.
+  if (!OPS_CONSOLE_MODE) {
+    window.open(OPSC_CONSOLE_URL, '_blank', 'noopener');
+    return;
+  }
   let panel = document.getElementById('ops-panel');
 
   if (!panel) {
     panel = document.createElement('div');
     panel.id = 'ops-panel';
-    panel.style.cssText = `position:fixed;top:0;left:0;width:100vw;
+    // MA-OCT-OPS.A: border-box, so the 40px side padding sits inside 100vw (it was 80px wider and clipped right).
+    panel.style.cssText = `position:fixed;top:0;left:0;width:100vw;box-sizing:border-box;
       height:100vh;background:#0a0c10;z-index:3000;overflow-y:auto;
       padding:32px 40px;font-family:system-ui,-apple-system,sans-serif;color:${OPS_COLORS.text};`;
     document.body.appendChild(panel);
@@ -423,13 +423,11 @@ async function openOps(opts) {
     // ADDED 30 July 2026 (August Operating Layer): persistent tab chrome —
     // built once at panel creation, survives every _renderOpsPanel() refresh
     // because that function now only touches #ops-tab-health's innerHTML.
-    // MA-OCT-005: in the console shell, ops_switchTab() loads Health (and starts its poll) only
-    // when Health is the active tab. The terminal keeps the old behaviour: load and poll at once.
+    // MA-OCT-005: ops_switchTab() loads Health (and starts its poll) only when Health is the active tab.
     ops_renderTabBar();
-    if (OPS_CONSOLE_MODE) return;
-    _opsStartPoll();
+    return;
   }
-  if (!_opsHealthWanted()) return;   // M-3: console mode reads ops-health only on the visible Health tab
+  if (!_opsHealthWanted()) return;   // M-3: ops-health is read only on the visible Health tab
 
   const res = await data_proxyGet(OPS_HEALTH_PATH);
   if (res.ok && res.data) {
@@ -440,19 +438,10 @@ async function openOps(opts) {
     healthContainer.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
         <div style="font-size:20px;font-weight:700;color:${OPS_COLORS.teal};">MERIDIAN ATLAS — OPS</div>
-        <button id="ops-close-btn" style="background:none;border:none;color:${OPS_COLORS.textDim};
-          font-size:28px;cursor:pointer;">&times;</button>
       </div>
       <div style="color:${OPS_COLORS.red};">Failed to load ops health: ${_escapeHtml(why)}</div>
     `;
-    _opsWireClose(panel);
   }
-}
-
-function closeOps() {
-  const panel = document.getElementById('ops-panel');
-  if (panel) panel.remove();
-  _opsStopPoll();
 }
 
 // ============================================================
@@ -534,10 +523,7 @@ function ops_renderTabBar() {
     });
   });
 
-  // The console opens on Cases (§5); the terminal on the operator's last tab.
-  const saved = _opsPref('ops_last_tab');
-  const lastTab = OPS_CONSOLE_MODE ? 'cases' : (OPS_TABS.some(t => t.id === saved) ? saved : 'health');
-  ops_switchTab(lastTab);
+  ops_switchTab('cases');   // the console opens on Cases (§5)
 }
 
 function ops_switchTab(tabName) {
@@ -553,12 +539,10 @@ function ops_switchTab(tabName) {
     btn.setAttribute('aria-selected', active ? 'true' : 'false');
     btn.setAttribute('tabindex', active ? '0' : '-1');
   });
-  _opsPref('ops_last_tab', tabName);
 
-  if (OPS_CONSOLE_MODE) {   // M-3: Health reads and polls only while it is the visible tab
-    if (tabName === 'health') { openOps({ skipCreate: true }); _opsStartPoll(); }
-    else _opsStopPoll();
-  }
+  // M-3: Health reads and polls only while it is the visible tab.
+  if (tabName === 'health') { openOps({ skipCreate: true }); _opsStartPoll(); }
+  else _opsStopPoll();
   if (tabName === 'cases') ops_loadCases();
   else if (tabName === 'dq') ops_loadDq();
   else if (tabName === 'sprint') ops_loadSprintBoard();
@@ -813,7 +797,7 @@ function ops_renderBudgetRisk(data) {
   if (!data) return `<div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;color:${OPS_COLORS.red};">Failed to load budget risk.</div>`;
   const gaugeSvg = _svgGauge(data.writes_today, data.daily_limit, data.daily_limit * 0.9);
   return `
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;display:flex;align-items:center;gap:24px;">
+    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:center;gap:24px;">
       <div>${gaugeSvg}</div>
       <div>
         <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Shared D1 Write Budget Today</div>
@@ -849,7 +833,7 @@ function ops_renderOpenFigiStatus(data) {
 // attributes and one delegated listener per container handles them.
 //
 // The backend owns all state (D4): every view re-reads after an action; nothing is cached across
-// sessions except ops_last_tab and ops_acting_role (§6.2). Server strings always pass _escapeHtml.
+// sessions except ops_acting_role (§6.2). Server strings always pass _escapeHtml.
 // Reads per call stay the 003/004 figures (lists limit=50, never 100 — N-3); nothing polls.
 
 const OPSC_CONSOLE_URL = 'https://meridian-ops.navinmv1981.workers.dev/api/ops/admin/console';
@@ -1087,15 +1071,6 @@ const OPSC_TD = 'style="padding:9px 10px;font-size:13px;vertical-align:top;"';
 const opscBtn = (extra = '') => `style="background:none;border:1px solid #2a3038;color:${OPS_COLORS.text};border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;${extra}"`;
 const OPSC_BTN = opscBtn();
 const OPSC_BTN_PRIMARY = `style="background:${OPS_COLORS.teal};color:#0a0c10;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;"`;
-
-function opsc_renderLauncher(what) {
-  return `
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:24px;max-width:560px;">
-      <div style="font-size:16px;font-weight:700;margin-bottom:8px;">Operator console — sign-in required</div>
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};margin-bottom:16px;">${opscEsc(what)} data are private and need sign-in, so they open in the operator console in a new tab.</div>
-      <a href="${OPSC_CONSOLE_URL}" target="_blank" rel="noopener" ${OPSC_BTN_PRIMARY.replace('style="', 'style="display:inline-block;text-decoration:none;')}>Open operator console</a>
-    </div>`;
-}
 
 function opsc_statusChips(view, statuses, active) {
   return `<div role="group" aria-label="Status filter" style="display:flex;gap:6px;flex-wrap:wrap;">${statuses.map(s => {
@@ -1347,7 +1322,6 @@ function opsc_listPath(kind, cursor) {
 async function opsc_loadList(kind, more) {
   const el = document.getElementById(OPSC_CONTAINER[kind]);
   if (!el) return;
-  if (!OPS_CONSOLE_MODE) { el.innerHTML = opsc_renderLauncher(kind === 'EXC' ? 'Case' : 'Ticket'); return; }
   opsc_wire(kind, el);
   const st = opscState[kind];
   st.loading = true; st.error = null;

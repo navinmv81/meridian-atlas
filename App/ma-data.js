@@ -172,8 +172,12 @@ window.escapeRdHtml = escapeRdHtml;
 // these instead of fetching directly.
 const OPS_WORKER_BASE = 'https://meridian-ops.navinmv1981.workers.dev';
 
+// MA-OCT-OPS.A: in the console shell (served by meridian-ops) the base is the page's own origin,
+// so every read is CSP connect-src 'self' (the moved Board/Ledger/Events/Drift GETs then 302 to
+// meridian-control, which the shell's connect-src also lists).
 async function data_opsGet(path) {
-  return fetchWithTimeout(`${OPS_WORKER_BASE}${path}`);
+  const base = window.MA_OPS_CONSOLE === true ? location.origin : OPS_WORKER_BASE;
+  return fetchWithTimeout(`${base}${path}`);
 }
 
 async function data_opsPost(path, body) {
