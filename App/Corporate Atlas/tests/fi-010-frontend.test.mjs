@@ -249,6 +249,20 @@ async function openBond(c, id) { await c.run(`_navOpen('bond', ${JSON.stringify(
   check('[T-F9 7.5] directory 5xx → outage + Retry', has(co.run('_navStack[0].el.innerHTML'), "Couldn't reach Corporate Atlas.") && co.run('_navStack[0].el.innerHTML').includes('_navRetry(1)'));
 }
 
+// ================= AC12 re-adjudication display notes =================
+{
+  const c = makeCtx({ override: p => (p.startsWith('/api/fi/bonds/') ? { ok: true, status: 200, data: { data_type: 'issuance_reference', gate: 'open',
+    bond: { accession_number: '0000000001-26-000099', tranche_seq: 1, cik: '0000000001', instrument_key: null, isin: null, cusip: null, tranche_label: 'Fixed-to-Floating Notes due 2031',
+      security_class: 'Senior Notes', rate_type: 'fixed_to_floating', coupon_rate: 4.5, spread_bps: 191, benchmark: 'SOFR', principal_amount: 1e9, currency: 'USD', maturity_date: '2031-01-01',
+      seniority: 'senior', form_type: '424B2', filing_date: '2026-01-01', source_url: 'https://www.sec.gov/x', parse_confidence: 90, check_source: false, rate_label: 'Fixed-to-floating',
+      parser_version: 'bonds-1.2.0', ingested_at: '2026-10-29T00:00:00Z', other_filings: 0 },
+    filer: { cik: '0000000001', issuer_name: 'X' }, issuer: { state: 'unmatched', candidates: [] } } } : null) });
+  await c.run(`_navOpen('bond', '0000000001-26-000099/1', { history: 'push' })`);
+  const h = c.run('_navStack[0].el.innerHTML');
+  check('[AC12 note] spread is shown as approximate ("SOFR + ≈191 bp") and labelled rounded to the nearest basis point', h.includes('SOFR + ≈191 bp') && h.includes('spread rounded to the nearest basis point') && !h.includes('SOFR + 191 bp'), h.slice(0, 1500));
+  check('[AC12 note] fixed and reset notes are never labelled "fixed for life"', !/fixed for life/i.test(c.run('_fiRateLabel({ rate_type: "fixed" }) + _fiCoupon({ rate_type: "fixed", coupon_rate: 5 })')));
+}
+
 // ================= M9-4: latest-filing label =================
 {
   const c = makeCtx();

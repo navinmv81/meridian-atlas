@@ -1098,6 +1098,67 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 <script src="ma-13f.js"></script>
 <script src="ma-entities.js"></script>
 <script src="ma-ops.js"></script>
+<script>
+// MA-OCT-007 hash router (spec rev 1.4 §3.3; R7-6, R7-10, N7-13). Parses the hash and
+// dispatches `ma:route`; it imports nothing and renders nothing (domain modules listen).
+// detail: { type: 'entity'|'instrument'|'fi'|'fi_cik'|'bond', id, from, mode: 'cold'|'typed'|'pop', depth }
+// History entries pushed by ma-entities.js carry state { maNav: depth }; the base
+// panel is depth 0. A popstate never shows the invalid-link toast.
+(function () {
+  function parse(hash) {
+    // MA-OCT-010: #/fi, #/fi/cik/{10 digits}, #/bond/{accession}/{seq} (a filing-tranche record, not an instrument).
+    const fi = /^#\/(fi|fi\/cik\/(\d{10})|bond\/(\d{10}-\d{2}-\d{6}\/[1-9]\d{0,5}))(?:\?(.*))?$/.exec(hash || '');
+    if (fi) {
+      let from = null;
+      try { from = new URLSearchParams(fi[4] || '').get('from'); } catch (e) { from = null; }
+      if (fi[2]) return { type: 'fi_cik', id: fi[2], from };
+      if (fi[3]) return { type: 'bond', id: fi[3], from };
+      return { type: 'fi', id: null, from };
+    }
+    const m = /^#\/(entity|instrument)\/([^?]+)(?:\?(.*))?$/.exec(hash || '');
+    if (!m) return null;
+    let id;
+    try { id = decodeURIComponent(m[2]); } catch (e) { return null; }
+    if (m[1] === 'entity') { if (!/^[1-9]\d{0,9}$/.test(id)) return null; id = Number(id); }
+    else if (!id || id.length > 100) return null;
+    let from = null;
+    try { from = new URLSearchParams(m[3] || '').get('from'); } catch (e) { from = null; }
+    return { type: m[1], id, from };
+  }
+  function toast(msg) {
+    const t = document.createElement('div');
+    t.setAttribute('role', 'status');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483000;background:#1b1f2a;color:#e6e6e6;border:1px solid #333;border-radius:6px;padding:8px 14px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.4)';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+  let lastHash = null;
+  function dispatch(mode, depth) {
+    lastHash = location.hash;
+    const r = parse(location.hash);
+    if (!r) {
+      if (mode !== 'pop' && location.hash && location.hash !== '#') {
+        toast("That link isn't valid");
+        history.replaceState(history.state, '', location.pathname + location.search);
+      }
+      if (mode === 'pop') document.dispatchEvent(new CustomEvent('ma:route', { detail: { type: null, mode, depth: depth || 0 } }));
+      return;
+    }
+    document.dispatchEvent(new CustomEvent('ma:route', { detail: { ...r, mode, depth } }));
+  }
+  window.addEventListener('popstate', e => {
+    const d = e.state && Number.isInteger(e.state.maNav) ? e.state.maNav : null;
+    // Entries pushed by the app always carry maNav, and the base entry has no hash, so a
+    // null-state entry with a hash is one the user typed (valid or not).
+    const typed = d === null && location.hash && location.hash !== '#';
+    dispatch(typed ? 'typed' : 'pop', d === null ? 0 : d);
+  });
+  window.addEventListener('hashchange', () => { if (location.hash !== lastHash) dispatch('typed', null); });
+  window.maNavParse = parse;
+  document.addEventListener('DOMContentLoaded', () => setTimeout(() => { if (location.hash) dispatch('cold', null); }, 0));
+})();
+</script>
 </head>
 <body>
 
@@ -1130,6 +1191,7 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 <button class="btn action-tile" id="dcfTabBtn" onclick="openDCF()" title="Discounted Cash Flow">DCF</button>
 <button class="btn action-tile" id="etfHoldingsBtn" onclick="openEtfHoldings()" title="ETF Portfolio Holdings">ETF Holdings</button>
 <button class="btn action-tile" id="corpAtlasBtn" onclick="openCorporateAtlas()" title="Corporate Atlas · Legal Entity Graph">Corporate Atlas</button>
+<button class="btn action-tile" id="fiBtn" onclick="openFixedIncome()" title="Fixed Income · SEC bond issuance data">Fixed Income</button>
 <button class="btn action-tile" id="opsBtn" onclick="openOps()" title="System Operations · Pipeline Health">OPS</button>
 <button class="btn" id="darkbtn" onclick="toggleDark()" title="Toggle dark mode">◑ Dark</button>
 <button class="btn on" id="abtn" onclick="toggleAuto()">Auto</button>

@@ -2058,7 +2058,8 @@ function _fiCoupon(b) {
   if (b.rate_type === 'floating' || b.rate_type === 'fixed_to_floating') {
     const bench = b.benchmark || null;
     if (b.spread_bps == null) return `${bench || 'Floating'} · spread not parsed — see filing`;
-    return `${bench || 'Floating'} + ${Number(b.spread_bps)} bp`;
+    // AC12 re-adjudication: spread_bps is an INTEGER rounded to the nearest bp, so never shown as exact.
+    return `${bench || 'Floating'} + ≈${Number(b.spread_bps)} bp`;
   }
   return b.coupon_rate == null ? '—' : `${Number(b.coupon_rate).toFixed(3)}%`;
 }
@@ -2233,7 +2234,8 @@ async function _navRenderBond(layer, opts) {
   const b = d.bond, nl = d.issuer || {}, filer = d.filer || {};
   layer.title = _fiTitle(b);
   const ids = _navDisplayIds({ isin: b.isin, cusip: b.cusip });
-  const rate = b.rate_type === 'fixed' ? _fiTermRow('Coupon', _fiCoupon(b)) : _fiTermRow('Benchmark + spread', _fiCoupon(b));
+  const rate = b.rate_type === 'fixed' ? _fiTermRow('Coupon', _fiCoupon(b))
+    : _fiTermRow('Benchmark + spread', `${_fiCoupon(b)}${b.spread_bps != null ? ' (spread rounded to the nearest basis point)' : ''}`);
   const terms = [
     _fiTermRow('Principal', `${_fiMoney(b.principal_amount, b.currency)}${b.principal_amount != null && b.currency ? ` ${b.currency}` : ''}`),
     rate, _fiTermRow('Rate type', _fiRateLabel(b)), _fiTermRow('Maturity', _navFmtDate(b.maturity_date)), _fiTermRow('Seniority', _fiSeniority(b)),

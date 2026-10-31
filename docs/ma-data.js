@@ -192,3 +192,82 @@ async function data_opsPost(path, body) {
 
 window.data_opsGet = data_opsGet;
 window.data_opsPost = data_opsPost;
+
+// --- MA-OCT-005 operator console transport (spec rev 0 §4.4, §6.1; Ops review M-5) ---
+// Admin routes (/api/ops/admin/*) sit behind Cloudflare Access. In the console shell
+// (Option B, window.MA_OPS_CONSOLE) they are same-origin; in the terminal they are not
+// reachable with the operator's identity, so the views show a launcher card instead.
+// redirect:'manual' turns an expired Access session (302 to the login) into an
+// opaqueredirect, so "signed out" is never confused with "offline". Every POST carries
+// Content-Type: application/json and X-Ops-Client: console (003/004 CSRF rule).
+// Returns { ok, status, data, kind } with kind one of:
+//   'ok' | 'http' (a JSON error body) | 'signed_out' | 'non_json' | 'network' | 'timeout'.
+const OPS_ADMIN_TIMEOUT_MS = 15000;
+
+async function data_opsAdmin(path, { method = 'GET', body } = {}) {
+  const consoleMode = window.MA_OPS_CONSOLE === true;
+  const base = consoleMode ? location.origin : OPS_WORKER_BASE;
+  const headers = { 'X-Ops-Client': 'console' };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  let r;
+  try {
+    r = await fetch(`${base}${path}`, {
+      method, headers, body: body === undefined ? undefined : JSON.stringify(body),
+      credentials: consoleMode ? 'same-origin' : 'include', redirect: 'manual',
+      signal: AbortSignal.timeout(OPS_ADMIN_TIMEOUT_MS)
+    });
+  } catch (e) {
+    return { ok: false, status: 0, data: null, kind: e && e.name === 'TimeoutError' ? 'timeout' : 'network' };
+  }
+  if (r.type === 'opaqueredirect' || r.status === 401 || (r.status >= 300 && r.status < 400)) {
+    return { ok: false, status: r.status, data: null, kind: 'signed_out' };
+  }
+  const text = await r.text().catch(() => '');
+  let data = null;
+  try { data = JSON.parse(text); } catch { /* HTML error page, Access policy page, empty body */ }
+  if (!data || typeof data !== 'object') return { ok: false, status: r.status, data: null, kind: 'non_json' };
+  return { ok: r.ok, status: r.status, data, kind: r.ok ? 'ok' : 'http' };
+}
+
+// The public meridian-proxy (Health tab's /api/ops-health), moved here from ma-ops.js's inline fetch (§5.6).
+const PROXY_WORKER_BASE = 'https://meridian-proxy.navinmv1981.workers.dev';
+async function data_proxyGet(path) {
+  return fetchWithTimeout(`${PROXY_WORKER_BASE}${path}`);
+}
+
+window.data_opsAdmin = data_opsAdmin;
+window.data_proxyGet = data_proxyGet;
+
+// --- meridian-entities-api wrappers (MA-OCT-007 Phase 1, spec rev 1.4 §3.1, §9) ---
+// Ruling D: ETF screens reach entities-api only through these helpers or DOM
+// events, never by a direct fetch from ma-etf.js. GET only; the front end
+// writes nothing (D4).
+const ENTITIES_WORKER_BASE = 'https://meridian-entities-api.navinmv1981.workers.dev';
+
+// Same return shape as data_opsGet: { ok, status, data } or { ok:false, status:0, type }.
+// A status of 0 is a network failure or timeout, never a mapping state (§5.3).
+async function data_entitiesGet(path) {
+  return fetchWithTimeout(`${ENTITIES_WORKER_BASE}${path}`);
+}
+
+// Byte-for-byte port of deriveInstrumentKey (App/Corporate Atlas/gate1-instrument-seed.js:51),
+// the rule that formed every instrument_key (E8). Takes raw holding values, never the
+// rendered "—" (N7-9). ISIN and CUSIP are trimmed, not uppercased, exactly like the seed.
+// Placeholder keys (e.g. CUSIP:000000000) are returned as derived; R1 guards them (R7-2).
+// Returns null when there is nothing to key on (the seed would throw on a missing name).
+function data_instrumentKey({ isin, cusip, ticker, name } = {}) {
+  if (isin && isin.trim().length === 12) {
+    return isin.trim();
+  } else if (cusip && cusip.trim().length >= 6) {
+    return 'CUSIP:' + cusip.trim();
+  } else if (ticker && ticker.trim() !== '') {
+    return 'TICKER:' + ticker.toUpperCase().trim();
+  } else if (typeof name === 'string') {
+    return 'NAME:' + name.toUpperCase().trim()
+      .replace(/\s+/g, '_').slice(0, 80);
+  }
+  return null;
+}
+
+window.data_entitiesGet = data_entitiesGet;
+window.data_instrumentKey = data_instrumentKey;
