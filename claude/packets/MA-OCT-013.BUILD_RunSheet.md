@@ -22,10 +22,11 @@
 
 | Need | Command | Effect |
 |---|---|---|
-| **Hard stop** | `$S stop` | Writes `App/Corporate Atlas/.merge-013-stop` and sends SIGTERM to the **013 runner's own pid** (`$W/runner.pid`; never another process). The runner finishes the in-flight D1 call, which is one transaction, then checkpoints and exits `killed`. The un-run batches go to `$W/remainder.json` (+ `.sha256`). |
+| **Hard stop** | `$S stop` | Writes `App/Corporate Atlas/.merge-013-stop` and sends SIGTERM to the **013 runner's own pid** (`$W/runner.pid`; never another process). The runner finishes the in-flight D1 call, then checkpoints and exits `killed`. Do not rely on that call being one transaction (CHECK N-4); each merge is all-or-nothing through its token. The un-run batches go to `$W/remainder.json` (+ `.sha256`). |
 | Pause before the next batch | `$S pause` / `$S resume` | The flag is checked before every batch. |
 | Clear a stop | `$S resume --clear-stop` | Only after the Operations Lead agrees. |
 | Status | `$S status` | Line 1 shows `WORK_DIR=… JOB_ID=manual.entity-merge-013`, then the flags, the runner pid, the cursor, the last run-log lines and the remainder SHA. |
+| **Any RUNNER ERROR** (MA-OCT-013.FIX, CHECK B-1) | — | **After any RUNNER ERROR: do not re-run. `$S status` → `$S readback --plan $P --batch <last>` → Operations Lead.** A batch that has a pre-image is never executed again: a re-run is refused with 0 writes and the message "do not re-run". `readback` and `restore --batch` work from the provisional checkpoint `$W/checkpoints/<id>-<plan>.provisional.json`, written before the execute call. |
 
 ## R0 Pre-flight (≥ 18:15Z, OPS-R12)
 1. **Tooling:**
@@ -112,6 +113,8 @@
      - a missing index.
    - It writes **`$W/remainder.json` + `.sha256`** on every stop with batches left.
 3. **Resuming after a calendar stop** (e.g. 21:58–22:02): re-run the same command at ≥ 22:02. The cursor continues; `--until Bnn` stops before a given batch.
+   - This applies **only** to a clean stop at a batch boundary (calendar, cap, pause flag, pilot hold). **After any RUNNER ERROR, or an outcome `failed` / "executed, unclassified": do not re-run** (see the kill-switch table).
+4. **Post-execute reads** (read-back, reference probes) are retried 3 times with backoff (2 s, 5 s, 10 s). If they still fail, the runner exits "executed, unclassified — run `readback`", the cursor stays put and the remainder starts after that batch.
 
 ## R7 (iii) LEIs (3 rows)
 - `$S lei --plan $P --operator "<name>"`.
@@ -136,7 +139,8 @@
   3. queue, iem and cik;
   4. clear the (iii) LEI;
   5. delete the redirect.
-- Every statement needs the batch token, so a raced merge is never touched.
+- Every statement needs the batch token, so a raced merge is never touched. The re-inserts also carry `NOT EXISTS` on the duplicate id, so a restore over a partially applied restore never aborts and is safe to repeat.
+- With only a provisional checkpoint (a batch left unclassified), `restore` classifies the batch at that moment with its token, restores only `merged`, and lists the rest under `not_restored`.
 - It verifies byte-identity against the pre-image and appends to `$W/restores.jsonl`.
 - **Cost:** about 16 writes per merge (≈ 820 a batch), inside the 70k gate.
 - **A full rollback** (≈ 29.9k) is a Founder + Operations Lead decision: earliest Fri 6 ≥ 08:05Z, ≤ 25k a day.

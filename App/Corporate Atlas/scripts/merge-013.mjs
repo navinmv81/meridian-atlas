@@ -18,7 +18,7 @@
 
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, linkSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -146,7 +146,9 @@ export async function makeContext(args, overrides = {}) {
     fetchImpl: overrides.fetchImpl || fetch,
     pauseFlag: overrides.pauseFlag || PAUSE_FLAG, stopFlag: overrides.stopFlag || STOP_FLAG,
     freezesPath: overrides.freezesPath || FREEZES_PATH,
-    log: overrides.log || (s => console.log(s)), stopRequested: false, operator: args.operator || null
+    log: overrides.log || (s => console.log(s)), stopRequested: false, operator: args.operator || null,
+    // B-1 (d): backoff between the tries of an idempotent post-execute read (≥ 3 retries)
+    retryDelays: overrides.retryDelays || READ_RETRY_DELAYS_MS, sleep: overrides.sleep || (ms => new Promise(r => setTimeout(r, ms)))
   };
   await setupHeartbeats(ctx, overrides);
   return ctx;
@@ -157,6 +159,39 @@ const gateLog = (ctx, text) => { appendJsonl(ctx.paths.gate, { utc: ctx.now().to
 const q = async (ctx, sql, label) => (await ctx.d1.exec([sql], { label }))[0].results;
 const chunks = (a, n = CHUNK) => { const o = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
 const isMissingTable = e => /no such table/i.test(String(e?.message || e));
+
+// ── B-1: write-once rollback inputs, provisional checkpoint, bounded read retry ──
+
+export const READ_RETRY_DELAYS_MS = [2000, 5000, 10000];   // 1 try + 3 retries
+export const DO_NOT_RERUN = 'do not re-run: `merge-013.sh status` → `merge-013.sh readback --plan <P> --batch <id>` → Operations Lead (restore works from the checkpoint)';
+
+// Exclusive and atomic: the file appears whole or not at all, and never replaces an existing one (EEXIST).
+export function writeOnce(file, text) {
+  ensureDir(path.dirname(file));
+  const tmp = `${file}.tmp-${process.pid}-${randomUUID().slice(0, 8)}`;
+  writeFileSync(tmp, text, { flag: 'wx' });
+  try { linkSync(tmp, file); } finally { unlinkSync(tmp); }
+}
+
+export function batchFiles(ctx, sha, id) {
+  const tag = `${id}-${sha.slice(0, 12)}`;
+  return { preimage: path.join(ctx.paths.preimages, `preimage-${tag}.json`), provisional: path.join(ctx.paths.checkpoints, `${tag}.provisional.json`),
+           final: path.join(ctx.paths.checkpoints, `${tag}.json`) };
+}
+
+// Idempotent reads only. Allow-list refusals are never retried.
+export async function retryRead(ctx, label, fn) {
+  const delays = ctx.retryDelays || READ_RETRY_DELAYS_MS;
+  let last;
+  for (let i = 0; i <= delays.length; i++) {
+    try { return await fn(); } catch (e) {
+      last = e;
+      if (/exec_refused/.test(String(e?.message))) throw e;
+      if (i < delays.length) { gateLog(ctx, `read ${label} failed (try ${i + 1}/${delays.length + 1}): ${redact(String(e?.message || e)).slice(0, 160)}; retrying in ${delays[i]} ms`); await ctx.sleep(delays[i]); }
+    }
+  }
+  throw last;
+}
 
 // ── Heartbeats (Ops M-1): job manual.entity-merge-013, emitter merge-013 ───
 
@@ -438,8 +473,8 @@ function writeRemainder(ctx, P, next, reason) {
 
 async function readState(ctx, merges) {
   const dups = merges.map(m => m.dup), ids = [...new Set(merges.flatMap(m => [m.dup, m.surv]))];
-  const em = new Map((await q(ctx, `SELECT * FROM entity_master WHERE entity_id IN (${ids.map(lit).join(', ')})`, 'rb-em')).map(r => [Number(r.entity_id), r]));
-  const red = new Map((await q(ctx, `SELECT duplicate_id, survivor_id, merged_at, packet FROM entity_merge_redirect WHERE duplicate_id IN (${dups.map(lit).join(', ')})`, 'rb-redirect')).map(r => [Number(r.duplicate_id), r]));
+  const em = new Map((await retryRead(ctx, 'rb-em', () => q(ctx, `SELECT * FROM entity_master WHERE entity_id IN (${ids.map(lit).join(', ')})`, 'rb-em'))).map(r => [Number(r.entity_id), r]));
+  const red = new Map((await retryRead(ctx, 'rb-redirect', () => q(ctx, `SELECT duplicate_id, survivor_id, merged_at, packet FROM entity_merge_redirect WHERE duplicate_id IN (${dups.map(lit).join(', ')})`, 'rb-redirect'))).map(r => [Number(r.duplicate_id), r]));
   return { em, red };
 }
 
@@ -467,8 +502,21 @@ export async function referenceProbes(ctx, dups) {
 }
 
 export async function executeBatch(ctx, P, batch) {
-  const tok = ctx.now().toISOString();
   const run = { id: randomUUID(), startedAt: ctx.now(), batch: batch.id };
+  const F = batchFiles(ctx, P.sha, batch.id);
+  // B-1 (a): a batch of this plan that already has a pre-image was executed (or attempted) before. Never again:
+  // refuse with 0 reads and 0 writes, so its pre-image and token stay the rollback input.
+  if (existsSync(F.preimage) || existsSync(F.provisional) || existsSync(F.final)) {
+    const why = existsSync(F.final) ? `batch ${batch.id} executed earlier (final checkpoint ${path.basename(F.final)})`
+      : `batch ${batch.id} executed earlier and is unclassified (pre-image${existsSync(F.provisional) ? ' + provisional checkpoint' : ''}, no final checkpoint)`;
+    const msg = `refused: ${why}; ${DO_NOT_RERUN}`;
+    gateLog(ctx, msg);
+    await report(ctx, run, 'failed', { extra: { reason: msg, refused: true } });
+    return { outcome: 'failed', refused: true, stops: [msg], merged: [], writes: 0 };
+  }
+  // no write at or after 23:30 (checked before the pre-image, so a clock stop leaves the batch unexecuted and re-runnable)
+  if (!writeAllowed(ctx.now())) { await report(ctx, run, 'budget_limit', { extra: { reason: `no write at or after ${LIMITS_013.noWriteFrom}` } }); return { outcome: 'budget_limit', stop: 'clock' }; }
+  const tok = ctx.now().toISOString();
   await sendEvent(ctx, eventFor(ctx, run, 'start', { detail: { merges: batch.merges.length, declared_writes: batch.declared_writes } }));
   // §6.3 per-batch probes: fund_entity_link (stop-and-refer, ETF MF-2) and facts by cik (Filings hold)
   const dups = batch.merges.map(m => m.dup);
@@ -487,21 +535,31 @@ export async function executeBatch(ctx, P, batch) {
     queue: await q(ctx, `SELECT * FROM entity_enrichment_queue WHERE entity_id IN (${live.map(m => lit(m.dup)).join(', ')})`, 'pre-queue'),
     iem: await q(ctx, `SELECT * FROM instrument_entity_map WHERE entity_id IN (${live.map(m => lit(m.dup)).join(', ')})`, 'pre-iem')
   };
-  ensureDir(ctx.paths.preimages);
-  const preFile = path.join(ctx.paths.preimages, `preimage-${batch.id}-${P.sha.slice(0, 12)}.json`);
+  const preFile = F.preimage;
   const preText = stableStringify({ batch: batch.id, plan_sha256: P.sha, token: tok, ...pre }) + '\n';
-  writeFileSync(preFile, preText);
-  // execute: one call, one transaction (D1 batch); each merge is all-or-nothing through its token
+  writeOnce(preFile, preText);                                   // B-1 (a): write-once
+  // B-1 (b): provisional checkpoint on disk before the execute call; readback / restore work from it (c)
+  const prov = { batch: batch.id, plan_sha256: P.sha, token: tok, preimage: path.basename(preFile), preimage_sha256: sha256(preText),
+                 state: 'executing', live: live.map(m => m.dup), transport: ctx.d1.name, utc: ctx.now().toISOString() };
+  writeOnce(F.provisional, JSON.stringify(prov, null, 1) + '\n');
+  // execute: one call; each merge is all-or-nothing through its token (atomicity of the call is not relied on)
   const sqls = live.flatMap(m => renderMerge(m, tok).map(s => s.sql));
-  if (!writeAllowed(ctx.now())) { await report(ctx, run, 'budget_limit', { extra: { reason: `no write at or after ${LIMITS_013.noWriteFrom}` } }); return { outcome: 'budget_limit', stop: 'clock' }; }
   let res = null, execError = null;
   try { res = await ctx.d1.exec(sqls, { label: `merge-${batch.id}` }); } catch (e) { execError = e; }
   const writes = res ? sumMeta(res, 'rows_written') : 0, reads = res ? sumMeta(res, 'rows_read') : 0;
-  // read-back and classes (§6.2)
-  const st = await readState(ctx, live);
-  const classes = live.map(m => ({ dup: m.dup, surv: m.surv, cls: classifyReadback(m, tok, { redirect: st.red.get(m.dup) || null, dup_row: st.em.get(m.dup) || null, surv_row: st.em.get(m.surv) || null }) }));
-  const merged = classes.filter(c => c.cls === 'merged'), raced = classes.filter(c => c.cls === 'raced'), breach = classes.filter(c => c.cls.startsWith('breach'));
-  const probes = await referenceProbes(ctx, merged.map(c => c.dup));
+  // read-back and classes (§6.2); B-1 (d): idempotent reads, retried with backoff
+  let st, probes, classes, merged, raced, breach;
+  try {
+    st = await readState(ctx, live);
+    classes = live.map(m => ({ dup: m.dup, surv: m.surv, cls: classifyReadback(m, tok, { redirect: st.red.get(m.dup) || null, dup_row: st.em.get(m.dup) || null, surv_row: st.em.get(m.surv) || null }) }));
+    merged = classes.filter(c => c.cls === 'merged'); raced = classes.filter(c => c.cls === 'raced'); breach = classes.filter(c => c.cls.startsWith('breach'));
+    probes = await retryRead(ctx, 'ref-probes', () => referenceProbes(ctx, merged.map(c => c.dup)));
+  } catch (e) {
+    const msg = `executed, unclassified — run \`readback --plan <P> --batch ${batch.id}\`; ${DO_NOT_RERUN} (read-back failed after ${ (ctx.retryDelays || READ_RETRY_DELAYS_MS).length + 1 } tries: ${redact(String(e?.message || e)).slice(0, 160)}${execError ? `; execute error: ${redact(execError.message).slice(0, 120)}` : ''})`;
+    gateLog(ctx, `${batch.id}: ${msg}`);
+    await report(ctx, run, 'failed', { rows: live.length, writes, reads, extra: { reason: msg, unclassified: true, checkpoint: path.basename(F.provisional) } });
+    return { outcome: 'failed', unclassified: true, stops: [msg], merged: [], writes, ckFile: F.provisional };
+  }
   const dangling = Object.entries(probes).filter(([, n]) => n > 0);
   const stops = [];
   if (execError) stops.push(`execute error: ${redact(execError.message).slice(0, 200)}`);
@@ -512,10 +570,9 @@ export async function executeBatch(ctx, P, batch) {
   const modeled = live.filter(m => merged.some(c => c.dup === m.dup)).reduce((a, m) => a + mergeCost(m), 0);
   const ck = { batch: batch.id, plan_sha256: P.sha, token: tok, preimage: path.basename(preFile), preimage_sha256: sha256(preText),
                merged: merged.map(c => c.dup), raced: raced.map(c => c.dup), breach, referred_etf_pl: referred, held_facts: heldF,
-               writes_measured: writes, writes_modeled: modeled, reads_measured: reads, probes, stops, transport: ctx.d1.name, utc: ctx.now().toISOString() };
-  ensureDir(ctx.paths.checkpoints);
-  const ckFile = path.join(ctx.paths.checkpoints, `${batch.id}-${P.sha.slice(0, 12)}.json`);
-  writeJsonAtomic(ckFile, ck);
+               writes_measured: writes, writes_modeled: modeled, reads_measured: reads, probes, stops, transport: ctx.d1.name, utc: ctx.now().toISOString(), state: 'final' };
+  const ckFile = F.final;
+  writeOnce(ckFile, JSON.stringify(ck, null, 1) + '\n');        // B-1 (a): write-once
   const outcome = stops.length ? 'failed' : (raced.length || referred.length || heldF.length ? 'partial' : 'success');
   await report(ctx, run, outcome, { rows: live.length, writes: ctx.local ? modeled : writes, reads, cursor: { before: batch.id, after: batch.id },
     extra: { attempted: live.length, merged: merged.length, raced: raced.length, reason: stops.join('; ') || undefined, checkpoint: path.basename(ckFile) } });
@@ -545,8 +602,12 @@ export async function cmdRun(ctx) {
       if (b.outcome === 'budget_limit') writeRemainder(ctx, P, cur.next, `budget: ${b.detail?.reason}`); return { stopped: b.outcome }; }
     ctx.log(`${batch.id}: ${batch.merges.length} merges, ≈ ${batch.declared_writes} writes …`);
     const r = await executeBatch(ctx, P, batch);
-    cur.done[batch.id] = { outcome: r.outcome, merged: r.merged?.length || 0, writes: r.writes, checkpoint: r.ckFile ? path.basename(r.ckFile) : null };
-    if (r.outcome === 'failed' || r.stop) { writeJsonAtomic(cursorFile(ctx, P.sha), cur); writeRemainder(ctx, P, cur.next + (r.outcome === 'failed' ? 1 : 0), r.stops?.join('; ') || r.stop); return { stopped: r.outcome, stops: r.stops }; }
+    // B-1 (a): a refused re-run changes nothing — not the cursor, not cur.done, not the remainder of the earlier stop
+    if (r.refused) return { stopped: 'failed', refused: true, at: batch.id, stops: r.stops };
+    cur.done[batch.id] = { outcome: r.outcome, merged: r.merged?.length || 0, writes: r.writes, checkpoint: r.ckFile ? path.basename(r.ckFile) : null, ...(r.unclassified ? { unclassified: true } : {}) };
+    // the cursor never advances past a failed batch (B-1 (d)); the remainder starts after it, since it was executed
+    if (r.outcome === 'failed' || r.stop) { writeJsonAtomic(cursorFile(ctx, P.sha), cur); writeRemainder(ctx, P, cur.next + (r.outcome === 'failed' ? 1 : 0), r.stops?.join('; ') || r.stop);
+      return { stopped: r.outcome, ...(r.unclassified ? { unclassified: true, at: batch.id } : {}), stops: r.stops }; }
     cur.next++; writeJsonAtomic(cursorFile(ctx, P.sha), cur); ran++;
     ctx.log(`  ${r.outcome}: merged ${r.merged.length}, writes ${ctx.local ? `${r.modeled} modeled` : r.writes}`);
     if (batch.pilot && !ctx.args['pilot-ok']) { gateLog(ctx, `pilot ${batch.id} done: holding for the §10 probes and the Data-Identity 20-row spot check; resume with --pilot-ok <name>`); return { stopped: 'pilot hold', at: batch.id }; }
@@ -557,22 +618,43 @@ export async function cmdRun(ctx) {
 
 // ── readback / restore (§10, §11) ────────────────────────────────────────
 
+// B-1 (c): the final checkpoint if there is one, otherwise the provisional one (written before the execute call).
 function loadBatchArtifacts(ctx, P, id) {
   const batch = P.plan.batches.find(b => b.id === id); if (!batch) throw new Error(`no batch ${id}`);
-  const ck = readJson(path.join(ctx.paths.checkpoints, `${id}-${P.sha.slice(0, 12)}.json`)); if (!ck) throw new Error(`no checkpoint for ${id}`);
+  const F = batchFiles(ctx, P.sha, id);
+  const ck = readJson(F.final) || readJson(F.provisional); if (!ck) throw new Error(`no checkpoint for ${id} (neither final nor provisional)`);
+  if (ck.plan_sha256 !== P.sha || ck.batch !== id) throw new Error(`checkpoint for ${id} belongs to another plan or batch`);
   const preText = readFileSync(path.join(ctx.paths.preimages, ck.preimage), 'utf8');
   if (sha256(preText) !== ck.preimage_sha256) throw new Error(`pre-image ${ck.preimage}: SHA mismatch`);
-  return { batch, ck, pre: JSON.parse(preText) };
+  const pre = JSON.parse(preText);
+  if (pre.token !== ck.token) throw new Error(`pre-image ${ck.preimage}: token differs from the checkpoint's`);
+  return { batch, ck, pre, provisional: ck.state === 'executing' };
+}
+
+// Classify every planned merge of the batch now, with the checkpoint's token.
+async function classifyNow(ctx, batch, tok) {
+  const st = await readState(ctx, batch.merges);
+  return batch.merges.map(m => ({ dup: m.dup, surv: m.surv, cls: classifyReadback(m, tok, { redirect: st.red.get(m.dup) || null, dup_row: st.em.get(m.dup) || null, surv_row: st.em.get(m.surv) || null }) }));
 }
 
 export async function cmdReadback(ctx) {
-  const P = loadPlan(ctx.args.plan); const { batch, ck } = loadBatchArtifacts(ctx, P, ctx.args.batch);
-  const st = await readState(ctx, batch.merges);
-  return { batch: batch.id, classes: batch.merges.map(m => ({ dup: m.dup, cls: classifyReadback(m, ck.token, { redirect: st.red.get(m.dup) || null, dup_row: st.em.get(m.dup) || null, surv_row: st.em.get(m.surv) || null }) })) };
+  const P = loadPlan(ctx.args.plan); const { batch, ck, provisional } = loadBatchArtifacts(ctx, P, ctx.args.batch);
+  const classes = await classifyNow(ctx, batch, ck.token);
+  const count = {}; for (const c of classes) count[c.cls] = (count[c.cls] || 0) + 1;
+  const out = { batch: batch.id, checkpoint: provisional ? 'provisional' : 'final', token: ck.token, counts: count, classes };
+  appendJsonl(path.join(ctx.paths.readbacks, `${batch.id}-${P.sha.slice(0, 12)}.jsonl`), { utc: ctx.now().toISOString(), ...out });
+  return out;
 }
 
 export async function restoreBatch(ctx, P, id) {
-  const { batch, ck, pre } = loadBatchArtifacts(ctx, P, id);
+  const { batch, ck: ck0, pre, provisional } = loadBatchArtifacts(ctx, P, id);
+  // From a provisional checkpoint the merged set is classified now; only 'merged' is restored, the rest is listed.
+  let ck = ck0, notRestored = [];
+  if (provisional) {
+    const classes = await classifyNow(ctx, batch, ck0.token);
+    ck = { ...ck0, merged: classes.filter(c => c.cls === 'merged').map(c => c.dup) };
+    notRestored = classes.filter(c => c.cls !== 'merged').map(c => ({ dup: c.dup, cls: c.cls }));
+  }
   const emPre = new Map(pre.em.map(r => [Number(r.entity_id), r]));
   const qPre = new Map(pre.queue.map(r => [Number(r.entity_id), r]));
   const leiState = readJson(ctx.paths.leiState, { applied: [] });
@@ -583,12 +665,13 @@ export async function restoreBatch(ctx, P, id) {
     const leiPre = lei ? { ...emPre.get(m.surv), ...(lei.pre_surv_row || {}) } : null;
     sqls.push(...renderRestore(m, { dup_row: emPre.get(m.dup), surv_row: leiPre || emPre.get(m.surv), queue_row: qPre.get(m.dup), iem_rows: pre.iem.filter(r => Number(r.entity_id) === m.dup) }, ck.token, lei).map(s => s.sql));
   }
-  if (!sqls.length) return { batch: id, restored: 0 };
+  const from = provisional ? 'provisional' : 'final';
+  if (!sqls.length) return { batch: id, from, restored: 0, not_restored: notRestored };
   const res = await ctx.d1.exec(sqls, { label: `restore-${id}` });
   // verify: every restored row equals its pre-image, the redirect is gone
   const st = await readState(ctx, merged);
-  const iemNow = await q(ctx, `SELECT * FROM instrument_entity_map WHERE entity_id IN (${merged.map(m => lit(m.dup)).join(', ')})`, 'restore-iem');
-  const qNow = new Map((await q(ctx, `SELECT * FROM entity_enrichment_queue WHERE entity_id IN (${merged.map(m => lit(m.dup)).join(', ')})`, 'restore-queue')).map(r => [Number(r.entity_id), r]));
+  const iemNow = await retryRead(ctx, 'restore-iem', () => q(ctx, `SELECT * FROM instrument_entity_map WHERE entity_id IN (${merged.map(m => lit(m.dup)).join(', ')})`, 'restore-iem'));
+  const qNow = new Map((await retryRead(ctx, 'restore-queue', () => q(ctx, `SELECT * FROM entity_enrichment_queue WHERE entity_id IN (${merged.map(m => lit(m.dup)).join(', ')})`, 'restore-queue'))).map(r => [Number(r.entity_id), r]));
   const bad = [];
   for (const m of merged) {
     if (stableStringify(st.em.get(m.dup)) !== stableStringify(emPre.get(m.dup))) bad.push(`${m.dup}: duplicate row differs`);
@@ -599,7 +682,7 @@ export async function restoreBatch(ctx, P, id) {
   const iemPreS = stableStringify(pre.iem.slice().sort((a, b) => a.instrument_key < b.instrument_key ? -1 : 1));
   const iemNowS = stableStringify(iemNow.slice().sort((a, b) => a.instrument_key < b.instrument_key ? -1 : 1));
   if (iemPreS !== iemNowS) bad.push('instrument_entity_map rows differ from the pre-image');
-  const out = { batch: id, restored: merged.length, writes: sumMeta(res, 'rows_written'), byte_identical: bad.length === 0, differences: bad.slice(0, 10) };
+  const out = { batch: id, from, restored: merged.length, writes: sumMeta(res, 'rows_written'), byte_identical: bad.length === 0, differences: bad.slice(0, 10), not_restored: notRestored };
   appendJsonl(path.join(ctx.paths.work, 'restores.jsonl'), { utc: ctx.now().toISOString(), ...out });
   return out;
 }
@@ -607,7 +690,7 @@ export async function restoreBatch(ctx, P, id) {
 export async function cmdRestore(ctx) {
   const P = loadPlan(ctx.args.plan);
   if (ctx.args.all) {
-    const ids = P.plan.batches.map(b => b.id).filter(id => existsSync(path.join(ctx.paths.checkpoints, `${id}-${P.sha.slice(0, 12)}.json`))).reverse();
+    const ids = P.plan.batches.map(b => b.id).filter(id => { const F = batchFiles(ctx, P.sha, id); return existsSync(F.final) || existsSync(F.provisional); }).reverse();
     const out = []; for (const id of ids) out.push(await restoreBatch(ctx, P, id));
     return { batches: out.length, restored: out.reduce((a, r) => a + r.restored, 0), all_identical: out.every(r => r.byte_identical !== false), failures: out.filter(r => r.byte_identical === false) };
   }
@@ -702,7 +785,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.log(JSON.stringify(r));
     if (r && ['failed', 'headroom_unavailable', 'killed'].includes(r.stopped)) code = 1;
     if (r && (r.ok === false || r.all_identical === false || r.byte_identical === false)) code = 1;
-  } catch (e) { console.error('RUNNER ERROR:', redact(e.message)); code = 1; }
+  } catch (e) { console.error('RUNNER ERROR:', redact(e.message)); if (writeCmds.has(cmd)) console.error(`RUNNER ERROR: ${DO_NOT_RERUN}`); code = 1; }
   try { if (ctx) { const pid = ctx.paths.pid; if (existsSync(pid) && readFileSync(pid, 'utf8') === String(process.pid)) unlinkSync(pid); } } catch { /* ignore */ }
   process.exit(code);
 }

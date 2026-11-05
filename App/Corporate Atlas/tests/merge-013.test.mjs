@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// MA-OCT-013 — tests T-1 … T-16 (spec rev 1 §17, e6dc8567…f098). Each MUST-FIX has a test that fails on
+// MA-OCT-013 — tests T-1 … T-17 (T-17: MA-OCT-013.FIX, CHECK blocker B-1) (spec rev 1 §17, e6dc8567…f098). Each MUST-FIX has a test that fails on
 // the pre-013 tree (the new lib / runner / wrapper are absent there). Runs the real core library, runner
 // and entry script against node:sqlite replicas in a temp folder. No network, no D1.
 //   node "App/Corporate Atlas/tests/merge-013.test.mjs"
@@ -115,7 +115,7 @@ writeFileSync(FREEZES, JSON.stringify({ recurring: [['05:50', '07:10'], ['07:55'
   .map(([start, end]) => ({ name: `band ${start}`, days: ['*'], start, end })), dated: [{ name: '013 run — other Entities writers frozen', start: '2026-11-05T18:00Z', end: '2026-11-06T00:10Z' }] }));
 const THU = '2026-11-05T18:30:00Z';
 async function ctxFor(file, args = {}, over = {}) {
-  const work = mkdtempSync(path.join(TMP, 'work-'));
+  const work = over.work || mkdtempSync(path.join(TMP, 'work-'));
   const sent = [];
   const t = Date.parse(over.at || THU); let tick = 0;
   const ctx = await R.makeContext({ transport: `local:${file}`, 'assume-account': 1000, 'no-ops-gates': true, operator: 'test', ...args },
@@ -460,6 +460,116 @@ check('[T-12] an index with the right name on the wrong columns is caught', C.in
   db.close();
   r = await R.cmdRun(await mk());
   check('[T-16] both present → the run starts', r.stopped === 'pilot hold' || r.done === true, r);
+}
+
+// ═══ T-17 (CHECK B-1, MA-OCT-013.FIX): crash safety after a committed batch ═══
+// Each part is wrapped so that, on the pre-fix tree (3c8866b), it fails as a check rather than crashing the suite.
+const soft = p => Promise.resolve().then(() => p()).catch(e => ({ threw: e.message }));   // a call that throws on the pre-fix tree → its checks fail one by one
+const part = async (name, fn) => { try { await fn(); } catch (e) { check(`${name} (threw)`, false, e.message); } };
+// Fault injection on the transport: rule(label, sqls) returns an Error to throw for that call, or null.
+function inject(ctx, rule) {
+  const real = ctx.d1.exec.bind(ctx.d1); const calls = [];
+  ctx.d1 = { ...ctx.d1, exec: async (sqls, o = {}) => { const writes = sqls.filter(x => !/^\s*(SELECT|WITH|EXPLAIN)\b/i.test(x)).length; calls.push({ label: o.label, writes });
+    const err = rule(o.label, sqls); if (err) throw err; return real(sqls, o); } };
+  return calls;
+}
+const code10000 = () => Object.assign(new Error('wrangler d1 execute failed (rb-em): A request to the Cloudflare API failed. [code: 10000]'), { code: '10000' });
+const planSha = dir => readFileSync(path.join(dir, 'plan.sha256'), 'utf8').split(/\s+/)[0];
+const cursorOf = (work, dir) => { try { return JSON.parse(readFileSync(path.join(work, `cursor-${planSha(dir).slice(0, 16)}.json`), 'utf8')); } catch { return null; } };
+const RUNSHEET = path.resolve(CA, '..', '..', 'claude', 'packets', 'MA-OCT-013.BUILD_RunSheet.md');
+{
+  // (A) the read-back fails on every try after B01 has committed
+  await part('[T-17] persistent read failure after commit', async () => {
+    const file = mkDb(); const before = dump(file);
+    const dir = writePlan(C.buildPlan(inputs(file))); const sha = planSha(dir), tag = `B01-${sha.slice(0, 12)}`;
+    const { ctx, work } = await ctxFor(file, { plan: dir, 'pilot-ok': 'test' });
+    const sleeps = []; ctx.retryDelays = [10, 20, 40]; ctx.sleep = async ms => { sleeps.push(ms); };
+    const provFile = path.join(work, 'checkpoints', `${tag}.provisional.json`), preFile = path.join(work, 'preimages', `preimage-${tag}.json`);
+    let provAtExec = null;
+    const calls = inject(ctx, (label) => {
+      if (label === 'merge-B01') provAtExec = existsSync(provFile) ? JSON.parse(readFileSync(provFile, 'utf8')) : false;
+      return label === 'rb-em' ? code10000() : null;
+    });
+    const r = await soft(() => R.cmdRun(ctx));
+    check('[T-17] (d) run exits failed, "executed, unclassified — run `readback`"', r.stopped === 'failed' && r.unclassified === true && /executed, unclassified — run `readback/.test(r.stops?.[0] || ''), r);
+    const tries = calls.filter(c => c.label === 'rb-em').length;
+    check('[T-17] (d) post-execute read retried ≥ 3 times (4 tries) with increasing backoff', tries >= 4 && sleeps.length >= 3 && sleeps.every((x, i) => i === 0 || x > sleeps[i - 1]), { tries, sleeps });
+    check('[T-17] the batch really committed (4 redirects, duplicates gone)', rows(file, 'SELECT COUNT(*) n FROM entity_merge_redirect')[0].n === 4 && rows(file, 'SELECT COUNT(*) n FROM entity_master WHERE entity_id IN (1010,1020,1030,1040)')[0].n === 0);
+    const preText = existsSync(preFile) ? readFileSync(preFile, 'utf8') : '';
+    check('[T-17] (b) provisional checkpoint was on disk before the execute call, with token + pre-image path + SHA', provAtExec && provAtExec.state === 'executing' && provAtExec.token && provAtExec.preimage === path.basename(preFile)
+      && provAtExec.preimage_sha256 === (await import('node:crypto')).createHash('sha256').update(preText).digest('hex') && provAtExec.token === JSON.parse(preText).token, provAtExec);
+    check('[T-17] no final checkpoint; (d) cursor not advanced', !existsSync(path.join(work, 'checkpoints', `${tag}.json`)) && (cursorOf(work, dir)?.next ?? 0) === 0, cursorOf(work, dir));
+    // the natural recovery — re-running the same command — is refused with 0 writes, pre-image untouched (a)
+    const mid = dump(file); const preBytes = preText; const remBefore = existsSync(path.join(work, 'remainder.json')) ? readFileSync(path.join(work, 'remainder.json'), 'utf8') : null;
+    const { ctx: c2 } = await ctxFor(file, { plan: dir, 'pilot-ok': 'test' }, { work, at: '2026-11-05T18:40:00Z' });
+    const calls2 = inject(c2, () => null);
+    const r2 = await soft(() => R.cmdRun(c2));
+    check('[T-17] (a) re-run refused: failed, "do not re-run", 0 writes', r2.stopped === 'failed' && r2.refused === true && /do not re-run/.test(r2.stops?.[0] || '') && calls2.every(c => c.writes === 0) && dump(file) === mid, { r2, calls2 });
+    check('[T-17] (a) pre-image byte-identical after the re-run; provisional unchanged; cursor and remainder unchanged', readFileSync(preFile, 'utf8') === preBytes && existsSync(provFile) && JSON.parse(readFileSync(provFile, 'utf8')).token === provAtExec?.token
+      && (cursorOf(work, dir)?.next ?? 0) === 0 && (existsSync(path.join(work, 'remainder.json')) ? readFileSync(path.join(work, 'remainder.json'), 'utf8') : null) === remBefore);
+    // (c) readback and restore from the provisional checkpoint
+    const rb = await soft(() => R.cmdReadback({ ...c2, args: { ...c2.args, batch: 'B01' } }));
+    check('[T-17] (c) readback works from the provisional checkpoint: 4 merged', rb.checkpoint === 'provisional' && rb.counts?.merged === 4, rb);
+    const rs = await soft(() => R.cmdRestore({ ...c2, args: { ...c2.args, batch: 'B01' } }));
+    check('[T-17] (c) restore --batch from the provisional checkpoint: 4 restored, byte-identical', rs.from === 'provisional' && rs.restored === 4 && rs.byte_identical === true, rs);
+    check('[T-17] (e) database byte-identical to before the run', dump(file) === before);
+    const rs2 = await soft(() => R.cmdRestore({ ...c2, args: { ...c2.args, batch: 'B01' } }));
+    check('[T-17] repeat restore is a 0-write no-op', rs2.restored === 0 && dump(file) === before, rs2);
+  });
+  // (A') the read-back fails once: the retry recovers and the batch completes normally
+  await part('[T-17] transient read failure', async () => {
+    const file = mkDb(); const dir = writePlan(C.buildPlan(inputs(file)));
+    const { ctx, work } = await ctxFor(file, { plan: dir, 'pilot-ok': 'test' });
+    ctx.retryDelays = [1, 2, 4]; ctx.sleep = async () => {};
+    let n = 0; inject(ctx, label => (label === 'rb-em' && n++ === 0) ? code10000() : null);
+    const r = await soft(() => R.cmdRun(ctx));
+    check('[T-17] (d) one code-10000 on the read-back → retried, batch classified, run done', r.done === true && n === 2 && existsSync(path.join(work, 'checkpoints', `B01-${planSha(dir).slice(0, 12)}.json`)), { r, n });
+  });
+  // (a) a stale cursor pointing at a batch with a FINAL checkpoint is refused too (never re-executed)
+  await part('[T-17] re-run over a final checkpoint', async () => {
+    const file = mkDb(); const dir = writePlan(C.buildPlan(inputs(file)));
+    const { ctx, work } = await ctxFor(file, { plan: dir, 'pilot-ok': 'test' });
+    await R.cmdRun(ctx);
+    const tag = `B01-${planSha(dir).slice(0, 12)}`, preFile = path.join(work, 'preimages', `preimage-${tag}.json`), pre0 = readFileSync(preFile, 'utf8');
+    writeFileSync(path.join(work, `cursor-${planSha(dir).slice(0, 16)}.json`), JSON.stringify({ plan_sha256: planSha(dir), next: 0, done: {} }));
+    const mid = dump(file);
+    const { ctx: c2 } = await ctxFor(file, { plan: dir, 'pilot-ok': 'test' }, { work, at: '2026-11-05T18:50:00Z' });
+    const r = await R.cmdRun(c2);
+    check('[T-17] (a) batch with a final checkpoint is never re-executed; pre-image and checkpoint unchanged', r.refused === true && dump(file) === mid && readFileSync(preFile, 'utf8') === pre0
+      && JSON.parse(readFileSync(path.join(work, 'checkpoints', `${tag}.json`), 'utf8')).merged.length === 4, r);
+  });
+  // (a) write-once primitive
+  await part('[T-17] write-once', async () => {
+    const f = path.join(TMP, 'once.json'); R.writeOnce(f, 'first\n');
+    check('[T-17] (a) writeOnce refuses to replace an existing file (EEXIST), content kept', throws(() => R.writeOnce(f, 'second\n'), /EEXIST/) && readFileSync(f, 'utf8') === 'first\n');
+  });
+  // a clock stop (≥ 23:30) leaves no pre-image, so the batch stays executable the next day
+  await part('[T-17] clock stop leaves no pre-image', async () => {
+    const file = mkDb(); const dir = writePlan(C.buildPlan(inputs(file)));
+    const { ctx, work } = await ctxFor(file, { plan: dir }, { at: '2026-11-05T23:31:00Z' });
+    const P = R.loadPlan(dir); const r = await R.executeBatch(ctx, P, P.plan.batches[0]);
+    check('[T-17] 23:31 → budget_limit before any pre-image is written', r.outcome === 'budget_limit' && !existsSync(path.join(work, 'preimages', `preimage-B01-${P.sha.slice(0, 12)}.json`)), r);
+  });
+  // should-fix: restore is safe on a partially applied restore (rows already back) — no PK abort, byte-identical
+  await part('[T-17] should-fix: partial restore', async () => {
+    const file = mkDb(); const before = dump(file);
+    const db0 = new DatabaseSync(file, { readOnly: true }); const dupRow = { ...db0.prepare('SELECT * FROM entity_master WHERE entity_id = 1010').get() }; const qRow = { ...db0.prepare('SELECT * FROM entity_enrichment_queue WHERE entity_id = 1010').get() }; db0.close();
+    const dir = writePlan(C.buildPlan(inputs(file)));
+    const { ctx } = await ctxFor(file, { plan: dir, 'pilot-ok': 'test' });
+    await R.cmdRun(ctx);
+    const P = R.loadPlan(dir); const m = P.plan.batches[0].merges.find(x => x.dup === 1010);
+    const tok = JSON.parse(readFileSync(path.join(ctx.paths.checkpoints, `B01-${P.sha.slice(0, 12)}.json`), 'utf8')).token;
+    const steps = C.renderRestore(m, { dup_row: dupRow, queue_row: qRow, iem_rows: [] }, tok);
+    check('[T-17] should-fix: R2-reinsert and R3-queue carry NOT EXISTS on the duplicate id', /NOT EXISTS \(SELECT 1 FROM entity_master WHERE entity_id = 1010\)/.test(steps.find(s => s.step === 'R2-reinsert').sql)
+      && /NOT EXISTS \(SELECT 1 FROM entity_enrichment_queue WHERE entity_id = 1010\)/.test(steps.find(s => s.step === 'R3-queue').sql));
+    const db = new DatabaseSync(file);       // the first three restore statements applied by an earlier, interrupted restore
+    db.exec('BEGIN'); for (const s of steps.slice(0, 3)) db.prepare(s.sql.replace(/ AND NOT EXISTS \(SELECT 1 FROM \w+ WHERE entity_id = 1010\)$/, '')).run(); db.exec('COMMIT'); db.close();
+    const rs = await R.cmdRestore({ ...ctx, args: { ...ctx.args, all: true } });
+    check('[T-17] should-fix: restore over a partially applied restore completes byte-identical (no PK conflict)', rs.all_identical === true && dump(file) === before, rs);
+  });
+  // (f) the run-sheet line
+  check('[T-17] (f) run sheet: "After any RUNNER ERROR: do not re-run" with status → readback → Operations Lead',
+    /After any RUNNER ERROR: do not re-run\. `\$S status` → `\$S readback --plan \$P --batch <last>` → Operations Lead/.test(readFileSync(RUNSHEET, 'utf8')));
 }
 
 rmSync(TMP, { recursive: true, force: true });

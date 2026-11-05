@@ -345,7 +345,9 @@ export function renderLei(item, tok) {
 export function renderRestore(m, pre, tok, lei = null) {
   if (!pre?.dup_row || !pre?.queue_row) throw new Error(`restore ${m.dup}: pre-image incomplete`);
   const t = T(m, tok);
-  const ins = (table, row) => { const cols = Object.keys(row); return `INSERT INTO ${table} (${cols.join(', ')}) SELECT ${cols.map(c => lit(row[c])).join(', ')} WHERE ${t}`; };
+  // B-1 should-fix: the re-inserts are no-ops when the row is already back (a partially applied merge or restore),
+  // so a restore never aborts on a PK conflict and is safe to repeat.
+  const ins = (table, row) => { const cols = Object.keys(row); return `INSERT INTO ${table} (${cols.join(', ')}) SELECT ${cols.map(c => lit(row[c])).join(', ')} WHERE ${t} AND NOT EXISTS (SELECT 1 FROM ${table} WHERE entity_id = ${lit(m.dup)})`; };
   const out = [
     { step: 'R1-key', sql: `UPDATE entity_master SET normalized_name = ${lit(m.surv_key)} WHERE entity_id = ${lit(m.surv)} AND normalized_name = ${lit(m.dup_key)} AND ${t}` },
     { step: 'R2-reinsert', sql: ins('entity_master', pre.dup_row) },
