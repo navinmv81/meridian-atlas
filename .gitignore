@@ -24,3 +24,6 @@ node_modules/
 # MA-OCT-011 runner control flags (011 OQ-10; added by MA-OCT-OPS.T12) — never committed.
 App/Corporate Atlas/.gleif-reconcile-011-paused
 App/Corporate Atlas/.gleif-reconcile-011-stop
+# MA-OCT-013 runner control flags (spec rev 1 §9, §17) — never committed.
+App/Corporate Atlas/.merge-013-paused
+App/Corporate Atlas/.merge-013-stop
