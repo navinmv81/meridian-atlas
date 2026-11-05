@@ -33,3 +33,10 @@ database_id = "43e80149-5333-4917-b678-6a8218ca4f93"
 # has fresh entries to work from, and clear of the shared write cap window.
 [triggers]
 crons = ["0 6 * * *", "50 6 * * *"]
+
+# MA-OCT-002b B2 (spec 002 §12): run events to meridian-ops (001 option A). Identifiers only; the key is the
+# secret OPS_INGEST_KEY (wrangler secret put, run sheet). Inert until that secret exists. B4 (KI 22.14): Phase 1 budget check reads OPS_D1_TODAY_URL.
+[vars]
+OPS_INGEST_URL = "https://meridian-ops.navinmv1981.workers.dev/api/ops/ingest/run-event"
+OPS_EMITTER = "entities-enrich-cf"
+OPS_D1_TODAY_URL = "https://meridian-ops.navinmv1981.workers.dev/api/ops/cf/d1-today"

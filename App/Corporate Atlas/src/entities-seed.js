@@ -442,24 +442,27 @@ async function populateEnrichmentQueue(env, budgetAlreadyExhausted) {
 // Runs all four steps in sequence, stopping early if any step reports the
 // mid-loop write checkpoint was hit (see runInBatches()). Shared by both
 // scheduled() and fetch() so their behavior can't drift apart again.
+import { heartbeat, cronTrigger } from './ops-heartbeat.js';   // MA-OCT-002b B2
+
 async function runAllSteps(env) {
   const step1 = await seedFundEntities(env);
   if (!step1.completed) {
     console.log('[entities-seed] Stopped after Step 1 — daily write cap hit.');
-    return;
+    return { steps_completed: 0, stopped: 'write_cap' };
   }
   const step2Completed = await seedManagerEntities(env, step1.etfs);
   if (!step2Completed) {
     console.log('[entities-seed] Stopped after Step 2 — daily write cap hit.');
-    return;
+    return { steps_completed: 1, stopped: 'write_cap' };
   }
   const step3Completed = await seedIssuerEntities(env);
   if (!step3Completed) {
     console.log('[entities-seed] Stopped after Step 3 — daily write cap hit. Step 4 skipped.');
     await populateEnrichmentQueue(env, /* budgetAlreadyExhausted */ true);
-    return;
+    return { steps_completed: 2, stopped: 'write_cap' };
   }
   await populateEnrichmentQueue(env, /* budgetAlreadyExhausted */ false);
+  return { steps_completed: 4, stopped: null };
 }
 
 // MA-OCT-002a A5 (CR-7 / CR-7b, KI 22.36 / 22.49): run-route auth gate.
@@ -491,16 +494,23 @@ function unauthorizedResponse() {
 export default {
   async scheduled(event, env, ctx) {
     console.log('[entities-seed] Cron started');
+    // MA-OCT-002b B2 (spec 002 §12): start + end, 2 subrequests; scheduled() only, never /run.
+    const hb = heartbeat(env, ctx, { jobId: 'cf.meridian-entities-seed', trigger: cronTrigger(event) });
+    hb.start();
 
     // FIXED 2 August 2026 (incident follow-up): this Worker never checked
     // hold_all_jobs — see checkHold()'s comment above for why that mattered.
     if (await checkHold(env)) {
       console.log('[entities-seed] hold_all_jobs = true — exiting immediately');
+      hb.end('skipped', { detail: { reason: 'hold' } });
       return;
     }
-    if (!(await checkWriteBudget(env))) return;
+    if (!(await checkWriteBudget(env))) { hb.end('skipped', { detail: { reason: 'budget' } }); return; }
 
-    await runAllSteps(env);
+    let r;
+    try { r = await runAllSteps(env); } catch (err) { hb.fail(err); throw err; }
+    hb.end(r && r.stopped ? 'partial' : 'success', { items_attempted: 4, items_progressed: r ? r.steps_completed : 0,
+      detail: { ...(r && r.stopped ? { stopped: r.stopped } : {}), metrics: { steps_completed: r ? r.steps_completed : 0 } } });
 
     console.log('[entities-seed] Cron complete');
   },

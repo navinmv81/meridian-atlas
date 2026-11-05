@@ -61,6 +61,8 @@
 // entity_master, and holdings_pipeline_state.
 
 import { computeLateness, intendedDrift, MAX_LOOKBACK_DAYS } from './lateness.js';
+import { refreshSchedules, storedDrift } from './schedules.js';   // MA-OCT-002b B1
+import { holdingsCycle, HOLDINGS_JOB } from './etf-cycle.js';     // MA-OCT-002b B3
 import { adminRouteId, handleCases, serviceGate } from './cases.js';   // MA-OCT-003 routes
 import { autoResolve, conditionFindings, dailyChecks, firstSweepToday, frozenBranches, rekeyConditions, suppress } from './sweep-ext.js';   // MA-OCT-003 sweep
 import { renderConsoleShell } from './console-page.js';                // MA-OCT-005 console shell
@@ -179,7 +181,8 @@ async function queryCloudflareGraphQL(env, query, variables) {
 const TRACKED_SCRIPTS = [
   'meridian-holdings', 'meridian-entities-seed', 'meridian-entities-enrich',
   'meridian-entities-figi', 'meridian-entities-api', 'meridian-entities-delta', 'meridian-ops',
-  'meridian-control'   // A6
+  'meridian-control',  // A6
+  'meridian-bootstrap' // MA-OCT-002b B-2: its subrequest use is measured before heartbeat room is reserved
 ];
 
 // GET /api/ops/cf/invocations?script=<name>&date=YYYY-MM-DD (date optional, defaults today)
@@ -232,6 +235,20 @@ async function cfInvocations(env, url) {
   const allInvocations = account.workersInvocationsAdaptive ?? [];
   const totalAllTriggers = allInvocations.reduce((sum, r) => sum + (r.sum?.requests ?? 0), 0);
 
+  // MA-OCT-002b B-2 (spec 002 §19.5): ?subrequests=1 adds per-minute subrequest sums, so heartbeat room is
+  // reserved only after measurement. Opt-in and fail-soft: a schema error never changes the base response.
+  let subrequests;
+  if (url.searchParams.get('subrequests') === '1') {
+    try {
+      const sd = await queryCloudflareGraphQL(env, `query($accountTag: string!, $script: string!, $dateStart: Time!, $dateEnd: Time!) {
+        viewer { accounts(filter: { accountTag: $accountTag }) {
+          workersInvocationsAdaptive(limit: 1000, filter: { scriptName: $script, datetime_geq: $dateStart, datetime_leq: $dateEnd }, orderBy: [datetimeMinute_ASC]) {
+            dimensions { datetimeMinute status } sum { requests subrequests } } } } }`, { accountTag: env.CF_ACCOUNT_TAG, script, dateStart, dateEnd });
+      subrequests = (sd?.viewer?.accounts?.[0]?.workersInvocationsAdaptive ?? [])
+        .map(r => ({ minute: r.dimensions?.datetimeMinute, status: r.dimensions?.status, requests: r.sum?.requests ?? 0, subrequests: r.sum?.subrequests ?? null }));
+    } catch (err) { subrequests = { error: String(err && err.message || err).slice(0, 200) }; }
+  }
+
   return json({
     ok: true,
     script,
@@ -241,7 +258,8 @@ async function cfInvocations(env, url) {
     all_trigger_invocation_count: totalAllTriggers,
     // If this is true, every invocation was cron-triggered — no manual/fetch
     // runs happened outside the schedule. If false, something else fired it.
-    matches_cron_only: totalAllTriggers === cronInvocations.length
+    matches_cron_only: totalAllTriggers === cronInvocations.length,
+    ...(subrequests !== undefined ? { subrequests } : {})
   });
 }
 
@@ -643,13 +661,14 @@ function lookbackWindow(url) {
            pauseSinceIso: new Date(now - days * 86400000).toISOString() };
 }
 
-function withLateness(job, runRows, pauses, w) {
+function withLateness(job, runRows, pauses, w, reg = null) {
   const out = { slots: [], job_state: null, drift: [] };
   try {
     const intended = job.intended_schedule ? JSON.parse(job.intended_schedule) : { kind: 'none' };
     const l = computeLateness(job, runRows, pauses, w.now, w.days);
     out.slots = l.slots; out.job_state = l.job_state; out.run_states = l.runs;
     out.drift = intendedDrift(intended, w.now);
+    if (reg) out.drift.push(...storedDrift(job, reg));                 // MA-OCT-002b B1: effective side (stored, 0 reads)
   } catch (err) {
     out.lateness_error = String(err && err.message || err).slice(0, 200);
   }
@@ -698,7 +717,7 @@ async function listJobs(env, url) {
   const res = await env.DB.batch(stmts);
   const pauses = res[0].results;
   const runsByJob = new Map(emitting.map((j, i) => [j.job_id, res[i + 1].results]));
-  const jobs = rows.results.map(j => ({ ...j, ...withLateness(j, runsByJob.get(j.job_id) || [], pauses, w) }));
+  const jobs = rows.results.map(j => ({ ...j, ...withLateness(j, runsByJob.get(j.job_id) || [], pauses, w, rows.results) }));
   const rowsRead = (rows.meta?.rows_read ?? 0) + res.reduce((a, r) => a + (r.meta?.rows_read ?? 0), 0);
   return jsonPrivate({ ok: true, lookback_days: w.days, jobs, rows_read: rowsRead });
 }
@@ -850,6 +869,16 @@ async function sweep(request, env) {
       gleifChecks = { e2: dc.e2, e4: dc.e4 };
     } catch (err) { console.log(`[ops-sweep] daily GLEIF checks failed: ${err && err.message}`); }
   }
+  // MA-OCT-002b B1 (§6.2): effective schedules from the CF API, first sweep of the UTC day only
+  // (6 subrequests, 0 extra reads; writes only on change). Fails soft like the daily GLEIF checks.
+  let schedules = null;
+  if (firstSweepToday(sweepRows, today)) {
+    try {
+      const sc = await refreshSchedules(env, reg, now, meta);
+      findings.push(...sc.findings);
+      schedules = { checked: sc.checked ?? 0, updated: sc.updated ?? 0, drift: sc.findings.length, errors: sc.errors ?? {}, ...(sc.skipped ? { skipped: sc.skipped } : {}) };
+    } catch (err) { console.log(`[ops-sweep] schedule refresh failed: ${err && err.message}`); schedules = { error: String(err && err.message).slice(0, 120) }; }
+  }
 
   const hold = state.hold_all_jobs === 'true';
   if (hold) findings.push({ type: 'hold_active', severity: 'sev2', dedupe_key: `hold_active:${today}`, title: 'hold_all_jobs is TRUE', summary: 'All D1-writing pipelines are halted (shared kill switch).' });
@@ -870,6 +899,11 @@ async function sweep(request, env) {
   const etf = { offset: Number.isFinite(offset) ? offset : null, total: Number.isFinite(total) ? total : null,
                 weeks_to_complete: Number.isFinite(total) && Number.isFinite(offset) ? Math.ceil((total - offset) / 20) : null,
                 last_run_status: state.last_run_status ?? null, sunday, sunday_writes: sundayWrites };
+  // MA-OCT-002b B3 (§9 (b)(c)): from the holdings Worker's B2 end events, once it has an emitter (1 bounded read).
+  if (reg.some(j => j.job_id === HOLDINGS_JOB && j.emitter_id)) {
+    try { const c = await holdingsCycle(env, now, meta); etf.cycle = c.metrics; findings.push(...c.findings); }
+    catch (err) { console.log(`[ops-sweep] holdings cycle failed: ${err && err.message}`); }
+  }
 
   // 5. Raise only NEW findings: dedupe pre-check (unique-index probes), then cap.
   // MA-OCT-003 §9.1: condition findings are keyed per UTC day, then S2 suppresses an open / snoozed case.
@@ -945,7 +979,7 @@ async function sweep(request, env) {
     headroom: d1 ? { rows_written: d1.rowsWritten, daily_cap: d1.daily_cap, headroom } : null,
     etf, findings: uniq.length + sup.suppressed, already_open: existing.size + sup.suppressed, new: raised, raised: raised.length,
     overflow, raised_today_before: raisedToday, daily_cap: dailyCap,
-    suppressed: sup.suppressed, s2_rows_read: sup.s2, gleif_checks: gleifChecks,
+    suppressed: sup.suppressed, s2_rows_read: sup.s2, gleif_checks: gleifChecks, schedules,
     auto_resolved: ar.auto_resolved, autoresolve_skipped_reopened: ar.skipped_reopened,
     open_counts: Object.fromEntries(oc.map(r => [r.severity, r.n])), dq_new: dqNew, dq_since: dqSince, rows_read: rowsRead
   });

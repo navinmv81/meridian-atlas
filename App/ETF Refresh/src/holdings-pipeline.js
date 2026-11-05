@@ -31,9 +31,15 @@ function decodeXmlEntities(str) {
 
 // ── Exports ───────────────────────────────────────────────────────────────────
 
+import { heartbeat, cronTrigger } from './ops-heartbeat.js';   // MA-OCT-002b B2
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runHoldingsPipeline(env));
+    // MA-OCT-002b B2/B3 (spec 002 §12, §9): end-only by default (1 subrequest); OPS_HEARTBEAT_START="true"
+    // adds the start event once B-2 has measured room. Inert until the ingest secret is set.
+    const hb = heartbeat(env, ctx, { jobId: 'cf.meridian-holdings', trigger: cronTrigger(event), endOnly: env.OPS_HEARTBEAT_START !== 'true' });
+    hb.start();
+    ctx.waitUntil(runHoldingsPipeline(env, { measure: hb.enabled })
+      .then(r => hb.end(...holdingsEvent(r)), err => { hb.fail(err); throw err; }));
   },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -67,13 +73,13 @@ export default {
 
 // ── Main pipeline ─────────────────────────────────────────────────────────────
 
-async function runHoldingsPipeline(env) {
+async function runHoldingsPipeline(env, { measure = false } = {}) {
   const db = env.DB;
 
   // Emergency stop — checked first, before any other work. See checkHold() above.
   if (await checkHold(db)) {
     console.log('holdings-pipeline: hold_all_jobs is set — skipping run.');
-    return;
+    return { skipped: 'hold' };
   }
 
   const startTime = new Date().toISOString();
@@ -134,15 +140,17 @@ async function runHoldingsPipeline(env) {
       'last_run_status',
       `write_limit:${todayWrites}:skipped`
     );
-    return;
+    return { skipped: 'budget', offset, total, writes_today: todayWrites };
   }
 
   let completedCount = 0; // ETFs fully finished this invocation (offset should advance past them)
   let errors = 0;
+  const perEtf = [];      // MA-OCT-002b B3 (b): [{t, w}] from the counter reads this loop already makes
 
   for (const etf of batch) {
     // Per-ETF write guard — stop starting new ETFs if limit reached mid-batch
     const writesBeforeEtf = await getTodayWriteCount(db);
+    if (perEtf.length) perEtf[perEtf.length - 1].w = writesBeforeEtf - perEtf[perEtf.length - 1].before;
     if (writesBeforeEtf >= DAILY_WRITE_LIMIT) {
       console.log(
         `Write limit reached mid-batch at ${writesBeforeEtf} rows. ` +
@@ -151,6 +159,7 @@ async function runHoldingsPipeline(env) {
       break;
     }
 
+    perEtf.push({ t: etf.ticker, before: writesBeforeEtf, w: null });
     try {
       const done = await processEtfHoldings(db, etf);
       if (done) completedCount++;
@@ -169,7 +178,6 @@ async function runHoldingsPipeline(env) {
   // re-encounters them and resumes from their saved holdings offset key.
   const newOffset = offset + completedCount;
   await setPipelineState(db, 'etfs_processed', completedCount.toString());
-
   if (completedCount > 0 && newOffset >= total) {
     await setPipelineState(db, 'etf_offset', '0');
     await setPipelineState(db, 'last_run_status', `complete:${completedCount}ok:${errors}err`);
@@ -180,6 +188,20 @@ async function runHoldingsPipeline(env) {
     console.log(`Batch done. Offset: ${newOffset}/${total}. Completed: ${completedCount}, Partial: ${batch.length - completedCount - errors}, Errors: ${errors}`);
   }
 
+  // One extra counter read, only when a heartbeat will carry it: last ETF's cost + writes_today_after (B3 (a)/(b)).
+  // ETF-PL C-1 (MA-OCT-002b.SIGNE): AFTER the etf_offset / last_run_status saves, so near the 50-subrequest limit
+  // it can never cost the cursor save; a failure only drops the measurement.
+  let writesAfter = null;
+  if (measure && perEtf.length) {
+    try { writesAfter = await getTodayWriteCount(db); perEtf[perEtf.length - 1].w = writesAfter - perEtf[perEtf.length - 1].before; }
+    catch (err) { console.log(`holdings-pipeline: post-run counter read failed (${err && err.message}); heartbeat sent without it.`); }
+  }
+
+  return { offset, offset_after: newOffset >= total && completedCount > 0 ? 0 : newOffset, total, attempted: batch.length, completed: completedCount,
+           errors, complete: completedCount > 0 && newOffset >= total, writes_today: todayWrites, writes_today_after: writesAfter,
+           per_etf: perEtf.map(({ t, w }) => ({ t, w })),
+           // B3 (b): the next batch's tickers, so Ops can predict its cost without reading ETF tables.
+           next: (newOffset >= total && completedCount > 0 ? etfs.slice(0, PIPELINE_BATCH_SIZE) : etfs.slice(newOffset, newOffset + PIPELINE_BATCH_SIZE)).map(e => e.ticker) };
 }
 
 // ── Per-ETF processing ────────────────────────────────────────────────────────
@@ -963,4 +985,17 @@ async function pipelineStatus(env) {
   return new Response(JSON.stringify({ ...state, ...counts }), {
     headers: { 'Content-Type': 'application/json' }
   });
+}
+
+// MA-OCT-002b B2/B3: the run summary → one contract-v1 end event (detail ≤ 2 KB: ≤ 20 per_etf entries).
+export function holdingsEvent(r) {
+  if (!r) return ['success', {}];
+  if (r.skipped) return ['skipped', { detail: { reason: r.skipped, ...(r.writes_today != null ? { metrics: { writes_today: r.writes_today } } : {}) } }];
+  const metrics = { errors: r.errors, total_etfs: r.total, writes_today_before: r.writes_today };
+  if (r.writes_today_after != null) { metrics.writes_today_after = r.writes_today_after; metrics.rows_written_run = r.writes_today_after - r.writes_today; }
+  return [r.completed < r.attempted ? 'partial' : 'success', {
+    items_attempted: r.attempted, items_progressed: r.completed,
+    ...(r.writes_today_after != null ? { rows_written: Math.max(0, r.writes_today_after - r.writes_today) } : {}),
+    cursor: { before: String(r.offset), after: r.complete ? `complete:${r.total}` : String(r.offset_after) },
+    detail: { per_etf: r.per_etf.slice(0, 20), ...(r.next ? { next: r.next.slice(0, 20) } : {}), metrics, ...(r.complete ? { pass_complete: true } : {}) } }];
 }

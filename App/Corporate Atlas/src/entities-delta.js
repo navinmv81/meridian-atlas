@@ -169,6 +169,12 @@ async function runDelta(env) {
         env.DB.prepare(`
           INSERT OR REPLACE INTO holdings_pipeline_state (key, value)
           VALUES (?, ?)
+        `).bind(`delta_inactive_${row.lei}`, `${row.entity_status}:${today}`),
+        // MA-OCT-002b B5 (spec 002 §14, CR-10 step 2): dual-write to the Entities-domain table for one release;
+        // readers then switch and the holdings_pipeline_state write above is removed (step 4).
+        env.DB.prepare(`
+          INSERT OR REPLACE INTO entity_pipeline_state (key, value, updated_at)
+          VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))
         `).bind(`delta_inactive_${row.lei}`, `${row.entity_status}:${today}`)
       );
       inactiveFlaggedCount++;

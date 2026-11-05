@@ -107,8 +107,20 @@ function execWrangler(sqlText, { timeoutMs = 300000, label = 'query' } = {}) {
     const parsed = JSON.parse(jsonStart >= 0 ? out.slice(jsonStart) : out);
     return parsed;
   } catch (err) {
-    throw new Error(`wrangler d1 execute failed (${label}): ${err.message}\nSQL (first 500 chars): ${sqlText.slice(0, 500)}`);
+    throw new Error(`wrangler d1 execute failed (${label}): ${err.message}${wranglerCause(err)}\nSQL (first 500 chars): ${sqlText.slice(0, 500)}`);
   }
+}
+
+// MA-OCT-002b B4 (spec 002 §15, AC-b4): record WHY wrangler failed. execFileSync's error carries wrangler's own
+// stdout/stderr; the Cloudflare error codes in it (10000 auth, 7403, …) were never logged, so the post-pin
+// Sunday failures (18, 25 Oct) could not be classified. 32-hex ids are redacted; no credential is in that output.
+export function wranglerCause(err) {
+  const text = [err && err.stdout, err && err.stderr].filter(Boolean).map(String).join('\n');
+  if (!text) return '';
+  const codes = [...new Set([...text.matchAll(/"code"\s*:\s*(\d{3,6})|\[code:\s*(\d{3,6})\]/g)].map(m => m[1] || m[2]))];
+  const msg = (text.match(/"text"\s*:\s*"([^"]{1,200})"/) || text.match(/✘ \[ERROR\] ([^\n]{1,200})/) || [])[1] || '';
+  const red = s => s.replace(/[0-9a-f]{32}/gi, '<id>');
+  return `\ncause: codes=${codes.length ? codes.join(',') : 'none'}${msg ? ` message="${red(msg)}"` : ''}`;
 }
 
 class Stmt {

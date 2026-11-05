@@ -35,9 +35,14 @@ async function getState(db, key) {
 
 // ── Exports ───────────────────────────────────────────────────────────────────
 
+import { heartbeat, cronTrigger } from './ops-heartbeat.js';   // MA-OCT-002b B2
+
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runBootstrap(env));
+    // MA-OCT-002b B2: end-only by default (1 subrequest); OPS_HEARTBEAT_START="true" once B-2 measured room.
+    const hb = heartbeat(env, ctx, { jobId: 'cf.meridian-bootstrap', trigger: cronTrigger(event), endOnly: env.OPS_HEARTBEAT_START !== 'true' });
+    hb.start();
+    ctx.waitUntil(runBootstrap(env).then(r => hb.end(...bootstrapEvent(r)), err => { hb.fail(err); throw err; }));
   },
   // MA-OCT-002a A5 (CR-6, KI 22.35): the unauthenticated /trigger route is
   // removed; every path returns 404. The cron (scheduled → runBootstrap →
@@ -55,8 +60,7 @@ async function runBootstrap(env) {
   const status = await getState(db, 'status');
 
   if (status === 'complete') {
-    await runWeeklySync(env);
-    return;
+    return await runWeeklySync(env);
   }
 
   await setState(db, 'status', 'running');
@@ -304,7 +308,7 @@ async function runWeeklySync(env) {
     allSeries = await discoverAllSeries(db);
   } catch (e) {
     console.error('Weekly sync: series discovery failed:', e.message);
-    return;
+    return { failed: 'series_discovery', message: String(e.message).slice(0, 200) };
   }
 
   // Build seriesId → ticker map from the fresh data
@@ -317,9 +321,11 @@ async function runWeeklySync(env) {
     `SELECT ticker, series_id FROM etf_master WHERE ticker LIKE 'NOTICKER_%' AND series_id IS NOT NULL`
   ).all();
 
+  let tickersResolved = 0;   // MA-OCT-002b B2
   for (const row of (nullTickers.results || [])) {
     const resolved = freshTickerMap.get(row.series_id);
     if (resolved) {
+      tickersResolved++;
       await db.prepare(`UPDATE etf_master SET ticker = ? WHERE ticker = ?`)
         .bind(resolved, row.ticker).run();
       console.log(`Resolved ticker: ${row.ticker} → ${resolved}`);
@@ -345,4 +351,15 @@ async function runWeeklySync(env) {
   }
 
   console.log(`Weekly sync complete. New ETFs added: ${added}`);
+  return { considered: Math.min(newSeries.length, BATCH_SIZE), added, tickers_resolved: tickersResolved,
+           noticker_rows: (nullTickers.results || []).length };
+}
+
+// MA-OCT-002b B2 (spec 002 §12): the weekly-sync summary → one contract-v1 end event.
+export function bootstrapEvent(r) {
+  if (!r) return ['success', {}];                                   // initial-bootstrap path (complete since Jun)
+  if (r.failed) return ['failed', { error: { class: r.failed, summary: r.message || r.failed } }];
+  if (!r.considered && !r.noticker_rows) return ['skipped', { detail: { reason: 'empty_input' } }];
+  return ['success', { items_attempted: r.considered, items_progressed: r.added, rows_written: r.added + r.tickers_resolved,
+    detail: { metrics: { tickers_resolved: r.tickers_resolved, noticker_rows: r.noticker_rows } } }];
 }

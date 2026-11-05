@@ -47,7 +47,23 @@ import { normalizeName } from './entities-seed.js';
 
 const DAILY_CAP = 100000; // account-wide D1 daily write cap (soft), shared across all Workers — replaces the old ENRICH_WRITE_LIMIT, 5 August 2026
 
-async function checkWriteBudget(env) {
+// MA-OCT-002b B4 (spec 002 §15, KI 22.14): this Worker never increments writes_today_<date>, so that counter is
+// blind to its own and every weekday writer. With analytics = true (Phase 1 only: 0 GLEIF subrequests, room for
+// 1 fetch) the check reads the real account total from meridian-ops GET /api/ops/cf/d1-today (OPS_D1_TODAY_URL)
+// against the F-5 ceiling (ML-1012-1: analytics lag 25–30 min → 60,000). Any failure falls back to the counter.
+// Phase 2+3 keeps the counter: its 4-subrequest margin needs a Data-Identity Lead ruling before another fetch.
+const ANALYTICS_CEILING = 60000;
+export async function analyticsWritesToday(env, fetchImpl = fetch) {
+  if (!env.OPS_D1_TODAY_URL) return null;
+  try {
+    const r = await fetchImpl(env.OPS_D1_TODAY_URL, { signal: AbortSignal.timeout(2000) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d && d.ok && Number.isInteger(d.rowsWritten) ? d.rowsWritten : null;
+  } catch { return null; }
+}
+
+async function checkWriteBudget(env, { analytics = false } = {}) {
   // FIXED MA-AUG-002, July 28 2026: aligned to holdings-pipeline.js's key
   // format (dashes kept) — same bug as entities-seed.js had, fixed there
   // at the same time. See that file's comment for the full explanation.
@@ -65,6 +81,18 @@ async function checkWriteBudget(env) {
   // ceiling like entities-seed's 65,000 — revisit once this Worker's real
   // write volume is observed at its first few live cadence runs.
   const REQUIRED_HEADROOM = 5000;
+  if (analytics) {
+    const used = await analyticsWritesToday(env);
+    if (used !== null) {
+      const room = ANALYTICS_CEILING - used;
+      if (room < REQUIRED_HEADROOM) {
+        console.log(`[entities-enrich] Insufficient account headroom (analytics ${used} rows written today; F-5 ceiling ${ANALYTICS_CEILING}, need ${REQUIRED_HEADROOM}). Skipping.`);
+        return false;
+      }
+      return true;
+    }
+    console.log('[entities-enrich] d1-today unavailable — falling back to the writes_today counter');
+  }
   const today = new Date().toISOString().slice(0, 10);
   const key = `writes_today_${today}`;
   const row = await env.DB.prepare(
@@ -103,7 +131,7 @@ async function runPhase1(env) {
 
   if (!entities.results.length) {
     console.log('[entities-enrich] Phase 1: nothing to populate');
-    return;
+    return { attempted: 0, populated: 0 };
   }
 
   let populated = 0;
@@ -129,6 +157,7 @@ async function runPhase1(env) {
   }
 
   console.log(`[entities-enrich] Phase 1: populated ${populated} of ${entities.results.length} entities`);
+  return { attempted: entities.results.length, populated };   // MA-OCT-002b B2 (Phase 1 heartbeat)
 }
 
 // ── Phase 2 — GLEIF ISIN Search ───────────────────────────────────────────────
@@ -269,7 +298,7 @@ async function runPhase3(env) {
   // safe. 44 keeps a real 4-subrequest margin (worst-case 46) against that
   // specific residual unknown, while recovering nearly all the throughput
   // the original 40 was leaving on the table.
-  const SUBREQUEST_CHECKPOINT = 44;
+  const SUBREQUEST_CHECKPOINT = 43;   // MA-OCT-002b B2 (spec 002 §12): 44 → 43 reserves the Phase 2+3 end heartbeat; keeps the 4-subrequest margin (MA-SEP-009)
   let deferredCount = 0;
 
   const entities = await env.DB.prepare(`
@@ -508,26 +537,41 @@ async function persistCombinedSubrequestCount(env, phase2Result, phase3Result) {
 
 // ── Cron dispatcher ───────────────────────────────────────────────────────────
 
+import { heartbeat, cronTrigger } from './ops-heartbeat.js';   // MA-OCT-002b B2
+
 export default {
   async scheduled(event, env, ctx) {
     console.log('[entities-enrich] Cron started');
+    // MA-OCT-002b B2 (spec 002 §12): phase1 start + end (2 subrequests, 0 GLEIF); phase23 end-only (1, reserved by
+    // SUBREQUEST_CHECKPOINT 43). scheduled() only — boost-driven /run calls are never double-reported.
+    const isPhase1 = new Date().getMinutes() < 50;
+    const hb = heartbeat(env, ctx, { jobId: isPhase1 ? 'cf.meridian-entities-enrich.phase1' : 'cf.meridian-entities-enrich.phase23',
+                                     trigger: cronTrigger(event), endOnly: !isPhase1 });
+    hb.start();
 
     if (await checkHold(env)) {
       console.log('[entities-enrich] hold_all_jobs = true — exiting immediately');
+      hb.end('skipped', { detail: { reason: 'hold' } });
       return;
     }
-    if (!(await checkWriteBudget(env))) return;
+    if (!(await checkWriteBudget(env, { analytics: isPhase1 }))) { hb.end('skipped', { detail: { reason: 'budget' } }); return; }
 
     const mins = new Date().getMinutes();
     const hour = new Date().getHours();
 
-    if (mins < 50) {
-      await runPhase1(env);
-    } else {
-      const phase2Result = await runPhase2(env);
-      const phase3Result = await runPhase3(env);
-      await persistCombinedSubrequestCount(env, phase2Result, phase3Result);
-    }
+    try {
+      if (mins < 50) {
+        const p1 = await runPhase1(env);
+        hb.end(p1.attempted ? 'success' : 'skipped', p1.attempted
+          ? { items_attempted: p1.attempted, items_progressed: p1.populated, detail: { metrics: { isins_populated: p1.populated } } }
+          : { detail: { reason: 'empty_input' } });
+      } else {
+        const phase2Result = await runPhase2(env);
+        const phase3Result = await runPhase3(env);
+        await persistCombinedSubrequestCount(env, phase2Result, phase3Result);
+        hb.end(phase3Result.deferred ? 'partial' : 'success', enrichPhase23Fields(phase2Result, phase3Result));
+      }
+    } catch (err) { hb.fail(err); throw err; }
 
     console.log('[entities-enrich] Cron complete');
   },
@@ -584,3 +628,13 @@ export default {
     });
   }
 };
+
+// MA-OCT-002b B2: Phase 2+3 end event. GLEIF counters go in detail.metrics (flat integers, ≤ 16 keys).
+export function enrichPhase23Fields(p2, p3) {
+  const metrics = { phase2_matched: p2?.matched ?? 0, phase2_subrequests: p2?.subrequests ?? 0, phase3_processed: p3?.processed ?? 0,
+                    phase3_deferred: p3?.deferred ?? 0, phase3_subrequests: p3?.subrequests ?? 0,
+                    subrequests_total: (p2?.subrequests ?? 0) + (p3?.subrequests ?? 0) };
+  // No items_attempted / items_progressed: Phase 3 counts attempts, not progress, and 003's E1 (attempted > 0,
+  // progressed = 0) must not read "processed" as progress. The Data-Identity Lead fixes the 006 §8.2 key set (§12 sign-off).
+  return { detail: { metrics } };
+}
