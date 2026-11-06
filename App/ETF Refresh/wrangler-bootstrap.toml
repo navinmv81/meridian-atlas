@@ -1,6 +1,7 @@
 name = "meridian-bootstrap"
 main = "src/bootstrap.js"
 compatibility_date = "2024-01-01"
+compatibility_flags = ["global_fetch_strictly_public"]   # MA-OCT-002b: heartbeat fetch to meridian-ops (same-account workers.dev) returned 404 without it (06 Nov 04:00Z tail)
 account_id = "ea36070477560935a68ad9110a2fd40b"
 
 # HOLD lifted 2026-06-14 — bootstrap cron reduced from */15 to every 4h

@@ -1,6 +1,7 @@
 name = "meridian-entities-enrich"
 main = "src/entities-enrich.js"
 compatibility_date = "2024-01-01"
+compatibility_flags = ["global_fetch_strictly_public"]   # MA-OCT-002b: heartbeat fetch to meridian-ops (same-account workers.dev) returned 404 without it (06 Nov 04:00Z tail)
 
 # Logs enabled MA-AUG-002, July 28 2026 — matches entities-seed; needed before
 # this Worker's cron is ever re-enabled given its incident history.
