@@ -442,10 +442,10 @@ export async function startGates(ctx) {
 }
 
 async function budgetGate(ctx, batchWrites) {
-  const now = ctx.now();
   let reading = null, fetchError = null;
-  if (ctx.args['assume-account'] !== undefined) reading = { rowsWritten: Number(ctx.args['assume-account']), date: utcDate(now), fetchedAt: now.toISOString() };
+  if (ctx.args['assume-account'] !== undefined) { const t = ctx.now(); reading = { rowsWritten: Number(ctx.args['assume-account']), date: utcDate(t), fetchedAt: t.toISOString() }; }
   else { try { reading = await fetchD1Today({ url: D1_TODAY_URL, fetchImpl: ctx.fetchImpl, now: ctx.now }); } catch (e) { fetchError = e.message; } }
+  const now = ctx.now();   // after the fetch, as the 011 runner's headroomGate (fetchedAt <= now, so age >= 0)
   const own = ownWrites013(ctx.paths, now);
   const d = budgetDecision({ reading, fetchError, now, state: readJson(ctx.paths.headroom, {}), batchWrites, own });
   writeJsonAtomic(ctx.paths.headroom, d.nextState);

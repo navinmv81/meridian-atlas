@@ -572,6 +572,19 @@ const RUNSHEET = path.resolve(CA, '..', '..', 'claude', 'packets', 'MA-OCT-013.B
     /After any RUNNER ERROR: do not re-run\. `\$S status` → `\$S readback --plan \$P --batch <last>` → Operations Lead/.test(readFileSync(RUNSHEET, 'utf8')));
 }
 
+// ═══ T-18 (RUN Day 1, 6 Nov): the live d1-today path, with the clock moving during the fetch ═══
+// On 5e41e7b budgetGate took `now` before fetchD1Today stamped fetchedAt, so the age was always < 0
+// on a real network and every batch stopped "headroom_unavailable". The clock here ticks on every call.
+{
+  const file = mkDb();
+  const p = C.buildPlan({ ...inputs(file), batchSize: 2 }); const dir = writePlan(p);
+  const fetchImpl = async () => ({ ok: true, status: 200, json: async () => ({ ok: true, date: '2026-11-05', rowsWritten: 1000 }) });
+  const { ctx } = await ctxFor(file, { plan: dir, 'pilot-ok': 'test', 'assume-account': undefined }, { fetchImpl });
+  const r = await R.cmdRun(ctx);
+  const merged = rows(file, 'SELECT COUNT(*) n FROM entity_merge_redirect')[0].n;
+  check('[T-18] live d1-today reading (clock advances during the fetch) passes the freshness rule; batches run', r.stopped !== 'headroom_unavailable' && merged > 0, { r, merged });
+}
+
 rmSync(TMP, { recursive: true, force: true });
 console.log(`\nmerge-013: ${pass}/${pass + fail} passed${fail ? ` (${fail} FAILED)` : ''}`);
 process.exit(fail ? 1 : 0);
