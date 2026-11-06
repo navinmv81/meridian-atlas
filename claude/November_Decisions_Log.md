@@ -1,0 +1,37 @@
+# Meridian Atlas — November 2026 Decisions Log
+
+Maintained by the Program Orchestrator (November Main Lane). Starts empty of inherited authority: October rulings are history, not November permissions (`claude_project_agentic_delivery_spec.md` §Version). October records (`claude/October_Decisions_Log.md`, `Sprint_Board.md`, `claude/Release_Ledger_October_2026.md`, `claude/meridian-october-board.html`) are closed and kept unchanged. Timestamps are Europe/London with UTC shown.
+
+| Date | Ref | Decision | Approved by | Next |
+|---|---|---|---|---|
+| 2026-11-06 | NML-1106-1 | **November Main Lane opened:** "November Main Lane — Transition, Outcomes and Approvals" (Program Orchestrator). Opened 19:51 Europe/London (19:51Z), after the Founder closed October (ML-1106-4). Role per Operating Kit §2: priorities, outcomes, approval preparation, exception resolution — no production authority. Governing references: `claude_project_agentic_delivery_spec.md`, `meridian_atlas_agentic_delivery_factory_operating_kit.md`, `meridian_atlas_november_content_scope_and_requirements.md` (all 2 Nov editions), `Meridian_Atlas_Current_State_v14.docx`. | Founder | Lane register below; transition steps |
+| 2026-11-06 | NML-1106-2 | **Lane register reset.** Only two lanes stay open: (1) **November Main Lane** (active); (2) **October Sprint Main Lane** (Cowork) — open as read-only reference for October history and carried items; it issues no new Controls or rulings. **All other October lanes archived** (list below; Founder confirmed archiving done 19:55). No packet lane opens in November until the Main Lane agrees it under a November work contract (Kit §3, §5). | Founder | — |
+| 2026-11-06 | NML-1106-3 | **Gap noted:** the Delivery Spec names a companion `meridian_atlas_november_kickoff_and_runbook.md`; it is not in the Project. Main Lane will not assume its content. | — | Founder: upload it, or confirm it is not needed |
+| 2026-11-06 | NML-1106-4 | **Founder kickoff decision (20:03).** Transition assessment accepted; 002b, 013 and October closure not reopened. (1) **Branch:** `November-2026` approved as the November working branch, cut after the post-close governance changes are committed through an explicitly scoped Code packet. Pages stays on `October-2026` `/docs`; no Pages change, docs regeneration, product-code change or Worker deploy authorised. (2) **Bootstrap** packet before assessment: allowlisted October post-close files + CLOSE.COMMIT report, exact copies of the three November references to disk, fingerprint verification, governance-only commit, then create `November-2026`; paths, operations and commit scope shown to the Founder before execution; no blanket staging, clean, reset, stash or delete; no unrelated untracked files; A2/011 patches not committed. (3) **Governance:** section D approved as design direction only; current board/Status ownership, admission, immutable hashes and review safeguards stay in force through bootstrap and MA-NOV-000; Claude.md v1.2 and instruction amendments drafted only after the feasibility recommendation and shown before activation; one state system, reuse Status JSON, no YAML. (4) **MA-NOV-000** after bootstrap: admitted Code feasibility assessment, read-only except its report; no D1, production calls, secret reads, scheduler changes, hosting activation or implementation; recommends launch, review, dashboard/action and state-write mechanisms with each handoff labelled automatic/assisted/manual; stops for architecture approval. (5) **FIRDS:** no hold, pause, repair or rerun under this decision; separate decision request before Sun 8 Nov. (6) Model unchanged; one execution worker; review on demand; no planning swarm, large backlog or content-scope implementation. | Founder | MA-NOV-BOOT approval card |
+| 2026-11-06 | NML-1106-5 | **MA-NOV-BOOT Control v1 issued** (`claude/packets/MA-NOV-BOOT_Control_v1.md`; hash on the status board). Task v1 is issued only after the Founder places the three November reference files on disk (Code cannot read Project-only documents; the Main Lane cannot copy them byte-exactly through the bridge). | Main Lane | Founder: place files; then Task v1 + Start Approval |
+
+## Lane register (November)
+
+| Lane | Surface | State | Notes |
+|---|---|---|---|
+| November Main Lane — Transition, Outcomes and Approvals | Cowork | **OPEN · active** | Program Orchestrator |
+| October Sprint Main Lane | Cowork | **OPEN · reference only** | October closed 6 Nov (ML-1106-4); no new authority |
+| LANE-1-ENG | Claude Code | ARCHIVED | Last: MA-OCT-CLOSE.COMMIT `5c3c57e` |
+| LANE-4-ENG | Claude Code | ARCHIVED | Last: MA-OCT-OPS.A |
+| LANE-8-ENG | Claude Code | ARCHIVED | Last: MA-OCT-002b.DEPLOY |
+| LANE-11-ENG | Claude Code | ARCHIVED | Last: MA-OCT-013.RUN |
+| LANE-11 (Data-Identity) | Cowork / Claude Code | ARCHIVED | Last: 002b.SIGND, FRI30.DIL |
+| LANE-1-OPS | Claude Code (read-only) | ARCHIVED | Last: 013.OPSSIGN |
+| REVIEW-A (Architect) | Claude Code | ARCHIVED | Last: 013.CHECK, A2.CODEREV |
+| ETF-PL | Cowork / Claude Code (read-only) | ARCHIVED | Last: 013.ETFCHK, 002b.SIGNE |
+| LANE-DOC | Cowork | ARCHIVED | Last: MA-OCT-CLOSE.DOC |
+| 013 review sessions (Architect, Ops, ETF PL) | 3 × Cowork | ARCHIVED | Last: 013.REV |
+| Any other October spec / review / packet session | any | ARCHIVED | Covered by NML-1106-2 |
+| LANE-NOV-ENG (new, for MA-NOV-BOOT then MA-NOV-000) | Claude Code (local) | NOT OPENED | Opens on the Founder's Start Approval |
+
+## Transition items to settle before any November work runs
+
+1. MA-NOV-BOOT: governance commit on `October-2026`, then `November-2026` cut from it (NML-1106-4).
+2. MA-NOV-000: Code feasibility assessment (after BOOT closes).
+3. FIRDS decision request before Sun 8 Nov (no scheduler change without specific approval).
+4. Carried October items stay queued for the scope assessment, not auto-started (triage in the 6 Nov transition recommendation).

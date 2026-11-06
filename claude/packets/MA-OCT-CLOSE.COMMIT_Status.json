@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-CLOSE.COMMIT",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-1-ENG",
   "control": {
     "version": "v1",
@@ -14,6 +14,9 @@
   },
   "blocker": null,
   "usage_class": "light",
-  "updated": "2026-11-06T18:55Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-06T19:45Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "49f42a878d2f416f681db77c86071b8d6557737c85f881613fb54d7c95749f1c"
+  }
 }

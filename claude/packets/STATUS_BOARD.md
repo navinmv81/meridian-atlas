@@ -109,8 +109,16 @@
 | MA-OCT-013.CHECK — Architect delta check — 013 spec rev 1 + build (PASS needed by 17:00Z Thu 5) | CLOSED | v1 `02b76656c3a8286bea87ee88d0e93b7aacd0764d4a007f5c1770f0c3918e44d7` | REVIEW-A / Claude Code (read-only, new session) | Architect (REVIEW-A) | Thu 5 Nov | October close-out | medium |
 | MA-OCT-013.RUN — 013 run, October close-out (Fri 6 eve + Sat 7, 25k/day) | CLOSED — 1,862/1,862 merged on Day 1 | v2 `96836f24e5c49ac1cf002d9a0dccbb0b18589a01d36f343081d5c8ca474a3ff6` | LANE-11-ENG / Claude Code | Engineering Lead (LANE-11-ENG) | Day 1 Fri 6 from ~09:30Z (ML-1106-1); Day 2 Sat 7 ≥ 08:05Z | supersedes v1 | heavy |
 | MA-OCT-002b.DEPLOY — 002b deploy Thu 5 (from 08:05Z) — gated on both sign-offs + the Founder's token | CLOSED | v1 `e6dbb30db6528e7bdf5a6710b2634104cb213220c9f54df0576192eb53ba02b3` | LANE-8-ENG / Claude Code | Engineering Lead (LANE-8-ENG) | Thu 5 Nov | October close-out | heavy |
-| MA-OCT-CLOSE.DOC — Meridian_Atlas_Current_State v14 + October Release Ledger | EXECUTING | v1 `4c9de01ac5f5cd35cf2b21ae4ce06249c480c61123ab15d6c8ffc73cd12b9645` | LANE-DOC / Cowork (docx skill) | Program Orchestrator (documentation) (LANE-DOC) | Thu 5 Nov | October close-out | heavy |
+| MA-OCT-CLOSE.DOC — Meridian_Atlas_Current_State v14 + October Release Ledger | CLOSED | v1 `4c9de01ac5f5cd35cf2b21ae4ce06249c480c61123ab15d6c8ffc73cd12b9645` | LANE-DOC / Cowork (docx skill) | Program Orchestrator (documentation) (LANE-DOC) | Thu 5 Nov | October close-out | heavy |
 | MA-OCT-013.FIX — 013 blocker B-1 fix (local) | CLOSED | v1 `b04db2a80c21df0af1493ca6fe9a1fe7e9813ceddc3642a90fc94cca212cfa7c` | LANE-1-ENG / Claude Code | Engineering Lead (LANE-1-ENG) | Thu 5 night | November item #1 prep | medium |
-| MA-OCT-013.ETFCHK — 013 post-run ETF spot check | READY | v1 `df394bc0f0c42d5e9a9f2582a66e7639b05084e7f55eda26ed992c9615b60578` | ETF-PL / Claude Code (read-only) | ETF Product Lead (ETF-PL) | Fri 6 / Sat 7 | October close-out | light |
-| MA-OCT-013.OPSSIGN — 013 R-4 run-log reconciliation sign-off | READY | v1 `dd0fb3cae5cfa18d0a88d5a2e1a09a49caf10076895f9c428e1feae088868256` | LANE-1-OPS / Claude Code (read-only) | Operations Lead (LANE-1-OPS) | Fri 6 / Sat 7 | October close-out | light |
-| MA-OCT-CLOSE.COMMIT — October final governance commit | READY | v1 `d93f73452be47fd025ac262ddda134f5c816cdddda63cafa8587cc9bb2aab2a3` | LANE-1-ENG / Claude Code | Engineering Lead (LANE-1-ENG) | Fri 6 / Sat 7 | October close-out | light |
+| MA-OCT-013.ETFCHK — 013 post-run ETF spot check | CLOSED | v1 `df394bc0f0c42d5e9a9f2582a66e7639b05084e7f55eda26ed992c9615b60578` | ETF-PL / Claude Code (read-only) | ETF Product Lead (ETF-PL) | Fri 6 / Sat 7 | October close-out | light |
+| MA-OCT-013.OPSSIGN — 013 R-4 run-log reconciliation sign-off | CLOSED | v1 `dd0fb3cae5cfa18d0a88d5a2e1a09a49caf10076895f9c428e1feae088868256` | LANE-1-OPS / Claude Code (read-only) | Operations Lead (LANE-1-OPS) | Fri 6 / Sat 7 | October close-out | light |
+| MA-OCT-CLOSE.COMMIT — October final governance commit | CLOSED | v1 `d93f73452be47fd025ac262ddda134f5c816cdddda63cafa8587cc9bb2aab2a3` | LANE-1-ENG / Claude Code | Engineering Lead (LANE-1-ENG) | Fri 6 / Sat 7 | October close-out | light |
+
+## November 2026 — admitted packets
+
+*Added by the November Main Lane (sole writer), 2026-11-06T20:15Z, under NML-1106-4. October rows above are closed history; their stale non-closed states are reconciled in MA-NOV-000's recommendation, not here.*
+
+| Packet | State | Control (SHA-256) | Lane / tool | Write owner | Next gate | Blocker | Usage |
+|---|---|---|---|---|---|---|---|
+| MA-NOV-BOOT — governance commit + `November-2026` branch | READY | v2 `b6fd8d27fd54ba7ffe7f0d193f54fe2ba9d6284b7a969ef1ad4f7e0f6350c146` (v1 `719f0a4a…4206` superseded 20:30Z: November reference files moved into `claude/`) | LANE-NOV-ENG / Claude Code (new) | Engineering Lead (LANE-NOV-ENG) | Task v2 issued 20:30Z (hash in `MA-NOV-BOOT_Status.json`; Task v1 superseded) → Founder Start Approval | — | light |

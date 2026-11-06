@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-013.OPSSIGN",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-1-OPS",
   "control": {
     "version": "v1",
@@ -14,6 +14,9 @@
   },
   "blocker": null,
   "usage_class": "light",
-  "updated": "2026-11-06T18:55Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-06T19:45Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "4961f23149a2817bc4fa7b120dd4ed1525e2a83263210ac67b3ee0efe0d381ce"
+  }
 }

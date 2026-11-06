@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-CLOSE.DOC",
-  "state": "EXECUTING",
+  "state": "CLOSED",
   "owner": "LANE-DOC",
   "control": {
     "version": "v1",
@@ -14,9 +14,9 @@
   },
   "blocker": null,
   "usage_class": "heavy",
-  "updated": "2026-11-04T21:05Z",
+  "updated": "2026-11-06T19:45Z",
   "updated_by": "Main Lane",
   "report": {
-    "sha256": "d30f1aae458f8211d36b82cca0a43a98af87eb9ec19b546fb7f07adf40ee879f"
+    "sha256": "b22a488ebf52306ec6a3b93c71e0ea88c4bac3f387bc681196f9ac65c6cd4fc9"
   }
 }

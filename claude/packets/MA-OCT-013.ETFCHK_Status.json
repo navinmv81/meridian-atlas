@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-013.ETFCHK",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "ETF-PL",
   "control": {
     "version": "v1",
@@ -14,6 +14,9 @@
   },
   "blocker": null,
   "usage_class": "light",
-  "updated": "2026-11-06T18:55Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-06T19:45Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "4ee07f76714fae7479b75a22199de16d7d0426278fa1b254c1d5a33ccee7693a"
+  }
 }
