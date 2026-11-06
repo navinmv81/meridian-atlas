@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-002b.BUILD",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-8-ENG",
   "control": {
     "version": "v1",
@@ -14,6 +14,7 @@
   },
   "blocker": null,
   "usage_class": "heavy",
-  "updated": "2026-10-30T07:00Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-10-30T22:00Z",
+  "updated_by": "Main Lane",
+  "note": "Deploy moved after the Wed 4 Nov reset (ML-1030-6); first post-release item with 013"
 }

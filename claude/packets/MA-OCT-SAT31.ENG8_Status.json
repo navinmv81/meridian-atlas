@@ -1,0 +1,23 @@
+{
+  "packet": "MA-OCT-SAT31.ENG8",
+  "state": "CLOSED",
+  "owner": "LANE-8-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-SAT31.ENG8_Control_v1.md",
+    "sha256": "71e5951323deec216366f88c3d52f674ed62ef451b8be0a9f3ed1299a0e3bbae"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-SAT31.ENG8_Task_v1.md",
+    "sha256": "d80105efbbff35a51419e308e6dd268e020b79464f306027ecf87652ce0164f6"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-30T22:10Z",
+  "updated_by": "Main Lane",
+  "founder_approval": {
+    "text": "Approve opening the bond gate",
+    "at": "2026-10-30"
+  }
+}

@@ -1,0 +1,6 @@
+# MA-OCT-013.OPSSIGN — Task v1 (immutable): 013 R-4 run-log reconciliation sign-off
+
+Governing: `claude/packets/MA-OCT-013.RUN_Report.md` `0152c923f0ea42c026dcb105ded2a4f187c51b760e84cccaf333841a731a4ccb`; spec rev 1 `e6dc85677278ef672c47a73c021395c6d1f65146b661d426a411f51cae57f098` §9 (R-4 fallback when no emitter); your 013 review M-1..M-6. Inputs (hash-check, read only): `~/MeridianAtlas-work/ma-oct-013/…/recon/recon-2026-11-06.json` (`221af4b1…3d9a`), `runlog.jsonl` (`d5cdb72b…d1a58e2`), `d1-ledger.jsonl` (`6498ac12…c4f4`). Check: run-log writes (11,298 merge + 3 LEI + 5) reconcile with the D1 ledger and with `d1-today` for 6 Nov; every batch `success`; no RUNNER ERROR after the 13:29Z stop was re-run (the 16:06Z start was a Founder-approved resume of an un-started batch); the boost pause row `pause_id 2` (expires Sat 7 14:00Z) — state whether to end it early. Verdict: **SIGNED / SIGNED WITH NOTE / REJECTED**.
+**Standing rules:** read-only — no D1 writes, no deploys, no git writes; ML-1024-1 (never read secret-file contents); ML-1013-3. Wrangler only `/usr/local/bin/wrangler` 4.96.0 for read-only queries (pre-flight `wrangler whoami`); ≤ 1,000 D1 reads.
+
+Write `claude/MA-OCT-013_Ops_R4_Signoff.md` (if a file) and `claude/packets/MA-OCT-013.OPSSIGN_Report.md`. Reply **"MA-OCT-013.OPSSIGN reported"**.

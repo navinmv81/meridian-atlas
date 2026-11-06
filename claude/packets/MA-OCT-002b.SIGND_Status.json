@@ -1,0 +1,22 @@
+{
+  "packet": "MA-OCT-002b.SIGND",
+  "state": "CLOSED",
+  "owner": "LANE-11",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-002b.SIGND_Control_v1.md",
+    "sha256": "63b394476fafbdff876e4110deca67cc869236185afef46ab3e68a836564ea45"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-002b.SIGND_Task_v1.md",
+    "sha256": "d2e400d16b4cdb8bf7aae76d8a8642dc5788d73a46e5ead4e5c17c8f5a3a7190"
+  },
+  "blocker": null,
+  "usage_class": "light",
+  "updated": "2026-11-04T21:05Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "34ddcb866b7c3bd60497d1a46125876e591cda9b32284ea959cc77fae0122988"
+  }
+}

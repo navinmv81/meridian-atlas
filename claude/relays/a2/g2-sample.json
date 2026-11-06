@@ -1,0 +1,1361 @@
+{
+ "packet": "MA-OCT-A2.G2-sample",
+ "seed": "MA-OCT-A2.G2",
+ "n": 150,
+ "method": "first n by sha256(seed:entity_id)",
+ "base_plan_sha256": "e3854698494d3be020c317100128902c9843ffa4c738ef050e2299d4a1a6e6a8",
+ "exclusions_sha256": "ac1c157202913643b21ea3adc8fbca3f3fdcc9d4de15593395f55913ba7ab4f7",
+ "population": 3648,
+ "sample": [
+  {
+   "entity_id": 113638,
+   "d1_name": "EnTie Commercial Bank, Ltd.",
+   "lei": "549300JK2NJEXZ7X6Z09",
+   "gc_legal_name": "安泰商業銀行股份有限公司",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "TW",
+   "gc_country": "TW"
+  },
+  {
+   "entity_id": 93012,
+   "d1_name": "Mercuries Life Insurance Co Ltd",
+   "lei": "254900MGZPWGJDGJRO25",
+   "gc_legal_name": "三商美邦人壽保險股份有限公司",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "TW",
+   "gc_country": "TW"
+  },
+  {
+   "entity_id": 108570,
+   "d1_name": "SEAMEC Ltd",
+   "lei": "894500491CYCR3Z2B663",
+   "gc_legal_name": "SEAMEC LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 110864,
+   "d1_name": "Humble Group AB",
+   "lei": "54930067DYL82EKQR937",
+   "gc_legal_name": "Humble Group AB",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "SE",
+   "gc_country": "SE"
+  },
+  {
+   "entity_id": 101544,
+   "d1_name": "IOL Chemicals and Pharmaceuticals Ltd",
+   "lei": "335800U5FXFDI8H3DT63",
+   "gc_legal_name": "IOL CHEMICALS AND PHARMACEUTICALS LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 94335,
+   "d1_name": "Domino's Pizza Enterprises Ltd",
+   "lei": "54930034RFI409JZ3179",
+   "gc_legal_name": "DOMINO'S PIZZA ENTERPRISES LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "AU",
+   "gc_country": "AU"
+  },
+  {
+   "entity_id": 98616,
+   "d1_name": "SpartanNash Co.",
+   "lei": "549300TV3QCCSQLF5X16",
+   "gc_legal_name": "SPARTANNASH COMPANY",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-MI",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 15721,
+   "d1_name": "Chewy Inc",
+   "lei": "254900NPQSTG9I422879",
+   "gc_legal_name": "CHEWY, INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 671,
+   "d1_name": "Jackson Financial Inc",
+   "lei": "213800WXW2KG1N4CO374",
+   "gc_legal_name": "JACKSON FINANCIAL INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 91132,
+   "d1_name": "Emami Ltd",
+   "lei": "335800CCQHJCDEUS7G90",
+   "gc_legal_name": "EMAMI LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 105972,
+   "d1_name": "Moat Homes Finance PLC",
+   "lei": "213800OEBSZ4X3VVE789",
+   "gc_legal_name": "MOAT HOMES FINANCE PLC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "GB",
+   "gc_country": "GB"
+  },
+  {
+   "entity_id": 92175,
+   "d1_name": "Fortuna Mining Corp",
+   "lei": "5493003Q88RVK7CW4735",
+   "gc_legal_name": "FORTUNA MINING CORP.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "CA-BC",
+   "gc_country": "CA"
+  },
+  {
+   "entity_id": 105409,
+   "d1_name": "Assura Financing PLC",
+   "lei": "549300YH2O3CNDZSO632",
+   "gc_legal_name": "ASSURA FINANCING PLC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "GB",
+   "gc_country": "GB"
+  },
+  {
+   "entity_id": 30962,
+   "d1_name": "TotalEnergies Capital USA LLC",
+   "lei": "9845000979865101C194",
+   "gc_legal_name": "TOTALENERGIES CAPITAL USA, LLC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 105058,
+   "d1_name": "TACALA LLC",
+   "lei": "5493002ZO8P8HFK4KJ86",
+   "gc_legal_name": "TACALA, LLC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 105341,
+   "d1_name": "Sagax Euro Mtn NL BV",
+   "lei": "549300M3FFATWSV78G84",
+   "gc_legal_name": "Sagax EURO MTN NL B.V.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "NL",
+   "gc_country": "NL"
+  },
+  {
+   "entity_id": 112532,
+   "d1_name": "DREDGING CORPORATION OF INDIA LIMITED",
+   "lei": "335800F97UEBU6CK7J37",
+   "gc_legal_name": "DREDGING CORPORATION OF INDIA LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 111523,
+   "d1_name": "Elmera Group ASA",
+   "lei": "2138006BSHJVCD9SR489",
+   "gc_legal_name": "ELMERA GROUP ASA",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "NO",
+   "gc_country": "NO"
+  },
+  {
+   "entity_id": 114206,
+   "d1_name": "Central Reinsurance Corporation",
+   "lei": "391200DI0LWKJJTSWS86",
+   "gc_legal_name": "中央再保險股份有限公司",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "TW",
+   "gc_country": "TW"
+  },
+  {
+   "entity_id": 94090,
+   "d1_name": "Natco Pharma Ltd",
+   "lei": "33580086GIBRWXSNGG39",
+   "gc_legal_name": "NATCO PHARMA LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 113942,
+   "d1_name": "Companhia Brasileira de Aluminio",
+   "lei": "5493001QYTIDILBVYO18",
+   "gc_legal_name": "COMPANHIA BRASILEIRA DE ALUMINIO",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "BR",
+   "gc_country": "BR"
+  },
+  {
+   "entity_id": 95597,
+   "d1_name": "KIWOOM Securities Co Ltd",
+   "lei": "988400O27CNGJA2QWJ18",
+   "gc_legal_name": "키움증권(주)",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "KR",
+   "gc_country": "KR"
+  },
+  {
+   "entity_id": 108920,
+   "d1_name": "Pearl Global Industries Ltd",
+   "lei": "33580081F89U3LE4DG24",
+   "gc_legal_name": "PEARL GLOBAL INDUSTRIES LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 3134,
+   "d1_name": "Amentum Holdings Inc",
+   "lei": "2549009FJIBLW40CU216",
+   "gc_legal_name": "AMENTUM HOLDINGS, INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 2618,
+   "d1_name": "Toromont Industries Ltd",
+   "lei": "5493008W5EPRSLQ0B737",
+   "gc_legal_name": "TOROMONT INDUSTRIES LTD.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "CA-ON",
+   "gc_country": "CA"
+  },
+  {
+   "entity_id": 107636,
+   "d1_name": "Allegany Park CLO Ltd.",
+   "lei": "549300D5KL0IVFLIND32",
+   "gc_legal_name": "Allegany Park CLO, Ltd.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "KY",
+   "gc_country": "KY"
+  },
+  {
+   "entity_id": 105627,
+   "d1_name": "APRR SA",
+   "lei": "9695002SV2VP9CU42826",
+   "gc_legal_name": "APRR",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "FR",
+   "gc_country": "FR"
+  },
+  {
+   "entity_id": 105989,
+   "d1_name": "In'li SA",
+   "lei": "969500X711HT6Q60P382",
+   "gc_legal_name": "IN'LI",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "FR",
+   "gc_country": "FR"
+  },
+  {
+   "entity_id": 443,
+   "d1_name": "Oklo Inc",
+   "lei": "529900WDIA7LYI9ILD14",
+   "gc_legal_name": "OKLO INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 16928,
+   "d1_name": "HERO MOTOCORP LIMITED",
+   "lei": "335800Q49FBMZJTRLK49",
+   "gc_legal_name": "HERO MOTOCORP LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 94064,
+   "d1_name": "Borosil Renewables Ltd",
+   "lei": "984500FB99E48CBAC192",
+   "gc_legal_name": "BOROSIL RENEWABLES LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 107369,
+   "d1_name": "HL Mando Corp.",
+   "lei": "988400P5GM9DGVVOJQ79",
+   "gc_legal_name": "에이치엘만도 주식회사",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "KR",
+   "gc_country": "KR"
+  },
+  {
+   "entity_id": 108987,
+   "d1_name": "Nitin Spinners Ltd",
+   "lei": "335800YE1INDT4ZCM355",
+   "gc_legal_name": "NITIN SPINNERS LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 109287,
+   "d1_name": "Black Diamond Group Ltd",
+   "lei": "529900FJ2VM3JLXS6T37",
+   "gc_legal_name": "Black Diamond Group Limited",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "CA-AB",
+   "gc_country": "CA"
+  },
+  {
+   "entity_id": 280352,
+   "d1_name": "Suncrete Inc",
+   "lei": "529900Y2KD6L4M48GS97",
+   "gc_legal_name": "Suncrete, Inc.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 111874,
+   "d1_name": "INDUSTRIE DE NORA S.P.A.",
+   "lei": "815600CD933CB2F89862",
+   "gc_legal_name": "INDUSTRIE DE NORA S.P.A.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IT",
+   "gc_country": "IT"
+  },
+  {
+   "entity_id": 105603,
+   "d1_name": "Northern Gas Networks Finance PLC",
+   "lei": "213800KZQUVA8TJZFL60",
+   "gc_legal_name": "NORTHERN GAS NETWORKS FINANCE PLC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "GB",
+   "gc_country": "GB"
+  },
+  {
+   "entity_id": 16286,
+   "d1_name": "Samsung Fire & Marine Insurance Co Ltd",
+   "lei": "988400JMBDK47EW0Z936",
+   "gc_legal_name": "삼성화재해상보험 주식회사",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "KR",
+   "gc_country": "KR"
+  },
+  {
+   "entity_id": 113685,
+   "d1_name": "THE INDIAN HUME PIPE COMPANY LIMITED",
+   "lei": "335800BC6NHZZXE9SY11",
+   "gc_legal_name": "THE INDIAN HUME PIPE COMPANY LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 106551,
+   "d1_name": "SASOL FINANCING USA LLC",
+   "lei": "549300XRB1PFMESFEL85",
+   "gc_legal_name": "SASOL FINANCING USA LLC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 92740,
+   "d1_name": "KRBL Ltd",
+   "lei": "3358009OO1W5QCPVMV73",
+   "gc_legal_name": "KRBL LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 89172,
+   "d1_name": "Segezha Group PJSC",
+   "lei": "253400AUENB54PN7LX36",
+   "gc_legal_name": "Публичное акционерное общество Группа компаний \"Сегежа\"",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "RU",
+   "gc_country": "RU"
+  },
+  {
+   "entity_id": 15836,
+   "d1_name": "Fortrea Holdings Inc",
+   "lei": "5493000FIVFABOVCDU97",
+   "gc_legal_name": "FORTREA HOLDINGS INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 1651,
+   "d1_name": "East West Bancorp Inc",
+   "lei": "254900O4X656YXFOYB11",
+   "gc_legal_name": "East West Bancorp, Inc.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 92132,
+   "d1_name": "Chicony Power Technology Co Ltd",
+   "lei": "254900V2YIHP8ADVM184",
+   "gc_legal_name": "群光電能科技股份有限公司",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "TW",
+   "gc_country": "TW"
+  },
+  {
+   "entity_id": 111933,
+   "d1_name": "Vestum AB (publ)",
+   "lei": "549300V2QS9QL4C1KQ31",
+   "gc_legal_name": "Vestum AB (publ)",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "SE",
+   "gc_country": "SE"
+  },
+  {
+   "entity_id": 93141,
+   "d1_name": "SKY Network Television Ltd",
+   "lei": "984500A70R6143A96068",
+   "gc_legal_name": "SKY NETWORK TELEVISION LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "NZ",
+   "gc_country": "NZ"
+  },
+  {
+   "entity_id": 2181,
+   "d1_name": "Asian Paints Ltd",
+   "lei": "335800HEHXGYRUNERD75",
+   "gc_legal_name": "ASIAN PAINTS LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 90059,
+   "d1_name": "Just Dial Ltd",
+   "lei": "894500VMGYJE9GSAZ158",
+   "gc_legal_name": "JUST DIAL LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 110800,
+   "d1_name": "Aica Kogyo Company, Limited",
+   "lei": "353800I589BKZAOJD116",
+   "gc_legal_name": "アイカ工業株式会社",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "JP",
+   "gc_country": "JP"
+  },
+  {
+   "entity_id": 105699,
+   "d1_name": "Nordea Kiinnitysluottopankki Oyj",
+   "lei": "7437001LESKGLAEOEU84",
+   "gc_legal_name": "Nordea Kiinnitysluottopankki Oyj",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "FI",
+   "gc_country": "FI"
+  },
+  {
+   "entity_id": 103287,
+   "d1_name": "KEDRION SPA",
+   "lei": "81560047FA58E1BEDF67",
+   "gc_legal_name": "KEDRION S.P.A.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IT",
+   "gc_country": "IT"
+  },
+  {
+   "entity_id": 103449,
+   "d1_name": "EDO Sukuk Ltd.",
+   "lei": "5493000LZIE4T625R469",
+   "gc_legal_name": "EDO Sukuk Limited",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "KY",
+   "gc_country": "KY"
+  },
+  {
+   "entity_id": 108826,
+   "d1_name": "Vadilal Industries Ltd",
+   "lei": "335800YO53STSJH9RB97",
+   "gc_legal_name": "VADILAL INDUSTRIES LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 108034,
+   "d1_name": "Oklahoma State University",
+   "lei": "254900M845UI413F1O58",
+   "gc_legal_name": "Oklahoma State University",
+   "gc_category": "RESIDENT_GOVERNMENT_ENTITY",
+   "gc_jurisdiction": "US-OK",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 113721,
+   "d1_name": "Krsnaa Diagnostics Ltd",
+   "lei": "335800BHDTJRKNTQ1O55",
+   "gc_legal_name": "KRSNAA DIAGNOSTICS LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 88041,
+   "d1_name": "Greenland Mines Ltd",
+   "lei": "254900IL9PV8PYIWAQ08",
+   "gc_legal_name": "GREENLAND MINES LTD.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 114168,
+   "d1_name": "Brisanet Servicos de Telecomunicacoes S.A.",
+   "lei": "254900IM8WJRFOM5JO91",
+   "gc_legal_name": "BRISANET SERVICOS DE TELECOMUNICACOES S.A.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "BR",
+   "gc_country": "BR"
+  },
+  {
+   "entity_id": 111505,
+   "d1_name": "Shindengen Electric Manufacturing Co.,Ltd.",
+   "lei": "353800ZRD3NQDG2I7X35",
+   "gc_legal_name": "新電元工業株式会社",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "JP",
+   "gc_country": "JP"
+  },
+  {
+   "entity_id": 103562,
+   "d1_name": "Vedanta Iron and Steel Ltd",
+   "lei": "335800Y89YF7J22XIQ21",
+   "gc_legal_name": "VEDANTA IRON AND STEEL LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 108325,
+   "d1_name": "VRL Logistics Ltd",
+   "lei": "335800VZ9XWQRZKF6945",
+   "gc_legal_name": "VRL LOGISTICS LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 105483,
+   "d1_name": "ASTM SpA",
+   "lei": "8156003F2286CFA55E20",
+   "gc_legal_name": "ASTM S.P.A.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IT",
+   "gc_country": "IT"
+  },
+  {
+   "entity_id": 89026,
+   "d1_name": "ASMedia Technology Inc",
+   "lei": "529900CQG67FQMMNX678",
+   "gc_legal_name": "祥碩科技股份有限公司",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "TW",
+   "gc_country": "TW"
+  },
+  {
+   "entity_id": 110761,
+   "d1_name": "CoinShares International Ltd",
+   "lei": "549300OUFYN9P5VF9D79",
+   "gc_legal_name": "COINSHARES INTERNATIONAL LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "JE",
+   "gc_country": "JE"
+  },
+  {
+   "entity_id": 113246,
+   "d1_name": "CHINA NEW HIGHER EDUCATION GROUP LIMITED",
+   "lei": "549300UQUTN69WGJ7J09",
+   "gc_legal_name": "China New Higher Education Group Limited",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "KY",
+   "gc_country": "KY"
+  },
+  {
+   "entity_id": 89046,
+   "d1_name": "Incitec Pivot Ltd",
+   "lei": "254900UW2F3BKV6Z9V18",
+   "gc_legal_name": "DYNO NOBEL LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "AU",
+   "gc_country": "AU"
+  },
+  {
+   "entity_id": 105707,
+   "d1_name": "Coventry Building Society",
+   "lei": "2138004G59FXEAZ6IO10",
+   "gc_legal_name": "COVENTRY BUILDING SOCIETY",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "GB",
+   "gc_country": "GB"
+  },
+  {
+   "entity_id": 101844,
+   "d1_name": "Seagate Data Storage Technology Pte Ltd",
+   "lei": "254900BS8BBQ8P0D4L86",
+   "gc_legal_name": "SEAGATE DATA STORAGE TECHNOLOGY PTE. LTD.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "SG",
+   "gc_country": "SG"
+  },
+  {
+   "entity_id": 93525,
+   "d1_name": "Graphite India Ltd",
+   "lei": "335800VMGC17U49YJX23",
+   "gc_legal_name": "GRAPHITE INDIA LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 463562,
+   "d1_name": "Afentra PLC",
+   "lei": "21380028BFDFJK8BRX92",
+   "gc_legal_name": "AFENTRA PLC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "GB",
+   "gc_country": "GB"
+  },
+  {
+   "entity_id": 91979,
+   "d1_name": "Syngene International Ltd",
+   "lei": "335800FFAWRC77Z2EY68",
+   "gc_legal_name": "SYNGENE INTERNATIONAL LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 101489,
+   "d1_name": "Share India Securities Ltd",
+   "lei": "335800VM5GDBVSBAK477",
+   "gc_legal_name": "SHARE INDIA SECURITIES LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 106395,
+   "d1_name": "NEWDAY FUNDING",
+   "lei": "549300M95T1WCOXEOR81",
+   "gc_legal_name": "NEWDAY FUNDING TRANSFEROR LTD",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "GB",
+   "gc_country": "GB"
+  },
+  {
+   "entity_id": 110790,
+   "d1_name": "Jupiter Mines Ltd",
+   "lei": "254900OFKP9ZQXBCHE19",
+   "gc_legal_name": "Jupiter Mines Limited",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "AU",
+   "gc_country": "AU"
+  },
+  {
+   "entity_id": 93162,
+   "d1_name": "NGEx Minerals Ltd",
+   "lei": "549300M2DU5ORAGOIG27",
+   "gc_legal_name": "NGEx Minerals Ltd.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "CA-BC",
+   "gc_country": "CA"
+  },
+  {
+   "entity_id": 95029,
+   "d1_name": "Concord Biotech Ltd",
+   "lei": "335800FBIZZTLAXLXZ73",
+   "gc_legal_name": "CONCORD BIOTECH LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 111878,
+   "d1_name": "Polight ASA",
+   "lei": "2138007ZPDNUIHX6Z659",
+   "gc_legal_name": "POLIGHT ASA",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "NO",
+   "gc_country": "NO"
+  },
+  {
+   "entity_id": 106042,
+   "d1_name": "Derby Healthcare PLC",
+   "lei": "25490033UV5PQQ7FCV22",
+   "gc_legal_name": "DERBY HEALTHCARE PLC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "GB",
+   "gc_country": "GB"
+  },
+  {
+   "entity_id": 3231,
+   "d1_name": "Planet Labs PBC",
+   "lei": "254900Q7PVI3HTQBRB44",
+   "gc_legal_name": "PLANET LABS PBC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 99752,
+   "d1_name": "ODDITY TECH LTD",
+   "lei": "254900QH12XZS53G0V57",
+   "gc_legal_name": "אודיטי טק בע\"מ",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IL",
+   "gc_country": "IL"
+  },
+  {
+   "entity_id": 109049,
+   "d1_name": "J Kumar Infraprojects Ltd",
+   "lei": "33580016NIMGU988MM71",
+   "gc_legal_name": "J. KUMAR INFRAPROJECTS LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 113663,
+   "d1_name": "AXISCADES TECHNOLOGIES LIMITED",
+   "lei": "335800KHE667P5ZJOL65",
+   "gc_legal_name": "AXISCADES TECHNOLOGIES LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 106562,
+   "d1_name": "V I P INDUSTRIES LIMITED",
+   "lei": "335800ZOF8VAW3IYEB61",
+   "gc_legal_name": "V I P INDUSTRIES LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 103215,
+   "d1_name": "ARBOR REALTY SR INC",
+   "lei": "549300TW7RTL2CI3CN08",
+   "gc_legal_name": "ARBOR REALTY SR, INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-MD",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 588,
+   "d1_name": "Axis Capital Holdings Ltd",
+   "lei": "635400VD2NQBYAHMEM55",
+   "gc_legal_name": "AXIS Capital Holdings Limited",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "BM",
+   "gc_country": "BM"
+  },
+  {
+   "entity_id": 109123,
+   "d1_name": "Stylam Industries Ltd",
+   "lei": "335800QRN6K3EW2JWK94",
+   "gc_legal_name": "STYLAM INDUSTRIES LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 31202,
+   "d1_name": "Empire State Development Corp",
+   "lei": "54930039Y2EMGXN6LM88",
+   "gc_legal_name": "EMPIRE STATE DEVELOPMENT CORPORATION",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-NY",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 87362,
+   "d1_name": "Acurx Pharmaceuticals Inc",
+   "lei": "5493006KI0IEUHE1UK56",
+   "gc_legal_name": "ACURX PHARMACEUTICALS, INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 112077,
+   "d1_name": "Dynacons Systems and Solutions Ltd",
+   "lei": "335800W1621BZO7VDK52",
+   "gc_legal_name": "DYNACONS SYSTEMS AND SOLUTIONS LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 14352,
+   "d1_name": "Qnity Electronics Inc",
+   "lei": "254900RSUG4J9TFFZX53",
+   "gc_legal_name": "QNITY ELECTRONICS, INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 104939,
+   "d1_name": "Crown Finance US Inc",
+   "lei": "254900ABTWPQTCKKR839",
+   "gc_legal_name": "CROWN FINANCE US, INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 14798,
+   "d1_name": "Hut 8 Corp",
+   "lei": "98450066FEF9C1D3FC20",
+   "gc_legal_name": "HUT 8 CORP.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 92736,
+   "d1_name": "Artience Co Ltd",
+   "lei": "3538004R7YQXBD9W7D03",
+   "gc_legal_name": "artience株式会社",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "JP",
+   "gc_country": "JP"
+  },
+  {
+   "entity_id": 3265,
+   "d1_name": "Voyager Technologies Inc",
+   "lei": "254900DDCLSP240FE187",
+   "gc_legal_name": "VOYAGER TECHNOLOGIES, INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 16569,
+   "d1_name": "CITIC Securities Company Limited",
+   "lei": "300300E1006744000068",
+   "gc_legal_name": "中信证券股份有限公司",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "CN",
+   "gc_country": "CN"
+  },
+  {
+   "entity_id": 91087,
+   "d1_name": "Lojas Renner SA",
+   "lei": "52990032N7OAAM138D78",
+   "gc_legal_name": "Lojas Renner S.A.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "BR",
+   "gc_country": "BR"
+  },
+  {
+   "entity_id": 92104,
+   "d1_name": "CRISIL Ltd",
+   "lei": "335800XLQ1LWF1M6KM87",
+   "gc_legal_name": "CRISIL LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 113618,
+   "d1_name": "Themis Medicare Ltd",
+   "lei": "335800LHRDVIKH69AF42",
+   "gc_legal_name": "THEMIS MEDICARE LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 112183,
+   "d1_name": "Horizon Construction Development Limited",
+   "lei": "254900C71ZQV8ANSM648",
+   "gc_legal_name": "Horizon Construction Development Limited",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "KY",
+   "gc_country": "KY"
+  },
+  {
+   "entity_id": 109077,
+   "d1_name": "Supriya Lifescience Ltd",
+   "lei": "894500RBVJX1EOJP0Y02",
+   "gc_legal_name": "SUPRIYA LIFESCIENCE LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 114428,
+   "d1_name": "Knowledge Marine & Engineering Works Ltd",
+   "lei": "98450005D45EA1B60C74",
+   "gc_legal_name": "KNOWLEDGE MARINE & ENGINEERING WORKS LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 16736,
+   "d1_name": "CIPLA LIMITED",
+   "lei": "335800KMJJYEDDK82Q34",
+   "gc_legal_name": "CIPLA LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 96090,
+   "d1_name": "Koei Tecmo Holdings Co Ltd",
+   "lei": "353800RQ25FIYLPYXP11",
+   "gc_legal_name": "株式会社コーエーテクモホールディングス",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "JP",
+   "gc_country": "JP"
+  },
+  {
+   "entity_id": 110964,
+   "d1_name": "YD More Investments Ltd",
+   "lei": "8945002CZNG0EZOGOI09",
+   "gc_legal_name": "י.ד מור השקעות בע''מ",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IL",
+   "gc_country": "IL"
+  },
+  {
+   "entity_id": 15316,
+   "d1_name": "Utz Brands Inc",
+   "lei": "5299009BHBU2NH5HRN16",
+   "gc_legal_name": "UTZ BRANDS, INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 104105,
+   "d1_name": "TOYOTA LEASE OWNER TRUST 2024-B",
+   "lei": "254900R64DFTI1MWY364",
+   "gc_legal_name": "TOYOTA LEASE OWNER TRUST 2024-B",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 95115,
+   "d1_name": "Sino-American Silicon Products Inc",
+   "lei": "529900DMZ4STK7NEXO95",
+   "gc_legal_name": "中美矽晶製品股份有限公司",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "TW",
+   "gc_country": "TW"
+  },
+  {
+   "entity_id": 114115,
+   "d1_name": "SAVITA OIL TECHNOLOGIES LIMITED",
+   "lei": "335800QZKHIWYZKNAD08",
+   "gc_legal_name": "SAVITA OIL TECHNOLOGIES LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 17232,
+   "d1_name": "GULF DEVELOPMENT PUBLIC COMPANY LIMITED",
+   "lei": "254900RO3BZTYPBQSX73",
+   "gc_legal_name": "บริษัท กัลฟ์ ดีเวลลอปเมนท์ จำกัด (มหาชน)",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "TH",
+   "gc_country": "TH"
+  },
+  {
+   "entity_id": 31189,
+   "d1_name": "Wyeth LLC",
+   "lei": "549300Q9GR3WRH4N4836",
+   "gc_legal_name": "WYETH LLC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 110658,
+   "d1_name": "Eastnine AB (publ)",
+   "lei": "2138009N2FO2BZTVYS76",
+   "gc_legal_name": "EASTNINE AB (PUBL)",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "SE",
+   "gc_country": "SE"
+  },
+  {
+   "entity_id": 95069,
+   "d1_name": "Rallis India Ltd",
+   "lei": "335800HI7I928BFJB442",
+   "gc_legal_name": "RALLIS INDIA LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 108903,
+   "d1_name": "Datamatics Global Services Ltd",
+   "lei": "335800M1YW7T5HR2HE98",
+   "gc_legal_name": "DATAMATICS GLOBAL SERVICES LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 105712,
+   "d1_name": "Heimstaden Bostad Treasury BV",
+   "lei": "549300ORG6UYMJBCV938",
+   "gc_legal_name": "Heimstaden Bostad Treasury B.V.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "NL",
+   "gc_country": "NL"
+  },
+  {
+   "entity_id": 14856,
+   "d1_name": "Coursera Inc",
+   "lei": "984500573CA1QB7DAC30",
+   "gc_legal_name": "COURSERA, INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 94292,
+   "d1_name": "LMW Ltd",
+   "lei": "335800YPWF9BRC6VMR31",
+   "gc_legal_name": "LMW LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 93814,
+   "d1_name": "Estithmar Holding QPSC",
+   "lei": "2138007EM894YQ19S568",
+   "gc_legal_name": "استثمار القابضة ش.م.ع.ق",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "QA",
+   "gc_country": "QA"
+  },
+  {
+   "entity_id": 1981,
+   "d1_name": "FSN E-Commerce Ventures Ltd",
+   "lei": "335800X5BJYC18NHDQ91",
+   "gc_legal_name": "FSN E-COMMERCE VENTURES LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 91831,
+   "d1_name": "DCM Shriram Ltd",
+   "lei": "335800SU1CJ59TE5RJ45",
+   "gc_legal_name": "DCM SHRIRAM LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 17306,
+   "d1_name": "ADANI PORTS AND SPECIAL ECONOMIC ZONE LIMITED",
+   "lei": "335800QOAXP5TM7OYP69",
+   "gc_legal_name": "ADANI PORTS AND SPECIAL ECONOMIC ZONE LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 2285,
+   "d1_name": "Ubiquiti Inc",
+   "lei": "5299007MITA4DMQCU747",
+   "gc_legal_name": "UBIQUITI INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 100845,
+   "d1_name": "Docebo Inc",
+   "lei": "98450059461F12KCE754",
+   "gc_legal_name": "DOCEBO INC.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "CA-ON",
+   "gc_country": "CA"
+  },
+  {
+   "entity_id": 98707,
+   "d1_name": "Hamilton Insurance Group Ltd.",
+   "lei": "549300W92BN1FIEXG871",
+   "gc_legal_name": "Hamilton Insurance Group, Ltd.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "BM",
+   "gc_country": "BM"
+  },
+  {
+   "entity_id": 91597,
+   "d1_name": "Poly Medicure Ltd",
+   "lei": "335800XM9YRKFWFVXO61",
+   "gc_legal_name": "POLY MEDICURE LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 94702,
+   "d1_name": "Sumitomo Chemical India Ltd",
+   "lei": "335800L1XZBQ95MM4J51",
+   "gc_legal_name": "SUMITOMO CHEMICAL INDIA LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 107046,
+   "d1_name": "Thai Oil Public Company Limited",
+   "lei": "549300HG5527UPZLTT69",
+   "gc_legal_name": "บริษัท ไทยออยล์ จำกัด (มหาชน)",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "TH",
+   "gc_country": "TH"
+  },
+  {
+   "entity_id": 17071,
+   "d1_name": "Siemens Energy India Ltd",
+   "lei": "335800AEZO3CVXCSA716",
+   "gc_legal_name": "SIEMENS ENERGY INDIA LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 96316,
+   "d1_name": "SIMMTECH Co Ltd",
+   "lei": "9884004D4JG9YA4VBD74",
+   "gc_legal_name": "(주)심텍",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "KR",
+   "gc_country": "KR"
+  },
+  {
+   "entity_id": 16969,
+   "d1_name": "Air China Limited",
+   "lei": "213800I9TWC9K22N4502",
+   "gc_legal_name": "中国国际航空股份有限公司",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "CN",
+   "gc_country": "CN"
+  },
+  {
+   "entity_id": 101140,
+   "d1_name": "Yalla Group Ltd",
+   "lei": "254900JO9GJYWVJTAX89",
+   "gc_legal_name": "Yalla Group Limited",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "KY",
+   "gc_country": "KY"
+  },
+  {
+   "entity_id": 17185,
+   "d1_name": "BYD COMPANY LIMITED",
+   "lei": "5299005557VL7ULJ7A69",
+   "gc_legal_name": "比亚迪股份有限公司",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "CN",
+   "gc_country": "CN"
+  },
+  {
+   "entity_id": 17270,
+   "d1_name": "JSW STEEL LIMITED",
+   "lei": "335800EK6HZSC4CVAJ09",
+   "gc_legal_name": "JSW STEEL LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 30601,
+   "d1_name": "Blackstone Reg Finance Co L.L.C.",
+   "lei": "254900S2G1V55FTA4590",
+   "gc_legal_name": "BLACKSTONE REG FINANCE CO. L.L.C.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 113410,
+   "d1_name": "Borosil Scientific Ltd",
+   "lei": "9845000KHFF9A4F3BF28",
+   "gc_legal_name": "BOROSIL SCIENTIFIC LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 101976,
+   "d1_name": "CIGNA HOLDING CO",
+   "lei": "45RS2W538ZOGNWLVIX82",
+   "gc_legal_name": "CIGNA HOLDING COMPANY",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 2695,
+   "d1_name": "First Quantum Minerals Ltd",
+   "lei": "549300I7UVBGWRYMYZ18",
+   "gc_legal_name": "FIRST QUANTUM MINERALS LTD.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "CA-BC",
+   "gc_country": "CA"
+  },
+  {
+   "entity_id": 109098,
+   "d1_name": "Suraj Estate Developers Ltd",
+   "lei": "33580025UQBQVKJRUR62",
+   "gc_legal_name": "SURAJ ESTATE DEVELOPERS LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 110840,
+   "d1_name": "GDI Integrated Facility Services Inc.",
+   "lei": "549300OQ1BQ4IS3Q8Y59",
+   "gc_legal_name": "GDI Services aux immeubles inc.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "CA-QC",
+   "gc_country": "CA"
+  },
+  {
+   "entity_id": 95987,
+   "d1_name": "Helia Group Ltd",
+   "lei": "529900RUQ2G0JXJOF423",
+   "gc_legal_name": "HELIA GROUP LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "AU",
+   "gc_country": "AU"
+  },
+  {
+   "entity_id": 105755,
+   "d1_name": "Paragon Treasury Plc",
+   "lei": "213800Q65UKPKCQBC252",
+   "gc_legal_name": "PARAGON TREASURY PLC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "GB",
+   "gc_country": "GB"
+  },
+  {
+   "entity_id": 92867,
+   "d1_name": "SK IE Technology Co Ltd",
+   "lei": "988400ZA9LM3JZBI5088",
+   "gc_legal_name": "에스케이아이이테크놀로지",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "KR",
+   "gc_country": "KR"
+  },
+  {
+   "entity_id": 107227,
+   "d1_name": "J. K. CEMENT LIMITED.",
+   "lei": "335800IECEF3EIDGF809",
+   "gc_legal_name": "J. K. CEMENT LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 111168,
+   "d1_name": "Synsam AB (publ)",
+   "lei": "5493000TMEGW9DHNOQ70",
+   "gc_legal_name": "Synsam AB (publ)",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "SE",
+   "gc_country": "SE"
+  },
+  {
+   "entity_id": 280379,
+   "d1_name": "ERock Inc",
+   "lei": "2549002XNN09OKWF1V91",
+   "gc_legal_name": "ERock, Inc.",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-DE",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 2496,
+   "d1_name": "SWIRE PACIFIC LIMITED",
+   "lei": "549300KZOZHII0DGF611",
+   "gc_legal_name": "SWIRE PACIFIC LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "HK",
+   "gc_country": "HK"
+  },
+  {
+   "entity_id": 100696,
+   "d1_name": "WESTERN ALLIANCE BANK",
+   "lei": "SI7YQSVPFZBSQ878IC17",
+   "gc_legal_name": "Western Alliance Bank",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "US-AZ",
+   "gc_country": "US"
+  },
+  {
+   "entity_id": 105698,
+   "d1_name": "Wheatley Group Capital PLC",
+   "lei": "213800H5Z7A5G7ZS2U33",
+   "gc_legal_name": "WHEATLEY GROUP CAPITAL PLC",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "GB",
+   "gc_country": "GB"
+  },
+  {
+   "entity_id": 1943,
+   "d1_name": "Saudi Telecom Co",
+   "lei": "21380028ATJ79OTA9W17",
+   "gc_legal_name": "SAUDI TELECOM COMPANY",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "SA",
+   "gc_country": "SA"
+  },
+  {
+   "entity_id": 113656,
+   "d1_name": "VINDHYA TELELINKS LIMITED",
+   "lei": "335800KOQ3YC7QIR4S62",
+   "gc_legal_name": "VINDHYA TELELINKS LIMITED",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "IN",
+   "gc_country": "IN"
+  },
+  {
+   "entity_id": 2669,
+   "d1_name": "Brookfield Renewable Corp",
+   "lei": "894500N9AWD5I1YNP231",
+   "gc_legal_name": "Brookfield Renewable Corporation",
+   "gc_category": "GENERAL",
+   "gc_jurisdiction": "CA-ON",
+   "gc_country": "CA"
+  }
+ ]
+}

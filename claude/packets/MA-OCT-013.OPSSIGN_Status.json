@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-013.OPSSIGN",
+  "state": "READY",
+  "owner": "LANE-1-OPS",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-013.OPSSIGN_Control_v1.md",
+    "sha256": "dd0fb3cae5cfa18d0a88d5a2e1a09a49caf10076895f9c428e1feae088868256"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-013.OPSSIGN_Task_v1.md",
+    "sha256": "dfa85ebce9f1c94c8a1ead923659cbbfe7c2db0298474c911037f9d3a64b91f8"
+  },
+  "blocker": null,
+  "usage_class": "light",
+  "updated": "2026-11-06T18:55Z",
+  "updated_by": "Main Lane"
+}

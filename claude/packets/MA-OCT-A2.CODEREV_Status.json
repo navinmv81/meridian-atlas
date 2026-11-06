@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-A2.CODEREV",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "REVIEW-A",
   "control": {
     "version": "v1",
@@ -14,6 +14,6 @@
   },
   "blocker": null,
   "usage_class": "medium",
-  "updated": "2026-10-30T07:00Z",
+  "updated": "2026-10-30T15:40Z",
   "updated_by": "Main Lane"
 }

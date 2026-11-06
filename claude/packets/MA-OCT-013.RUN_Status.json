@@ -1,0 +1,26 @@
+{
+  "packet": "MA-OCT-013.RUN",
+  "state": "CLOSED",
+  "owner": "LANE-11-ENG",
+  "control": {
+    "version": "v2",
+    "file": "MA-OCT-013.RUN_Control_v2.md",
+    "sha256": "96836f24e5c49ac1cf002d9a0dccbb0b18589a01d36f343081d5c8ca474a3ff6"
+  },
+  "task": {
+    "version": "v2",
+    "file": "MA-OCT-013.RUN_Task_v2.md",
+    "sha256": "4d50af022d8635d0036247d15920fd693ccc819d23e30ad89e1f54ff0dd0ef0a"
+  },
+  "blocker": null,
+  "usage_class": "heavy",
+  "updated": "2026-11-06T18:55Z",
+  "updated_by": "Main Lane",
+  "founder_approval": {
+    "text": "013 run Fri 6 18:30Z (day 1) + Sat 7 (day 2), 25k/day \u2014 013 stays in October",
+    "at": "2026-11-05"
+  },
+  "report": {
+    "sha256": "0152c923f0ea42c026dcb105ded2a4f187c51b760e84cccaf333841a731a4ccb"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-013.FIX",
+  "state": "CLOSED",
+  "owner": "LANE-1-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-013.FIX_Control_v1.md",
+    "sha256": "b04db2a80c21df0af1493ca6fe9a1fe7e9813ceddc3642a90fc94cca212cfa7c"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-013.FIX_Task_v1.md",
+    "sha256": "4fffb8491d568be33e34ea98903f68a148646e1d0c6cf7b96ad942ceb35f7cab"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-11-05T20:50Z",
+  "updated_by": "Main Lane"
+}

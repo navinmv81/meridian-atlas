@@ -1,0 +1,22 @@
+{
+  "packet": "MA-OCT-CLOSE.DOC",
+  "state": "EXECUTING",
+  "owner": "LANE-DOC",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-CLOSE.DOC_Control_v1.md",
+    "sha256": "4c9de01ac5f5cd35cf2b21ae4ce06249c480c61123ab15d6c8ffc73cd12b9645"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-CLOSE.DOC_Task_v1.md",
+    "sha256": "2f9134fa1596a89d2dc61aae5c8f1b094ad6025fa812f764e051d53525d6ac15"
+  },
+  "blocker": null,
+  "usage_class": "heavy",
+  "updated": "2026-11-04T21:05Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "d30f1aae458f8211d36b82cca0a43a98af87eb9ec19b546fb7f07adf40ee879f"
+  }
+}

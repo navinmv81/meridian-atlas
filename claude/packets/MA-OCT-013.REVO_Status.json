@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-013.REVO",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-1-OPS",
   "control": {
     "version": "v1",
@@ -14,6 +14,6 @@
   },
   "blocker": null,
   "usage_class": "medium",
-  "updated": "2026-10-30T07:00Z",
+  "updated": "2026-10-30T15:40Z",
   "updated_by": "Main Lane"
 }

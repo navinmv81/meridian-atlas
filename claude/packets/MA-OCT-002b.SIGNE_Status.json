@@ -1,0 +1,22 @@
+{
+  "packet": "MA-OCT-002b.SIGNE",
+  "state": "CLOSED",
+  "owner": "ETF-PL",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-002b.SIGNE_Control_v1.md",
+    "sha256": "16684720594d117370530b07922ac1b4c14a0dacfc16173e3dae38b73af9b2f5"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-002b.SIGNE_Task_v1.md",
+    "sha256": "f53b26de712dcf10e47dabc3e28c8489921588a23ca540cd6d5affdf00bf977b"
+  },
+  "blocker": null,
+  "usage_class": "light",
+  "updated": "2026-11-04T21:05Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "5faaaa1ab20581c6cbda6fcc9523e2952fdb628146d6b0e8b146dc3702b34771"
+  }
+}

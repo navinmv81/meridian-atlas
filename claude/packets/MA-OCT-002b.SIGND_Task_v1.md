@@ -1,0 +1,5 @@
+# MA-OCT-002b.SIGND — Task v1 (immutable): 002b sign-off — Data-Identity Lead
+
+Read `claude/packets/MA-OCT-002b.BUILD_Report.md` (`b42b48585dece86633d4aa62e4c091a86c96b230715cf0645c1af27b8a5709ca`) — §2 item table, §12 sign-offs, three-point check, run sheet — and the 002 spec §5.2 (`claude/MA-OCT-002_Spec.md`). As **Data-Identity Lead**, sign off or reject: the entities-seed and enrich heartbeats, enrich `SUBREQUEST_CHECKPOINT` 44 → 43, the phase23 key set (no `items_attempted`/`items_progressed` until you define real progress counters), Phase 1's budget source (account total from `/api/ops/cf/d1-today`, F-5 ceiling 60,000, fallback to the counter), and migration 009 `entity_pipeline_state` (Entities domain) with the one-release delta dual-write. Main Lane has ruled RQ-2: Phase 2+3 keeps the counter (no extra fetch) for now. For each item: SIGNED / SIGNED WITH CONDITION (state it) / REJECTED (why). Doc-only: no D1, no deploys, no git writes, no secrets. Keep it to one page.
+
+Write the sign-off file and `claude/packets/MA-OCT-002b.SIGND_Report.md`. Reply **"MA-OCT-002b.SIGND reported"**.

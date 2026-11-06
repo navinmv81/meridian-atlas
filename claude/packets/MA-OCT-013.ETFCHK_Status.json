@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-013.ETFCHK",
+  "state": "READY",
+  "owner": "ETF-PL",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-013.ETFCHK_Control_v1.md",
+    "sha256": "df394bc0f0c42d5e9a9f2582a66e7639b05084e7f55eda26ed992c9615b60578"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-013.ETFCHK_Task_v1.md",
+    "sha256": "2d89aac2f09b8052171c8bcf6bb184f8c9488763e7821736ec71f7aeeb41b4f4"
+  },
+  "blocker": null,
+  "usage_class": "light",
+  "updated": "2026-11-06T18:55Z",
+  "updated_by": "Main Lane"
+}

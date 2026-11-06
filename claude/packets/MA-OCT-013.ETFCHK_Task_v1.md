@@ -1,0 +1,6 @@
+# MA-OCT-013.ETFCHK — Task v1 (immutable): 013 post-run ETF spot check
+
+Governing: `claude/packets/MA-OCT-013.RUN_Report.md` `0152c923f0ea42c026dcb105ded2a4f187c51b760e84cccaf333841a731a4ccb` (38/38 batches, 1,862 merges, verify ok); your review `claude/MA-OCT-013_ETF_Review.md` `381ccb991149f6c76fb265f17eefbbe26a014eb3f7d89e8236696b7bf6da6e84` **N-6** (post-run spot check: `/api/etf-overlap`, `/api/etf-exposure` on 3 ETFs, entity icon on 3 ISINs among the repointed instruments) and M-1..M-2. Run N-6 exactly against the live site/APIs; confirm no ETF number changed beyond what 013 intends (only the repointed instruments now resolve to survivors), and that ETF API response shapes are unchanged. Verdict: **SIGNED / SIGNED WITH NOTE / REJECTED** (rejected → name the rows; the Data-Identity Lead decides on per-batch restore).
+**Standing rules:** read-only — no D1 writes, no deploys, no git writes; ML-1024-1 (never read secret-file contents); ML-1013-3. Wrangler only `/usr/local/bin/wrangler` 4.96.0 for read-only queries (pre-flight `wrangler whoami`); ≤ 1,000 D1 reads.
+
+Write `claude/MA-OCT-013_ETF_PostRun_Check.md` (if a file) and `claude/packets/MA-OCT-013.ETFCHK_Report.md`. Reply **"MA-OCT-013.ETFCHK reported"**.

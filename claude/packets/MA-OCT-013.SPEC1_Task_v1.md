@@ -1,0 +1,13 @@
+# MA-OCT-013.SPEC1 — Task v1 (immutable): 013 spec rev 1 — fold all 15 review must-fix + measure the 4 unmeasured entity-id tables (read-only D1)
+
+Governing: `claude/MA-OCT-013_Spec.md` rev 0 `9a7466775ab8e91cc5ad70458d789138fa95d41a147d4b585ab20aeb1add69a3`; Architect review `claude/MA-OCT-013_Architect_Review.md` `83d9c89416346dc3e7521692b03dfd6b6df9f0de492d76174c286becd15425fa` (M-1..M-7); Ops review `claude/MA-OCT-013_Operations_Review.md` `4a879de2ba828cdd5d8310cd1cae6d1e9bbb9c30f067a23ae64d36272ff28262` (M-1..M-6); ETF PL review `claude/MA-OCT-013_ETF_Review.md` `381ccb991149f6c76fb265f17eefbbe26a014eb3f7d89e8236696b7bf6da6e84` (M-1..M-2); Founder 013 Q1–Q3 (ML-1029-4; Q2 LEI-bearing row survives + 642 optional rows → later; Q3 6 cross-pair LEIs → adjudication later); ML-1030-6 (013 + 002b first after the October release).
+
+Do:
+1. **Measurement (read-only D1, ≤ 30,000 reads, indexed paths only, EXPLAIN first):** Architect M-3 — `managerissuerpositionquarterly`, `issuereventstream`, `issuerperiodsummary`, `financialfact_reported`: how many rows reference any of the 1,979 core duplicate ids, which index serves the lookup, and the repoint/rebuild cost. If a table has no usable index for the lookup, do **not** scan it — report it and propose the safe alternative (e.g. rebuild from source, or exclude from 013 with a redirect read).
+2. **Rev 1** with a "Changes in rev 1" table mapping every MUST-FIX (Arch M-1..M-7, Ops M-1..M-6, ETF M-1..M-2) to the section changed and each NOTE to accepted/deferred: rollback order (B13-4), pre-image CAS guards + W1-A on the (iii) LEI, fill-only carry-over (cik first), seed re-creation dry run on all shapes, own work dir + kill switch + `013.env` entry script (A2 pattern), dangling-reference `NOT EXISTS` guard on the step-4 delete, run-day write budget and remainder rule, restore calendar, ETF items.
+3. **Run day:** plan the run for **Fri 6 Nov after 08:05Z** with a run-day cap of **33k writes and account total ≤ 70k** (Founder re-approval requested by the Main Lane); if the measured total exceeds it, define the remainder rule (stop at a batch boundary; rest the next eligible weekday, never Sunday).
+4. A short **build list** for the runner (files, tests that must fail on today's tree) so the build lane can start Thu 5.
+
+**Standing rules:** Wrangler only `/usr/local/bin/wrangler` 4.96.0; pre-flight `wrangler whoami`. `claude/relays/FREEZES.json` applies (daily 05:50–07:10, 07:55–08:05, boost bands, 23:50–00:10 UTC). ML-1024-1: never read secret-file contents. ML-1013-3. Explicit-path staging only; never `git add -A`; never `September-2026`. Own worktree only. No D1 writes in this packet.
+
+Write `claude/packets/MA-OCT-013.SPEC1_Report.md`. Reply **"MA-OCT-013.SPEC1 reported"**.

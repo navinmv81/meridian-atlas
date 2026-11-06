@@ -1,0 +1,9 @@
+# MA-OCT-013.BUILD — Task v1 (immutable): 013 runner build (local) — starts as soon as 013.SPEC1 reports
+
+Governing: `claude/MA-OCT-013_Spec.md` **rev 1** (hash in `claude/packets/MA-OCT-013.SPEC1_Report.md`) and its build list; the three 013 reviews; ML-1104-2 (close October Thu 5). **Start only when `MA-OCT-013.SPEC1_Report.md` exists;** verify the rev 1 hash it states.
+
+Do: build exactly the rev 1 runner (A2 pattern: `013.env` + one entry script; own work dir; pause/stop/status; pre-image CAS guards; dangling-reference `NOT EXISTS` guard on the delete; fill-only carry-over; rollback order per Arch M-1; run-day cap 33k / account ≤ 70k with batch-boundary stop and remainder rule; index preconditions `idx_iem_entity_key` / `idx_bil_entity` hard-stop). Tests for every MUST-FIX, failing on today's tree; a **dry run on a local replica** (no D1 writes) with counts matching rev 1. Commit by explicit path, push. Write the **run sheet** for Thu 5 (target start ≥ 18:15Z, after the 17:45–18:15 band) incl. kill switch and per-batch restore. **Hard stop (ML-1104-2): if build + dry run are not reported by 15:00Z Thu 5, stop and report.**
+
+**Standing rules:** Wrangler only `/usr/local/bin/wrangler` 4.96.0; pre-flight `wrangler whoami`. `claude/relays/FREEZES.json` (Thu 5: 05:50–07:10, 07:55–08:05, 10:45–11:15, 11:45–12:15, 16:45–17:15, 17:45–18:15, 23:50–00:10 UTC). **One production change at a time** across lanes (announce with UTC time in your report; check the other Thu lanes' reports first). Production steps end by 23:45Z. ML-1024-1; ML-1013-3. Explicit-path staging only (commit your own files, `pull --rebase`); never `git add -A`; never `September-2026`. Own worktree only. D1 writes guarded, batched, three-point check first.
+
+Write `claude/packets/MA-OCT-013.BUILD_Report.md`. Reply **"MA-OCT-013.BUILD reported"**.

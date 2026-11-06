@@ -1,0 +1,23 @@
+{
+  "packet": "MA-OCT-REL.SITE",
+  "state": "CLOSED",
+  "owner": "LANE-1-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-REL.SITE_Control_v1.md",
+    "sha256": "4c5b720f4e9bd96d76821cfd0192e23302ff02009366a22f429c226ea748efdb"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-REL.SITE_Task_v1.md",
+    "sha256": "4b4257a58d9f0e11e25f91ec0da8873c498fd2c5d7f127c095ea9099fad6d526"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-31T10:10Z",
+  "updated_by": "Main Lane",
+  "founder_approval": {
+    "text": "Approve go-live today",
+    "at": "2026-10-31"
+  }
+}

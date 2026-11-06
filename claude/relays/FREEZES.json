@@ -1,7 +1,7 @@
 {
- "issued": "2026-10-30",
+ "issued": "2026-11-06",
  "by": "Main Lane",
- "note": "UTC. Runners must refuse to start a live batch inside any window. Recurring windows use day/time; dated windows use ISO start/end. 24 Oct: UK clocks go back Sun 25 Oct; local boost fires move from 10:50/16:50 UTC to 11:50/17:50 UTC. GMT bands added; the BST bands (10:45\u201311:15, 16:45\u201317:15) stay until the Main Lane removes them (keep both = safe).",
+ "note": "UTC. Runners must refuse to start a live batch inside any window. Recurring windows use day/time; dated windows use ISO start/end. 24 Oct: UK clocks go back Sun 25 Oct; local boost fires move from 10:50/16:50 UTC to 11:50/17:50 UTC. GMT bands added; the BST bands (10:45\u201311:15, 16:45\u201317:15) stay until the Main Lane removes them (keep both = safe). 30 Oct: A2 window removed \u2014 A2 deferred to November (G-2 FAIL, Founder Q3; ML-1030-2).",
  "recurring": [
   {
    "name": "holdings Sunday",
@@ -89,9 +89,9 @@
    "end": "2026-10-24T00:00Z"
   },
   {
-   "name": "A2 run window \u2014 other Entities writers frozen (Founder A2 Q2; re-pinned to the Sat-only run, ML-1030-1)",
-   "start": "2026-10-31T07:10Z",
-   "end": "2026-11-01T00:10Z"
+   "name": "013 run day 1 \u2014 other Entities writers frozen (re-pinned to start now, ML-1106-1)",
+   "start": "2026-11-06T09:15Z",
+   "end": "2026-11-07T00:10Z"
   }
  ]
 }

@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-013.CHECK",
+  "state": "CLOSED",
+  "owner": "REVIEW-A",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-013.CHECK_Control_v1.md",
+    "sha256": "02b76656c3a8286bea87ee88d0e93b7aacd0764d4a007f5c1770f0c3918e44d7"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-013.CHECK_Task_v1.md",
+    "sha256": "d57da4719da1914e07dab4c2d2172b9c4125ec23d444a67e112683935d3a84d8"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-11-05T20:50Z",
+  "updated_by": "Main Lane"
+}

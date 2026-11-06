@@ -1,0 +1,5 @@
+# MA-OCT-002b.SIGNE — Task v1 (immutable): 002b sign-off — ETF Product Lead
+
+Read `claude/packets/MA-OCT-002b.BUILD_Report.md` (`b42b48585dece86633d4aa62e4c091a86c96b230715cf0645c1af27b8a5709ca`) — §2 item table, §12 sign-offs, three-point check, run sheet — and the 002 spec §5.2 (`claude/MA-OCT-002_Spec.md`). As **ETF Product Lead**, sign off or reject: the holdings and bootstrap heartbeats (fields, end-only default, `OPS_HEARTBEAT_START` gate, per-ETF cost + next 20 tickers in `detail`), and the B3 next-batch warning reading (warn only when the predicted batch would cross the 80k guard − 5,000; weeks-since-full-pass; frozen flag). Confirm no ETF-domain table is written by any 002b code and ETF API contracts are unchanged. For each item: SIGNED / SIGNED WITH CONDITION (state it) / REJECTED (why). Doc-only: no D1, no deploys, no git writes, no secrets. Keep it to one page.
+
+Write the sign-off file and `claude/packets/MA-OCT-002b.SIGNE_Report.md`. Reply **"MA-OCT-002b.SIGNE reported"**.

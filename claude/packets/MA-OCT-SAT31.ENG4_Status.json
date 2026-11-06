@@ -1,0 +1,19 @@
+{
+  "packet": "MA-OCT-SAT31.ENG4",
+  "state": "CLOSED",
+  "owner": "LANE-4-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-SAT31.ENG4_Control_v1.md",
+    "sha256": "8519a8cb4c564bceffcd798bc12894c1e033043c0ede2264bd2bb4e1a9f5f3f5"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-SAT31.ENG4_Task_v1.md",
+    "sha256": "4f3ede52e8af5afb7f91e7b207b26253e95dc96afe151ab4d1deb9e6dc895907"
+  },
+  "blocker": null,
+  "usage_class": "heavy",
+  "updated": "2026-10-30T22:10Z",
+  "updated_by": "Main Lane"
+}

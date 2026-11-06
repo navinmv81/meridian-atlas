@@ -1,0 +1,26 @@
+{
+  "packet": "MA-OCT-OPS.A",
+  "state": "CLOSED",
+  "owner": "LANE-4-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-OPS.A_Control_v1.md",
+    "sha256": "9a61e92d2546a75d170b1724053185102264fe7b81912f922f68aef85c5c2519"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-OPS.A_Task_v1.md",
+    "sha256": "70478b2218516b3652c7ac938c3d8c87cb773858a3c6012953833fe09ae60638"
+  },
+  "blocker": null,
+  "usage_class": "medium",
+  "updated": "2026-10-31T11:00Z",
+  "updated_by": "Main Lane",
+  "founder_approval": {
+    "text": "Run Ops A",
+    "at": "2026-10-31"
+  },
+  "report": {
+    "sha256": "b6a423d8d456a1bb9437919fbb13b86a010eb32e842f9806f89c40970cbf3192"
+  }
+}

@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-004.GOLIVE",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-4-ENG",
   "control": {
     "version": "v1",
@@ -14,6 +14,9 @@
   },
   "blocker": null,
   "usage_class": "heavy",
-  "updated": "2026-10-30T07:00Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-10-30T16:15Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "e280d367a15bb97acf8a5ebce83e74a37799db1dd3202a665865e1b965a4a20e"
+  }
 }

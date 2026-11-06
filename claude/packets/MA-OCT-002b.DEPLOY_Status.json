@@ -1,0 +1,22 @@
+{
+  "packet": "MA-OCT-002b.DEPLOY",
+  "state": "CLOSED",
+  "owner": "LANE-8-ENG",
+  "control": {
+    "version": "v1",
+    "file": "MA-OCT-002b.DEPLOY_Control_v1.md",
+    "sha256": "e6dbb30db6528e7bdf5a6710b2634104cb213220c9f54df0576192eb53ba02b3"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-OCT-002b.DEPLOY_Task_v1.md",
+    "sha256": "472be5b02179fdec2478feb14b69d7d07992533f81cc8a5b705c0057333d82b8"
+  },
+  "blocker": null,
+  "usage_class": "heavy",
+  "updated": "2026-11-06T09:15Z",
+  "updated_by": "Main Lane",
+  "report": {
+    "sha256": "5ad3c24ab3e525527f2308386fbe4d1ddd4285bd31c028051700a5db443f30dc"
+  }
+}
