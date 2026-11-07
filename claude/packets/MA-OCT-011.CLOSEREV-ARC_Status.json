@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-011.CLOSEREV-ARC",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "REVIEW-A",
   "write_owner": "Architect (REVIEW-A)",
   "control": {
@@ -14,6 +14,16 @@
     "sha256": "a95183c0001440e7f242508a1948dc545cbc88b7bab1a3aee3aa68bf32ba0c83"
   },
   "usage_class": "medium",
-  "updated": "2026-10-22T18:00Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-07T08:51Z",
+  "updated_by": "Main Lane",
+  "close_reason": "completed",
+  "close_evidence": "Ledger row 13 (CLOSEREV-ARC a9c1cd19\u2026)",
+  "reconciled": {
+    "by": "Main Lane",
+    "at": "2026-11-07T08:51Z",
+    "record": "claude/packets/October_Close_Reconciliation.md",
+    "authority": "Founder 7 Nov 08:49 (architecture as recommended) + ML-1106-4",
+    "previous_state": "READY",
+    "previous_sha256": "cffa1d4cb9d693f47d8132152af0a355c9086d0b9cfed8d016cddec3922cec8a"
+  }
 }

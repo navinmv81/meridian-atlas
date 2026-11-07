@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-011.CLOSEREV-OPS",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-1-OPS",
   "write_owner": "Operations Lead (LANE-1-OPS)",
   "control": {
@@ -14,6 +14,16 @@
     "sha256": "0589d3d3f7c483893116d460eef2980741155ab54caa987f2472560e572f69f5"
   },
   "usage_class": "medium",
-  "updated": "2026-10-22T18:00Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-07T08:51Z",
+  "updated_by": "Main Lane",
+  "close_reason": "completed",
+  "close_evidence": "Ledger row 13 (CLOSEREV-OPS 408948c2\u2026)",
+  "reconciled": {
+    "by": "Main Lane",
+    "at": "2026-11-07T08:51Z",
+    "record": "claude/packets/October_Close_Reconciliation.md",
+    "authority": "Founder 7 Nov 08:49 (architecture as recommended) + ML-1106-4",
+    "previous_state": "READY",
+    "previous_sha256": "847cf7a31d4c11b7e513410e56bfe110181fca697cbc1cdc81b47e9e8b7d17cb"
+  }
 }

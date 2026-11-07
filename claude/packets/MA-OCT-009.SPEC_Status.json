@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-009.SPEC",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-7",
   "write_owner": "Engineering Lead (LANE-7)",
   "control": {
@@ -14,6 +14,16 @@
     "sha256": "ca66f8661ba9fb14923f6422925e1b15996e84255c2be15a525582d8eae4bfa7"
   },
   "usage_class": "medium",
-  "updated": "2026-10-25T08:30Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-07T08:51Z",
+  "updated_by": "Main Lane",
+  "close_reason": "completed",
+  "close_evidence": "Ledger row 22 (009/010 live 4e7ee20b)",
+  "reconciled": {
+    "by": "Main Lane",
+    "at": "2026-11-07T08:51Z",
+    "record": "claude/packets/October_Close_Reconciliation.md",
+    "authority": "Founder 7 Nov 08:49 (architecture as recommended) + ML-1106-4",
+    "previous_state": "READY",
+    "previous_sha256": "723ec8a38eb90467f9d01135bebe1b2afb9b499accf14f895986ab2d7b460b51"
+  }
 }

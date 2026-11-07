@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-002a",
-  "state": "EXECUTING",
+  "state": "CLOSED",
   "owner": "LANE-1-ENG",
   "write_owner": "Engineering Lead (LANE-1-ENG)",
   "control": {
@@ -16,7 +16,7 @@
   "blocker": null,
   "review_needed": true,
   "usage_class": "heavy",
-  "updated": "2026-10-12T22:45Z",
+  "updated": "2026-11-07T08:51Z",
   "updated_by": "Main Lane",
   "started": "2026-10-11T07:13Z (Founder Start Approval)",
   "days": {
@@ -36,5 +36,15 @@
   "rulings": [
     "ML-1011-2",
     "ML-1011-3"
-  ]
+  ],
+  "close_reason": "completed",
+  "close_evidence": "Ledger rows 5\u20138, 14 (002a report 594727fd\u2026)",
+  "reconciled": {
+    "by": "Main Lane",
+    "at": "2026-11-07T08:51Z",
+    "record": "claude/packets/October_Close_Reconciliation.md",
+    "authority": "Founder 7 Nov 08:49 (architecture as recommended) + ML-1106-4",
+    "previous_state": "EXECUTING",
+    "previous_sha256": "9c769e6d52fe258d3af3e28ab697e65827b4b1bc9d1eaba43b77d9d7015cabf5"
+  }
 }

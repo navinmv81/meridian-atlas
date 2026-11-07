@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-007.P1",
-  "state": "EXECUTING",
+  "state": "CLOSED",
   "owner": "LANE-1-ENG",
   "write_owner": "Engineering Lead (LANE-1-ENG)",
   "control": {
@@ -16,7 +16,7 @@
   "blocker": null,
   "review_needed": true,
   "usage_class": "heavy",
-  "updated": "2026-10-15T18:35Z",
+  "updated": "2026-11-07T08:51Z",
   "updated_by": "Main Lane",
   "worker_live": {
     "version": "73851c02-f891-478d-abe1-1e2e5290f11f",
@@ -27,5 +27,15 @@
   "report": {
     "file": "MA-OCT-007.P1_Report.md",
     "sha256": "a9227367a54d9e5836fbda540b8bc27c5832e6bcb86c04955809029407e39f33"
+  },
+  "close_reason": "completed",
+  "close_evidence": "Ledger rows 11\u201312 (P1 report b487f396\u2026; live 31 Oct)",
+  "reconciled": {
+    "by": "Main Lane",
+    "at": "2026-11-07T08:51Z",
+    "record": "claude/packets/October_Close_Reconciliation.md",
+    "authority": "Founder 7 Nov 08:49 (architecture as recommended) + ML-1106-4",
+    "previous_state": "EXECUTING",
+    "previous_sha256": "0a6fa2d1101c2f70782cc09abfaca5b3ff25169c4c5cb86a3ab5a2481b60b4d1"
   }
 }

@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-011.DIL29",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-11",
   "write_owner": "Data-Identity Lead (LANE-11)",
   "control": {
@@ -14,6 +14,16 @@
     "sha256": "540234cd2d97fcd1cd181af92d8ce7e338952bc5042f34cc7c0b96e176abb1db"
   },
   "usage_class": "medium",
-  "updated": "2026-10-22T18:00Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-07T08:51Z",
+  "updated_by": "Main Lane",
+  "close_reason": "completed",
+  "close_evidence": "Board CLOSED; A2 sample result recorded (FRI30.DIL / A2 to November)",
+  "reconciled": {
+    "by": "Main Lane",
+    "at": "2026-11-07T08:51Z",
+    "record": "claude/packets/October_Close_Reconciliation.md",
+    "authority": "Founder 7 Nov 08:49 (architecture as recommended) + ML-1106-4",
+    "previous_state": "READY",
+    "previous_sha256": "1ef9f4275fdeec9ad1e7ae88dabd644c57b91dc0fc42bae9fa4cc907c5f9e766"
+  }
 }

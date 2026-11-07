@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-008.BUILD",
-  "state": "REVIEW_NEEDED",
+  "state": "CLOSED",
   "owner": "LANE-8-ENG",
   "write_owner": "LANE-8-ENG",
   "control": {
@@ -16,11 +16,21 @@
   "blocker": null,
   "review_needed": true,
   "usage_class": "heavy",
-  "updated": "2026-10-16T18:55Z",
+  "updated": "2026-11-07T08:51Z",
   "updated_by": "Main Lane",
   "report": {
     "file": "MA-OCT-008.BUILD_Report.md",
     "sha256": "c58271be9d82bf1a6f02e96c7c1886237e118925a182d5d53e7a16d83ef73271"
   },
-  "remaining": "DIL \u00a714.2 sample + 3 links; Ops AC13 confirm; commit list; Architect close-out (fresh session)"
+  "remaining": "DIL \u00a714.2 sample + 3 links; Ops AC13 confirm; commit list; Architect close-out (fresh session)",
+  "close_reason": "completed",
+  "close_evidence": "Ledger rows 15, 23 (AC12 PASS; gate open 30 Oct)",
+  "reconciled": {
+    "by": "Main Lane",
+    "at": "2026-11-07T08:51Z",
+    "record": "claude/packets/October_Close_Reconciliation.md",
+    "authority": "Founder 7 Nov 08:49 (architecture as recommended) + ML-1106-4",
+    "previous_state": "REVIEW_NEEDED",
+    "previous_sha256": "52044d5580918ae72ba021eecc3b3ea962fc4ec571aa14ed06ff96952f0d5611"
+  }
 }

@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-005.SPEC",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "REVIEW-007",
   "write_owner": "UX Lead (REVIEW-007)",
   "control": {
@@ -14,6 +14,16 @@
     "sha256": "0d804183d5bbeb124cb51114e681fb78ec28a835871b6f5d49be5ca86e8a448d"
   },
   "usage_class": "medium",
-  "updated": "2026-10-25T08:30Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-07T08:51Z",
+  "updated_by": "Main Lane",
+  "close_reason": "completed",
+  "close_evidence": "Ledger row 24 (005 built and live 1109edb6)",
+  "reconciled": {
+    "by": "Main Lane",
+    "at": "2026-11-07T08:51Z",
+    "record": "claude/packets/October_Close_Reconciliation.md",
+    "authority": "Founder 7 Nov 08:49 (architecture as recommended) + ML-1106-4",
+    "previous_state": "READY",
+    "previous_sha256": "b30efc36fe22f93608bdb6206df976345f5ee831ee7513b4d25fa548a61d8d94"
+  }
 }

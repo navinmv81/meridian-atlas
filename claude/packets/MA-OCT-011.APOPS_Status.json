@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-011.APOPS",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-1-OPS",
   "write_owner": "Operations Lead (LANE-1-OPS)",
   "control": {
@@ -15,6 +15,16 @@
   },
   "blocker": "APILOT",
   "usage_class": "light",
-  "updated": "2026-10-21T14:00Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-07T08:51Z",
+  "updated_by": "Main Lane",
+  "close_reason": "superseded",
+  "close_evidence": "Bucket A deferred (Founder 21 Oct, ML-1021-2); A release never issued; carried to November as A2",
+  "reconciled": {
+    "by": "Main Lane",
+    "at": "2026-11-07T08:51Z",
+    "record": "claude/packets/October_Close_Reconciliation.md",
+    "authority": "Founder 7 Nov 08:49 (architecture as recommended) + ML-1106-4",
+    "previous_state": "READY",
+    "previous_sha256": "74a2f88db5d538a95879875f1b23c944be82e500447c0d38f445f6d30ed7d99f"
+  }
 }

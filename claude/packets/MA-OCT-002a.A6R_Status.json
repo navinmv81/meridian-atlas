@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-002a.A6R",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "REVIEW-A",
   "write_owner": "Architect (REVIEW-A)",
   "control": {
@@ -14,6 +14,16 @@
     "sha256": "9b0ac41e239421e1d43888495ce6372550db93d82fea2b316d61e81a6e0266dc"
   },
   "usage_class": "medium",
-  "updated": "2026-10-22T18:00Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-07T08:51Z",
+  "updated_by": "Main Lane",
+  "close_reason": "completed",
+  "close_evidence": "Ledger row 14 (A6R report 76fe7e01\u2026)",
+  "reconciled": {
+    "by": "Main Lane",
+    "at": "2026-11-07T08:51Z",
+    "record": "claude/packets/October_Close_Reconciliation.md",
+    "authority": "Founder 7 Nov 08:49 (architecture as recommended) + ML-1106-4",
+    "previous_state": "READY",
+    "previous_sha256": "4ad25c17baa270a2c9de34f3f8563f70faccb83b202ef5ea3fd4518192d3ac4d"
+  }
 }

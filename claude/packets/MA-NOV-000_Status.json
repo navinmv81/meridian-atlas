@@ -1,0 +1,47 @@
+{
+  "packet": "MA-NOV-000",
+  "state": "CLOSED",
+  "phase": "INVESTIGATION",
+  "owner": "Program Orchestrator (November Main Lane)",
+  "write_owner": "Engineering Lead (LANE-NOV-ENG) \u2014 claude/packets/MA-NOV-000_Report.md only",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-000_Control_v1.md",
+    "sha256": "9afaea82b7a9bfcad65e518b19d61ebe6e1d6f8c2705a962941ae30d73c6e1c0"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-000_Task_v1.md",
+    "sha256": "361b8a04faad8b07399e2a586cc63f7576e94263e5d1791f45b20074cbf28559"
+  },
+  "reviewer": "Architect (fresh read-only session, on demand)",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-07T08:52Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-06T21:19Z",
+    "words": "approve MA-NOV-000",
+    "control_sha256": "9afaea82b7a9bfcad65e518b19d61ebe6e1d6f8c2705a962941ae30d73c6e1c0",
+    "task_sha256": "361b8a04faad8b07399e2a586cc63f7576e94263e5d1791f45b20074cbf28559",
+    "recorded_by": "Main Lane"
+  },
+  "report": {
+    "file": "MA-NOV-000_Report.md",
+    "sha256": "8b04f45bc7be22efaf4e20e2dd4cf4a011ece7ca002fbfa2f994a942c1e34519"
+  },
+  "result": "Report verified by Main Lane 21:40Z (only the report written; spot checks: settings allows, 13 worktrees, 93 Status files, control-api routes). Architect review not run (Founder option).",
+  "rev": 2,
+  "decision": {
+    "by": "Founder",
+    "at": "2026-11-07T08:49Z",
+    "words": "approve architecture as recommended",
+    "choices": "1b launch via app-bundled binary; 2b model recorded once in claude/factory/config.json; 3a approvals via Main Lane; 4 Q6.1 ownership rule (pilot packets); 5a project-only settings + allowlist, 5b remove 3 npx-wrangler allows via CR; October reconciliation; Architect review of this report skipped (pilot gets independent review)",
+    "artifact_sha256": "8b04f45bc7be22efaf4e20e2dd4cf4a011ece7ca002fbfa2f994a942c1e34519"
+  },
+  "title": "Delivery-factory feasibility assessment",
+  "lane": "LANE-NOV-ENG / Claude Code",
+  "next_gate": "\u2014"
+}

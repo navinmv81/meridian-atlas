@@ -1,0 +1,41 @@
+{
+  "packet": "MA-NOV-BOOT",
+  "state": "CLOSED",
+  "owner": "Program Orchestrator (November Main Lane)",
+  "write_owner": "Engineering Lead (LANE-NOV-ENG)",
+  "control": {
+    "version": "v2",
+    "file": "MA-NOV-BOOT_Control_v2.md",
+    "sha256": "b6fd8d27fd54ba7ffe7f0d193f54fe2ba9d6284b7a969ef1ad4f7e0f6350c146"
+  },
+  "task": {
+    "version": "v2",
+    "file": "MA-NOV-BOOT_Task_v2.md",
+    "sha256": "8b527aef7e703cd1ecfc05e138a47d3b676a0788e322d964cb1d7575c5ac573c"
+  },
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-11-06T21:00Z",
+  "updated_by": "Main Lane",
+  "superseded": [
+    {
+      "file": "MA-NOV-BOOT_Control_v1.md",
+      "sha256": "719f0a4a89ab24c2b705582cb5ec225ec90173eb6bcb1733403d263cd8894206"
+    },
+    {
+      "file": "MA-NOV-BOOT_Task_v1.md",
+      "sha256": "7c715eb73e90d764aae0bb5da9c2c0fcd242cbfa8e9f538a6c6345b280282573"
+    }
+  ],
+  "note": "Task v2 corrected before release 20:35Z (scan A self-match rule); pre-release hash f554e70f\u2026 never given to a lane",
+  "report": {
+    "file": "MA-NOV-BOOT_Report.md",
+    "sha256": "78664d7ead355b973c88113b92a5a2ed2b7e71132df931c740b8231c4b9b7e00"
+  },
+  "result": "Commit a01ffe2 (15 paths) on October-2026, fast-forward from 5c3c57e; November-2026 created at a01ffe2, pushed with upstream, checked out. Main Lane verified from git and disk 21:00Z.",
+  "rev": 2,
+  "title": "Governance commit + November-2026 branch",
+  "lane": "LANE-NOV-ENG / Claude Code",
+  "next_gate": "\u2014"
+}

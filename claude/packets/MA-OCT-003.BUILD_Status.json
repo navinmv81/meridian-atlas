@@ -1,6 +1,6 @@
 {
   "packet": "MA-OCT-003.BUILD",
-  "state": "READY",
+  "state": "CLOSED",
   "owner": "LANE-8-ENG",
   "write_owner": "Engineering Lead (LANE-8-ENG)",
   "control": {
@@ -14,6 +14,16 @@
     "sha256": "963214b6730931360f9997d4bcd5be218f4cf4146a6b047b6b4f38dc03fa800a"
   },
   "usage_class": "heavy",
-  "updated": "2026-10-21T13:00Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-07T08:51Z",
+  "updated_by": "Main Lane",
+  "close_reason": "completed",
+  "close_evidence": "Ledger rows 16, 18, 20 (build 1307bf36\u2026; deploys 3\u20135)",
+  "reconciled": {
+    "by": "Main Lane",
+    "at": "2026-11-07T08:51Z",
+    "record": "claude/packets/October_Close_Reconciliation.md",
+    "authority": "Founder 7 Nov 08:49 (architecture as recommended) + ML-1106-4",
+    "previous_state": "READY",
+    "previous_sha256": "18158a39c572699b0e8e6ec8101ceef65107f4737e5d96153111165799b57840"
+  }
 }
