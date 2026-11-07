@@ -43,6 +43,7 @@ export function packetLease(root, id, status, nowMs) {
   return { source: file ? 'file' : 'status', lease, state: leaseState(lease, nowMs) };
 }
 
+// forRun: false (check) | true or 'headless' (dispatch run) | 'interactive' (dispatch begin)
 export function evaluate({ root, nowMs = Date.now(), forRun = false, prefix = 'MA-NOV-' }) {
   const packets = listStatus(prefix, { root });
   const pause = readPause(root);
@@ -76,18 +77,26 @@ export function evaluate({ root, nowMs = Date.now(), forRun = false, prefix = 'M
     }
     const pl = packetLease(root, id, s, nowMs);
     if (pl) {
-      if (pl.state === 'live') reasons.push(`live lease ${pl.lease.run_id || ''}`.trim());
+      if (pl.state === 'live') reasons.push(`running: live ${pl.lease.mode || 'headless'} lease ${pl.lease.run_id || ''}`.trim());
       else if (pl.state === 'expired-alive') reasons.push('lease expired but holder still running');
       else { reasons.push('stale lease (interrupted run)'); stale.push({ id, ...pl }); }
     }
     if (pause) reasons.push(`global pause (PAUSE.json${pause.reason ? `: ${pause.reason}` : ''})`);
     if (s.hold) reasons.push(`hold ${s.hold.type || '?'}${s.hold.reason ? `: ${s.hold.reason}` : ''}`);
     else if (cap) reasons.push(`capacity hold (set by ${cap.set_by || '?'} on ${cap.id})`);
+    // forRun: 'headless' (or true) needs the full run_profile; 'interactive' (begin) needs only allowed_write_paths.
     const rp = s.run_profile;
-    const rpMissing = !rp || !Array.isArray(rp.allowed_tools) || !rp.allowed_tools.length || !rp.permission_mode || !Array.isArray(rp.allowed_write_paths);
-    if (rpMissing) {
-      if (forRun) reasons.push('no complete run_profile (allowed_tools, permission_mode, allowed_write_paths)');
-      else if (s.state === 'READY') warnings[id] = ['no run_profile — dispatch run would refuse'];
+    const hasPaths = !!rp && Array.isArray(rp.allowed_write_paths);
+    const headlessOk = hasPaths && Array.isArray(rp.allowed_tools) && rp.allowed_tools.length > 0 && !!rp.permission_mode;
+    if (forRun === 'interactive') {
+      if (!hasPaths) reasons.push('no run_profile.allowed_write_paths (needed by begin)');
+    } else if (forRun) {
+      if (!headlessOk) reasons.push('no complete run_profile (allowed_tools, permission_mode, allowed_write_paths)');
+    } else if (s.state === 'READY') {
+      const w = [];
+      if (!hasPaths) w.push('no run_profile.allowed_write_paths — begin would refuse');
+      if (!headlessOk) w.push('no complete run_profile — headless dispatch run would refuse');
+      if (w.length) warnings[id] = w;
     }
     if (reasons.length) ineligible.push({ id, reasons });
     else eligible.push(id);

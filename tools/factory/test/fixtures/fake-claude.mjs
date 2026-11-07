@@ -6,6 +6,7 @@
 //   FAKE_REPORT=<rel path>     write a report file (relative to cwd)
 //   FAKE_WRITE_OUTSIDE=<rel>   write a file outside the allowed scope
 //   FAKE_QUOTA=1               emit a usage-limit error result event
+//   FAKE_SIGNIN_FAIL=1         emit the two not-signed-in lines seen in P1.DEMO run r-20261107T092212Z-c0da, exit 1
 //   FAKE_EXIT=<n>              exit code (default 0)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,6 +28,11 @@ if (sleep) await new Promise((r) => setTimeout(r, sleep));
 const put = (rel, text) => { const p = path.join(process.cwd(), rel); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, text); };
 if (env.FAKE_REPORT) put(env.FAKE_REPORT, `# stub report\nsession ${sid}\n`);
 if (env.FAKE_WRITE_OUTSIDE) put(env.FAKE_WRITE_OUTSIDE, 'outside scope\n');
+if (env.FAKE_SIGNIN_FAIL === '1') {
+  console.log(JSON.stringify({ type: 'assistant', message: { model: '<synthetic>', role: 'assistant', content: [{ type: 'text', text: 'Not logged in · Please run /login' }] }, session_id: sid, error: 'authentication_failed', is_api_error_message: true }));
+  console.log(JSON.stringify({ type: 'result', subtype: 'success', is_error: true, terminal_reason: 'api_error', result: 'Not logged in · Please run /login', session_id: sid }));
+  process.exit(1);
+}
 if (env.FAKE_QUOTA === '1') {
   console.log(JSON.stringify({ type: 'result', subtype: 'error', is_error: true, result: 'Claude AI usage limit reached|1762531200', session_id: sid }));
   process.exit(Number(env.FAKE_EXIT || 1));

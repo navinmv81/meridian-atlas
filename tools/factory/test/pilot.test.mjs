@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import { makeRepo, envFor, runNode, spawnNode, callCount, status, waitFor, stripGenerated, DISPATCH, FACTORY, REAL_ROOT } from './helpers.mjs';
 import { writeStatus, listStatus, OwnershipError, TransitionError, RevConflictError } from '../lib/state.mjs';
 import { acquireLease, LeaseError } from '../lib/lease.mjs';
@@ -286,4 +287,141 @@ test('13. generator is idempotent (two runs differ only in generated_at); refuse
   assert.deepEqual(diff, ['generated_at: 2026-11-07T10:00:00Z']);
   fs.writeFileSync(P(repo, 'claude', 'packets', 'STATUS_BOARD.md'), '# Status Board — October 2026\nhand-written\n');
   assert.throws(() => project({ root: repo.root }), /not a generated board/);
+});
+
+// ---- MA-NOV-P1.FIX: interactive mode (begin/end), --tools, sign-in failure ----
+const sha = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+const writeReport = (repo, id) => fs.writeFileSync(P(repo, 'claude', 'packets', `${id}_Report.md`), `# ${id} report (interactive)\n`);
+const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+
+test('16. begin -> EXECUTING + interactive lease + before.json; second begin refused; shown as running', () => {
+  const repo = makeRepo({ packets: [{ id: A, extra: { run_profile: { allowed_write_paths: [report(A)] } } }, B] });
+  const r = runNode(DISPATCH, ['begin', A], envFor(repo));
+  assert.equal(r.status, 0, r.stderr);
+  const m = r.stdout.trim().match(new RegExp(`^BEGIN ${A} run (r-\\S+) — work now; finish with: node tools/factory/dispatch\\.mjs end ${A}$`));
+  assert.ok(m, r.stdout);
+  const s = status(repo, A);
+  assert.equal(s.state, 'EXECUTING');
+  assert.equal(s.lease.mode, 'interactive');
+  assert.equal(s.lease.holder, 'interactive');
+  assert.equal(s.run.mode, 'interactive');
+  assert.equal(s.run.run_id, m[1]);
+  assert.equal(s.heartbeat, null);
+  assert.equal(s.updated_by, 'dispatcher');
+  assert.ok(fs.existsSync(P(repo, 'claude', 'factory', 'leases', `${A}.lease`)));
+  const before = JSON.parse(fs.readFileSync(P(repo, 'claude', 'factory', 'runs', m[1], 'before.json'), 'utf8'));
+  assert.equal(before.status_rev, s.rev);
+  assert.equal(typeof before.entries, 'object');
+  const again = runNode(DISPATCH, ['begin', A], envFor(repo));
+  assert.equal(again.status, 2);
+  assert.match(again.stderr, /refused: .*running: live interactive lease/);
+  const other = runNode(DISPATCH, ['begin', B], envFor(repo));
+  assert.equal(other.status, 2);
+  assert.match(other.stderr, /one at a time/);
+  assert.equal(runNode(DISPATCH, ['run', A], envFor(repo)).status, 2, 'headless run refused while interactive lease live');
+  const c = JSON.parse(runNode(DISPATCH, ['check'], envFor(repo)).stdout);
+  assert.deepEqual(c.running.map((x) => [x.id, x.mode, x.lease_state]), [[A, 'interactive', 'live']]);
+  assert.deepEqual(c.stale_handled, []);
+  assert.match(runNode(DISPATCH, ['status'], envFor(repo)).stdout, new RegExp(`${A}\\s+EXECUTING\\s+running:interactive ${m[1]} holder:interactive expires:`));
+  const board = fs.readFileSync(P(repo, 'claude', 'packets', 'STATUS_BOARD.md'), 'utf8');
+  assert.match(board, new RegExp(`\\*\\*Running:\\*\\* ${A} — interactive, holder interactive, run \`${m[1]}\`, started \\S+, lease expires \\S+`));
+  const html = fs.readFileSync(P(repo, 'claude', 'factory', 'control-tower.html'), 'utf8');
+  assert.match(html, /mode-interactive">interactive</);
+  assert.match(html, /no heartbeat expected/);
+  assert.ok(!/class="hb"/.test(html), 'no heartbeat indicator for an interactive run');
+  assert.match(html, /How to start a run/);
+});
+
+test('17. end with report -> REVIEW_NEEDED + report hash (Main Lane write and PAUSE.json during the run ignored)', () => {
+  const repo = makeRepo({ packets: [A, B] });
+  const b = runNode(DISPATCH, ['begin', A], envFor(repo));
+  assert.equal(b.status, 0, b.stderr);
+  writeReport(repo, A);
+  writeStatus(B, (x) => { x.next_gate = 'Main Lane note during run'; }, { writer: 'main-lane', expectRev: 1, root: repo.root });
+  fs.writeFileSync(P(repo, 'claude', 'factory', 'PAUSE.json'), JSON.stringify({ set_by: 'Founder', reason: 'pause during run' }));
+  const e = runNode(DISPATCH, ['end', A], envFor(repo));
+  assert.equal(e.status, 0, e.stderr + e.stdout);
+  const reportSha = sha(P(repo, 'claude', 'packets', `${A}_Report.md`));
+  assert.match(e.stdout.trim(), new RegExp(`^END ${A} run r-\\S+: REVIEW_NEEDED · report ${reportSha}$`));
+  const s = status(repo, A);
+  assert.equal(s.state, 'REVIEW_NEEDED');
+  assert.equal(s.run.report_sha256, reportSha);
+  assert.equal(s.run.mode, 'interactive');
+  assert.ok(s.run.ended);
+  assert.equal(s.lease, null);
+  assert.ok(fs.existsSync(P(repo, 'claude', 'factory', 'runs', s.run.run_id, 'lease.json')));
+  assert.ok(!fs.existsSync(P(repo, 'claude', 'factory', 'leases', `${A}.lease`)));
+  const run = JSON.parse(fs.readFileSync(P(repo, 'claude', 'factory', 'runs', s.run.run_id, 'run.json'), 'utf8'));
+  assert.equal(run.mode, 'interactive');
+  assert.deepEqual(run.scope_violations, []);
+  assert.match(fs.readFileSync(P(repo, 'claude', 'factory', 'control-tower.html'), 'utf8'), new RegExp(`${s.run.run_id}</code> ${A} · interactive · REVIEW_NEEDED`));
+  assert.equal(runNode(DISPATCH, ['end', A], envFor(repo)).status, 2, 'second end refused (no lease)');
+});
+
+test('18. end with an out-of-scope write -> BLOCKED (scope violation)', () => {
+  const repo = makeRepo({ packets: [A] });
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 0);
+  writeReport(repo, A);
+  fs.writeFileSync(P(repo, 'App', 'evil.js'), 'outside scope\n');
+  fs.appendFileSync(P(repo, 'App', 'keep.txt'), 'tracked file edited\n');
+  const e = runNode(DISPATCH, ['end', A], envFor(repo));
+  assert.equal(e.status, 3, e.stderr);
+  const s = status(repo, A);
+  assert.equal(s.state, 'BLOCKED');
+  assert.equal(s.run.blocked_reason, 'scope violation: App/evil.js, App/keep.txt');
+  assert.match(e.stdout, /^END .*: BLOCKED — scope violation: App\/evil\.js, App\/keep\.txt/);
+});
+
+test('19. end without report -> BLOCKED "no report"', () => {
+  const repo = makeRepo({ packets: [A] });
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 0);
+  const e = runNode(DISPATCH, ['end', A], envFor(repo));
+  assert.equal(e.status, 3);
+  const s = status(repo, A);
+  assert.equal(s.state, 'BLOCKED');
+  assert.match(s.run.blocked_reason, new RegExp(`^no report \\(expected claude/packets/${A}_Report\\.md\\)$`));
+});
+
+test('20. end after lease expiry -> BLOCKED "lease expired before end", no rerun', async () => {
+  const repo = makeRepo({ packets: [A], config: { lease_ttl_s: 1 } });
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 0);
+  await sleepMs(1300);
+  writeReport(repo, A);
+  assert.match(runNode(DISPATCH, ['status'], envFor(repo)).stdout, /\(EXPIRED\)/);
+  const c = JSON.parse(runNode(DISPATCH, ['check'], envFor(repo)).stdout);
+  assert.deepEqual(c.stale_handled, [], 'holder still alive: not treated as interrupted');
+  const e = runNode(DISPATCH, ['end', A], envFor(repo));
+  assert.equal(e.status, 3, e.stderr);
+  const s = status(repo, A);
+  assert.equal(s.state, 'BLOCKED');
+  assert.equal(s.run.blocked_reason, 'lease expired before end — Main Lane to confirm');
+  assert.equal(s.run.report_sha256, undefined);
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 2, 'never auto-rerun');
+  assert.equal(runNode(DISPATCH, ['end', A], envFor(repo)).status, 2);
+});
+
+test('21. headless argv contains --tools (and still --allowedTools)', () => {
+  const repo = makeRepo({ packets: [A] });
+  const r = runNode(DISPATCH, ['run', A], envFor(repo, { FAKE_REPORT: report(A) }));
+  assert.equal(r.status, 0, r.stderr);
+  const a = JSON.parse(fs.readFileSync(repo.calls, 'utf8').trim()).argv;
+  assert.equal(a[a.indexOf('--tools') + 1], 'Read,Write');
+  assert.equal(a[a.indexOf('--allowedTools') + 1], 'Read,Write');
+  assert.equal(status(repo, A).run.mode, 'headless');
+  const d = runNode(DISPATCH, ['run', 'MA-NOV-TB', '--dry-run'], envFor(repo));
+  assert.equal(d.status, 2, 'unknown packet refused');
+});
+
+test('22. sign-in failure -> BLOCKED "worker not signed in" (no hold, no retry)', () => {
+  const repo = makeRepo({ packets: [A, B] });
+  const r = runNode(DISPATCH, ['run', A], envFor(repo, { FAKE_SIGNIN_FAIL: '1' }));
+  assert.equal(r.status, 3, r.stderr);
+  const s = status(repo, A);
+  assert.equal(s.state, 'BLOCKED');
+  assert.equal(s.run.blocked_reason, 'worker not signed in');
+  assert.equal(s.run.exit_code, 1);
+  assert.equal(s.hold, undefined, 'no capacity hold');
+  assert.equal(callCount(repo), 1);
+  assert.equal(runNode(DISPATCH, ['run', A], envFor(repo)).status, 2, 'no retry');
+  assert.deepEqual(evaluate({ root: repo.root }).eligible, [B], 'other packets unaffected (no hold)');
 });

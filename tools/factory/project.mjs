@@ -54,9 +54,9 @@ function pick(s) {
     blocker: blockerText(s), usage_class: s.usage_class ?? null, updated: s.updated ?? null, updated_by: s.updated_by ?? null,
     control: pickObj(s.control, ['version', 'file', 'sha256']), task: pickObj(s.task, ['version', 'file', 'sha256']),
     start_approval: pickObj(s.start_approval, ['by', 'at', 'words']),
-    lease: pickObj(s.lease, ['run_id', 'holder', 'pid', 'acquired', 'expires']),
+    lease: pickObj(s.lease, ['run_id', 'holder', 'mode', 'pid', 'acquired', 'expires']),
     heartbeat: s.heartbeat ?? null,
-    run: pickObj(s.run, ['run_id', 'session_id', 'started', 'ended', 'exit_code', 'outcome', 'blocked_reason', 'report_sha256']),
+    run: pickObj(s.run, ['run_id', 'mode', 'session_id', 'started', 'ended', 'exit_code', 'outcome', 'blocked_reason', 'report_sha256']),
     hold: pickObj(s.hold, ['type', 'set_by', 'at', 'reason', 'resume_state', 'reset_at']),
   };
 }
@@ -78,6 +78,14 @@ export function buildSnapshot({ root, now = new Date() }) {
   };
 }
 
+export const runMode = (p) => (p.lease && p.lease.mode) || (p.run && p.run.mode) || 'headless';
+
+function runningText(snap) {
+  const r = snap.packets.filter((p) => p.state === 'EXECUTING' || p.lease);
+  if (!r.length) return 'none (dispatcher idle)';
+  return r.map((p) => `${p.id} — ${runMode(p)}, holder ${dash(p.lease && p.lease.holder)}, run \`${dash(p.run && p.run.run_id)}\`, started ${dash((p.run && p.run.started) || (p.lease && p.lease.acquired))}, lease expires ${dash(p.lease && p.lease.expires)}`).join(' · ');
+}
+
 export function renderBoard(snap) {
   const lines = [
     BOARD_TITLE,
@@ -87,6 +95,8 @@ export function renderBoard(snap) {
     '*Projection of `claude/packets/MA-NOV-*_Status.json` (the only live state). Hand edits are overwritten. October board archived unchanged at `claude/packets/STATUS_BOARD_October_2026.md`.*',
     '',
     `**Global pause:** ${snap.pause ? `ON — ${cell(snap.pause.reason)}` : 'off'} · **Capacity hold:** ${snap.capacity_hold ? `ON — ${cell(snap.capacity_hold.reason)} (set by ${cell(snap.capacity_hold.set_by)})` : 'off'}`,
+    '',
+    `**Running:** ${runningText(snap)}`,
     '',
     BOARD_SECTION,
     '',
@@ -126,14 +136,22 @@ export function renderHtml(snap) {
     ...by('DRAFT').map((p) => card(p, '<div class="act">Draft — awaiting admission by the Main Lane</div>')),
     ...P.filter((p) => p.hold && !['CLOSED'].includes(p.state)).map((p) => card(p, `<div class="act">Hold ${esc(p.hold.type)} — resume via the Main Lane</div>`)),
   ];
-  const running = by('EXECUTING').map((p) => card(p, `<div class="meta">Lease: ${esc(p.lease && p.lease.holder)} · run <code>${esc(p.run && p.run.run_id)}</code> · expires ${esc(p.lease && p.lease.expires)} · heartbeat <span class="hb" data-hb="${esc(p.heartbeat)}" data-exp="${esc(p.lease && p.lease.expires)}">${esc(p.heartbeat)}</span></div>`));
+  const running = by('EXECUTING').map((p) => {
+    const mode = runMode(p);
+    const l = p.lease || {};
+    const common = `<div class="meta"><span class="pill mode-${esc(mode)}">${esc(mode)}</span> holder ${esc(l.holder)} · run <code>${esc(p.run && p.run.run_id)}</code> · started ${esc((p.run && p.run.started) || l.acquired)} · lease expires <span class="lx" data-exp="${esc(l.expires)}">${esc(l.expires)}</span></div>`;
+    const tail = mode === 'interactive'
+      ? `<div class="meta">Interactive session — no heartbeat expected; it finishes with <code>node tools/factory/dispatch.mjs end ${esc(p.id)}</code>.</div>`
+      : `<div class="meta">Heartbeat <span class="hb" data-hb="${esc(p.heartbeat)}" data-exp="${esc(l.expires)}">${esc(p.heartbeat)}</span></div>`;
+    return card(p, common + tail);
+  });
   const anyLease = P.some((p) => p.lease);
   const ready = P.filter((p) => p.state === 'READY' && p.start_approval).map((p) => card(p, `<div class="meta">Start approval: ${esc(p.start_approval.by)} ${esc(p.start_approval.at)} — “${esc(p.start_approval.words)}”</div>${p.warnings.length ? `<div class="meta">${p.warnings.map(esc).join('; ')}</div>` : ''}`));
   const review = by('REVIEW_NEEDED', 'CHANGES_REQUESTED', 'APPROVED').map((p) => card(p, p.run && p.run.report_sha256 ? `<div class="meta">Report <code>${esc(p.run.report_sha256)}</code></div>` : ''));
   const blocked = by('BLOCKED', 'PAUSED', 'CAPACITY_HOLD').map((p) => card(p));
   const closed = by('CLOSED').sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || '')) || a.id.localeCompare(b.id)).slice(0, 10)
     .map((p) => `<div class="line"><b>${esc(p.id)}</b> — ${esc(p.title)} <span class="dim">${esc(p.updated)}</span></div>`);
-  const runs = snap.runs.map((r) => `<div class="line"><code>${esc(r.run_id)}</code> ${esc(r.packet)} · ${esc(r.outcome)} · exit ${esc(r.exit_code)} · ${esc(r.started)} → ${esc(r.ended)}${r.blocked_reason ? ` · ${esc(r.blocked_reason)}` : ''}</div>`);
+  const runs = snap.runs.map((r) => `<div class="line"><code>${esc(r.run_id)}</code> ${esc(r.packet)} · ${esc(r.mode || 'headless')} · ${esc(r.outcome)}${r.mode === 'interactive' ? '' : ` · exit ${esc(r.exit_code)}`} · ${esc(r.started)} → ${esc(r.ended)}${r.blocked_reason ? ` · ${esc(r.blocked_reason)}` : ''}</div>`);
   const logic = TOWER_LOGIC_FUNCTIONS.map((f) => f.toString()).join('\n');
   const json = stableStringify(snap).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
@@ -151,7 +169,7 @@ h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 8px;border-bott
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0}.banner.red{border-color:var(--red)}.banner.amber{border-color:var(--amber)}
 .pill{background:var(--pill);border-radius:10px;padding:1px 8px;font-size:12px}.pill.ok{color:var(--ok)}.t{margin:2px 0}.meta,.dim,.empty{color:var(--dim);font-size:12.5px}
 .why{color:var(--amber);font-size:12.5px}.act{color:var(--fg);font-size:12.5px;font-style:italic}.line{padding:3px 0;border-bottom:1px dashed var(--line)}
-code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace}.hb.ok{color:var(--ok)}.hb.amber{color:var(--amber)}.hb.red{color:var(--red);font-weight:600}
+code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace}.mode-interactive{color:var(--ok)}.lx.red{color:var(--red);font-weight:600}.hb.ok{color:var(--ok)}.hb.amber{color:var(--amber)}.hb.red{color:var(--red);font-weight:600}
 #status{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:10px;background:var(--pill)}#status.offline{background:var(--red);color:#fff;font-weight:600}
 pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;word-break:break-all}footer{margin-top:24px;color:var(--dim);font-size:12px}
 </style>
@@ -166,7 +184,7 @@ ${section('In review', review, 'Nothing in review.')}
 ${section('Blocked / held', blocked, 'Nothing blocked or held.')}
 ${section('Closed (last 10)', closed, 'None closed.')}
 ${section('Recent runs', runs, 'No dispatcher runs recorded.')}
-<section><h2>Fixed line</h2><pre>${esc(snap.fixed_line)}</pre></section>
+<section><h2>How to start a run</h2><p class="meta">Founder: open a Claude Code session and type the fixed line. Runs are interactive (Founder choice B, 7 Nov): the session brackets its work with <code>node tools/factory/dispatch.mjs begin &lt;ID&gt;</code> … <code>end &lt;ID&gt;</code>, so this page shows it as running and the scope check applies.</p><pre>${esc(snap.fixed_line)}</pre></section>
 <footer>generated_at ${esc(snap.generated_at)} · node tools/factory/project.mjs · no secrets, no network</footer>
 <script type="application/json" id="snapshot">${json}</script>
 <script id="tower-logic">
@@ -188,6 +206,13 @@ ${logic}
       var c = heartbeatClass(hb, exp, now, snap.config.heartbeat_amber_s);
       hbs[i].className = 'hb ' + c;
       hbs[i].textContent = (hb ? formatAge((now - Date.parse(hb)) / 1000) + ' ago' : 'none') + (c === 'red' ? ' — STALE (past lease expiry)' : '');
+    }
+    var lxs = document.querySelectorAll('.lx');
+    for (var j = 0; j < lxs.length; j++) {
+      var e = lxs[j].getAttribute('data-exp'); e = e === '—' ? null : e;
+      var lc = leaseClass(e, now);
+      lxs[j].className = 'lx ' + lc;
+      if (lc === 'red') lxs[j].textContent = e + ' — EXPIRED';
     }
   }
   tick(); setInterval(tick, 5000);

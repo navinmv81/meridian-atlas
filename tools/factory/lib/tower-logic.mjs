@@ -14,6 +14,12 @@ export function heartbeatClass(heartbeatIso, expiresIso, nowMs, amberS) {
   return (nowMs - Date.parse(heartbeatIso)) / 1000 > amberS ? 'amber' : 'ok';
 }
 
+// Lease expiry colour for interactive runs (no heartbeat is expected from an interactive session).
+export function leaseClass(expiresIso, nowMs) {
+  if (!expiresIso) return 'ok';
+  return nowMs > Date.parse(expiresIso) ? 'red' : 'ok';
+}
+
 export function formatAge(s) {
   if (!(s >= 0)) return '?';
   if (s < 90) return Math.round(s) + 's';
@@ -22,4 +28,4 @@ export function formatAge(s) {
   return Math.round(s / 86400) + 'd';
 }
 
-export const TOWER_LOGIC_FUNCTIONS = [towerState, heartbeatClass, formatAge];
+export const TOWER_LOGIC_FUNCTIONS = [towerState, heartbeatClass, leaseClass, formatAge];

@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-// Dispatcher (MA-NOV-P1.BUILD Task §5). Node built-ins only.
-//   node tools/factory/dispatch.mjs check            eligibility (§3) as JSON; handles stale leases; exit 0
+// Dispatcher (MA-NOV-P1.BUILD Task §5; interactive mode MA-NOV-P1.FIX). Node built-ins only.
+//   node tools/factory/dispatch.mjs check            eligibility (§3) + running leases as JSON; handles stale leases; exit 0
 //   node tools/factory/dispatch.mjs status           one line per November packet
-//   node tools/factory/dispatch.mjs run <ID> [--dry-run]
-// run exit codes: 0 finished → REVIEW_NEEDED · 2 refused (nothing launched) · 3 finished → BLOCKED · 1 internal error.
-// One bounded run, no retries, never relaunches an interrupted run.
+//   node tools/factory/dispatch.mjs begin <ID>       interactive run: lease + EXECUTING + before.json (Founder choice B)
+//   node tools/factory/dispatch.mjs end <ID>         interactive run: scope check → REVIEW_NEEDED | BLOCKED
+//   node tools/factory/dispatch.mjs run <ID> [--dry-run]   headless run (kept for later; needs a signed-in worker)
+// exit codes: 0 begun / finished → REVIEW_NEEDED · 2 refused (nothing changed) · 3 finished → BLOCKED · 1 internal error.
+// One bounded run at a time, no retries, never relaunches an interrupted run.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -13,7 +15,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { repoRoot, factoryDir, sha256File, isoSec, readConfig } from './lib/util.mjs';
 import { readStatus, writeStatusFresh, listStatus, statusPath } from './lib/state.mjs';
 import { evaluate, reportCandidates } from './lib/eligibility.mjs';
-import { acquireLease, retireLease, LeaseError } from './lib/lease.mjs';
+import { acquireLease, retireLease, readLeaseFile, leaseState, LeaseError } from './lib/lease.mjs';
 import { project } from './project.mjs';
 
 export class RefusedError extends Error { constructor(m) { super(m); this.name = 'RefusedError'; } }
@@ -115,6 +117,10 @@ function statusRevs(root) {
 
 // Founder-action files written during a run; never a worker scope violation.
 const FOUNDER_ACTION_FILES = ['claude/factory/PAUSE.json'];
+// In-flight atomic-write temp files of the state library (.<file>.<pid>.<hex>.tmp) and the generator
+// (.<file>.<pid>.tmp), directly in claude/packets/ or claude/factory/. A concurrent Main Lane write can be caught
+// mid-rename by one git snapshot and not the other; these are never a worker scope violation.
+const ATOMIC_TMP_RE = /^claude\/(packets|factory)\/\.[^/]+\.\d+(\.[0-9a-f]+)?\.tmp$/;
 
 function detectQuota(files) {
   for (const f of files) {
@@ -161,32 +167,103 @@ export function handleStale(root, nowMs = Date.now(), log = console.log) {
 
 function buildArgs(cfg, s, sessionId) {
   const rp = s.run_profile;
+  const tools = rp.allowed_tools.join(',');
+  // --tools limits which tools exist at all; --allowedTools only pre-approves them (P1.DEMO finding: Bash,
+  // WebSearch and Task were still visible with --allowedTools alone). Both are passed.
   return ['-p', '--session-id', sessionId, '--model', cfg.model, '--output-format', 'stream-json', '--verbose',
     '--permission-mode', rp.permission_mode, '--permission-prompts', 'none',
-    '--allowedTools', rp.allowed_tools.join(','), '--setting-sources', 'project'];
+    '--tools', tools, '--allowedTools', tools, '--setting-sources', 'project'];
 }
 
 function buildPrompt(id, s) {
   return `Execute claude/packets/${s.task.file} under claude/packets/${s.control.file} (Control sha256 ${s.control.sha256}, Task sha256 ${s.task.sha256}). Founder Start Approval recorded in claude/packets/${id}_Status.json.\n`;
 }
 
-export async function runPacket(id, { root = repoRoot(), dryRun = false, env = process.env, log = console.log } = {}) {
-  handleStale(root, Date.now(), log);
-  // 1. eligibility
-  const ev = evaluate({ root, forRun: true });
+// Sign-in failure, as seen in P1.DEMO run r-20261107T092212Z-c0da: an event with "error":"authentication_failed"
+// and a result "Not logged in · Please run /login". Classified as BLOCKED "worker not signed in" — no hold, no retry.
+const SIGNIN_RE = /not logged in|please run \/login|authentication_failed/i;
+export function detectSignin(files) {
+  for (const f of files) {
+    if (!fs.existsSync(f)) continue;
+    for (const line of fs.readFileSync(f, 'utf8').split('\n')) {
+      if (!line.trim()) continue;
+      if (f.endsWith('.err')) { if (SIGNIN_RE.test(line)) return true; continue; }
+      let ev; try { ev = JSON.parse(line); } catch { continue; }
+      if (ev && ev.error === 'authentication_failed') return true;
+      if (ev && ev.type === 'result' && ev.is_error && /not logged in/i.test(String(ev.result))) return true;
+    }
+  }
+  return false;
+}
+
+const newRunId = (d) => `r-${d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')}-${crypto.randomBytes(2).toString('hex')}`;
+
+function refuseUnlessEligible(root, id, forRun) {
+  const ev = evaluate({ root, forRun });
   if (!ev.eligible.includes(id)) {
     const why = (ev.ineligible.find((x) => x.id === id) || { reasons: ['no such November packet'] }).reasons;
     throw new RefusedError(`${id} is not eligible: ${why.join('; ')}`);
   }
-  // Pilot: one worker at a time across all packets (keeps the post-run scope diff unambiguous).
-  const leasesDirPath = path.join(factoryDir(root), 'leases');
-  const others = fs.existsSync(leasesDirPath) ? fs.readdirSync(leasesDirPath).filter((f) => f.endsWith('.lease') && f !== `${id}.lease`) : [];
-  if (others.length) throw new RefusedError(`another run holds a lease (${others.join(', ')}) — the pilot runs one worker at a time`);
+}
+
+// Pilot: one run at a time across all packets (keeps the scope diff unambiguous).
+function refuseIfOtherLease(root, id) {
+  const dir = path.join(factoryDir(root), 'leases');
+  const others = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.lease') && f !== `${id}.lease`) : [];
+  if (others.length) throw new RefusedError(`another run holds a lease (${others.join(', ')}) — the pilot runs one at a time`);
+}
+
+function statusMark(root, id) {
+  return { rev: readStatus(id, { root }).rev, hash: sha256File(statusPath(id, root)) };
+}
+
+// Shared step 7 for `run` and `end`: scope check → outcome → Status → run.json → lease to run folder → regenerate.
+// `decide({violations, report})` returns {outcome, reason}.
+function finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota = null, summaryExtra = {}, log }) {
+  const after = gitSnapshot(root);
+  // Dispatcher-owned paths. The packet's Status file is checked separately below; the two generated
+  // projections are excluded because they are regenerated from Status after every run anyway.
+  const own = [`claude/factory/runs/${runId}/`, 'claude/factory/leases/', `claude/packets/${id}_Status.json`,
+    'claude/packets/STATUS_BOARD.md', 'claude/factory/control-tower.html'];
+  const revsAfter = statusRevs(root);
+  // Another packet's Status written through the state library (rev bumped) is a Main Lane write, not the worker's.
+  const legit = (p) => FOUNDER_ACTION_FILES.includes(p) || ATOMIC_TMP_RE.test(p) || (p in revsBefore && p in revsAfter && revsAfter[p] > revsBefore[p]);
+  const allowed = (s.run_profile && s.run_profile.allowed_write_paths) || [];
+  const violations = before ? scopeViolations(before, after, allowed, own, legit) : [];
+  if (mark && readStatus(id, { root }).rev === mark.rev && sha256File(statusPath(id, root)) !== mark.hash) {
+    violations.push(`claude/packets/${id}_Status.json (edited outside the state library)`);
+  }
+  const report = reportCandidates(root, id, s).find((p) => fs.existsSync(p)) || null;
+  const { outcome, reason } = decide({ violations, report });
+  const reportSha = outcome === 'REVIEW_NEEDED' && report ? sha256File(report) : null;
+  const ended = new Date();
+  writeStatusFresh(id, (x) => {
+    x.state = outcome; x.lease = null;
+    x.run = { ...runRec, ...(summaryExtra.run || {}), ended: isoSec(ended), outcome,
+      ...(reason ? { blocked_reason: reason } : {}), ...(reportSha ? { report_file: rel(root, report), report_sha256: reportSha } : {}) };
+    x.updated = isoSec(ended); x.updated_by = 'dispatcher';
+  }, { writer: 'dispatcher', root });
+  if (quota) {
+    writeStatusFresh(id, (x) => { x.hold = { type: 'CAPACITY_HOLD', set_by: 'dispatcher', reason: `worker log: ${quota}`, at: isoSec(ended) }; }, { writer: 'dispatcher-hold', root });
+  }
+  const summary = { run_id: runId, packet: id, mode: runRec.mode, ...(summaryExtra.summary || {}), started: runRec.started, ended: isoSec(ended),
+    outcome, blocked_reason: reason, report_sha256: reportSha, capacity_hold: !!quota, scope_violations: violations };
+  const runDir = path.join(factoryDir(root), 'runs', runId);
+  fs.mkdirSync(runDir, { recursive: true });
+  fs.writeFileSync(path.join(runDir, 'run.json'), JSON.stringify(summary, null, 2) + '\n');
+  retireLease(root, id, runId, 'lease.json'); // rename, no delete
+  try { project({ root }); } catch (e) { log(`project.mjs: ${e.message}`); }
+  return summary;
+}
+
+// ---- headless mode (kept for later; Founder chose interactive, sign-in option B) ----
+export async function runPacket(id, { root = repoRoot(), dryRun = false, env = process.env, log = console.log } = {}) {
+  handleStale(root, Date.now(), log);
+  refuseUnlessEligible(root, id, 'headless');                     // 1. eligibility
+  refuseIfOtherLease(root, id);
   const cfg = readConfig(root, { required: true });
-  // 2. binary
-  const { bin, version } = resolveBinary(cfg, env);
-  // 3. model — never invented or changed
-  if (!cfg.model) throw new RefusedError('Founder has not recorded the model (choice 2b)');
+  const { bin, version } = resolveBinary(cfg, env);                // 2. binary
+  if (!cfg.model) throw new RefusedError('Founder has not recorded the model (choice 2b)'); // 3. never invented
   const s = readStatus(id, { root });
   const sessionId = crypto.randomUUID();
   const args = buildArgs(cfg, s, sessionId);
@@ -195,35 +272,32 @@ export async function runPacket(id, { root = repoRoot(), dryRun = false, env = p
     log(JSON.stringify({ dry_run: true, id, bin, version, args, prompt: prompt.trim(), note: 'nothing written, no lease taken' }, null, 2));
     return { dryRun: true, args };
   }
-  // 4. lease (O_EXCL)
-  const started = new Date();
-  const runId = `r-${started.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')}-${crypto.randomBytes(2).toString('hex')}`;
-  const expires = new Date(started.getTime() + cfg.lease_ttl_s * 1000);
-  const lease = { run_id: runId, holder: 'dispatcher', pid: process.pid, acquired: isoSec(started), expires: isoSec(expires) };
+  const started = new Date();                                       // 4. lease (O_EXCL)
+  const runId = newRunId(started);
+  const lease = { run_id: runId, holder: 'dispatcher', mode: 'headless', pid: process.pid, acquired: isoSec(started),
+    expires: isoSec(new Date(started.getTime() + cfg.lease_ttl_s * 1000)) };
   try { acquireLease(root, id, lease); } catch (e) { if (e instanceof LeaseError) throw new RefusedError(e.message); throw e; }
   const runDir = path.join(factoryDir(root), 'runs', runId);
   fs.mkdirSync(runDir, { recursive: true });
   const logFile = path.join(runDir, 'worker.jsonl');
   const errFile = path.join(runDir, 'worker.err');
-  const runRec = { run_id: runId, session_id: sessionId, started: isoSec(started), log: rel(root, logFile) };
-  let lastWritten;
-  const record = (mutate, writer = 'dispatcher') => {
-    const w = writeStatusFresh(id, (x) => { mutate(x); if (writer === 'dispatcher') { x.updated = isoSec(); x.updated_by = 'dispatcher'; } }, { writer, root });
-    lastWritten = { rev: w.rev, hash: sha256File(statusPath(id, root)) };
-    return w;
+  const runRec = { run_id: runId, mode: 'headless', session_id: sessionId, started: isoSec(started), log: rel(root, logFile) };
+  let mark = null;
+  const record = (mutate) => {
+    writeStatusFresh(id, (x) => { mutate(x); x.updated = isoSec(); x.updated_by = 'dispatcher'; }, { writer: 'dispatcher', root });
+    mark = statusMark(root, id);
   };
-  // 5. EXECUTING
-  try {
+  try {                                                              // 5. EXECUTING
     record((x) => { x.state = 'EXECUTING'; x.lease = lease; x.run = runRec; x.heartbeat = isoSec(started); });
   } catch (e) {
     retireLease(root, id, runId, 'lease.unused.json');
     throw e;
   }
   try { project({ root }); } catch (e) { log(`project.mjs: ${e.message}`); }
-  const before = gitSnapshot(root);
+  // revs first, then git: a Main Lane write landing between the two then shows as a rev bump (legit), not a raw edit.
   const revsBefore = statusRevs(root);
-  // 6. launch — one attempt, no retry
-  const outFd = fs.openSync(logFile, 'a');
+  const before = gitSnapshot(root);
+  const outFd = fs.openSync(logFile, 'a');                          // 6. launch — one attempt, no retry
   const errFd = fs.openSync(errFile, 'a');
   let interrupted = null;
   const child = spawn(bin, args, { cwd: root, stdio: ['pipe', outFd, errFd], env });
@@ -231,13 +305,9 @@ export async function runPacket(id, { root = repoRoot(), dryRun = false, env = p
   child.stdin.end(prompt);
   const fwd = (sig) => { interrupted = sig; try { child.kill('SIGTERM'); } catch { /* gone */ } };
   process.once('SIGINT', fwd); process.once('SIGTERM', fwd);
-  const hbMs = Number(env.FACTORY_HEARTBEAT_MS) || 30000;
   const hb = setInterval(() => {
-    try {
-      const m = fs.statSync(logFile).mtime;
-      record((x) => { x.heartbeat = isoSec(m); });
-    } catch { /* rev conflict or transient: skip this tick */ }
-  }, hbMs);
+    try { const m = fs.statSync(logFile).mtime; record((x) => { x.heartbeat = isoSec(m); }); } catch { /* rev conflict or transient: skip tick */ }
+  }, Number(env.FACTORY_HEARTBEAT_MS) || 30000);
   const { code, signal } = await new Promise((resolve) => {
     child.on('error', (e) => { fs.appendFileSync(errFile, `spawn error: ${e.message}\n`); resolve({ code: null, signal: null }); });
     child.on('exit', (c, sg) => resolve({ code: c, signal: sg }));
@@ -245,74 +315,131 @@ export async function runPacket(id, { root = repoRoot(), dryRun = false, env = p
   clearInterval(hb);
   process.removeListener('SIGINT', fwd); process.removeListener('SIGTERM', fwd);
   fs.closeSync(outFd); fs.closeSync(errFd);
-  // 7. scope check + outcome
-  const after = gitSnapshot(root);
-  // Dispatcher-owned paths. The packet's Status file is checked separately below; the two generated
-  // projections are excluded because they are regenerated from Status after every run anyway.
-  const own = [`claude/factory/runs/${runId}/`, 'claude/factory/leases/', `claude/packets/${id}_Status.json`,
-    'claude/packets/STATUS_BOARD.md', 'claude/factory/control-tower.html'];
-  const revsAfter = statusRevs(root);
-  // Another packet's Status written through the state library (rev bumped) is a Main Lane write, not the worker's.
-  const legit = (p) => FOUNDER_ACTION_FILES.includes(p) || (p in revsBefore && p in revsAfter && revsAfter[p] > revsBefore[p]);
-  const violations = scopeViolations(before, after, s.run_profile.allowed_write_paths, own, legit);
-  const now = readStatus(id, { root });
-  if (lastWritten && now.rev === lastWritten.rev && sha256File(statusPath(id, root)) !== lastWritten.hash) {
-    violations.push(`claude/packets/${id}_Status.json (edited outside the state library)`);
-  }
-  const report = reportCandidates(root, id, s).find((p) => fs.existsSync(p)) || null;
-  const quota = detectQuota([logFile, errFile]);
-  let outcome; let reason = null; let reportSha = null;
-  if (violations.length) { outcome = 'BLOCKED'; reason = `scope violation: ${violations.join(', ')}`; }
-  else if (interrupted) { outcome = 'BLOCKED'; reason = `dispatcher interrupted (${interrupted})`; }
-  else if (code === 0 && report) { outcome = 'REVIEW_NEEDED'; reportSha = sha256File(report); }
-  else if (code !== 0) { outcome = 'BLOCKED'; reason = `worker exit ${code === null ? 'none' : code}${signal ? ` (${signal})` : ''}${quota ? ' — usage/quota limit' : ''}`; }
-  else { outcome = 'BLOCKED'; reason = `worker exited 0 without the report (${reportCandidates(root, id, s).map((p) => rel(root, p)).join(' or ')})`; }
-  const ended = new Date();
-  record((x) => {
-    x.state = outcome; x.lease = null;
-    x.run = { ...runRec, ended: isoSec(ended), exit_code: code, signal: signal || null, outcome,
-      ...(reason ? { blocked_reason: reason } : {}), ...(reportSha ? { report_file: rel(root, report), report_sha256: reportSha } : {}) };
-  });
-  if (quota) {
-    record((x) => { x.hold = { type: 'CAPACITY_HOLD', set_by: 'dispatcher', reason: `worker log: ${quota}`, at: isoSec(ended) }; }, 'dispatcher-hold');
-  }
-  const summary = { run_id: runId, packet: id, session_id: sessionId, bin, bin_version: version, model: cfg.model, started: isoSec(started), ended: isoSec(ended),
-    exit_code: code, signal: signal || null, outcome, blocked_reason: reason, report_sha256: reportSha, capacity_hold: !!quota, scope_violations: violations };
-  fs.writeFileSync(path.join(runDir, 'run.json'), JSON.stringify(summary, null, 2) + '\n');
-  // 8. lease → run folder (rename, no delete)
-  retireLease(root, id, runId, 'lease.json');
-  try { project({ root }); } catch (e) { log(`project.mjs: ${e.message}`); }
-  log(`${id} run ${runId}: ${outcome}${reason ? ` — ${reason}` : ''}${quota ? ' · CAPACITY_HOLD set' : ''}`);
+  const signin = detectSignin([logFile, errFile]);
+  const quota = signin ? null : detectQuota([logFile, errFile]);
+  const decide = ({ violations, report }) => {                     // 7. outcome
+    if (violations.length) return { outcome: 'BLOCKED', reason: `scope violation: ${violations.join(', ')}` };
+    if (interrupted) return { outcome: 'BLOCKED', reason: `dispatcher interrupted (${interrupted})` };
+    if (signin) return { outcome: 'BLOCKED', reason: 'worker not signed in' };
+    if (code === 0 && report) return { outcome: 'REVIEW_NEEDED', reason: null };
+    if (code !== 0) return { outcome: 'BLOCKED', reason: `worker exit ${code === null ? 'none' : code}${signal ? ` (${signal})` : ''}${quota ? ' — usage/quota limit' : ''}` };
+    return { outcome: 'BLOCKED', reason: `worker exited 0 without the report (${reportCandidates(root, id, s).map((p) => rel(root, p)).join(' or ')})` };
+  };
+  const summary = finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota, log,
+    summaryExtra: { run: { exit_code: code, signal: signal || null }, summary: { session_id: sessionId, bin, bin_version: version, model: cfg.model, exit_code: code, signal: signal || null } } });
+  log(`${id} run ${runId}: ${summary.outcome}${summary.blocked_reason ? ` — ${summary.blocked_reason}` : ''}${quota ? ' · CAPACITY_HOLD set' : ''}`);
   return summary;
 }
 
+// ---- interactive mode (Founder choice B): the session started by the fixed line brackets its own work ----
+// Holder pid = the calling shell's parent (the interactive Claude Code process), else the shell itself.
+function holderPid() {
+  const r = spawnSync('ps', ['-o', 'ppid=', '-p', String(process.ppid)], { encoding: 'utf8' });
+  const pid = parseInt((r.stdout || '').trim(), 10);
+  return Number.isInteger(pid) && pid > 1 ? pid : process.ppid;
+}
+
+export function beginPacket(id, { root = repoRoot(), log = console.log } = {}) {
+  handleStale(root, Date.now(), log);
+  refuseUnlessEligible(root, id, 'interactive');
+  refuseIfOtherLease(root, id);
+  const cfg = readConfig(root, { required: true });
+  const started = new Date();
+  const runId = newRunId(started);
+  const lease = { run_id: runId, holder: 'interactive', mode: 'interactive', pid: holderPid(), acquired: isoSec(started),
+    expires: isoSec(new Date(started.getTime() + cfg.lease_ttl_s * 1000)) };
+  try { acquireLease(root, id, lease); } catch (e) { if (e instanceof LeaseError) throw new RefusedError(e.message); throw e; }
+  const runRec = { run_id: runId, mode: 'interactive', started: isoSec(started) };
+  try {
+    writeStatusFresh(id, (x) => { x.state = 'EXECUTING'; x.lease = lease; x.run = runRec; x.heartbeat = null; x.updated = isoSec(started); x.updated_by = 'dispatcher'; },
+      { writer: 'dispatcher', root });
+  } catch (e) {
+    retireLease(root, id, runId, 'lease.unused.json');
+    throw e;
+  }
+  try { project({ root }); } catch (e) { log(`project.mjs: ${e.message}`); }
+  const mark = statusMark(root, id);
+  const revs = statusRevs(root); // revs before git (see runPacket)
+  const before = { run_id: runId, packet: id, taken_at: isoSec(), status_rev: mark.rev, status_sha256: mark.hash,
+    status_revs: revs, entries: Object.fromEntries(gitSnapshot(root)) };
+  const runDir = path.join(factoryDir(root), 'runs', runId);
+  fs.mkdirSync(runDir, { recursive: true });
+  fs.writeFileSync(path.join(runDir, 'before.json'), JSON.stringify(before, null, 2) + '\n');
+  log(`BEGIN ${id} run ${runId} — work now; finish with: node tools/factory/dispatch.mjs end ${id}`);
+  return { run_id: runId, lease };
+}
+
+export function endPacket(id, { root = repoRoot(), log = console.log } = {}) {
+  const lease = readLeaseFile(root, id);
+  if (!lease) throw new RefusedError(`no lease for ${id} — nothing to end (run begin first)`);
+  if (lease.mode !== 'interactive') throw new RefusedError(`${id} lease is not interactive (${lease.mode || 'headless'} run) — end refused`);
+  const s = readStatus(id, { root });
+  if (s.state !== 'EXECUTING' || !s.run || s.run.run_id !== lease.run_id) {
+    throw new RefusedError(`${id} Status (${s.state}, run ${s.run && s.run.run_id}) does not match lease run ${lease.run_id}`);
+  }
+  const runId = lease.run_id;
+  const expired = leaseState(lease) !== 'live';
+  const beforeFile = path.join(factoryDir(root), 'runs', runId, 'before.json');
+  const b = fs.existsSync(beforeFile) ? JSON.parse(fs.readFileSync(beforeFile, 'utf8')) : null;
+  const decide = ({ violations, report }) => {
+    const parts = [];
+    if (!b) parts.push('before.json missing — scope check impossible');
+    if (violations.length) parts.push(`scope violation: ${violations.join(', ')}`);
+    if (expired) parts.push('lease expired before end — Main Lane to confirm');
+    if (parts.length) return { outcome: 'BLOCKED', reason: parts.join('; ') };
+    if (report) return { outcome: 'REVIEW_NEEDED', reason: null };
+    return { outcome: 'BLOCKED', reason: `no report (expected ${reportCandidates(root, id, s).map((p) => rel(root, p)).join(' or ')})` };
+  };
+  const summary = finishRun({ root, id, s, runId, runRec: s.run,
+    before: b ? new Map(Object.entries(b.entries)) : null, revsBefore: b ? b.status_revs : {},
+    mark: b ? { rev: b.status_rev, hash: b.status_sha256 } : null, decide, log,
+    summaryExtra: { summary: { holder: lease.holder, holder_pid: lease.pid, lease_expires: lease.expires, lease_expired: expired } } });
+  log(`END ${id} run ${runId}: ${summary.outcome}${summary.blocked_reason ? ` — ${summary.blocked_reason}` : ''}${summary.report_sha256 ? ` · report ${summary.report_sha256}` : ''}`);
+  return summary;
+}
+
+// Live leases = running (interactive runs have no heartbeat; their lease expiry is shown instead).
+export function running(root = repoRoot(), nowMs = Date.now()) {
+  return listStatus('MA-NOV-', { root }).map(({ id, status: s }) => ({ id, s, l: readLeaseFile(root, id) || s.lease }))
+    .filter((x) => x.l && leaseState(x.l, nowMs) !== 'stale')
+    .map(({ id, l }) => ({ id, mode: l.mode || 'headless', holder: l.holder, run_id: l.run_id, started: l.acquired, expires: l.expires, lease_state: leaseState(l, nowMs) }));
+}
+
 export function statusLines(root = repoRoot()) {
-  return listStatus('MA-NOV-', { root }).map(({ id, status: s }) =>
-    `${id.padEnd(22)} ${String(s.state).padEnd(16)} lease:${s.lease ? s.lease.run_id : '-'} hb:${s.heartbeat || '-'} hold:${s.hold ? s.hold.type : '-'}`);
+  const run = Object.fromEntries(running(root).map((r) => [r.id, r]));
+  return listStatus('MA-NOV-', { root }).map(({ id, status: s }) => {
+    const r = run[id];
+    const live = r ? (r.mode === 'interactive'
+      ? `running:interactive ${r.run_id} holder:${r.holder} expires:${r.expires}${r.lease_state === 'live' ? '' : ' (EXPIRED)'}`
+      : `running:headless ${r.run_id} hb:${s.heartbeat || '-'} expires:${r.expires}`) : 'lease:-';
+    return `${id.padEnd(22)} ${String(s.state).padEnd(16)} ${live} hold:${s.hold ? s.hold.type : '-'}`;
+  });
 }
 
 async function main(argv) {
   const root = repoRoot();
   const [cmd, id, ...rest] = argv;
+  const guard = async (fn, okCode = (r) => 0) => {
+    try { return okCode(await fn()); } catch (e) {
+      if (e instanceof RefusedError) { console.error(`refused: ${e.message}`); return 2; }
+      throw e;
+    }
+  };
   if (cmd === 'check') {
     const handled = handleStale(root, Date.now(), (m) => console.error(m));
     const ev = evaluate({ root });
-    console.log(JSON.stringify({ eligible: ev.eligible, ineligible: ev.ineligible, warnings: ev.warnings, stale_handled: handled,
+    console.log(JSON.stringify({ eligible: ev.eligible, ineligible: ev.ineligible, running: running(root), warnings: ev.warnings, stale_handled: handled,
       pause: ev.pause, capacity_hold: ev.capacity_hold }, null, 2));
     return 0;
   }
   if (cmd === 'status') { for (const l of statusLines(root)) console.log(l); return 0; }
   if (cmd === 'run' && id) {
-    try {
-      const r = await runPacket(id, { root, dryRun: rest.includes('--dry-run') || id === '--dry-run' });
-      if (r.dryRun) return 0;
-      return r.outcome === 'REVIEW_NEEDED' ? 0 : 3;
-    } catch (e) {
-      if (e instanceof RefusedError) { console.error(`refused: ${e.message}`); return 2; }
-      throw e;
-    }
+    return guard(() => runPacket(id, { root, dryRun: rest.includes('--dry-run') || id === '--dry-run' }),
+      (r) => (r.dryRun ? 0 : r.outcome === 'REVIEW_NEEDED' ? 0 : 3));
   }
-  console.error('usage: dispatch.mjs check | status | run <ID> [--dry-run]');
+  if (cmd === 'begin' && id) return guard(() => beginPacket(id, { root }));
+  if (cmd === 'end' && id) return guard(() => endPacket(id, { root }), (r) => (r.outcome === 'REVIEW_NEEDED' ? 0 : 3));
+  console.error('usage: dispatch.mjs check | status | begin <ID> | end <ID> | run <ID> [--dry-run]');
   return 2;
 }
 
