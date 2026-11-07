@@ -13,9 +13,10 @@ import os from 'node:os';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { repoRoot, factoryDir, sha256File, isoSec, readConfig } from './lib/util.mjs';
-import { readStatus, writeStatusFresh, listStatus, statusPath } from './lib/state.mjs';
+import { readStatus, writeStatusFresh, listStatus, statusPath, TRANSITIONS_FILE } from './lib/state.mjs';
 import { evaluate, reportCandidates } from './lib/eligibility.mjs';
-import { acquireLease, retireLease, readLeaseFile, leaseState, LeaseError } from './lib/lease.mjs';
+import { acquireLease, retireLease, readLeaseFile, leaseState, LeaseError, pidAlive,
+  acquireGlobalLock, retireGlobalLock, readGlobalLock } from './lib/lease.mjs';
 import { project } from './project.mjs';
 
 export class RefusedError extends Error { constructor(m) { super(m); this.name = 'RefusedError'; } }
@@ -90,15 +91,24 @@ export function pathAllowed(p, allowed) {
 }
 
 // `legit(p)` marks changes made during the run by the Founder/Main Lane through their own channels.
-export function scopeViolations(before, after, allowed, ownPrefixes, legit = () => false) {
+// F1: `committed` = paths changed by commits made during the run. `committedUnchanged(p)` is true when a path that
+// was already dirty at the start was committed byte-for-byte as it was (allowed only when the packet may commit) —
+// e.g. pinned Main Lane files the Task tells the run to commit. Any other committed path outside scope is a violation.
+export function scopeViolations(before, after, allowed, ownPrefixes, legit = () => false, { committed = [], committedUnchanged = () => false } = {}) {
   const own = (p) => ownPrefixes.some((o) => p === o || p.startsWith(o));
+  const skip = (p) => own(p) || pathAllowed(p, allowed) || legit(p);
   const out = [];
   for (const [p, sig] of after) {
-    if (before.get(p) === sig || own(p) || pathAllowed(p, allowed) || legit(p)) continue;
+    if (before.get(p) === sig || skip(p)) continue;
     out.push(p);
   }
   for (const p of before.keys()) {
-    if (!after.has(p) && !own(p) && !pathAllowed(p, allowed) && !legit(p)) out.push(p); // reverted/removed
+    if (!after.has(p) && !skip(p) && !committedUnchanged(p)) out.push(p); // reverted/removed/committed changed
+  }
+  for (const p of committed) {
+    if (skip(p)) continue;
+    if (before.has(p) && committedUnchanged(p)) continue;
+    out.push(p);
   }
   return [...new Set(out)].sort();
 }
@@ -115,12 +125,46 @@ function statusRevs(root) {
   return out;
 }
 
-// Founder-action files written during a run; never a worker scope violation.
-const FOUNDER_ACTION_FILES = ['claude/factory/PAUSE.json'];
+// Files written during a run by the Founder (PAUSE.json) or by the state library itself (transitions.jsonl,
+// MA-NOV-P1.FIX2 F10); never a worker scope violation.
+const FOUNDER_ACTION_FILES = ['claude/factory/PAUSE.json', TRANSITIONS_FILE];
 // In-flight atomic-write temp files of the state library (.<file>.<pid>.<hex>.tmp) and the generator
-// (.<file>.<pid>.tmp), directly in claude/packets/ or claude/factory/. A concurrent Main Lane write can be caught
-// mid-rename by one git snapshot and not the other; these are never a worker scope violation.
-const ATOMIC_TMP_RE = /^claude\/(packets|factory)\/\.[^/]+\.\d+(\.[0-9a-f]+)?\.tmp$/;
+// (.<file>.<pid>.tmp). A concurrent Main Lane write can be caught mid-rename by one git snapshot and not the other.
+// F7: accepted only when <file> is an existing *_Status.json or STATUS_BOARD.md in claude/packets/, or
+// control-tower.html in claude/factory/ — any other dotfile .tmp is checked like every other path.
+const ATOMIC_TMP_RE = /^claude\/(packets|factory)\/\.([^/]+)\.\d+(\.[0-9a-f]+)?\.tmp$/;
+export function isAtomicTemp(root, p) {
+  const m = ATOMIC_TMP_RE.exec(p);
+  if (!m) return false;
+  const [, dir, base] = m;
+  const ok = dir === 'packets' ? (base.endsWith('_Status.json') || base === 'STATUS_BOARD.md') : base === 'control-tower.html';
+  return ok && fs.existsSync(path.join(root, 'claude', dir, base));
+}
+
+// Commit awareness (F1). HEAD at start is recorded; at the end, paths changed by new commits join the scope check.
+function gitHead(root) {
+  const r = spawnSync('git', ['--no-optional-locks', 'rev-parse', '--verify', '-q', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  return r.status === 0 ? r.stdout.trim() : null;
+}
+function commitCheck(root, startHead, allowCommits) {
+  if (!startHead) return { available: false, moved: false, head: gitHead(root), paths: [], problems: [] };
+  const head = gitHead(root);
+  if (head === startHead) return { available: true, moved: false, head, paths: [], problems: [] };
+  const problems = [];
+  if (allowCommits !== true) problems.push('commits not allowed for this packet');
+  const anc = head ? spawnSync('git', ['--no-optional-locks', 'merge-base', '--is-ancestor', startHead, head], { cwd: root }) : { status: 1 };
+  if (anc.status !== 0) problems.push('HEAD is not a descendant of the start commit');
+  const d = head ? spawnSync('git', ['--no-optional-locks', 'diff', '--name-only', '-z', `${startHead}..${head}`], { cwd: root, encoding: 'utf8' }) : null;
+  if (!d || d.status !== 0) problems.push('git diff of the run\'s commits failed — scope check incomplete');
+  const paths = d && d.status === 0 ? d.stdout.split('\0').filter(Boolean) : [];
+  return { available: true, moved: true, head, paths, problems };
+}
+// Content hash of a path as committed at HEAD ('gone' if absent there).
+function headBlobHash(root, p) {
+  const r = spawnSync('git', ['--no-optional-locks', 'show', `HEAD:${p}`], { cwd: root, maxBuffer: 256 * 1024 * 1024 });
+  return r.status === 0 ? crypto.createHash('sha256').update(r.stdout).digest('hex') : 'gone';
+}
+const sigHash = (sig) => (sig ? sig.slice(3) : null); // "<XY>:<hash>" → hash
 
 function detectQuota(files) {
   for (const f of files) {
@@ -154,11 +198,24 @@ export function handleStale(root, nowMs = Date.now(), log = console.log) {
         x.updated = isoSec(nowMs); x.updated_by = 'dispatcher';
       }, { writer: 'dispatcher', root });
       const moved = retireLease(root, st.id, runId, 'lease.json');
+      retireGlobalLock(root, runId);
       handled.push({ id: st.id, run_id: runId, action: 'BLOCKED', lease_moved_to: moved && rel(root, moved) });
       log(`stale lease: ${st.id} run ${runId} → BLOCKED (interrupted run — no automatic rerun)`);
     } else {
       handled.push({ id: st.id, run_id: runId, action: 'reported only', state: s.state });
       log(`stale lease: ${st.id} run ${runId} — state ${s.state}, left for the Main Lane`);
+    }
+  }
+  // Orphan global lock: expired, holder gone, and no packet lease of the same run left (e.g. a crash between
+  // taking the global lock and the per-packet lease). Renamed into the run folder, never deleted.
+  const g = readGlobalLock(root);
+  if (g) {
+    const own = g.packet ? readLeaseFile(root, g.packet) : null;
+    const gone = g.corrupt || (Date.parse(g.expires) <= nowMs && !pidAlive(g.pid));
+    if (gone && !(own && own.run_id === g.run_id)) {
+      const moved = retireGlobalLock(root, g.run_id, 'global.lock.json', { force: true });
+      handled.push({ id: g.packet || null, run_id: g.run_id || null, action: 'orphan global lock retired', lock_moved_to: moved && rel(root, moved) });
+      log(`stale global lock: run ${g.run_id} (${g.packet}) retired`);
     }
   }
   if (handled.length) { try { project({ root, now: new Date(nowMs) }); } catch (e) { log(`project.mjs: ${e.message}`); } }
@@ -213,28 +270,62 @@ function refuseIfOtherLease(root, id) {
   if (others.length) throw new RefusedError(`another run holds a lease (${others.join(', ')}) — the pilot runs one at a time`);
 }
 
+// F2: global O_EXCL lock first, then the directory read below, then the per-packet lease. On any failure after the
+// global lock is taken it is renamed into the run folder as global.lock.unused.json.
+function takeGlobalLock(root, id, info) {
+  try { acquireGlobalLock(root, { packet: id, ...info }); } catch (e) { if (e instanceof LeaseError) throw new RefusedError(e.message); throw e; }
+  try { refuseIfOtherLease(root, id); } catch (e) { retireGlobalLock(root, info.run_id, 'global.lock.unused.json'); throw e; }
+}
+function takeLease(root, id, lease) {
+  try { acquireLease(root, id, lease); } catch (e) {
+    retireGlobalLock(root, lease.run_id, 'global.lock.unused.json');
+    if (e instanceof LeaseError) throw new RefusedError(e.message);
+    throw e;
+  }
+}
+const envSession = (env = process.env) => env.CLAUDE_CODE_SESSION_ID || null;
+
 function statusMark(root, id) {
   return { rev: readStatus(id, { root }).rev, hash: sha256File(statusPath(id, root)) };
 }
 
 // Shared step 7 for `run` and `end`: scope check → outcome → Status → run.json → lease to run folder → regenerate.
 // `decide({violations, report})` returns {outcome, reason}.
-function finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota = null, summaryExtra = {}, log }) {
+function finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota = null, summaryExtra = {}, log,
+  startHead, strictOwn = false }) {
   const after = gitSnapshot(root);
+  const allowCommits = !!(s.run_profile && s.run_profile.allow_commits === true);
+  const commits = commitCheck(root, startHead, allowCommits);
   // Dispatcher-owned paths. The packet's Status file is checked separately below; the two generated
   // projections are excluded because they are regenerated from Status after every run anyway.
   const own = [`claude/factory/runs/${runId}/`, 'claude/factory/leases/', `claude/packets/${id}_Status.json`,
     'claude/packets/STATUS_BOARD.md', 'claude/factory/control-tower.html'];
   const revsAfter = statusRevs(root);
   // Another packet's Status written through the state library (rev bumped) is a Main Lane write, not the worker's.
-  const legit = (p) => FOUNDER_ACTION_FILES.includes(p) || ATOMIC_TMP_RE.test(p) || (p in revsBefore && p in revsAfter && revsAfter[p] > revsBefore[p]);
+  const ignoredTemp = [];
+  const temp = (p) => { if (isAtomicTemp(root, p)) { ignoredTemp.push(p); return true; } return false; };
+  const legit = (p) => FOUNDER_ACTION_FILES.includes(p) || temp(p) || (p in revsBefore && p in revsAfter && revsAfter[p] > revsBefore[p]);
   const allowed = (s.run_profile && s.run_profile.allowed_write_paths) || [];
-  const violations = before ? scopeViolations(before, after, allowed, own, legit) : [];
-  if (mark && readStatus(id, { root }).rev === mark.rev && sha256File(statusPath(id, root)) !== mark.hash) {
+  const committedPreexisting = [];
+  const committedUnchanged = (p) => {
+    if (!allowCommits || !before || !before.has(p) || after.has(p)) return false;
+    const same = sigHash(before.get(p)) === headBlobHash(root, p);
+    if (same) committedPreexisting.push(p);
+    return same;
+  };
+  const violations = before ? scopeViolations(before, after, allowed, own, legit, { committed: commits.paths, committedUnchanged }) : [];
+  const problems = [...commits.problems];
+  const curRev = readStatus(id, { root }).rev;
+  if (mark && curRev === mark.rev && sha256File(statusPath(id, root)) !== mark.hash) {
     violations.push(`claude/packets/${id}_Status.json (edited outside the state library)`);
+  } else if (mark && strictOwn && curRev !== mark.rev) {
+    // F6: in interactive mode the dispatcher writes nothing between begin and end, so any rev change is foreign.
+    problems.push(`own Status changed during run (rev ${mark.rev}→${curRev})`);
   }
+  const otherStatusChanges = Object.keys(revsAfter).filter((p) => p !== `claude/packets/${id}_Status.json` && p in revsBefore && revsAfter[p] !== revsBefore[p])
+    .map((p) => ({ path: p, rev_from: revsBefore[p], rev_to: revsAfter[p] }));
   const report = reportCandidates(root, id, s).find((p) => fs.existsSync(p)) || null;
-  const { outcome, reason } = decide({ violations, report });
+  const { outcome, reason } = decide({ violations, report, problems });
   const reportSha = outcome === 'REVIEW_NEEDED' && report ? sha256File(report) : null;
   const ended = new Date();
   writeStatusFresh(id, (x) => {
@@ -247,11 +338,16 @@ function finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decid
     writeStatusFresh(id, (x) => { x.hold = { type: 'CAPACITY_HOLD', set_by: 'dispatcher', reason: `worker log: ${quota}`, at: isoSec(ended) }; }, { writer: 'dispatcher-hold', root });
   }
   const summary = { run_id: runId, packet: id, mode: runRec.mode, ...(summaryExtra.summary || {}), started: runRec.started, ended: isoSec(ended),
-    outcome, blocked_reason: reason, report_sha256: reportSha, capacity_hold: !!quota, scope_violations: violations };
+    outcome, blocked_reason: reason, report_sha256: reportSha, capacity_hold: !!quota, scope_violations: violations,
+    start_head: startHead || null, end_head: commits.head,
+    commit_check: commits.available ? (commits.moved ? 'commits checked' : 'no commits') : 'unavailable — no start HEAD recorded (run begun by pre-FIX2 code)',
+    committed_paths: commits.paths, committed_preexisting_unchanged: [...new Set(committedPreexisting)].sort(),
+    ignored_temp_files: [...new Set(ignoredTemp)].sort(), other_status_changes: otherStatusChanges };
   const runDir = path.join(factoryDir(root), 'runs', runId);
   fs.mkdirSync(runDir, { recursive: true });
   fs.writeFileSync(path.join(runDir, 'run.json'), JSON.stringify(summary, null, 2) + '\n');
   retireLease(root, id, runId, 'lease.json'); // rename, no delete
+  retireGlobalLock(root, runId);
   try { project({ root }); } catch (e) { log(`project.mjs: ${e.message}`); }
   return summary;
 }
@@ -260,7 +356,7 @@ function finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decid
 export async function runPacket(id, { root = repoRoot(), dryRun = false, env = process.env, log = console.log } = {}) {
   handleStale(root, Date.now(), log);
   refuseUnlessEligible(root, id, 'headless');                     // 1. eligibility
-  refuseIfOtherLease(root, id);
+  refuseIfOtherLease(root, id); // early read (dry-run too); the global lock below is the atomic check
   const cfg = readConfig(root, { required: true });
   const { bin, version } = resolveBinary(cfg, env);                // 2. binary
   if (!cfg.model) throw new RefusedError('Founder has not recorded the model (choice 2b)'); // 3. never invented
@@ -275,8 +371,9 @@ export async function runPacket(id, { root = repoRoot(), dryRun = false, env = p
   const started = new Date();                                       // 4. lease (O_EXCL)
   const runId = newRunId(started);
   const lease = { run_id: runId, holder: 'dispatcher', mode: 'headless', pid: process.pid, acquired: isoSec(started),
-    expires: isoSec(new Date(started.getTime() + cfg.lease_ttl_s * 1000)) };
-  try { acquireLease(root, id, lease); } catch (e) { if (e instanceof LeaseError) throw new RefusedError(e.message); throw e; }
+    expires: isoSec(new Date(started.getTime() + cfg.lease_ttl_s * 1000)), session_id: sessionId };
+  takeGlobalLock(root, id, { run_id: runId, mode: 'headless', pid: lease.pid, acquired: lease.acquired, expires: lease.expires, session_id: sessionId });
+  takeLease(root, id, lease);
   const runDir = path.join(factoryDir(root), 'runs', runId);
   fs.mkdirSync(runDir, { recursive: true });
   const logFile = path.join(runDir, 'worker.jsonl');
@@ -291,11 +388,13 @@ export async function runPacket(id, { root = repoRoot(), dryRun = false, env = p
     record((x) => { x.state = 'EXECUTING'; x.lease = lease; x.run = runRec; x.heartbeat = isoSec(started); });
   } catch (e) {
     retireLease(root, id, runId, 'lease.unused.json');
+    retireGlobalLock(root, runId, 'global.lock.unused.json');
     throw e;
   }
   try { project({ root }); } catch (e) { log(`project.mjs: ${e.message}`); }
   // revs first, then git: a Main Lane write landing between the two then shows as a rev bump (legit), not a raw edit.
   const revsBefore = statusRevs(root);
+  const startHead = gitHead(root);
   const before = gitSnapshot(root);
   const outFd = fs.openSync(logFile, 'a');                          // 6. launch — one attempt, no retry
   const errFd = fs.openSync(errFile, 'a');
@@ -317,15 +416,17 @@ export async function runPacket(id, { root = repoRoot(), dryRun = false, env = p
   fs.closeSync(outFd); fs.closeSync(errFd);
   const signin = detectSignin([logFile, errFile]);
   const quota = signin ? null : detectQuota([logFile, errFile]);
-  const decide = ({ violations, report }) => {                     // 7. outcome
-    if (violations.length) return { outcome: 'BLOCKED', reason: `scope violation: ${violations.join(', ')}` };
+  const decide = ({ violations, report, problems }) => {           // 7. outcome
+    if (violations.length || problems.length) {
+      return { outcome: 'BLOCKED', reason: [...(violations.length ? [`scope violation: ${violations.join(', ')}`] : []), ...problems].join('; ') };
+    }
     if (interrupted) return { outcome: 'BLOCKED', reason: `dispatcher interrupted (${interrupted})` };
     if (signin) return { outcome: 'BLOCKED', reason: 'worker not signed in' };
     if (code === 0 && report) return { outcome: 'REVIEW_NEEDED', reason: null };
     if (code !== 0) return { outcome: 'BLOCKED', reason: `worker exit ${code === null ? 'none' : code}${signal ? ` (${signal})` : ''}${quota ? ' — usage/quota limit' : ''}` };
     return { outcome: 'BLOCKED', reason: `worker exited 0 without the report (${reportCandidates(root, id, s).map((p) => rel(root, p)).join(' or ')})` };
   };
-  const summary = finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota, log,
+  const summary = finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota, log, startHead,
     summaryExtra: { run: { exit_code: code, signal: signal || null }, summary: { session_id: sessionId, bin, bin_version: version, model: cfg.model, exit_code: code, signal: signal || null } } });
   log(`${id} run ${runId}: ${summary.outcome}${summary.blocked_reason ? ` — ${summary.blocked_reason}` : ''}${quota ? ' · CAPACITY_HOLD set' : ''}`);
   return summary;
@@ -339,28 +440,31 @@ function holderPid() {
   return Number.isInteger(pid) && pid > 1 ? pid : process.ppid;
 }
 
-export function beginPacket(id, { root = repoRoot(), log = console.log } = {}) {
+export function beginPacket(id, { root = repoRoot(), log = console.log, env = process.env } = {}) {
   handleStale(root, Date.now(), log);
   refuseUnlessEligible(root, id, 'interactive');
-  refuseIfOtherLease(root, id);
   const cfg = readConfig(root, { required: true });
   const started = new Date();
   const runId = newRunId(started);
+  const sessionId = envSession(env); // F5: null when the variable is absent
   const lease = { run_id: runId, holder: 'interactive', mode: 'interactive', pid: holderPid(), acquired: isoSec(started),
-    expires: isoSec(new Date(started.getTime() + cfg.lease_ttl_s * 1000)) };
-  try { acquireLease(root, id, lease); } catch (e) { if (e instanceof LeaseError) throw new RefusedError(e.message); throw e; }
-  const runRec = { run_id: runId, mode: 'interactive', started: isoSec(started) };
+    expires: isoSec(new Date(started.getTime() + cfg.lease_ttl_s * 1000)), session_id: sessionId };
+  takeGlobalLock(root, id, { run_id: runId, mode: 'interactive', pid: lease.pid, acquired: lease.acquired, expires: lease.expires, session_id: sessionId });
+  takeLease(root, id, lease);
+  const runRec = { run_id: runId, mode: 'interactive', session_id: sessionId, started: isoSec(started) };
   try {
     writeStatusFresh(id, (x) => { x.state = 'EXECUTING'; x.lease = lease; x.run = runRec; x.heartbeat = null; x.updated = isoSec(started); x.updated_by = 'dispatcher'; },
       { writer: 'dispatcher', root });
   } catch (e) {
     retireLease(root, id, runId, 'lease.unused.json');
+    retireGlobalLock(root, runId, 'global.lock.unused.json');
     throw e;
   }
   try { project({ root }); } catch (e) { log(`project.mjs: ${e.message}`); }
   const mark = statusMark(root, id);
   const revs = statusRevs(root); // revs before git (see runPacket)
-  const before = { run_id: runId, packet: id, taken_at: isoSec(), status_rev: mark.rev, status_sha256: mark.hash,
+  const head = gitHead(root);    // F1
+  const before = { run_id: runId, packet: id, taken_at: isoSec(), session_id: sessionId, head, status_rev: mark.rev, status_sha256: mark.hash,
     status_revs: revs, entries: Object.fromEntries(gitSnapshot(root)) };
   const runDir = path.join(factoryDir(root), 'runs', runId);
   fs.mkdirSync(runDir, { recursive: true });
@@ -369,7 +473,7 @@ export function beginPacket(id, { root = repoRoot(), log = console.log } = {}) {
   return { run_id: runId, lease };
 }
 
-export function endPacket(id, { root = repoRoot(), log = console.log } = {}) {
+export function endPacket(id, { root = repoRoot(), log = console.log, env = process.env } = {}) {
   const lease = readLeaseFile(root, id);
   if (!lease) throw new RefusedError(`no lease for ${id} — nothing to end (run begin first)`);
   if (lease.mode !== 'interactive') throw new RefusedError(`${id} lease is not interactive (${lease.mode || 'headless'} run) — end refused`);
@@ -377,23 +481,31 @@ export function endPacket(id, { root = repoRoot(), log = console.log } = {}) {
   if (s.state !== 'EXECUTING' || !s.run || s.run.run_id !== lease.run_id) {
     throw new RefusedError(`${id} Status (${s.state}, run ${s.run && s.run.run_id}) does not match lease run ${lease.run_id}`);
   }
+  // F5/F9: only the session that began the run may end it (checked when both ids are known; nothing is written on refusal).
+  const endedBy = envSession(env);
+  const begunBy = lease.session_id || (s.run && s.run.session_id) || null;
+  if (endedBy && begunBy && endedBy !== begunBy) {
+    throw new RefusedError(`this run was begun by another session (begun by ${begunBy}, end called from ${endedBy}) — end refused`);
+  }
   const runId = lease.run_id;
   const expired = leaseState(lease) !== 'live';
   const beforeFile = path.join(factoryDir(root), 'runs', runId, 'before.json');
   const b = fs.existsSync(beforeFile) ? JSON.parse(fs.readFileSync(beforeFile, 'utf8')) : null;
-  const decide = ({ violations, report }) => {
+  const decide = ({ violations, report, problems }) => {
     const parts = [];
     if (!b) parts.push('before.json missing — scope check impossible');
     if (violations.length) parts.push(`scope violation: ${violations.join(', ')}`);
+    parts.push(...problems);
     if (expired) parts.push('lease expired before end — Main Lane to confirm');
     if (parts.length) return { outcome: 'BLOCKED', reason: parts.join('; ') };
     if (report) return { outcome: 'REVIEW_NEEDED', reason: null };
     return { outcome: 'BLOCKED', reason: `no report (expected ${reportCandidates(root, id, s).map((p) => rel(root, p)).join(' or ')})` };
   };
-  const summary = finishRun({ root, id, s, runId, runRec: s.run,
+  const summary = finishRun({ root, id, s, runId, runRec: { ...s.run, ended_by_session: endedBy },
     before: b ? new Map(Object.entries(b.entries)) : null, revsBefore: b ? b.status_revs : {},
-    mark: b ? { rev: b.status_rev, hash: b.status_sha256 } : null, decide, log,
-    summaryExtra: { summary: { holder: lease.holder, holder_pid: lease.pid, lease_expires: lease.expires, lease_expired: expired } } });
+    mark: b ? { rev: b.status_rev, hash: b.status_sha256 } : null, decide, log, startHead: b ? b.head : null, strictOwn: true,
+    summaryExtra: { summary: { holder: lease.holder, holder_pid: lease.pid, lease_expires: lease.expires, lease_expired: expired,
+      session_id: begunBy, ended_by_session: endedBy } } });
   log(`END ${id} run ${runId}: ${summary.outcome}${summary.blocked_reason ? ` — ${summary.blocked_reason}` : ''}${summary.report_sha256 ? ` · report ${summary.report_sha256}` : ''}`);
   return summary;
 }

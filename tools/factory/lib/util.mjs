@@ -40,13 +40,17 @@ export function readJsonIfExists(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
-export const CONFIG_DEFAULTS = { schema: 1, model: null, claude_bin: null, heartbeat_amber_s: 300, lease_ttl_s: 7200, refresh_s: 30 };
+// `opener` (MA-NOV-P1.FIX2 F4): the lane opener whose fixed line the Tower shows; null/absent → DEFAULT_OPENER.
+export const DEFAULT_OPENER = 'claude/packets/LANE_OPENER_v2.md';
+export const CONFIG_DEFAULTS = { schema: 1, model: null, claude_bin: null, heartbeat_amber_s: 300, lease_ttl_s: 7200, refresh_s: 30, opener: DEFAULT_OPENER };
 
 export function readConfig(root, { required = false } = {}) {
   const file = path.join(factoryDir(root), 'config.json');
   const cfg = readJsonIfExists(file);
   if (!cfg && required) throw new Error(`missing ${path.relative(root, file)}`);
-  return { ...CONFIG_DEFAULTS, ...(cfg || {}) };
+  const out = { ...CONFIG_DEFAULTS, ...(cfg || {}) };
+  if (!out.opener) out.opener = DEFAULT_OPENER;
+  return out;
 }
 
 export function readPause(root) {

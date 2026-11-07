@@ -15,6 +15,7 @@ const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const git = (root, ...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t.invalid', '-c', 'commit.gpgsign=false', ...a], { cwd: root, encoding: 'utf8' });
 
 export const LANE_OPENER_FIXTURE = '# LANE_OPENER (fixture)\n\n## Fixed line (the Founder keeps this)\n\n```\nFollow claude/packets/LANE_OPENER.md (sha256 <hash>) and run the Founder-approved packet.\n```\n';
+export const LANE_OPENER_V2_FIXTURE = '# LANE_OPENER v2 (fixture)\n\n## Fixed line (the Founder keeps this)\n\n```\nFollow claude/packets/LANE_OPENER_v2.md (sha256 <hash>) and run the Founder-approved packet.\n```\n';
 
 // Write a packet: Control + Task + Status with a Founder start_approval bound to both hashes.
 export function addPacket(root, id, { state = 'READY', approved = true, runProfile = true, extra = {} } = {}) {
@@ -44,6 +45,7 @@ export function makeRepo({ packets = [], config = {}, git: useGit = true } = {})
   fs.mkdirSync(path.join(root, 'App'), { recursive: true });
   fs.writeFileSync(path.join(root, 'App', 'keep.txt'), 'app\n');
   fs.writeFileSync(path.join(root, 'claude', 'packets', 'LANE_OPENER.md'), LANE_OPENER_FIXTURE);
+  fs.writeFileSync(path.join(root, 'claude', 'packets', 'LANE_OPENER_v2.md'), LANE_OPENER_V2_FIXTURE);
   fs.writeFileSync(path.join(root, 'claude', 'factory', 'config.json'),
     JSON.stringify({ schema: 1, model: 'test-model', claude_bin: null, heartbeat_amber_s: 300, lease_ttl_s: 7200, refresh_s: 30, ...config }, null, 2) + '\n');
   for (const p of packets) (typeof p === 'string' ? addPacket(root, p) : addPacket(root, p.id, p));
@@ -62,7 +64,14 @@ export function makeRepo({ packets = [], config = {}, git: useGit = true } = {})
 }
 
 export function envFor(repo, extra = {}) {
-  return { ...process.env, FACTORY_ROOT: repo.root, CLAUDE_BIN: repo.stub, FAKE_CALLS: repo.calls, FACTORY_HEARTBEAT_MS: '100', ...extra };
+  return { ...process.env, FACTORY_ROOT: repo.root, CLAUDE_BIN: repo.stub, FAKE_CALLS: repo.calls, FACTORY_HEARTBEAT_MS: '100',
+    CLAUDE_CODE_SESSION_ID: 'test-session-1', ...extra };
+}
+
+export function gitIn(root, ...a) {
+  const r = git(root, ...a);
+  if (r.status !== 0) throw new Error(`git ${a.join(' ')}: ${r.stderr}`);
+  return r.stdout.trim();
 }
 
 export function runNode(script, args, env) {

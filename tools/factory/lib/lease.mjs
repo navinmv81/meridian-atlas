@@ -52,3 +52,44 @@ export function retireLease(root, id, runId, name = 'lease.json') {
   fs.renameSync(src, dst);
   return dst;
 }
+
+// Global run lock (MA-NOV-P1.FIX2 F2): claude/factory/leases/.global.lock, taken with O_EXCL by `begin` and `run`
+// before the per-packet lease, so two different packets begun at the same moment cannot both start.
+export const GLOBAL_LOCK = '.global.lock';
+export function globalLockPath(root) { return path.join(leasesDir(root), GLOBAL_LOCK); }
+
+export function readGlobalLock(root) {
+  const p = globalLockPath(root);
+  if (!fs.existsSync(p)) return null;
+  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return { corrupt: true }; }
+}
+
+export function acquireGlobalLock(root, info) {
+  fs.mkdirSync(leasesDir(root), { recursive: true });
+  let fd;
+  try {
+    fd = fs.openSync(globalLockPath(root), 'wx');
+  } catch (e) {
+    if (e.code === 'EEXIST') {
+      const cur = readGlobalLock(root) || {};
+      throw new LeaseError(`another run holds the global lock (${cur.packet || '?'} run ${cur.run_id || '?'}) — the pilot runs one at a time`);
+    }
+    throw e;
+  }
+  try { fs.writeSync(fd, JSON.stringify(info, null, 2) + '\n'); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+  return info;
+}
+
+// Move the global lock into the run folder (rename, never delete) — only if it belongs to `runId`
+// (or `force`, for an orphan lock found by stale handling).
+export function retireGlobalLock(root, runId, name = 'global.lock.json', { force = false } = {}) {
+  const src = globalLockPath(root);
+  if (!fs.existsSync(src)) return null;
+  const cur = readGlobalLock(root) || {};
+  if (!force && cur.run_id !== runId) return null;
+  const dir = path.join(factoryDir(root), 'runs', runId || cur.run_id || 'unknown-global-lock');
+  fs.mkdirSync(dir, { recursive: true });
+  const dst = path.join(dir, name);
+  fs.renameSync(src, dst);
+  return dst;
+}

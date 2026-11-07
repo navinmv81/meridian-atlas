@@ -1,16 +1,16 @@
-# Delivery factory: pilot (MA-NOV-P1.BUILD, interactive mode MA-NOV-P1.FIX)
+# Delivery factory: pilot (MA-NOV-P1.BUILD, interactive mode MA-NOV-P1.FIX, review fixes MA-NOV-P1.FIX2)
 
 These are dependency-free Node scripts (built-ins only, ES modules, no network). They are the specification approved in `claude/packets/MA-NOV-000_Report.md`, with Founder choices 1b, 2b, 3a, 4, 5a and 5b.
 
 | File | Purpose |
 |---|---|
-| `lib/state.mjs` | Status-JSON state library. `readStatus`, `listStatus` and `writeStatus` (compare-and-swap on `rev`, then temp file plus `rename(2)`, with field-ownership and transition checks) |
+| `lib/state.mjs` | Status-JSON state library. `readStatus`, `listStatus` and `writeStatus` (compare-and-swap on `rev`, then temp file plus `rename(2)`, with field-ownership and transition checks). Every successful write appends a row to `claude/factory/transitions.jsonl` |
 | `lib/eligibility.mjs` | `LANE_OPENER.md` step 3, plus lease, pause, hold and `run_profile` checks. Returns `{eligible, ineligible:[{id, reasons}]}` |
-| `lib/lease.mjs` | O_EXCL lease files under `claude/factory/leases/` |
-| `lib/tower-logic.mjs` | Pure client functions (OFFLINE, heartbeat colour), embedded verbatim in the Tower HTML |
+| `lib/lease.mjs` | O_EXCL lease files under `claude/factory/leases/`, plus the global run lock `leases/.global.lock` |
+| `lib/tower-logic.mjs` | Pure client functions (page status LIVE / SNAPSHOT / RUNNING (snapshot) / STALE RUN, heartbeat and lease colour), embedded verbatim in the Tower HTML |
 | `project.mjs` | Generator: `claude/packets/STATUS_BOARD.md` + `claude/factory/control-tower.html` |
 | `dispatch.mjs` | `check` / `status` / `begin <ID>` / `end <ID>` (interactive) / `run <ID> [--dry-run]` (headless) |
-| `test/` | `node --test tools/factory/test` (stub binary in `test/fixtures/fake-claude.mjs`; every test uses a temp repo) |
+| `test/` | `node --test tools/factory/test` (stub binary in `test/fixtures/fake-claude.mjs`; every test uses a temp repo). 32 tests: 1–13 (+4b, 4c), 16–22, 23–32. Ids 14–15 are unused on purpose, so that report references to 16–22 stay valid |
 
 ## Day-to-day use
 
@@ -46,12 +46,28 @@ P1.DEMO run `r-20261107T092212Z-c0da` showed that a headless worker launched fro
     - With an **expired** lease, `end` still runs the scope check, then sets BLOCKED "lease expired before end — Main Lane to confirm". It is never rerun.
   - An interactive run has **no heartbeat**. `check`, `status`, the board and the Tower show it as running, with mode, holder, start and lease expiry.
   - If the holder process is gone **and** the lease has expired, `check` treats it like any other stale lease: BLOCKED "interrupted run — no automatic rerun".
-  - *Interim:* `LANE_OPENER.md` does not call `begin`/`end` yet. Adding them to the opener is a Main Lane change.
+  - `LANE_OPENER_v2.md` calls `check`, `begin` and `end` (v1 `LANE_OPENER.md` is kept as history).
 - **Headless (`run`, kept for later).** Unchanged, plus the two P1.DEMO fixes:
   - argv now passes `--tools <list>` as well as `--allowedTools <list>`. `--allowedTools` only pre-approves tools, while `--tools` limits which tools exist.
   - A sign-in failure (`"error":"authentication_failed"` or result "Not logged in…") is classified as BLOCKED "worker not signed in", with no hold and no retry.
 
   It needs a signed-in worker before it can be used.
+
+## Review fixes (MA-NOV-P1.FIX2, from MA-NOV-P1.REVIEW)
+
+- **Commits (F1).** `begin` (and headless `run`) records `head` (`git rev-parse HEAD`). At the end, paths in `git diff --name-only <head>..HEAD` join the scope check under the same rules.
+  - HEAD moved and `run_profile.allow_commits !== true` → BLOCKED "commits not allowed for this packet".
+  - The new HEAD is not a descendant of the start commit → BLOCKED "HEAD is not a descendant of the start commit".
+  - With `allow_commits`, a path that was already dirty at the start and was committed byte-for-byte unchanged (e.g. pinned Main Lane files a Task tells the run to commit) is not a violation. It is listed in `run.json` → `committed_preexisting_unchanged`. A pre-dirty file that was changed and committed is a violation.
+  - A `before.json` without `head` (written by pre-FIX2 code) records `commit_check: "unavailable …"` in `run.json`.
+- **One run at a time (F2).** `begin` and `run` take `claude/factory/leases/.global.lock` with O_EXCL **before** the per-packet lease. The lease-directory read remains a second check. The lock is renamed into the run folder (`global.lock.json`, or `global.lock.unused.json` if the start failed) at `end`, at run completion and by stale handling. An orphan lock (expired, holder gone, no lease of its run) is retired by `check`.
+- **Tower (F3, Founder option b — no scheduler).** Nothing regenerates the page on a timer. The status pill reads **LIVE** (snapshot younger than 2 × `refresh_s`), **SNAPSHOT** ("Idle — snapshot from <time> (<n> min ago); regenerated on every begin/end and Main Lane update"), **RUNNING (snapshot)** (older snapshot with an unexpired lease) or **STALE RUN** (a lease past its expiry, red). There is no OFFLINE state.
+- **Fixed line (F4).** `config.json` may name `opener`; absent or null → `claude/packets/LANE_OPENER_v2.md`. The Tower shows that file's fixed line with its computed SHA-256.
+- **Session ids (F5, F9).** `begin` records `session_id` from `CLAUDE_CODE_SESSION_ID` (null if absent) in the lease, `run` and `before.json`. `end` records `ended_by_session`. If both ids are known and differ, `end` refuses (exit 2, nothing written): "this run was begun by another session".
+- **Own Status (F6).** In interactive mode the dispatcher writes nothing between `begin` and `end`, so any `rev` change on the running packet's own Status → BLOCKED "own Status changed during run (rev x→y)". Rev bumps on other packets are allowed and listed in `run.json` → `other_status_changes` for Main Lane confirmation. Writer identity in `writeStatus` remains self-declared (honour system); the scope check is the guard.
+- **Temp files (F7).** Only `.<file>.<pid>[.<hex>].tmp` whose `<file>` is an existing `*_Status.json` or `STATUS_BOARD.md` (in `claude/packets/`) or `control-tower.html` (in `claude/factory/`) is ignored. Ignored paths are listed in `run.json` → `ignored_temp_files`.
+- **History (F10).** `claude/factory/transitions.jsonl` gets `{at, id, writer, from, to, rev}` for every successful `writeStatus`. It is append-only, created if missing, and ignored by the scope check like `PAUSE.json`. Refused writes throw and are not logged.
+- **Limits (F8, unchanged).** Gitignored paths, writes outside the repo, and reads are invisible to the scope check.
 
 ## Ownership (MA-NOV-000 §Q6.1, Founder choice 4)
 

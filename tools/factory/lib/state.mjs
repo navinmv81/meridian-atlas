@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { repoRoot, packetsDir, stableStringify } from './util.mjs';
+import { repoRoot, packetsDir, factoryDir, stableStringify, isoSec } from './util.mjs';
 
 export class OwnershipError extends Error { constructor(m) { super(m); this.name = 'OwnershipError'; } }
 export class TransitionError extends Error { constructor(m) { super(m); this.name = 'TransitionError'; } }
@@ -102,7 +102,19 @@ export function writeStatus(id, mutate, { writer, expectRev, root = repoRoot(), 
   try { fs.writeSync(fd, data); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
   if (_crashBeforeRename) process.kill(process.pid, 'SIGKILL'); // test 8 only: simulate a crash here
   fs.renameSync(tmp, file);
+  appendTransition(root, { at: isoSec(), id, writer, from: cur.state ?? null, to: next.state ?? null, rev: next.rev });
   return next;
+}
+
+// Append-only history of successful Status writes (MA-NOV-P1.FIX2 F10). Refused writes throw above and are not
+// logged. The Status write has already landed when this runs, so a failed append warns instead of throwing.
+export const TRANSITIONS_FILE = 'claude/factory/transitions.jsonl';
+function appendTransition(root, row) {
+  try {
+    const f = path.join(factoryDir(root), 'transitions.jsonl');
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    fs.appendFileSync(f, JSON.stringify(row) + '\n');
+  } catch (e) { process.stderr.write(`state.mjs: transitions.jsonl append failed: ${e.message}\n`); }
 }
 
 // Convenience: write against the rev currently on disk.

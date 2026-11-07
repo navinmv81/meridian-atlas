@@ -25,13 +25,14 @@ export function blockerText(s) {
   return null;
 }
 
-function fixedLine(root) {
-  const f = path.join(packetsDir(root), 'LANE_OPENER.md');
-  if (!fs.existsSync(f)) return null;
-  const text = fs.readFileSync(f, 'utf8');
-  const m = text.match(/## Fixed line[^\n]*\n+```[^\n]*\n([\s\S]*?)\n```/);
-  if (!m) return null;
-  return m[1].trim().replace('<hash>', sha256File(f));
+// F4: the opener named by config.opener (default claude/packets/LANE_OPENER_v2.md), with its computed SHA-256.
+export function opener(root, cfg = readConfig(root)) {
+  const file = cfg.opener;
+  const f = path.join(root, ...file.split('/'));
+  if (!fs.existsSync(f)) return { file, sha256: null, fixed_line: null };
+  const sha = sha256File(f);
+  const m = fs.readFileSync(f, 'utf8').match(/## Fixed line[^\n]*\n+```[^\n]*\n([\s\S]*?)\n```/);
+  return { file, sha256: sha, fixed_line: m ? m[1].trim().replace('<hash>', sha) : null };
 }
 
 function recentRuns(root) {
@@ -66,13 +67,15 @@ export function buildSnapshot({ root, now = new Date() }) {
   const packets = listStatus('MA-NOV-', { root });
   const ev = evaluate({ root, nowMs: now.getTime() });
   const reasons = Object.fromEntries(ev.ineligible.map((x) => [x.id, x.reasons]));
+  const op = opener(root, cfg);
   return {
     schema: 1,
     generated_at: isoSec(now),
     config: { heartbeat_amber_s: cfg.heartbeat_amber_s, lease_ttl_s: cfg.lease_ttl_s, refresh_s: cfg.refresh_s, model: cfg.model },
     pause: readPause(root),
     capacity_hold: ev.capacity_hold,
-    fixed_line: fixedLine(root),
+    opener: { file: op.file, sha256: op.sha256 },
+    fixed_line: op.fixed_line,
     packets: packets.map(({ id, status }) => ({ id, ...pick(status), eligible: ev.eligible.includes(id), reasons: reasons[id] || [], warnings: ev.warnings[id] || [] })),
     runs: recentRuns(root),
   };
@@ -170,7 +173,7 @@ h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 8px;border-bott
 .pill{background:var(--pill);border-radius:10px;padding:1px 8px;font-size:12px}.pill.ok{color:var(--ok)}.t{margin:2px 0}.meta,.dim,.empty{color:var(--dim);font-size:12.5px}
 .why{color:var(--amber);font-size:12.5px}.act{color:var(--fg);font-size:12.5px;font-style:italic}.line{padding:3px 0;border-bottom:1px dashed var(--line)}
 code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace}.mode-interactive{color:var(--ok)}.lx.red{color:var(--red);font-weight:600}.hb.ok{color:var(--ok)}.hb.amber{color:var(--amber)}.hb.red{color:var(--red);font-weight:600}
-#status{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:10px;background:var(--pill)}#status.offline{background:var(--red);color:#fff;font-weight:600}
+#status{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:10px;background:var(--pill);font-size:13px;font-weight:400}#status.live{color:var(--ok)}#status.amber{background:var(--amber);color:#fff}#status.red{background:var(--red);color:#fff;font-weight:600}
 pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;word-break:break-all}footer{margin-top:24px;color:var(--dim);font-size:12px}
 </style>
 </head>
@@ -184,7 +187,7 @@ ${section('In review', review, 'Nothing in review.')}
 ${section('Blocked / held', blocked, 'Nothing blocked or held.')}
 ${section('Closed (last 10)', closed, 'None closed.')}
 ${section('Recent runs', runs, 'No dispatcher runs recorded.')}
-<section><h2>How to start a run</h2><p class="meta">Founder: open a Claude Code session and type the fixed line. Runs are interactive (Founder choice B, 7 Nov): the session brackets its work with <code>node tools/factory/dispatch.mjs begin &lt;ID&gt;</code> … <code>end &lt;ID&gt;</code>, so this page shows it as running and the scope check applies.</p><pre>${esc(snap.fixed_line)}</pre></section>
+<section><h2>How to start a run</h2><p class="meta">Founder: open a Claude Code session and type the fixed line. Runs are interactive (Founder choice B, 7 Nov): the session brackets its work with <code>node tools/factory/dispatch.mjs begin &lt;ID&gt;</code> … <code>end &lt;ID&gt;</code>, so this page shows it as running and the scope check applies.</p><pre>${esc(snap.fixed_line)}</pre><p class="meta">Opener: <code>${esc(snap.opener && snap.opener.file)}</code> sha256 <code>${esc(snap.opener && snap.opener.sha256)}</code> (computed from the file when this page was generated)</p></section>
 <footer>generated_at ${esc(snap.generated_at)} · node tools/factory/project.mjs · no secrets, no network</footer>
 <script type="application/json" id="snapshot">${json}</script>
 <script id="tower-logic">
@@ -195,10 +198,11 @@ ${logic}
   var snap = JSON.parse(document.getElementById('snapshot').textContent);
   function tick(){
     var now = Date.now();
-    var st = towerState(snap.generated_at, now, snap.config.refresh_s);
+    var leases = snap.packets.filter(function (p) { return p.lease; }).map(function (p) { return { id: p.id, run_id: p.lease.run_id, expires: p.lease.expires }; });
+    var st = towerStatus(snap.generated_at, now, snap.config.refresh_s, leases);
     var el = document.getElementById('status');
-    el.textContent = st.offline ? 'OFFLINE — snapshot ' + formatAge(st.ageS) + ' old' : 'live · ' + formatAge(st.ageS) + ' old';
-    el.className = st.offline ? 'offline' : '';
+    el.textContent = st.label;
+    el.className = st.cls;
     var hbs = document.querySelectorAll('.hb');
     for (var i = 0; i < hbs.length; i++) {
       var hb = hbs[i].getAttribute('data-hb'), exp = hbs[i].getAttribute('data-exp');
