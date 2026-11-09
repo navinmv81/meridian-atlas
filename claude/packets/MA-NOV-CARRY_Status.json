@@ -1,0 +1,49 @@
+{
+  "packet": "MA-NOV-CARRY",
+  "title": "October carry-overs — triaged, not committed scope (18 items; see the 6 Nov transition recommendation)",
+  "kind": "carry-over register",
+  "state": "DRAFT",
+  "phase": "SPEC",
+  "rev": 3,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "— (not admitted)",
+  "write_owner": "NONE",
+  "control": null,
+  "task": null,
+  "requirements": [
+    "Immediate: boost pause lapse; public Ops GET routes (Access); FIRDS CR-11; enrich phase-1 stall",
+    "Dependencies: items 6–13 (linked to OPS/EXP/BOND/HOME)",
+    "Maintenance: A2, CR-10 steps 3–5, holdings start events, runner/registry hygiene",
+    "Deferred: Access session length, cosmetic markers, low-priority KIs"
+  ],
+  "dependencies": [],
+  "scope_source": "claude/meridian_atlas_november_content_scope_and_requirements.md (2 Nov kickoff edition, c16c8e19…5a03)",
+  "next_gate": "Scope assessment (Spec §7 checkpoint 1) after P1.FIX3 and the weekly usage reset; Founder scope approval before any spec",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "—",
+  "updated": "2026-11-09T06:42:44Z",
+  "updated_by": "Main Lane",
+  "observations": [
+    {
+      "at": "2026-11-08T12:47:48Z",
+      "item": "FIRDS (CR-11)",
+      "note": "Sun 8 Nov 11:02Z run SUCCEEDED (first since 27 Sep): firds_instrument_reference +216, entity_isin_map +251, instrument_master +216, entity_master +145, 407 refreshed. Failure is intermittent, not fixed — CR-11 stays. The +145 new entity_master rows are new duplicate-check candidates (013 follow-up)."
+    },
+    {
+      "at": "2026-11-08T12:47:48Z",
+      "item": "Holdings write budget (ETF Product Lead)",
+      "note": "Sweep 08:00Z: sev2 EXC-S-6E6D3D658179 holdings Sunday reached the 80k guard (80,361); sev3 EXC-S-0985E036CADD next batch predicted 110,545 writes (> 80k guard and > 100k daily cap). Cycle 133/237 ETFs, ~6 weeks to complete. The guard stops the run (partial), so no breach — but next Sunday 15 Nov needs an ETF PL decision on batch size. Classified: immediate (before Sun 15 Nov)."
+    },
+    {
+      "at": "2026-11-08T12:47:48Z",
+      "item": "D1 daily writes",
+      "note": "86,108 / 100,000 at 12:00Z Sun 8 Nov (holdings + FIRDS + jobs). No manual D1 writes planned today."
+    },
+    {
+      "at": "2026-11-09T06:42:44Z",
+      "item": "Boost job_missed false positives (Operations Lead)",
+      "note": "Boost fired 11:50Z and 17:50Z Sun 8 Nov with start+success recorded (HTTP 201), but the sweep raised sev3 EXC-S-BEAEC2CBA475 and EXC-S-F2F2329B57EC (missed slots). Investigate after the reset; boost also fired with the day over the 80k guard (wrote ~0)."
+    }
+  ]
+}

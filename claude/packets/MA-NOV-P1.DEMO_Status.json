@@ -1,0 +1,155 @@
+{
+  "packet": "MA-NOV-P1.DEMO",
+  "title": "Bracketed interactive run: Claude.md v1.2 amendments draft",
+  "state": "CHANGES_REQUESTED",
+  "phase": "BUILD",
+  "rev": 15,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENG / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead (documentation), interactive run (LANE_OPENER_v2)",
+  "control": {
+    "version": "v2",
+    "file": "MA-NOV-P1.DEMO_Control_v2.md",
+    "sha256": "5a9934fdebf50f33e034b900060bcc406a627fdb615577a54785f483a814b3b4"
+  },
+  "task": {
+    "version": "v2",
+    "file": "MA-NOV-P1.DEMO_Task_v2.md",
+    "sha256": "91bdfcb4252015f566edbef0a19a3e92bdd501ee887bd662aec119acbf92ce7c"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/governance/Claude_md_v1.2_amendments.md",
+      "claude/packets/MA-NOV-P1.DEMO_Report.md"
+    ]
+  },
+  "reviewer": "Architect — MA-NOV-P1.REVIEW",
+  "next_gate": "Accepted by Founder (with notes); record closes when FIX3 adds the follow-up closure path",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-11-08T08:44:33Z",
+  "updated_by": "Main Lane",
+  "lease": null,
+  "run": {
+    "run_id": "r-20261107T095946Z-3762",
+    "mode": "interactive",
+    "started": "2026-11-07T09:59:46Z",
+    "ended": "2026-11-07T10:01:47Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-P1.DEMO_Report.md",
+    "report_sha256": "e77486ebf307cf571b833481d275028e59404ff7858c74ee299780b834c25ff7"
+  },
+  "heartbeat": null,
+  "superseded": [
+    {
+      "file": "MA-NOV-P1.DEMO_Control_v1.md",
+      "sha256": "dd34368e8687f289aacf737792da1b51d4d53e4408ea57ed0cbf3a268506c41a"
+    },
+    {
+      "file": "MA-NOV-P1.DEMO_Task_v1.md",
+      "sha256": "a0838d6565fdad25d92d5b8f6dc1f781ad9b0c0b25a6a28b47acf6d8e951b453"
+    }
+  ],
+  "previous_runs": [
+    {
+      "run_id": "r-20261107T092212Z-c0da",
+      "session_id": "2d9e33d1-b343-4b2d-b06a-a58d07c7d209",
+      "started": "2026-11-07T09:22:12Z",
+      "log": "claude/factory/runs/r-20261107T092212Z-c0da/worker.jsonl",
+      "ended": "2026-11-07T09:22:13Z",
+      "exit_code": 1,
+      "signal": null,
+      "outcome": "BLOCKED",
+      "blocked_reason": "worker exit 1"
+    }
+  ],
+  "previous_start_approval": {
+    "by": "Founder",
+    "at": "2026-11-07T09:21Z",
+    "words": "model claude-opus-5-5; approve MA-NOV-P1.DEMO",
+    "control_sha256": "dd34368e8687f289aacf737792da1b51d4d53e4408ea57ed0cbf3a268506c41a",
+    "task_sha256": "a0838d6565fdad25d92d5b8f6dc1f781ad9b0c0b25a6a28b47acf6d8e951b453",
+    "recorded_by": "Main Lane"
+  },
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-07T09:46Z",
+    "words": "approve MA-NOV-P1.DEMO",
+    "control_sha256": "5a9934fdebf50f33e034b900060bcc406a627fdb615577a54785f483a814b3b4",
+    "task_sha256": "91bdfcb4252015f566edbef0a19a3e92bdd501ee887bd662aec119acbf92ce7c",
+    "recorded_by": "Main Lane"
+  },
+  "report": {
+    "file": "MA-NOV-P1.DEMO_Report.md",
+    "sha256": "e77486ebf307cf571b833481d275028e59404ff7858c74ee299780b834c25ff7"
+  },
+  "result": "Interactive run r-20261107T095946Z-3762: begin 09:59:46Z, end 10:01:47Z, 0 scope violations; draft claude/governance/Claude_md_v1.2_amendments.md (081c2d56…, 2,139 words). Verified by Main Lane 2026-11-07T10:04:03Z.",
+  "review": {
+    "reviewer": "Architect",
+    "packet": "MA-NOV-P1.REVIEW",
+    "run_id": "r-20261107T105411Z-2bf1",
+    "session_id": "4e97c250-c0d4-4af3-90fe-c8d87d64a493",
+    "file": "MA-NOV-P1.REVIEW_Report.md",
+    "sha256": "7677ad1d033fd3e2b59a29745c16e166c72c2b4dded5d98e417784ac1b26cb99",
+    "verdict": "PASS_WITH_NOTES",
+    "must_fix": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F6",
+      "D1",
+      "D2",
+      "D3"
+    ],
+    "copied_by": "Main Lane",
+    "at": "2026-11-07T11:03:52Z"
+  },
+  "review_followup": {
+    "reviewer": "Architect",
+    "packet": "MA-NOV-P1.REVIEW2",
+    "run_id": "r-20261107T215253Z-231a",
+    "session_id": "a7ec301b-e98c-486c-98e2-ddcdcfa683c9",
+    "file": "MA-NOV-P1.REVIEW2_Report.md",
+    "sha256": "dcb1e3db2c20f772024591a69945877232034a4d3dcaefd150be80d2564266e5",
+    "verdict": "PASS_WITH_NOTES",
+    "must_fix_closed": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F6",
+      "D1",
+      "D2",
+      "D3"
+    ],
+    "new": [
+      "G1 (M before commit-allowed packets)",
+      "G2 (M before commit/push-allowed packets)",
+      "G3",
+      "G4",
+      "G5"
+    ],
+    "accept": "yes, with notes",
+    "copied_by": "Main Lane",
+    "at": "2026-11-08T08:40:35Z"
+  },
+  "pilot_acceptance": {
+    "by": "Founder",
+    "at": "2026-11-08T08:44Z",
+    "words": "accept pilot with note- (A)",
+    "basis": [
+      "MA-NOV-P1.REVIEW_Report.md 7677ad1d…cb99",
+      "MA-NOV-P1.REVIEW2_Report.md dcb1e3db…66e5"
+    ],
+    "conditions": [
+      "No packet may commit or push until G1 and G2 are fixed (P1.FIX3)",
+      "Claude.md v1.2 draft stays DRAFT until separate approval",
+      "Interim Tower retired once FIX3 lands"
+    ],
+    "recorded_by": "Main Lane"
+  }
+}

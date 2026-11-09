@@ -12,6 +12,10 @@ import { TOWER_LOGIC_FUNCTIONS } from './lib/tower-logic.mjs';
 
 export const BOARD_TITLE = '# Status Board — November 2026 (generated — do not edit; run node tools/factory/project.mjs)';
 export const BOARD_SECTION = '## November 2026 — admitted packets';
+export const SCOPE_SECTION = '## November scope — outcomes';
+// FIX3 item 7: outcome / carry-over records are sprint scope, not work — shown in their own section only.
+export const SCOPE_KINDS = ['outcome', 'carry-over register'];
+export const isScope = (p) => SCOPE_KINDS.includes(p.kind);
 const COLUMNS = ['Packet', 'State', 'Control (SHA-256)', 'Lane / tool', 'Write owner', 'Next gate', 'Blocker', 'Usage'];
 
 const dash = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
@@ -50,7 +54,7 @@ function recentRuns(root) {
 function pick(s) {
   const pickObj = (o, keys) => (o && typeof o === 'object' ? Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]])) : o ?? null);
   return {
-    title: s.title ?? null, state: s.state ?? null, phase: s.phase ?? null, rev: Number.isInteger(s.rev) ? s.rev : 1,
+    title: s.title ?? null, kind: s.kind ?? null, state: s.state ?? null, phase: s.phase ?? null, rev: Number.isInteger(s.rev) ? s.rev : 1,
     lane: s.lane ?? null, write_owner: s.write_owner ?? null, next_gate: s.next_gate ?? null,
     blocker: blockerText(s), usage_class: s.usage_class ?? null, updated: s.updated ?? null, updated_by: s.updated_by ?? null,
     control: pickObj(s.control, ['version', 'file', 'sha256']), task: pickObj(s.task, ['version', 'file', 'sha256']),
@@ -59,6 +63,7 @@ function pick(s) {
     heartbeat: s.heartbeat ?? null,
     run: pickObj(s.run, ['run_id', 'mode', 'session_id', 'started', 'ended', 'exit_code', 'outcome', 'blocked_reason', 'report_sha256']),
     hold: pickObj(s.hold, ['type', 'set_by', 'at', 'reason', 'resume_state', 'reset_at']),
+    ...(SCOPE_KINDS.includes(s.kind) ? { requirements: s.requirements || [], dependencies: s.dependencies || [], observations: s.observations || [] } : {}),
   };
 }
 
@@ -106,10 +111,20 @@ export function renderBoard(snap) {
     `| ${COLUMNS.join(' | ')} |`,
     `|${COLUMNS.map(() => '---').join('|')}|`,
   ];
-  for (const p of snap.packets) {
+  for (const p of snap.packets.filter((x) => !isScope(x))) {
     const name = p.title ? `${p.id} — ${p.title}` : p.id;
     const ctrl = p.control && p.control.sha256 ? `${ver(p.control.version)} \`${p.control.sha256}\`` : '—';
     lines.push(`| ${[cell(name), cell(p.state), ctrl, cell(p.lane), cell(p.write_owner), cell(p.next_gate), cell(p.blocker), cell(p.usage_class)].join(' | ')} |`);
+  }
+  const scope = snap.packets.filter(isScope);
+  if (scope.length) {
+    lines.push('', SCOPE_SECTION, '', '| Outcome | Kind | State | Requirements | Dependencies | Next gate |', '|---|---|---|---|---|---|');
+    for (const p of scope) {
+      lines.push(`| ${[cell(p.title ? `${p.id} — ${p.title}` : p.id), cell(p.kind), cell(p.state), cell(p.requirements.join('; ')), cell(p.dependencies.join('; ')), cell(p.next_gate)].join(' | ')} |`);
+    }
+    for (const p of scope.filter((x) => x.observations.length)) {
+      lines.push('', `**${p.id} observations:**`, ...p.observations.map((o) => `- ${cell(o.at)} · ${cell(o.item)} — ${cell(o.note)}`));
+    }
   }
   return lines.join('\n') + '\n';
 }
@@ -129,7 +144,12 @@ ${p.blocker ? `<div class="why">Blocker: ${esc(p.blocker)}</div>` : ''}${reasons
 }
 
 export function renderHtml(snap) {
-  const P = snap.packets;
+  const P = snap.packets.filter((p) => !isScope(p));
+  const scope = snap.packets.filter(isScope).map((p) => `<div class="card scope"><div class="row"><b>${esc(p.id)}</b> <span class="pill">${esc(p.kind)}</span> <span class="pill">${esc(p.state)}</span></div>
+<div class="t">${esc(p.title)}</div>
+<div class="meta">Requirements: ${p.requirements.length ? p.requirements.map(esc).join('; ') : '—'}</div>
+<div class="meta">Dependencies: ${p.dependencies.length ? p.dependencies.map(esc).join('; ') : '—'}</div>
+<div class="meta">Next gate: ${esc(p.next_gate)}</div>${p.observations.length ? `<ul class="obs">${p.observations.map((o) => `<li><span class="dim">${esc(o.at)}</span> <b>${esc(o.item)}</b> — ${esc(o.note)}</li>`).join('')}</ul>` : ''}</div>`);
   const by = (...states) => P.filter((p) => states.includes(p.state));
   const waiting = [
     ...(snap.pause ? [`<div class="card banner red"><b>Global pause is ON</b> — ${esc(snap.pause.reason)} (set ${esc(snap.pause.at)})</div>`] : []),
@@ -148,7 +168,7 @@ export function renderHtml(snap) {
       : `<div class="meta">Heartbeat <span class="hb" data-hb="${esc(p.heartbeat)}" data-exp="${esc(l.expires)}">${esc(p.heartbeat)}</span></div>`;
     return card(p, common + tail);
   });
-  const anyLease = P.some((p) => p.lease);
+  const anyLease = snap.packets.some((p) => p.lease);
   const ready = P.filter((p) => p.state === 'READY' && p.start_approval).map((p) => card(p, `<div class="meta">Start approval: ${esc(p.start_approval.by)} ${esc(p.start_approval.at)} — “${esc(p.start_approval.words)}”</div>${p.warnings.length ? `<div class="meta">${p.warnings.map(esc).join('; ')}</div>` : ''}`));
   const review = by('REVIEW_NEEDED', 'CHANGES_REQUESTED', 'APPROVED').map((p) => card(p, p.run && p.run.report_sha256 ? `<div class="meta">Report <code>${esc(p.run.report_sha256)}</code></div>` : ''));
   const blocked = by('BLOCKED', 'PAUSED', 'CAPACITY_HOLD').map((p) => card(p));
@@ -174,6 +194,7 @@ h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 8px;border-bott
 .why{color:var(--amber);font-size:12.5px}.act{color:var(--fg);font-size:12.5px;font-style:italic}.line{padding:3px 0;border-bottom:1px dashed var(--line)}
 code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace}.mode-interactive{color:var(--ok)}.lx.red{color:var(--red);font-weight:600}.hb.ok{color:var(--ok)}.hb.amber{color:var(--amber)}.hb.red{color:var(--red);font-weight:600}
 #status{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:10px;background:var(--pill);font-size:13px;font-weight:400}#status.live{color:var(--ok)}#status.amber{background:var(--amber);color:#fff}#status.red{background:var(--red);color:#fff;font-weight:600}
+.obs{margin:6px 0 0;padding-left:18px;font-size:12.5px}
 pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;word-break:break-all}footer{margin-top:24px;color:var(--dim);font-size:12px}
 </style>
 </head>
@@ -187,6 +208,7 @@ ${section('In review', review, 'Nothing in review.')}
 ${section('Blocked / held', blocked, 'Nothing blocked or held.')}
 ${section('Closed (last 10)', closed, 'None closed.')}
 ${section('Recent runs', runs, 'No dispatcher runs recorded.')}
+${section('November scope', scope, 'No outcome records.')}
 <section><h2>How to start a run</h2><p class="meta">Founder: open a Claude Code session and type the fixed line. Runs are interactive (Founder choice B, 7 Nov): the session brackets its work with <code>node tools/factory/dispatch.mjs begin &lt;ID&gt;</code> … <code>end &lt;ID&gt;</code>, so this page shows it as running and the scope check applies.</p><pre>${esc(snap.fixed_line)}</pre><p class="meta">Opener: <code>${esc(snap.opener && snap.opener.file)}</code> sha256 <code>${esc(snap.opener && snap.opener.sha256)}</code> (computed from the file when this page was generated)</p></section>
 <footer>generated_at ${esc(snap.generated_at)} · node tools/factory/project.mjs · no secrets, no network</footer>
 <script type="application/json" id="snapshot">${json}</script>

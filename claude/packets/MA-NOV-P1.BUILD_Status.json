@@ -1,0 +1,113 @@
+{
+  "packet": "MA-NOV-P1.BUILD",
+  "title": "Pilot build: state library, Tower/board generator, dispatcher, tests",
+  "state": "CHANGES_REQUESTED",
+  "phase": "BUILD",
+  "rev": 8,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENG / Claude Code (fixed line)",
+  "write_owner": "Engineering Lead (LANE-NOV-ENG)",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-P1.BUILD_Control_v1.md",
+    "sha256": "c049828bbd66f3c92c40110a542bae640ca27ee0d9cc1a39bd52d964b034f7aa"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-P1.BUILD_Task_v1.md",
+    "sha256": "30ebc6d2bceec6aa5d2abfeca977d03512fac56a6647dc6bd747154ee8ef2f40"
+  },
+  "reviewer": "Architect — MA-NOV-P1.REVIEW (separate session)",
+  "next_gate": "Accepted by Founder (with notes); record closes when FIX3 adds the follow-up closure path",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "heavy",
+  "updated": "2026-11-08T08:44:33Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-07T08:56Z",
+    "words": "approve MA-NOV-P1.BUILD",
+    "control_sha256": "c049828bbd66f3c92c40110a542bae640ca27ee0d9cc1a39bd52d964b034f7aa",
+    "task_sha256": "30ebc6d2bceec6aa5d2abfeca977d03512fac56a6647dc6bd747154ee8ef2f40",
+    "recorded_by": "Main Lane"
+  },
+  "run": {
+    "mode": "fixed line (interactive Claude Code)",
+    "started": "after 2026-11-07T08:56Z (approval); exact start not recorded",
+    "ended": "2026-11-07T09:11Z (report file mtime)",
+    "note": "recorded by Main Lane after the run; pre-dispatcher"
+  },
+  "report": {
+    "file": "MA-NOV-P1.BUILD_Report.md",
+    "sha256": "d58288042af43d1dc285dac40047ec5c964cc5c7df40f81cd507e9b9f9219f15"
+  },
+  "result": "Commit 2d41378 (43 paths) pushed; 15/15 tests (lane, macOS Node 24) and 15/15 (Main Lane re-run, Linux Node 22); 3 wrangler allows removed. Verified by Main Lane 2026-11-07T09:16:55Z.",
+  "review": {
+    "reviewer": "Architect",
+    "packet": "MA-NOV-P1.REVIEW",
+    "run_id": "r-20261107T105411Z-2bf1",
+    "session_id": "4e97c250-c0d4-4af3-90fe-c8d87d64a493",
+    "file": "MA-NOV-P1.REVIEW_Report.md",
+    "sha256": "7677ad1d033fd3e2b59a29745c16e166c72c2b4dded5d98e417784ac1b26cb99",
+    "verdict": "PASS_WITH_NOTES",
+    "must_fix": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F6",
+      "D1",
+      "D2",
+      "D3"
+    ],
+    "copied_by": "Main Lane",
+    "at": "2026-11-07T11:03:52Z"
+  },
+  "review_followup": {
+    "reviewer": "Architect",
+    "packet": "MA-NOV-P1.REVIEW2",
+    "run_id": "r-20261107T215253Z-231a",
+    "session_id": "a7ec301b-e98c-486c-98e2-ddcdcfa683c9",
+    "file": "MA-NOV-P1.REVIEW2_Report.md",
+    "sha256": "dcb1e3db2c20f772024591a69945877232034a4d3dcaefd150be80d2564266e5",
+    "verdict": "PASS_WITH_NOTES",
+    "must_fix_closed": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F6",
+      "D1",
+      "D2",
+      "D3"
+    ],
+    "new": [
+      "G1 (M before commit-allowed packets)",
+      "G2 (M before commit/push-allowed packets)",
+      "G3",
+      "G4",
+      "G5"
+    ],
+    "accept": "yes, with notes",
+    "copied_by": "Main Lane",
+    "at": "2026-11-08T08:40:35Z"
+  },
+  "pilot_acceptance": {
+    "by": "Founder",
+    "at": "2026-11-08T08:44Z",
+    "words": "accept pilot with note- (A)",
+    "basis": [
+      "MA-NOV-P1.REVIEW_Report.md 7677ad1d…cb99",
+      "MA-NOV-P1.REVIEW2_Report.md dcb1e3db…66e5"
+    ],
+    "conditions": [
+      "No packet may commit or push until G1 and G2 are fixed (P1.FIX3)",
+      "Claude.md v1.2 draft stays DRAFT until separate approval",
+      "Interim Tower retired once FIX3 lands"
+    ],
+    "recorded_by": "Main Lane"
+  }
+}

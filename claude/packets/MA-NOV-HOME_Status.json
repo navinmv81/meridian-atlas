@@ -1,0 +1,32 @@
+{
+  "packet": "MA-NOV-HOME",
+  "title": "Outcome — Homepage as the research entrance (HOME-01–07): proposition, routes into exposure analysis and company research",
+  "kind": "outcome",
+  "state": "DRAFT",
+  "phase": "SPEC",
+  "rev": 1,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "— (not admitted)",
+  "write_owner": "NONE",
+  "control": null,
+  "task": null,
+  "requirements": [
+    "HOME-01",
+    "HOME-02",
+    "HOME-03",
+    "HOME-04",
+    "HOME-05",
+    "HOME-06",
+    "HOME-07"
+  ],
+  "dependencies": [
+    "phone-width button row (12)"
+  ],
+  "scope_source": "claude/meridian_atlas_november_content_scope_and_requirements.md (2 Nov kickoff edition, c16c8e19…5a03)",
+  "next_gate": "Scope assessment (Spec §7 checkpoint 1) after P1.FIX3 and the weekly usage reset; Founder scope approval before any spec",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "—",
+  "updated": "2026-11-08T08:44:52Z",
+  "updated_by": "Main Lane"
+}

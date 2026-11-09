@@ -1,6 +1,6 @@
 // MA-NOV-P1.BUILD pilot tests (Task §7). Run: node --test tools/factory/test
 // Every test builds its own temp repo; the dispatcher launches only the stub in fixtures/.
-// Numbering: 1–13 (+4b, 4c) BUILD, 16–22 FIX, 23–32 FIX2. Ids 14–15 are deliberately unused: BUILD skipped them and
+// Numbering: 1–13 (+4b, 4c) BUILD, 16–22 FIX, 23–32 FIX2, 33–40 FIX3. Ids 14–15 are deliberately unused: BUILD skipped them and
 // the FIX/REVIEW reports cite 16–22 by number, so renumbering would break those references.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,7 +12,7 @@ import { makeRepo, envFor, runNode, spawnNode, callCount, status, waitFor, strip
 import { writeStatus, listStatus, OwnershipError, TransitionError, RevConflictError } from '../lib/state.mjs';
 import { acquireLease, LeaseError } from '../lib/lease.mjs';
 import { evaluate } from '../lib/eligibility.mjs';
-import { project, BOARD_TITLE, BOARD_SECTION } from '../project.mjs';
+import { project, BOARD_TITLE, BOARD_SECTION, SCOPE_SECTION, SCOPE_KINDS } from '../project.mjs';
 
 const A = 'MA-NOV-TA';
 const B = 'MA-NOV-TB';
@@ -267,7 +267,8 @@ test('12. generated board parses with LANE_OPENER step 3 and preserves every Con
   assert.ok(board.includes(`\n${BOARD_SECTION}\n`));
   const parsed = laneOpenerReadyRows(board);
   assert.deepEqual(parsed.header, ['Packet', 'State', 'Control (SHA-256)', 'Lane / tool', 'Write owner', 'Next gate', 'Blocker', 'Usage']);
-  const all = listStatus('MA-NOV-', { root: repo.root });
+  // FIX3 item 7: outcome / carry-over records live in the November scope section, not the work table.
+  const all = listStatus('MA-NOV-', { root: repo.root }).filter((x) => !SCOPE_KINDS.includes(x.status.kind));
   assert.equal(parsed.rows.length, all.length, 'no packet lost');
   for (const { id, status: s } of all) {
     const row = parsed.rows.find((r) => r.Packet.split(' — ')[0] === id);
@@ -618,4 +619,136 @@ test('32. Tower states: LIVE / SNAPSHOT / RUNNING (snapshot) / STALE RUN; no OFF
   assert.equal(idle.state, 'SNAPSHOT');
   assert.equal(idle.label, `Idle — snapshot from ${snap.generated_at} (10 min ago); regenerated on every begin/end and Main Lane update`);
   assert.equal(towerStatus(snap.generated_at, g + 10e3, 30, []).state, 'LIVE');
+});
+
+// ---- MA-NOV-P1.FIX3: commit-check gaps G1–G5, closure path, Outcomes view ----
+const branchOf = (repo) => gitIn(repo.root, 'symbolic-ref', '--short', 'HEAD');
+
+test('33. file added then removed across two commits -> BLOCKED (G1: every commit checked, not just the net diff)', () => {
+  const repo = makeRepo({ packets: [withCommits(A)] });
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 0);
+  writeReport(repo, A);
+  fs.writeFileSync(P(repo, 'App', 'leak.js'), 'added then removed\n');
+  committer(repo)('App/leak.js');
+  gitIn(repo.root, 'rm', '-q', '--', 'App/leak.js');
+  gitIn(repo.root, 'commit', '-q', '-m', 'remove');
+  const e = runNode(DISPATCH, ['end', A], envFor(repo));
+  assert.equal(e.status, 3, e.stderr + e.stdout);
+  assert.equal(status(repo, A).run.blocked_reason, 'scope violation: App/leak.js');
+  assert.ok(runJson(repo, A).committed_paths.includes('App/leak.js'));
+});
+
+test('34. commit on another branch -> BLOCKED "ref changed"; origin/<branch> moving with allow_commits is accepted (G2)', () => {
+  const repo = makeRepo({ packets: [withCommits(A)] });
+  const br = branchOf(repo);
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 0);
+  writeReport(repo, A);
+  gitIn(repo.root, 'checkout', '-q', '-b', 'side');
+  fs.writeFileSync(P(repo, 'claude', 'packets', `${A}_Report.md`), 'x'); // stays untracked on both branches
+  gitIn(repo.root, 'commit', '-q', '--allow-empty', '-m', 'side work');
+  gitIn(repo.root, 'checkout', '-q', br);
+  const e = runNode(DISPATCH, ['end', A], envFor(repo));
+  assert.equal(e.status, 3, e.stderr + e.stdout);
+  assert.equal(status(repo, A).run.blocked_reason, 'ref changed: refs/heads/side');
+  assert.equal(runJson(repo, A).ref_check, 'refs changed');
+
+  const repo2 = makeRepo({ packets: [withCommits(A)] });
+  const br2 = branchOf(repo2);
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo2)).status, 0);
+  writeReport(repo2, A);
+  committer(repo2)(report(A));
+  gitIn(repo2.root, 'update-ref', `refs/remotes/origin/${br2}`, 'HEAD'); // as a push would
+  const e2 = runNode(DISPATCH, ['end', A], envFor(repo2));
+  assert.equal(e2.status, 0, e2.stderr + e2.stdout);
+  assert.equal(runJson(repo2, A).ref_check, 'checked');
+});
+
+test('35. before.json without a ref snapshot (older code) -> ref_check "unavailable", not BLOCKED (G2)', () => {
+  const repo = makeRepo({ packets: [A] });
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 0);
+  const bf = P(repo, 'claude', 'factory', 'runs', status(repo, A).run.run_id, 'before.json');
+  const b = JSON.parse(fs.readFileSync(bf, 'utf8'));
+  assert.ok(b.refs && Object.keys(b.refs).length >= 1, 'begin records refs');
+  delete b.refs; delete b.transitions;
+  fs.writeFileSync(bf, JSON.stringify(b));
+  writeReport(repo, A);
+  const e = runNode(DISPATCH, ['end', A], envFor(repo));
+  assert.equal(e.status, 0, e.stderr + e.stdout);
+  assert.equal(runJson(repo, A).ref_check, 'unavailable');
+  assert.equal(runJson(repo, A).transitions_check, 'unavailable');
+});
+
+test('36. unparsable global lock: younger than 60 s kept, older retired (G3)', () => {
+  const repo = makeRepo({ packets: [A] });
+  const lock = P(repo, 'claude', 'factory', 'leases', '.global.lock');
+  fs.writeFileSync(lock, '{"half-writ');
+  assert.equal(runNode(DISPATCH, ['check'], envFor(repo)).status, 0);
+  assert.ok(fs.existsSync(lock), 'young unparsable lock kept');
+  const old = (Date.now() - 120e3) / 1000;
+  fs.utimesSync(lock, old, old);
+  assert.equal(runNode(DISPATCH, ['check'], envFor(repo)).status, 0);
+  assert.ok(!fs.existsSync(lock), 'old unparsable lock retired (renamed, not deleted)');
+});
+
+test('37. end without a session id when the lease has one -> refused, nothing written (G4)', () => {
+  const repo = makeRepo({ packets: [A] });
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo, { CLAUDE_CODE_SESSION_ID: 'sess-A' })).status, 0);
+  writeReport(repo, A);
+  const bytes = fs.readFileSync(statusFile(repo, A));
+  const x = runNode(DISPATCH, ['end', A], envFor(repo, { CLAUDE_CODE_SESSION_ID: '' }));
+  assert.equal(x.status, 2, x.stderr + x.stdout);
+  assert.match(x.stderr, /end needs the session that began the run/);
+  assert.deepEqual(fs.readFileSync(statusFile(repo, A)), bytes, 'Status unchanged');
+  assert.ok(fs.existsSync(P(repo, 'claude', 'factory', 'leases', `${A}.lease`)), 'lease kept');
+});
+
+test('38. transitions log rewritten -> BLOCKED; appended -> accepted (G5)', () => {
+  const tl = (repo) => P(repo, 'claude', 'factory', 'transitions.jsonl');
+  const repo = makeRepo({ packets: [A] });
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 0);
+  writeReport(repo, A);
+  fs.writeFileSync(tl(repo), fs.readFileSync(tl(repo), 'utf8').replace('READY', 'DRAFT'));
+  const e = runNode(DISPATCH, ['end', A], envFor(repo));
+  assert.equal(e.status, 3, e.stderr + e.stdout);
+  assert.equal(status(repo, A).run.blocked_reason, 'transitions log rewritten');
+
+  const repo2 = makeRepo({ packets: [A] });
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo2)).status, 0);
+  writeReport(repo2, A);
+  fs.appendFileSync(tl(repo2), '{"appended":true}\n');
+  const e2 = runNode(DISPATCH, ['end', A], envFor(repo2));
+  assert.equal(e2.status, 0, e2.stderr + e2.stdout);
+  assert.equal(runJson(repo2, A).transitions_check, 'append-only');
+});
+
+test('39. closure path CHANGES_REQUESTED -> APPROVED: main-lane with closure_by (CLOSED packet) accepted; otherwise refused', () => {
+  const repo = makeRepo({ packets: [{ id: A, state: 'CHANGES_REQUESTED' }, { id: B, state: 'CLOSED' }, { id: 'MA-NOV-TC', state: 'READY' }], git: false });
+  const before = fs.readFileSync(statusFile(repo, A));
+  const w = (fn, writer = 'main-lane') => writeStatus(A, fn, { writer, expectRev: 1, root: repo.root });
+  assert.throws(() => w((x) => { x.state = 'APPROVED'; }), TransitionError, 'no closure_by');
+  assert.throws(() => w((x) => { x.state = 'APPROVED'; x.closure_by = 'MA-NOV-TC'; }), TransitionError, 'follow-up not CLOSED');
+  assert.throws(() => w((x) => { x.state = 'APPROVED'; x.closure_by = 'MA-NOV-NONE'; }), TransitionError, 'no such packet');
+  assert.throws(() => w((x) => { x.state = 'APPROVED'; x.closure_by = B; }, 'dispatcher'), 'dispatcher refused');
+  assert.deepEqual(fs.readFileSync(statusFile(repo, A)), before, 'nothing written by refused writes');
+  const ok = w((x) => { x.state = 'APPROVED'; x.closure_by = B; });
+  assert.equal(ok.state, 'APPROVED');
+  assert.equal(ok.closure_by, B);
+});
+
+test('40. Outcomes view: outcome / carry-over records render in "November scope" with requirements, not in work columns', () => {
+  const OX = 'MA-NOV-OX'; const CX = 'MA-NOV-CX';
+  const scope = (id, kind, more = {}) => ({ id, state: 'DRAFT', approved: false, runProfile: false,
+    extra: { kind, control: null, task: null, requirements: [`${id}-R01`, `${id}-R02`], dependencies: [`${id} dep`], ...more } });
+  const repo = makeRepo({ packets: [A, scope(OX, 'outcome'), scope(CX, 'carry-over register', { observations: [{ at: '2026-11-08T12:00:00Z', item: 'CX obs item', note: 'CX obs note' }] })], git: false });
+  const { board, html } = project({ root: repo.root });
+  const work = board.slice(board.indexOf(BOARD_SECTION), board.indexOf(SCOPE_SECTION));
+  assert.ok(work.includes(A) && !work.includes(OX) && !work.includes(CX), 'work table excludes outcome records');
+  const sc = board.slice(board.indexOf(SCOPE_SECTION));
+  for (const t of [`${OX}-R01`, `${OX} dep`, `${CX}-R02`, 'CX obs note']) assert.ok(sc.includes(t), `board scope has ${t}`);
+  const body = html.slice(0, html.indexOf('<script type="application/json"'));
+  const secs = body.split('<section>').slice(1);
+  const scopeSec = secs.find((x) => x.startsWith('<h2>November scope'));
+  assert.ok(scopeSec, 'November scope section present');
+  for (const t of [`${OX}-R01`, `${CX}-R02`, `${OX} dep`, 'CX obs item', 'CX obs note']) assert.ok(scopeSec.includes(t), `Tower scope has ${t}`);
+  for (const sct of secs.filter((x) => x !== scopeSec)) assert.ok(!sct.includes(OX) && !sct.includes(CX), `not in: ${sct.slice(0, 40)}`);
 });

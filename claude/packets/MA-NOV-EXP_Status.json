@@ -1,0 +1,39 @@
+{
+  "packet": "MA-NOV-EXP",
+  "title": "Outcome — Connected exposure-to-company research (EXP-01–12): selected ETFs/equities → explainable combined exposure and gaps → company → connected evidence",
+  "kind": "outcome",
+  "state": "DRAFT",
+  "phase": "SPEC",
+  "rev": 1,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "— (not admitted)",
+  "write_owner": "NONE",
+  "control": null,
+  "task": null,
+  "requirements": [
+    "EXP-01",
+    "EXP-02",
+    "EXP-03",
+    "EXP-04",
+    "EXP-05",
+    "EXP-06",
+    "EXP-07",
+    "EXP-08",
+    "EXP-09",
+    "EXP-10",
+    "EXP-11",
+    "EXP-12"
+  ],
+  "dependencies": [
+    "007 Phase 2 ETF wiring (9)",
+    "ETF overlap/exposure read cost + holdings icon (10)",
+    "013 held identity subset (11)"
+  ],
+  "scope_source": "claude/meridian_atlas_november_content_scope_and_requirements.md (2 Nov kickoff edition, c16c8e19…5a03)",
+  "next_gate": "Scope assessment (Spec §7 checkpoint 1) after P1.FIX3 and the weekly usage reset; Founder scope approval before any spec",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "—",
+  "updated": "2026-11-08T08:44:52Z",
+  "updated_by": "Main Lane"
+}

@@ -1,0 +1,60 @@
+{
+  "packet": "MA-NOV-P1.REVIEW2",
+  "title": "Architect delta review of MA-NOV-P1.FIX2",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "Architect / Claude Code (fresh session, LANE_OPENER_v2)",
+  "write_owner": "Architect (review report only)",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-P1.REVIEW2_Control_v1.md",
+    "sha256": "a8dd81f8028c27f7822c4cf566b24dce3e90c3cad82b38043eb5c4eb5a53de1d"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-P1.REVIEW2_Task_v1.md",
+    "sha256": "67fe9b21c80613172282a8c06b456258eb4f6c58937b32c0cd136b86c625b3d5"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-P1.REVIEW2_Report.md"
+    ]
+  },
+  "reviews": [
+    "MA-NOV-P1.FIX2"
+  ],
+  "next_gate": "—",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-08T08:40:35Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-07T21:52Z",
+    "words": "approve MA-NOV-P1.REVIEW2",
+    "control_sha256": "a8dd81f8028c27f7822c4cf566b24dce3e90c3cad82b38043eb5c4eb5a53de1d",
+    "task_sha256": "67fe9b21c80613172282a8c06b456258eb4f6c58937b32c0cd136b86c625b3d5",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261107T215253Z-231a",
+    "mode": "interactive",
+    "session_id": "a7ec301b-e98c-486c-98e2-ddcdcfa683c9",
+    "started": "2026-11-07T21:52:53Z",
+    "ended_by_session": "a7ec301b-e98c-486c-98e2-ddcdcfa683c9",
+    "ended": "2026-11-07T21:57:48Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-P1.REVIEW2_Report.md",
+    "report_sha256": "dcb1e3db2c20f772024591a69945877232034a4d3dcaefd150be80d2564266e5"
+  },
+  "heartbeat": null,
+  "report": {
+    "file": "MA-NOV-P1.REVIEW2_Report.md",
+    "sha256": "dcb1e3db2c20f772024591a69945877232034a4d3dcaefd150be80d2564266e5"
+  },
+  "result": "PASS_WITH_NOTES; all 9 must-fix closed; G1/G2 must-fix before any commit-allowed packet; G3–G5 notes; pilot acceptable with notes. Session id recorded and matched at end. Verified 2026-11-08T08:40:35Z."
+}

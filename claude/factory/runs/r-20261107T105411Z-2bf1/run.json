@@ -1,0 +1,16 @@
+{
+  "run_id": "r-20261107T105411Z-2bf1",
+  "packet": "MA-NOV-P1.REVIEW",
+  "mode": "interactive",
+  "holder": "interactive",
+  "holder_pid": 5901,
+  "lease_expires": "2026-11-07T12:54:11Z",
+  "lease_expired": false,
+  "started": "2026-11-07T10:54:11Z",
+  "ended": "2026-11-07T10:59:51Z",
+  "outcome": "REVIEW_NEEDED",
+  "blocked_reason": null,
+  "report_sha256": "7677ad1d033fd3e2b59a29745c16e166c72c2b4dded5d98e417784ac1b26cb99",
+  "capacity_hold": false,
+  "scope_violations": []
+}

@@ -1,0 +1,61 @@
+{
+  "packet": "MA-NOV-P1.REVIEW",
+  "title": "Independent Architect review of the pilot (BUILD + FIX + DEMO)",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "Architect / Claude Code (fresh session, LANE_OPENER_v2)",
+  "write_owner": "Architect (review report only)",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-P1.REVIEW_Control_v1.md",
+    "sha256": "74ea6be9bad1237b54431041b3477107fa649e2bb23f52fc5466c8bac4d79498"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-P1.REVIEW_Task_v1.md",
+    "sha256": "ec20fc25818ba0a39e3182718feafd0b0f6d8a3e5e1bae172a7cdcf0a3ef6ae0"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-P1.REVIEW_Report.md"
+    ]
+  },
+  "reviews": [
+    "MA-NOV-P1.BUILD",
+    "MA-NOV-P1.FIX",
+    "MA-NOV-P1.DEMO"
+  ],
+  "next_gate": "—",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-07T11:03:52Z",
+  "updated_by": "Main Lane",
+  "note": "Control corrected before release (one phrase; pre-release hash 5d873918… never given to a lane)",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-07T10:52Z",
+    "words": "approve MA-NOV-P1.REVIEW",
+    "control_sha256": "74ea6be9bad1237b54431041b3477107fa649e2bb23f52fc5466c8bac4d79498",
+    "task_sha256": "ec20fc25818ba0a39e3182718feafd0b0f6d8a3e5e1bae172a7cdcf0a3ef6ae0",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261107T105411Z-2bf1",
+    "mode": "interactive",
+    "started": "2026-11-07T10:54:11Z",
+    "ended": "2026-11-07T10:59:51Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-P1.REVIEW_Report.md",
+    "report_sha256": "7677ad1d033fd3e2b59a29745c16e166c72c2b4dded5d98e417784ac1b26cb99"
+  },
+  "heartbeat": null,
+  "report": {
+    "file": "MA-NOV-P1.REVIEW_Report.md",
+    "sha256": "7677ad1d033fd3e2b59a29745c16e166c72c2b4dded5d98e417784ac1b26cb99"
+  },
+  "result": "Verdict PASS_WITH_NOTES; 9 must-fix (2 need Founder decision); reviewer session 4e97c250… distinct from all run records. Verified by Main Lane 2026-11-07T11:03:52Z."
+}

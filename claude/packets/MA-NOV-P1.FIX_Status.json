@@ -1,0 +1,123 @@
+{
+  "packet": "MA-NOV-P1.FIX",
+  "title": "Interactive run mode (begin/end) + dispatcher fixes",
+  "state": "CHANGES_REQUESTED",
+  "phase": "BUILD",
+  "rev": 8,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENG / Claude Code (fixed line)",
+  "write_owner": "Engineering Lead (LANE-NOV-ENG)",
+  "control": {
+    "version": "v2",
+    "file": "MA-NOV-P1.FIX_Control_v2.md",
+    "sha256": "1f2cfe2638388def54a6481608b5e56b61bfeebe80d9f58fe1f0d65885d0b6f9"
+  },
+  "task": {
+    "version": "v2",
+    "file": "MA-NOV-P1.FIX_Task_v2.md",
+    "sha256": "fc2b71064bab4fdbfda89e59f6f690b8b931308c0e1b077de8e0c0d80c524f88"
+  },
+  "reviewer": "Architect — MA-NOV-P1.REVIEW",
+  "next_gate": "Accepted by Founder (with notes); record closes when FIX3 adds the follow-up closure path",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-08T08:44:33Z",
+  "updated_by": "Main Lane",
+  "superseded": [
+    {
+      "file": "MA-NOV-P1.FIX_Control_v1.md",
+      "sha256": "16e09a9c22fe21b3dcb18da0507cb98f696ce83d88a7f9ca6752c9e4120e0869"
+    },
+    {
+      "file": "MA-NOV-P1.FIX_Task_v1.md",
+      "sha256": "fa8e5aaf233c2f1d8960bc09263141e45ad45a8ee2e1513ef513cfe5da1e3f48"
+    }
+  ],
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-07T09:30Z",
+    "words": "approve MA-NOV-P1.FIX",
+    "control_sha256": "1f2cfe2638388def54a6481608b5e56b61bfeebe80d9f58fe1f0d65885d0b6f9",
+    "task_sha256": "fc2b71064bab4fdbfda89e59f6f690b8b931308c0e1b077de8e0c0d80c524f88",
+    "recorded_by": "Main Lane"
+  },
+  "run": {
+    "mode": "fixed line (interactive, pre-begin/end)",
+    "started": "after 2026-11-07T09:30Z (approval)",
+    "ended": "2026-11-07T09:43Z (Founder \"done\")",
+    "note": "recorded by Main Lane"
+  },
+  "report": {
+    "file": "MA-NOV-P1.FIX_Report.md",
+    "sha256": "a7e23d72084a014fa30e4d22a05a374fffeef71ea28e5505cac594ebd2e9fd97"
+  },
+  "result": "Commit a74d1b7 (14 paths) pushed; 22/22 tests (lane) and 22/22 (Main Lane re-run). Verified 2026-11-07T09:44:15Z.",
+  "review": {
+    "reviewer": "Architect",
+    "packet": "MA-NOV-P1.REVIEW",
+    "run_id": "r-20261107T105411Z-2bf1",
+    "session_id": "4e97c250-c0d4-4af3-90fe-c8d87d64a493",
+    "file": "MA-NOV-P1.REVIEW_Report.md",
+    "sha256": "7677ad1d033fd3e2b59a29745c16e166c72c2b4dded5d98e417784ac1b26cb99",
+    "verdict": "PASS_WITH_NOTES",
+    "must_fix": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F6",
+      "D1",
+      "D2",
+      "D3"
+    ],
+    "copied_by": "Main Lane",
+    "at": "2026-11-07T11:03:52Z"
+  },
+  "review_followup": {
+    "reviewer": "Architect",
+    "packet": "MA-NOV-P1.REVIEW2",
+    "run_id": "r-20261107T215253Z-231a",
+    "session_id": "a7ec301b-e98c-486c-98e2-ddcdcfa683c9",
+    "file": "MA-NOV-P1.REVIEW2_Report.md",
+    "sha256": "dcb1e3db2c20f772024591a69945877232034a4d3dcaefd150be80d2564266e5",
+    "verdict": "PASS_WITH_NOTES",
+    "must_fix_closed": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F6",
+      "D1",
+      "D2",
+      "D3"
+    ],
+    "new": [
+      "G1 (M before commit-allowed packets)",
+      "G2 (M before commit/push-allowed packets)",
+      "G3",
+      "G4",
+      "G5"
+    ],
+    "accept": "yes, with notes",
+    "copied_by": "Main Lane",
+    "at": "2026-11-08T08:40:35Z"
+  },
+  "pilot_acceptance": {
+    "by": "Founder",
+    "at": "2026-11-08T08:44Z",
+    "words": "accept pilot with note- (A)",
+    "basis": [
+      "MA-NOV-P1.REVIEW_Report.md 7677ad1d…cb99",
+      "MA-NOV-P1.REVIEW2_Report.md dcb1e3db…66e5"
+    ],
+    "conditions": [
+      "No packet may commit or push until G1 and G2 are fixed (P1.FIX3)",
+      "Claude.md v1.2 draft stays DRAFT until separate approval",
+      "Interim Tower retired once FIX3 lands"
+    ],
+    "recorded_by": "Main Lane"
+  }
+}

@@ -1,4 +1,4 @@
-# Delivery factory: pilot (MA-NOV-P1.BUILD, interactive mode MA-NOV-P1.FIX, review fixes MA-NOV-P1.FIX2)
+# Delivery factory: pilot (MA-NOV-P1.BUILD, interactive mode MA-NOV-P1.FIX, review fixes MA-NOV-P1.FIX2 and MA-NOV-P1.FIX3)
 
 These are dependency-free Node scripts (built-ins only, ES modules, no network). They are the specification approved in `claude/packets/MA-NOV-000_Report.md`, with Founder choices 1b, 2b, 3a, 4, 5a and 5b.
 
@@ -10,7 +10,7 @@ These are dependency-free Node scripts (built-ins only, ES modules, no network).
 | `lib/tower-logic.mjs` | Pure client functions (page status LIVE / SNAPSHOT / RUNNING (snapshot) / STALE RUN, heartbeat and lease colour), embedded verbatim in the Tower HTML |
 | `project.mjs` | Generator: `claude/packets/STATUS_BOARD.md` + `claude/factory/control-tower.html` |
 | `dispatch.mjs` | `check` / `status` / `begin <ID>` / `end <ID>` (interactive) / `run <ID> [--dry-run]` (headless) |
-| `test/` | `node --test tools/factory/test` (stub binary in `test/fixtures/fake-claude.mjs`; every test uses a temp repo). 32 tests: 1–13 (+4b, 4c), 16–22, 23–32. Ids 14–15 are unused on purpose, so that report references to 16–22 stay valid |
+| `test/` | `node --test tools/factory/test` (stub binary in `test/fixtures/fake-claude.mjs`; every test uses a temp repo). 40 tests: 1–13 (+4b, 4c), 16–22, 23–32, 33–40. Ids 14–15 are unused on purpose, so that report references to 16–22 stay valid |
 
 ## Day-to-day use
 
@@ -69,11 +69,21 @@ P1.DEMO run `r-20261107T092212Z-c0da` showed that a headless worker launched fro
 - **History (F10).** `claude/factory/transitions.jsonl` gets `{at, id, writer, from, to, rev}` for every successful `writeStatus`. It is append-only, created if missing, and ignored by the scope check like `PAUSE.json`. Refused writes throw and are not logged.
 - **Limits (F8, unchanged).** Gitignored paths, writes outside the repo, and reads are invisible to the scope check.
 
+## Review fixes (MA-NOV-P1.FIX3, from MA-NOV-P1.REVIEW2 G1–G5, NML-1108-1/2)
+
+- **Every commit (G1).** Committed paths are the union of `git diff --name-only <head>..HEAD` and `git log --format= --name-only <head>..HEAD`, so a file added in one commit and removed in a later one is still checked. If HEAD is not a descendant of the start commit, only the net diff is used (the run is BLOCKED anyway).
+- **All refs (G2).** `begin` and headless `run` save `git for-each-ref` as `before.json` → `refs`. At the end, any ref other than the current branch that changed, appeared or disappeared → BLOCKED "ref changed: <ref>". `refs/remotes/origin/<current branch>` may move only with `allow_commits` (a push). `run.json` → `ref_check`: `checked` / `refs changed` / `unavailable` (a `before.json` without `refs`, written by older code — not BLOCKED).
+- **Unparsable global lock (G3).** Retired by `check` only once its mtime is more than 60 s old (it may be mid-write).
+- **Session (G4).** If the lease has a `session_id` and `end` is called without one → refused (exit 2, nothing written): "end needs the session that began the run".
+- **Transitions log (G5).** `before.json` → `transitions{size, sha256}`. At the end the first `size` bytes must hash the same, else BLOCKED "transitions log rewritten". `run.json` → `transitions_check`: `append-only` / `rewritten` / `unavailable`.
+- **Closure path (NML-1108-1).** `CHANGES_REQUESTED → APPROVED` is allowed for writer `main-lane` only, and only when that same write sets `closure_by` to the id of a packet whose Status is `CLOSED` (the follow-up whose review covered the requested changes). Otherwise `TransitionError`, nothing written. `CHANGES_REQUESTED → READY` is unchanged.
+- **Outcomes view (NML-1108-2).** Status records with `kind: "outcome"` or `kind: "carry-over register"` are sprint scope, not work: they are left out of the board table and every Tower work section, and shown in a separate **November scope** section (board: `## November scope — outcomes`) with `requirements`, `dependencies` and `observations`.
+
 ## Ownership (MA-NOV-000 §Q6.1, Founder choice 4)
 
 | Writer | May change |
 |---|---|
-| `main-lane` | any field |
+| `main-lane` | any field (CHANGES_REQUESTED→APPROVED only with `closure_by`, see FIX3) |
 | `dispatcher` | `lease`, `heartbeat`, `run`, `updated`, `updated_by`, and `state` only for READY→EXECUTING, EXECUTING→REVIEW_NEEDED and EXECUTING→BLOCKED |
 | `dispatcher-hold` | **`hold` only**. This is the documented exception (Task §5.7). When a worker log shows a usage/quota-limit error, the dispatcher records `hold{type:"CAPACITY_HOLD", set_by:"dispatcher", reason, at}` through this separate main-lane-class write path. Nothing else can be written through it |
 

@@ -16,7 +16,7 @@ import { repoRoot, factoryDir, sha256File, isoSec, readConfig } from './lib/util
 import { readStatus, writeStatusFresh, listStatus, statusPath, TRANSITIONS_FILE } from './lib/state.mjs';
 import { evaluate, reportCandidates } from './lib/eligibility.mjs';
 import { acquireLease, retireLease, readLeaseFile, leaseState, LeaseError, pidAlive,
-  acquireGlobalLock, retireGlobalLock, readGlobalLock } from './lib/lease.mjs';
+  acquireGlobalLock, retireGlobalLock, readGlobalLock, globalLockPath } from './lib/lease.mjs';
 import { project } from './project.mjs';
 
 export class RefusedError extends Error { constructor(m) { super(m); this.name = 'RefusedError'; } }
@@ -154,10 +154,48 @@ function commitCheck(root, startHead, allowCommits) {
   if (allowCommits !== true) problems.push('commits not allowed for this packet');
   const anc = head ? spawnSync('git', ['--no-optional-locks', 'merge-base', '--is-ancestor', startHead, head], { cwd: root }) : { status: 1 };
   if (anc.status !== 0) problems.push('HEAD is not a descendant of the start commit');
-  const d = head ? spawnSync('git', ['--no-optional-locks', 'diff', '--name-only', '-z', `${startHead}..${head}`], { cwd: root, encoding: 'utf8' }) : null;
-  if (!d || d.status !== 0) problems.push('git diff of the run\'s commits failed — scope check incomplete');
-  const paths = d && d.status === 0 ? d.stdout.split('\0').filter(Boolean) : [];
+  // G1 (FIX3): union of the net diff and every commit's own paths, so a file added then removed is still checked.
+  const git = (...a) => (head ? spawnSync('git', ['--no-optional-locks', ...a], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }) : null);
+  const d = git('diff', '--no-renames', '--name-only', '-z', `${startHead}..${head}`);
+  // Not a descendant → already BLOCKED; the log range would then list unrelated history, so only the net diff is used.
+  const l = anc.status === 0 ? git('log', '--no-renames', '--format=', '--name-only', '-z', `${startHead}..${head}`) : { status: 0, stdout: '' };
+  if (!d || d.status !== 0 || !l || l.status !== 0) problems.push('git diff/log of the run\'s commits failed — scope check incomplete');
+  const split = (r) => (r && r.status === 0 ? r.stdout.split(/[\0\n]/).filter(Boolean) : []);
+  const paths = [...new Set([...split(d), ...split(l)])].sort();
   return { available: true, moved: true, head, paths, problems };
+}
+
+// G2 (FIX3): every ref, as "<refname> → <sha>".
+export function refSnapshot(root) {
+  const r = spawnSync('git', ['--no-optional-locks', 'for-each-ref', '--format=%(refname) %(objectname)'], { cwd: root, encoding: 'utf8' });
+  if (r.status !== 0) return null;
+  return Object.fromEntries(r.stdout.split('\n').filter(Boolean).map((x) => x.split(' ')));
+}
+function currentBranchRef(root) {
+  const r = spawnSync('git', ['--no-optional-locks', 'symbolic-ref', '-q', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  return r.status === 0 ? r.stdout.trim() : null;
+}
+// Changed, new or removed refs other than the current branch (and its origin tracking ref when commits are allowed).
+export function refChanges(root, before, allowCommits) {
+  const after = refSnapshot(root) || {};
+  const branch = currentBranchRef(root);
+  const skip = new Set(branch ? [branch] : []);
+  if (branch && allowCommits) skip.add(`refs/remotes/origin/${branch.replace(/^refs\/heads\//, '')}`);
+  const names = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort();
+  return names.filter((n) => !skip.has(n) && before[n] !== after[n]);
+}
+
+// G5 (FIX3): size + SHA-256 of the transitions log; at the end the old bytes must be an unchanged prefix.
+export function transitionsMark(root) {
+  const f = path.join(root, ...TRANSITIONS_FILE.split('/'));
+  const buf = fs.existsSync(f) ? fs.readFileSync(f) : Buffer.alloc(0);
+  return { size: buf.length, sha256: crypto.createHash('sha256').update(buf).digest('hex') };
+}
+export function transitionsRewritten(root, mark) {
+  const f = path.join(root, ...TRANSITIONS_FILE.split('/'));
+  const buf = fs.existsSync(f) ? fs.readFileSync(f) : Buffer.alloc(0);
+  if (buf.length < mark.size) return true;
+  return crypto.createHash('sha256').update(buf.subarray(0, mark.size)).digest('hex') !== mark.sha256;
 }
 // Content hash of a path as committed at HEAD ('gone' if absent there).
 function headBlobHash(root, p) {
@@ -211,7 +249,9 @@ export function handleStale(root, nowMs = Date.now(), log = console.log) {
   const g = readGlobalLock(root);
   if (g) {
     const own = g.packet ? readLeaseFile(root, g.packet) : null;
-    const gone = g.corrupt || (Date.parse(g.expires) <= nowMs && !pidAlive(g.pid));
+    // G3 (FIX3): an unparsable lock may be one being written right now — retire it only once its mtime is > 60 s old.
+    let mtimeMs = nowMs; try { mtimeMs = fs.statSync(globalLockPath(root)).mtimeMs; } catch { /* gone meanwhile */ }
+    const gone = g.corrupt ? nowMs - mtimeMs > 60000 : (Date.parse(g.expires) <= nowMs && !pidAlive(g.pid));
     if (gone && !(own && own.run_id === g.run_id)) {
       const moved = retireGlobalLock(root, g.run_id, 'global.lock.json', { force: true });
       handled.push({ id: g.packet || null, run_id: g.run_id || null, action: 'orphan global lock retired', lock_moved_to: moved && rel(root, moved) });
@@ -292,10 +332,12 @@ function statusMark(root, id) {
 // Shared step 7 for `run` and `end`: scope check → outcome → Status → run.json → lease to run folder → regenerate.
 // `decide({violations, report})` returns {outcome, reason}.
 function finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota = null, summaryExtra = {}, log,
-  startHead, strictOwn = false }) {
+  startHead, strictOwn = false, refsBefore = null, transBefore = null }) {
   const after = gitSnapshot(root);
   const allowCommits = !!(s.run_profile && s.run_profile.allow_commits === true);
   const commits = commitCheck(root, startHead, allowCommits);
+  const refsChanged = refsBefore ? refChanges(root, refsBefore, allowCommits) : [];
+  const transRewritten = transBefore ? transitionsRewritten(root, transBefore) : false;
   // Dispatcher-owned paths. The packet's Status file is checked separately below; the two generated
   // projections are excluded because they are regenerated from Status after every run anyway.
   const own = [`claude/factory/runs/${runId}/`, 'claude/factory/leases/', `claude/packets/${id}_Status.json`,
@@ -314,7 +356,7 @@ function finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decid
     return same;
   };
   const violations = before ? scopeViolations(before, after, allowed, own, legit, { committed: commits.paths, committedUnchanged }) : [];
-  const problems = [...commits.problems];
+  const problems = [...commits.problems, ...refsChanged.map((r) => `ref changed: ${r}`), ...(transRewritten ? ['transitions log rewritten'] : [])];
   const curRev = readStatus(id, { root }).rev;
   if (mark && curRev === mark.rev && sha256File(statusPath(id, root)) !== mark.hash) {
     violations.push(`claude/packets/${id}_Status.json (edited outside the state library)`);
@@ -341,6 +383,8 @@ function finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decid
     outcome, blocked_reason: reason, report_sha256: reportSha, capacity_hold: !!quota, scope_violations: violations,
     start_head: startHead || null, end_head: commits.head,
     commit_check: commits.available ? (commits.moved ? 'commits checked' : 'no commits') : 'unavailable — no start HEAD recorded (run begun by pre-FIX2 code)',
+    ref_check: refsBefore ? (refsChanged.length ? 'refs changed' : 'checked') : 'unavailable', refs_changed: refsChanged,
+    transitions_check: transBefore ? (transRewritten ? 'rewritten' : 'append-only') : 'unavailable',
     committed_paths: commits.paths, committed_preexisting_unchanged: [...new Set(committedPreexisting)].sort(),
     ignored_temp_files: [...new Set(ignoredTemp)].sort(), other_status_changes: otherStatusChanges };
   const runDir = path.join(factoryDir(root), 'runs', runId);
@@ -396,6 +440,10 @@ export async function runPacket(id, { root = repoRoot(), dryRun = false, env = p
   const revsBefore = statusRevs(root);
   const startHead = gitHead(root);
   const before = gitSnapshot(root);
+  const refsBefore = refSnapshot(root);   // G2
+  const transBefore = transitionsMark(root); // G5
+  fs.writeFileSync(path.join(runDir, 'before.json'), JSON.stringify({ run_id: runId, packet: id, taken_at: isoSec(), session_id: sessionId,
+    head: startHead, status_revs: revsBefore, refs: refsBefore, transitions: transBefore, entries: Object.fromEntries(before) }, null, 2) + '\n');
   const outFd = fs.openSync(logFile, 'a');                          // 6. launch — one attempt, no retry
   const errFd = fs.openSync(errFile, 'a');
   let interrupted = null;
@@ -426,7 +474,7 @@ export async function runPacket(id, { root = repoRoot(), dryRun = false, env = p
     if (code !== 0) return { outcome: 'BLOCKED', reason: `worker exit ${code === null ? 'none' : code}${signal ? ` (${signal})` : ''}${quota ? ' — usage/quota limit' : ''}` };
     return { outcome: 'BLOCKED', reason: `worker exited 0 without the report (${reportCandidates(root, id, s).map((p) => rel(root, p)).join(' or ')})` };
   };
-  const summary = finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota, log, startHead,
+  const summary = finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota, log, startHead, refsBefore, transBefore,
     summaryExtra: { run: { exit_code: code, signal: signal || null }, summary: { session_id: sessionId, bin, bin_version: version, model: cfg.model, exit_code: code, signal: signal || null } } });
   log(`${id} run ${runId}: ${summary.outcome}${summary.blocked_reason ? ` — ${summary.blocked_reason}` : ''}${quota ? ' · CAPACITY_HOLD set' : ''}`);
   return summary;
@@ -465,7 +513,7 @@ export function beginPacket(id, { root = repoRoot(), log = console.log, env = pr
   const revs = statusRevs(root); // revs before git (see runPacket)
   const head = gitHead(root);    // F1
   const before = { run_id: runId, packet: id, taken_at: isoSec(), session_id: sessionId, head, status_rev: mark.rev, status_sha256: mark.hash,
-    status_revs: revs, entries: Object.fromEntries(gitSnapshot(root)) };
+    status_revs: revs, refs: refSnapshot(root), transitions: transitionsMark(root), entries: Object.fromEntries(gitSnapshot(root)) };
   const runDir = path.join(factoryDir(root), 'runs', runId);
   fs.mkdirSync(runDir, { recursive: true });
   fs.writeFileSync(path.join(runDir, 'before.json'), JSON.stringify(before, null, 2) + '\n');
@@ -484,6 +532,7 @@ export function endPacket(id, { root = repoRoot(), log = console.log, env = proc
   // F5/F9: only the session that began the run may end it (checked when both ids are known; nothing is written on refusal).
   const endedBy = envSession(env);
   const begunBy = lease.session_id || (s.run && s.run.session_id) || null;
+  if (lease.session_id && !endedBy) throw new RefusedError('end needs the session that began the run'); // G4
   if (endedBy && begunBy && endedBy !== begunBy) {
     throw new RefusedError(`this run was begun by another session (begun by ${begunBy}, end called from ${endedBy}) — end refused`);
   }
@@ -504,6 +553,7 @@ export function endPacket(id, { root = repoRoot(), log = console.log, env = proc
   const summary = finishRun({ root, id, s, runId, runRec: { ...s.run, ended_by_session: endedBy },
     before: b ? new Map(Object.entries(b.entries)) : null, revsBefore: b ? b.status_revs : {},
     mark: b ? { rev: b.status_rev, hash: b.status_sha256 } : null, decide, log, startHead: b ? b.head : null, strictOwn: true,
+    refsBefore: (b && b.refs) || null, transBefore: (b && b.transitions) || null,
     summaryExtra: { summary: { holder: lease.holder, holder_pid: lease.pid, lease_expires: lease.expires, lease_expired: expired,
       session_id: begunBy, ended_by_session: endedBy } } });
   log(`END ${id} run ${runId}: ${summary.outcome}${summary.blocked_reason ? ` — ${summary.blocked_reason}` : ''}${summary.report_sha256 ? ` · report ${summary.report_sha256}` : ''}`);

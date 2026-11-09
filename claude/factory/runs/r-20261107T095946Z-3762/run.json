@@ -1,0 +1,16 @@
+{
+  "run_id": "r-20261107T095946Z-3762",
+  "packet": "MA-NOV-P1.DEMO",
+  "mode": "interactive",
+  "holder": "interactive",
+  "holder_pid": 4718,
+  "lease_expires": "2026-11-07T11:59:46Z",
+  "lease_expired": false,
+  "started": "2026-11-07T09:59:46Z",
+  "ended": "2026-11-07T10:01:47Z",
+  "outcome": "REVIEW_NEEDED",
+  "blocked_reason": null,
+  "report_sha256": "e77486ebf307cf571b833481d275028e59404ff7858c74ee299780b834c25ff7",
+  "capacity_hold": false,
+  "scope_violations": []
+}

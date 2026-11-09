@@ -1,0 +1,32 @@
+{
+  "packet": "MA-NOV-OPS",
+  "title": "Outcome — Ops UI cleanup (OPS-01–06): System Health, Cases, DQ match the main product; Events / Sprint Board / Release Ledger tabs removed without record loss",
+  "kind": "outcome",
+  "state": "DRAFT",
+  "phase": "SPEC",
+  "rev": 1,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "— (not admitted)",
+  "write_owner": "NONE",
+  "control": null,
+  "task": null,
+  "requirements": [
+    "OPS-01",
+    "OPS-02",
+    "OPS-03",
+    "OPS-04",
+    "OPS-05",
+    "OPS-06"
+  ],
+  "dependencies": [
+    "D1 sprintboarditems/releaseledger sync check (carry-over 13)",
+    "phone-width button row (12)"
+  ],
+  "scope_source": "claude/meridian_atlas_november_content_scope_and_requirements.md (2 Nov kickoff edition, c16c8e19…5a03)",
+  "next_gate": "Scope assessment (Spec §7 checkpoint 1) after P1.FIX3 and the weekly usage reset; Founder scope approval before any spec",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "—",
+  "updated": "2026-11-08T08:44:52Z",
+  "updated_by": "Main Lane"
+}

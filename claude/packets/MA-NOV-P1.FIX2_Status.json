@@ -1,0 +1,117 @@
+{
+  "packet": "MA-NOV-P1.FIX2",
+  "title": "Review must-fix: scope check, global lock, Tower states, session ids, draft alignment",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 8,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENG / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-P1.FIX2_Control_v1.md",
+    "sha256": "a261f67e6ec856cbcb861346ed4437c2f070b37f659e3a36d7965e2cd81d5d5c"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-P1.FIX2_Task_v1.md",
+    "sha256": "f16f2fbd935cc18a380c77017038f82638dcf8f13841c0fc5d478fd7f456a992"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "tools/factory/",
+      "claude/governance/Claude_md_v1.2_amendments.md",
+      "claude/packets/MA-NOV-P1.FIX2_Report.md"
+    ],
+    "allow_commits": true
+  },
+  "reviewer": "Architect — MA-NOV-P1.REVIEW2",
+  "next_gate": "—",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-08T08:44:33Z",
+  "updated_by": "Main Lane",
+  "decisions": {
+    "F3": {
+      "choice": "b",
+      "by": "Founder",
+      "at": "2026-11-07T20:23Z"
+    },
+    "D1": {
+      "choice": "code transition table canonical",
+      "by": "Founder",
+      "at": "2026-11-07T20:23Z"
+    }
+  },
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-07T20:23Z",
+    "words": "F3 b; D1 code; approve MA-NOV-P1.FIX2",
+    "control_sha256": "a261f67e6ec856cbcb861346ed4437c2f070b37f659e3a36d7965e2cd81d5d5c",
+    "task_sha256": "f16f2fbd935cc18a380c77017038f82638dcf8f13841c0fc5d478fd7f456a992",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261107T202556Z-a368",
+    "mode": "interactive",
+    "started": "2026-11-07T20:25:56Z",
+    "ended_by_session": "61fceddb-61bc-440a-b883-f848b302dd24",
+    "ended": "2026-11-07T20:34:53Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-P1.FIX2_Report.md",
+    "report_sha256": "a1a7b0e9c3d7a40efa2691d936bbb2b9328be9f2d6d11aeb6b3b011637668de5"
+  },
+  "heartbeat": null,
+  "report": {
+    "file": "MA-NOV-P1.FIX2_Report.md",
+    "sha256": "a1a7b0e9c3d7a40efa2691d936bbb2b9328be9f2d6d11aeb6b3b011637668de5"
+  },
+  "result": "Commit eb64d22 (20 paths) pushed; 32/32 tests (lane) and 32/32 (Main Lane re-run); Tower shows LANE_OPENER_v2; transitions.jsonl live. Run begun by pre-FIX2 code (no session id / start HEAD) — commit to be checked by REVIEW2 via git show. Verified 2026-11-07T20:39:58Z.",
+  "review": {
+    "reviewer": "Architect",
+    "packet": "MA-NOV-P1.REVIEW2",
+    "run_id": "r-20261107T215253Z-231a",
+    "session_id": "a7ec301b-e98c-486c-98e2-ddcdcfa683c9",
+    "file": "MA-NOV-P1.REVIEW2_Report.md",
+    "sha256": "dcb1e3db2c20f772024591a69945877232034a4d3dcaefd150be80d2564266e5",
+    "verdict": "PASS_WITH_NOTES",
+    "must_fix_closed": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F6",
+      "D1",
+      "D2",
+      "D3"
+    ],
+    "new": [
+      "G1 (M before commit-allowed packets)",
+      "G2 (M before commit/push-allowed packets)",
+      "G3",
+      "G4",
+      "G5"
+    ],
+    "accept": "yes, with notes",
+    "copied_by": "Main Lane",
+    "at": "2026-11-08T08:40:35Z"
+  },
+  "decision": {
+    "by": "Founder",
+    "at": "2026-11-08T08:44Z",
+    "words": "accept pilot with note- (A)",
+    "basis": [
+      "MA-NOV-P1.REVIEW_Report.md 7677ad1d…cb99",
+      "MA-NOV-P1.REVIEW2_Report.md dcb1e3db…66e5"
+    ],
+    "conditions": [
+      "No packet may commit or push until G1 and G2 are fixed (P1.FIX3)",
+      "Claude.md v1.2 draft stays DRAFT until separate approval",
+      "Interim Tower retired once FIX3 lands"
+    ],
+    "recorded_by": "Main Lane"
+  }
+}
