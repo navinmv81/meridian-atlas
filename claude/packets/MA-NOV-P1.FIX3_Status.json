@@ -1,0 +1,85 @@
+{
+  "packet": "MA-NOV-P1.FIX3",
+  "title": "Commit-check gaps G1–G5, follow-up closure path, Outcomes view, pilot records commit",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENG / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-P1.FIX3_Control_v1.md",
+    "sha256": "5ea7be9bb3901e2f03afea3c9dae123a82989d22f44e64413d195248ff1bbfa2"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-P1.FIX3_Task_v1.md",
+    "sha256": "fa9f15559cbdd32437a52d5004194aa00d463788e05917dcb07bbe7fe79c48a7"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "tools/factory/",
+      "claude/packets/MA-NOV-P1.FIX3_Report.md"
+    ],
+    "allow_commits": true
+  },
+  "reviewer": "Architect — MA-NOV-P1.REVIEW3 (light)",
+  "next_gate": "—",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-09T18:42:51Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-09T06:44Z",
+    "words": "approve MA-NOV-P1.FIX3",
+    "control_sha256": "5ea7be9bb3901e2f03afea3c9dae123a82989d22f44e64413d195248ff1bbfa2",
+    "task_sha256": "fa9f15559cbdd32437a52d5004194aa00d463788e05917dcb07bbe7fe79c48a7",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261109T064454Z-91b0",
+    "mode": "interactive",
+    "session_id": "4dae9d0d-531f-40d8-a048-c9621b2d1332",
+    "started": "2026-11-09T06:44:54Z",
+    "ended_by_session": "4dae9d0d-531f-40d8-a048-c9621b2d1332",
+    "ended": "2026-11-09T06:50:44Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-P1.FIX3_Report.md",
+    "report_sha256": "4c6eb020df6a8d351eeb0ff9c0587dc3245ca3b4c6944f0aadfa9597f0109dae"
+  },
+  "heartbeat": null,
+  "report": {
+    "file": "MA-NOV-P1.FIX3_Report.md",
+    "sha256": "4c6eb020df6a8d351eeb0ff9c0587dc3245ca3b4c6944f0aadfa9597f0109dae"
+  },
+  "result": "Commit 37ad1c2 (41 paths: 5 tools/factory, Task, 35 pinned records) = origin; 40/40 tests (lane) and 40/40 (Main Lane re-run); commit_check ran (commits checked), ref_check unavailable (begun by FIX2 code); Tower shows November scope. Verified 2026-11-09T06:56:42Z.",
+  "review": {
+    "reviewer": "Architect",
+    "packet": "MA-NOV-P1.REVIEW3",
+    "run_id": "r-20261109T183512Z-e465",
+    "session_id": "3beccc2c-b18f-4a44-a884-1e7b2bab7eac",
+    "file": "MA-NOV-P1.REVIEW3_Report.md",
+    "sha256": "dd256043b75b7b5618adac3e2ceee51be17fb4e8e078ce474faebcfb0a58042b",
+    "verdict": "PASS_WITH_NOTES",
+    "closed": [
+      "G1",
+      "G2",
+      "G3",
+      "G4",
+      "G5",
+      "closure path",
+      "Outcomes view"
+    ],
+    "new": [
+      "H1 (fix before first push-allowed packet)",
+      "H2"
+    ],
+    "commit_packets": "yes with notes (no push until H1)",
+    "copied_by": "Main Lane",
+    "at": "2026-11-09T18:42:51Z"
+  }
+}

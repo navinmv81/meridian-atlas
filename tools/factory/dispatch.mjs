@@ -175,10 +175,18 @@ function currentBranchRef(root) {
   const r = spawnSync('git', ['--no-optional-locks', 'symbolic-ref', '-q', 'HEAD'], { cwd: root, encoding: 'utf8' });
   return r.status === 0 ? r.stdout.trim() : null;
 }
-// Changed, new or removed refs other than the current branch (and its origin tracking ref when commits are allowed).
-export function refChanges(root, before, allowCommits) {
+// H1 (FIX4): the branch HEAD is on, short name, or 'DETACHED'. Recorded at begin/run as `start_branch`.
+export function currentBranch(root) {
+  const r = spawnSync('git', ['--no-optional-locks', 'symbolic-ref', '-q', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  return r.status === 0 && r.stdout.trim() ? r.stdout.trim() : 'DETACHED';
+}
+// Changed, new or removed refs other than the start branch (and its origin tracking ref when commits are allowed).
+// H1 (FIX4): with `startBranch` known, only refs/heads/<startBranch> is skipped — never the branch HEAD is on at the end.
+// `startBranch` undefined (run begun by pre-FIX4 code) → old behaviour: the current branch is skipped.
+export function refChanges(root, before, allowCommits, startBranch) {
   const after = refSnapshot(root) || {};
-  const branch = currentBranchRef(root);
+  const branch = startBranch === undefined ? currentBranchRef(root)
+    : (startBranch && startBranch !== 'DETACHED' ? `refs/heads/${startBranch}` : null);
   const skip = new Set(branch ? [branch] : []);
   if (branch && allowCommits) skip.add(`refs/remotes/origin/${branch.replace(/^refs\/heads\//, '')}`);
   const names = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort();
@@ -332,11 +340,13 @@ function statusMark(root, id) {
 // Shared step 7 for `run` and `end`: scope check → outcome → Status → run.json → lease to run folder → regenerate.
 // `decide({violations, report})` returns {outcome, reason}.
 function finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota = null, summaryExtra = {}, log,
-  startHead, strictOwn = false, refsBefore = null, transBefore = null }) {
+  startHead, strictOwn = false, refsBefore = null, transBefore = null, startBranch = undefined }) {
   const after = gitSnapshot(root);
   const allowCommits = !!(s.run_profile && s.run_profile.allow_commits === true);
   const commits = commitCheck(root, startHead, allowCommits);
-  const refsChanged = refsBefore ? refChanges(root, refsBefore, allowCommits) : [];
+  const refsChanged = refsBefore ? refChanges(root, refsBefore, allowCommits, startBranch) : [];
+  const endBranch = currentBranch(root);
+  const branchChanged = typeof startBranch === 'string' && endBranch !== startBranch; // H1
   const transRewritten = transBefore ? transitionsRewritten(root, transBefore) : false;
   // Dispatcher-owned paths. The packet's Status file is checked separately below; the two generated
   // projections are excluded because they are regenerated from Status after every run anyway.
@@ -356,7 +366,8 @@ function finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decid
     return same;
   };
   const violations = before ? scopeViolations(before, after, allowed, own, legit, { committed: commits.paths, committedUnchanged }) : [];
-  const problems = [...commits.problems, ...refsChanged.map((r) => `ref changed: ${r}`), ...(transRewritten ? ['transitions log rewritten'] : [])];
+  const problems = [...(branchChanged ? [`branch changed: ${startBranch} → ${endBranch}`] : []),
+    ...commits.problems, ...refsChanged.map((r) => `ref changed: ${r}`), ...(transRewritten ? ['transitions log rewritten'] : [])];
   const curRev = readStatus(id, { root }).rev;
   if (mark && curRev === mark.rev && sha256File(statusPath(id, root)) !== mark.hash) {
     violations.push(`claude/packets/${id}_Status.json (edited outside the state library)`);
@@ -382,6 +393,8 @@ function finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decid
   const summary = { run_id: runId, packet: id, mode: runRec.mode, ...(summaryExtra.summary || {}), started: runRec.started, ended: isoSec(ended),
     outcome, blocked_reason: reason, report_sha256: reportSha, capacity_hold: !!quota, scope_violations: violations,
     start_head: startHead || null, end_head: commits.head,
+    start_branch: typeof startBranch === 'string' ? startBranch : null, end_branch: endBranch,
+    branch_check: typeof startBranch === 'string' ? (branchChanged ? 'branch changed' : 'checked') : 'unavailable',
     commit_check: commits.available ? (commits.moved ? 'commits checked' : 'no commits') : 'unavailable — no start HEAD recorded (run begun by pre-FIX2 code)',
     ref_check: refsBefore ? (refsChanged.length ? 'refs changed' : 'checked') : 'unavailable', refs_changed: refsChanged,
     transitions_check: transBefore ? (transRewritten ? 'rewritten' : 'append-only') : 'unavailable',
@@ -439,11 +452,12 @@ export async function runPacket(id, { root = repoRoot(), dryRun = false, env = p
   // revs first, then git: a Main Lane write landing between the two then shows as a rev bump (legit), not a raw edit.
   const revsBefore = statusRevs(root);
   const startHead = gitHead(root);
+  const startBranch = currentBranch(root); // H1
   const before = gitSnapshot(root);
   const refsBefore = refSnapshot(root);   // G2
   const transBefore = transitionsMark(root); // G5
   fs.writeFileSync(path.join(runDir, 'before.json'), JSON.stringify({ run_id: runId, packet: id, taken_at: isoSec(), session_id: sessionId,
-    head: startHead, status_revs: revsBefore, refs: refsBefore, transitions: transBefore, entries: Object.fromEntries(before) }, null, 2) + '\n');
+    head: startHead, start_branch: startBranch, status_revs: revsBefore, refs: refsBefore, transitions: transBefore, entries: Object.fromEntries(before) }, null, 2) + '\n');
   const outFd = fs.openSync(logFile, 'a');                          // 6. launch — one attempt, no retry
   const errFd = fs.openSync(errFile, 'a');
   let interrupted = null;
@@ -474,7 +488,7 @@ export async function runPacket(id, { root = repoRoot(), dryRun = false, env = p
     if (code !== 0) return { outcome: 'BLOCKED', reason: `worker exit ${code === null ? 'none' : code}${signal ? ` (${signal})` : ''}${quota ? ' — usage/quota limit' : ''}` };
     return { outcome: 'BLOCKED', reason: `worker exited 0 without the report (${reportCandidates(root, id, s).map((p) => rel(root, p)).join(' or ')})` };
   };
-  const summary = finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota, log, startHead, refsBefore, transBefore,
+  const summary = finishRun({ root, id, s, runId, runRec, before, revsBefore, mark, decide, quota, log, startHead, refsBefore, transBefore, startBranch,
     summaryExtra: { run: { exit_code: code, signal: signal || null }, summary: { session_id: sessionId, bin, bin_version: version, model: cfg.model, exit_code: code, signal: signal || null } } });
   log(`${id} run ${runId}: ${summary.outcome}${summary.blocked_reason ? ` — ${summary.blocked_reason}` : ''}${quota ? ' · CAPACITY_HOLD set' : ''}`);
   return summary;
@@ -512,7 +526,8 @@ export function beginPacket(id, { root = repoRoot(), log = console.log, env = pr
   const mark = statusMark(root, id);
   const revs = statusRevs(root); // revs before git (see runPacket)
   const head = gitHead(root);    // F1
-  const before = { run_id: runId, packet: id, taken_at: isoSec(), session_id: sessionId, head, status_rev: mark.rev, status_sha256: mark.hash,
+  const before = { run_id: runId, packet: id, taken_at: isoSec(), session_id: sessionId, head, start_branch: currentBranch(root), // H1
+    status_rev: mark.rev, status_sha256: mark.hash,
     status_revs: revs, refs: refSnapshot(root), transitions: transitionsMark(root), entries: Object.fromEntries(gitSnapshot(root)) };
   const runDir = path.join(factoryDir(root), 'runs', runId);
   fs.mkdirSync(runDir, { recursive: true });
@@ -554,6 +569,7 @@ export function endPacket(id, { root = repoRoot(), log = console.log, env = proc
     before: b ? new Map(Object.entries(b.entries)) : null, revsBefore: b ? b.status_revs : {},
     mark: b ? { rev: b.status_rev, hash: b.status_sha256 } : null, decide, log, startHead: b ? b.head : null, strictOwn: true,
     refsBefore: (b && b.refs) || null, transBefore: (b && b.transitions) || null,
+    startBranch: b && typeof b.start_branch === 'string' ? b.start_branch : undefined,
     summaryExtra: { summary: { holder: lease.holder, holder_pid: lease.pid, lease_expires: lease.expires, lease_expired: expired,
       session_id: begunBy, ended_by_session: endedBy } } });
   log(`END ${id} run ${runId}: ${summary.outcome}${summary.blocked_reason ? ` — ${summary.blocked_reason}` : ''}${summary.report_sha256 ? ` · report ${summary.report_sha256}` : ''}`);

@@ -1,9 +1,9 @@
 {
   "packet": "MA-NOV-P1.DEMO",
   "title": "Bracketed interactive run: Claude.md v1.2 amendments draft",
-  "state": "CHANGES_REQUESTED",
+  "state": "CLOSED",
   "phase": "BUILD",
-  "rev": 15,
+  "rev": 17,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "LANE-NOV-ENG / Claude Code (fixed line, LANE_OPENER_v2)",
   "write_owner": "Engineering Lead (documentation), interactive run (LANE_OPENER_v2)",
@@ -24,11 +24,11 @@
     ]
   },
   "reviewer": "Architect — MA-NOV-P1.REVIEW",
-  "next_gate": "Accepted by Founder (with notes); record closes when FIX3 adds the follow-up closure path",
+  "next_gate": "—",
   "blocker": null,
   "review_needed": false,
   "usage_class": "light",
-  "updated": "2026-11-08T08:44:33Z",
+  "updated": "2026-11-09T18:42:51Z",
   "updated_by": "Main Lane",
   "lease": null,
   "run": {
@@ -151,5 +151,7 @@
       "Interim Tower retired once FIX3 lands"
     ],
     "recorded_by": "Main Lane"
-  }
+  },
+  "closure_by": "MA-NOV-P1.FIX2",
+  "closure_note": "Must-fix from REVIEW closed by FIX2 (REVIEW2 PASS_WITH_NOTES); follow-ups G1–G5 by FIX3 (REVIEW3 PASS_WITH_NOTES); pilot accepted NML-1108-2"
 }

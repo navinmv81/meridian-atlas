@@ -1,0 +1,60 @@
+{
+  "packet": "MA-NOV-P1.REVIEW3",
+  "title": "Light Architect delta review of MA-NOV-P1.FIX3",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "Architect / Claude Code (fresh session, LANE_OPENER_v2)",
+  "write_owner": "Architect (review report only)",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-P1.REVIEW3_Control_v1.md",
+    "sha256": "30feeefd46a9aff895af02cb1210793fafc34b5d3a0f8deb781c5d4d561f6a1c"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-P1.REVIEW3_Task_v1.md",
+    "sha256": "a6877ece08edf06935b781ef48836fb564a400ced32a230eaa631c901733e67c"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-P1.REVIEW3_Report.md"
+    ]
+  },
+  "reviews": [
+    "MA-NOV-P1.FIX3"
+  ],
+  "next_gate": "—",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-11-09T18:42:51Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-09T06:59Z",
+    "words": "approve MA-NOV-P1.REVIEW3",
+    "control_sha256": "30feeefd46a9aff895af02cb1210793fafc34b5d3a0f8deb781c5d4d561f6a1c",
+    "task_sha256": "a6877ece08edf06935b781ef48836fb564a400ced32a230eaa631c901733e67c",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261109T183512Z-e465",
+    "mode": "interactive",
+    "session_id": "3beccc2c-b18f-4a44-a884-1e7b2bab7eac",
+    "started": "2026-11-09T18:35:12Z",
+    "ended_by_session": "3beccc2c-b18f-4a44-a884-1e7b2bab7eac",
+    "ended": "2026-11-09T18:39:09Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-P1.REVIEW3_Report.md",
+    "report_sha256": "dd256043b75b7b5618adac3e2ceee51be17fb4e8e078ce474faebcfb0a58042b"
+  },
+  "heartbeat": null,
+  "report": {
+    "file": "MA-NOV-P1.REVIEW3_Report.md",
+    "sha256": "dd256043b75b7b5618adac3e2ceee51be17fb4e8e078ce474faebcfb0a58042b"
+  },
+  "result": "PASS_WITH_NOTES; G1–G5, closure path, Outcomes view closed; H1/H2 notes. Verified 2026-11-09T18:42:51Z."
+}

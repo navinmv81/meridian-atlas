@@ -1,9 +1,9 @@
 {
   "packet": "MA-NOV-P1.BUILD",
   "title": "Pilot build: state library, Tower/board generator, dispatcher, tests",
-  "state": "CHANGES_REQUESTED",
+  "state": "CLOSED",
   "phase": "BUILD",
-  "rev": 8,
+  "rev": 10,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "LANE-NOV-ENG / Claude Code (fixed line)",
   "write_owner": "Engineering Lead (LANE-NOV-ENG)",
@@ -18,11 +18,11 @@
     "sha256": "30ebc6d2bceec6aa5d2abfeca977d03512fac56a6647dc6bd747154ee8ef2f40"
   },
   "reviewer": "Architect — MA-NOV-P1.REVIEW (separate session)",
-  "next_gate": "Accepted by Founder (with notes); record closes when FIX3 adds the follow-up closure path",
+  "next_gate": "—",
   "blocker": null,
   "review_needed": false,
   "usage_class": "heavy",
-  "updated": "2026-11-08T08:44:33Z",
+  "updated": "2026-11-09T18:42:51Z",
   "updated_by": "Main Lane",
   "start_approval": {
     "by": "Founder",
@@ -109,5 +109,7 @@
       "Interim Tower retired once FIX3 lands"
     ],
     "recorded_by": "Main Lane"
-  }
+  },
+  "closure_by": "MA-NOV-P1.FIX2",
+  "closure_note": "Must-fix from REVIEW closed by FIX2 (REVIEW2 PASS_WITH_NOTES); follow-ups G1–G5 by FIX3 (REVIEW3 PASS_WITH_NOTES); pilot accepted NML-1108-2"
 }

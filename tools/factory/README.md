@@ -1,4 +1,4 @@
-# Delivery factory: pilot (MA-NOV-P1.BUILD, interactive mode MA-NOV-P1.FIX, review fixes MA-NOV-P1.FIX2 and MA-NOV-P1.FIX3)
+# Delivery factory: pilot (MA-NOV-P1.BUILD, interactive mode MA-NOV-P1.FIX, review fixes MA-NOV-P1.FIX2, MA-NOV-P1.FIX3 and MA-NOV-P1.FIX4)
 
 These are dependency-free Node scripts (built-ins only, ES modules, no network). They are the specification approved in `claude/packets/MA-NOV-000_Report.md`, with Founder choices 1b, 2b, 3a, 4, 5a and 5b.
 
@@ -78,6 +78,13 @@ P1.DEMO run `r-20261107T092212Z-c0da` showed that a headless worker launched fro
 - **Transitions log (G5).** `before.json` → `transitions{size, sha256}`. At the end the first `size` bytes must hash the same, else BLOCKED "transitions log rewritten". `run.json` → `transitions_check`: `append-only` / `rewritten` / `unavailable`.
 - **Closure path (NML-1108-1).** `CHANGES_REQUESTED → APPROVED` is allowed for writer `main-lane` only, and only when that same write sets `closure_by` to the id of a packet whose Status is `CLOSED` (the follow-up whose review covered the requested changes). Otherwise `TransitionError`, nothing written. `CHANGES_REQUESTED → READY` is unchanged.
 - **Outcomes view (NML-1108-2).** Status records with `kind: "outcome"` or `kind: "carry-over register"` are sprint scope, not work: they are left out of the board table and every Tower work section, and shown in a separate **November scope** section (board: `## November scope — outcomes`) with `requirements`, `dependencies` and `observations`.
+
+## MA-NOV-P1.FIX4 (REVIEW3 H1/H2, NML-1110-1)
+
+- **Start branch (H1).** `begin` and headless `run` record `start_branch` (`git symbolic-ref --short HEAD`, or `DETACHED`) in `before.json`. At the end, a different branch → BLOCKED "branch changed: <start> → <end>", and the ref check skips only `refs/heads/<start_branch>` (plus `refs/remotes/origin/<start_branch>` with `allow_commits`) — never the branch HEAD happens to be on at the end. `run.json` → `branch_check`: `checked` / `branch changed` / `unavailable` (no `start_branch` in `before.json`: older code, not BLOCKED; the old current-branch skip then applies).
+- **`closure_by` id (H2).** Must match `/^MA-[A-Z0-9][A-Z0-9.-]*$/` and name a CLOSED packet; a path such as `../packets/MA-NOV-X` is refused.
+- **Record kinds.** `kind` `outcome`, `carry-over register`, `founder-request`, `plan` (`RECORD_KINDS` in `lib/eligibility.mjs`) are never eligible and never in work columns. `founder-request` (`request_type`, `question`, `options[]`, `reply`, `due`, `status` open|answered|withdrawn, `answer`, `answered_at`): open → Tower *Waiting for you* and board *Waiting for the Founder*; answered/withdrawn → *Recent decisions*. `plan` (`milestones[{when,title,detail,status}]`, `handoffs[{step,today,how,target}]`) drives *Path* and *Handoffs*.
+- **Tower layout** follows `claude/factory/design/interim-tower-reference.html` (system fonts, no network). *Recent decisions* also lists state changes from `transitions.jsonl`.
 
 ## Ownership (MA-NOV-000 §Q6.1, Founder choice 4)
 

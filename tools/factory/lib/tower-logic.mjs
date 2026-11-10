@@ -49,4 +49,9 @@ export function formatAge(s) {
   return Math.round(s / 86400) + 'd';
 }
 
-export const TOWER_LOGIC_FUNCTIONS = [towerStatus, heartbeatClass, leaseClass, formatAge];
+// FIX4: towerStatus().cls → the interim design's badge pill class.
+export function badgeClass(cls) {
+  return cls === 'live' ? 'p-fresh' : cls === 'amber' ? 'p-aging' : cls === 'red' ? 'p-stale' : 'p-interim';
+}
+
+export const TOWER_LOGIC_FUNCTIONS = [towerStatus, heartbeatClass, leaseClass, formatAge, badgeClass];

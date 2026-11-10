@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>November Control Tower</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: control-room view — "waiting for you" first, then work by state, then the path to the target, handoffs and records. */
+:root{
+  --bg:#f3f5f8; --panel:#ffffff; --line:#d8dee6; --fg:#16202b; --dim:#5b6878;
+  --accent:#1f6fb8; --acc-bg:rgba(31,111,184,.09);
+  --ok:#1c8650; --ok-bg:rgba(28,134,80,.10); --warn:#a46500; --warn-bg:rgba(164,101,0,.10);
+  --bad:#c23b3b; --bad-bg:rgba(194,59,59,.09); --slate:#5b6b80; --sl-bg:rgba(91,107,128,.10);
+  --sans:"IBM Plex Sans",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b0f14; --panel:#121821; --line:#24303d; --fg:#dbe4ee; --dim:#8b99a9;
+  --accent:#58b4ff; --acc-bg:rgba(88,180,255,.12);
+  --ok:#3fd987; --ok-bg:rgba(63,217,135,.12); --warn:#f3b843; --warn-bg:rgba(243,184,67,.12);
+  --bad:#ff6d6d; --bad-bg:rgba(255,109,109,.12); --slate:#8ea0b6; --sl-bg:rgba(142,160,182,.12); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b0f14; --panel:#121821; --line:#24303d; --fg:#dbe4ee; --dim:#8b99a9;
+  --accent:#58b4ff; --acc-bg:rgba(88,180,255,.12);
+  --ok:#3fd987; --ok-bg:rgba(63,217,135,.12); --warn:#f3b843; --warn-bg:rgba(243,184,67,.12);
+  --bad:#ff6d6d; --bad-bg:rgba(255,109,109,.12); --slate:#8ea0b6; --sl-bg:rgba(142,160,182,.12); color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:24px 18px 56px;display:flex;flex-direction:column;gap:24px}
+h1{font-size:21px;margin:0;font-weight:700;text-wrap:balance}
+h2{font-size:11.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);margin:0 0 10px;font-weight:600}
+.mono{font-family:var(--mono)}
+.dim{color:var(--dim)}
+header{display:flex;flex-direction:column;gap:8px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:12.5px;color:var(--dim)}
+.meta b{color:var(--fg);font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;padding:3px 9px;border-radius:20px;border:1px solid currentColor;white-space:nowrap}
+.pill i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.p-ready{color:var(--accent);background:var(--acc-bg)}
+.p-run{color:var(--warn);background:var(--warn-bg)}
+.p-review{color:var(--warn);background:var(--warn-bg);border-style:dashed}
+.p-closed{color:var(--ok);background:var(--ok-bg)}
+.p-decision{color:var(--bad);background:var(--bad-bg)}
+.p-interim{color:var(--slate);background:var(--sl-bg)}
+.p-fresh{color:var(--ok);background:var(--ok-bg)}
+.p-stale{color:var(--bad);background:var(--bad-bg)}
+.p-aging{color:var(--warn);background:var(--warn-bg)}
+.banner{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--slate);border-radius:8px;padding:10px 14px;font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;min-width:0}
+/* waiting for you */
+.asks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.ask{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.ask.soft{border-left-color:var(--warn)}
+.ask.note{border-left-color:var(--slate)}
+.ask .k{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.ask .t{font-weight:600;font-size:14.5px}
+.ask .x{font-size:13px;color:var(--dim)}
+.reply{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.reply code{font-family:var(--mono);font-size:12.5px;background:var(--acc-bg);color:var(--accent);padding:3px 8px;border-radius:4px;overflow-wrap:anywhere}
+button.copy{font:inherit;font-size:12px;background:var(--panel);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:3px 10px;cursor:pointer}
+button.copy:hover{background:var(--acc-bg)}
+button.copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* work board */
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:820px){.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:460px){.board{grid-template-columns:1fr}}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.col-h{display:flex;justify-content:space-between;align-items:center}
+.col-h .n{font-family:var(--mono);font-size:12px;color:var(--dim)}
+.card{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.card:first-of-type{border-top:0;padding-top:0}
+.card .id{font-family:var(--mono);font-size:12.5px;font-weight:600}
+.card .t{font-size:13px}
+.card .x{font-size:12px;color:var(--dim);overflow-wrap:anywhere}
+.empty{font-size:12.5px;color:var(--dim);font-style:italic}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:10.5px;font-family:var(--mono);color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+/* fixed line */
+.line{display:flex;flex-direction:column;gap:8px}
+.line pre{margin:0;font-family:var(--mono);font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:13px}
+/* path */
+.path{display:flex;flex-direction:column;gap:0}
+.stp{display:grid;grid-template-columns:92px 22px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.stp:first-child{border-top:0}
+.stp .d{font-family:var(--mono);font-size:12px;color:var(--dim);padding-top:1px}
+.dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--line);margin-top:4px}
+.dot.done{background:var(--ok);border-color:var(--ok)}
+.dot.now{background:var(--accent);border-color:var(--accent)}
+.stp .w{font-size:13px}
+.stp .w span{display:block;font-size:12px;color:var(--dim)}
+@media (max-width:520px){.stp{grid-template-columns:22px minmax(0,1fr)}.stp .d,.stp .s{grid-column:2}}
+/* tables */
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-top:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);font-weight:600;border-top:0}
+td.m{font-family:var(--mono);font-size:12px}
+.lab{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.l-man{color:var(--bad);background:var(--bad-bg)} .l-asst{color:var(--warn);background:var(--warn-bg)} .l-auto{color:var(--ok);background:var(--ok-bg)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+ul.plain{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px;font-size:13px}
+ul.plain li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:baseline}
+.tag{font-family:var(--mono);font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:4px;white-space:nowrap;color:var(--slate);background:var(--sl-bg)}
+footer{font-size:12px;color:var(--dim);border-top:1px solid var(--line);padding-top:12px}
+@media (prefers-reduced-motion:no-preference){.pill i.pulse{animation:p 2s ease-in-out infinite}@keyframes p{50%{opacity:.35}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="top">
+    <h1>Meridian Atlas — November Control Tower</h1>
+    <span class="pill p-interim"><i></i>Interim</span>
+    <span class="pill" id="fresh"><i class="pulse"></i><span id="fresh-t">–</span></span>
+  </div>
+  <div class="meta">
+    <span>Refreshed <b class="mono" id="refreshed">–</b></span>
+    <span>Working branch <b class="mono">November-2026 @ a01ffe2</b></span>
+    <span>Live site <b class="mono">October-2026 /docs</b> (unchanged)</span>
+    <span>Workers <b>no November deploys</b></span>
+  </div>
+</header>
+
+<div class="banner"><b>Interim view.</b> The Main Lane rebuilds this page from <span class="mono">claude/packets/STATUS_BOARD.md</span> and the Status files whenever a state changes; those files stay the record. Target: a Tower generated from Status files by ordinary code, with approvals here, accepted by <b>Wed 11 Nov</b>. Approve by replying to the Main Lane with the line shown on a card.</div>
+
+<section aria-labelledby="h-asks">
+  <h2 id="h-asks">Waiting for you</h2>
+  <div class="asks" id="asks"></div>
+</section>
+
+<section aria-labelledby="h-work">
+  <h2 id="h-work">Work</h2>
+  <div class="board" id="board"></div>
+</section>
+
+<section class="two">
+  <div class="panel line" aria-labelledby="h-line">
+    <h2 id="h-line">Start an approved run in Claude Code</h2>
+    <ol class="steps">
+      <li>Approve the packet here by replying to the Main Lane (card above).</li>
+      <li>Open Claude Code on <span class="mono">Meridian Atlas Clean (v11)</span>. Reviews need a new session.</li>
+      <li>Type the fixed line. It never changes while the procedure file is unchanged.</li>
+      <li>When it stops, tell the Main Lane "done".</li>
+    </ol>
+    <pre id="fixed"></pre>
+    <div class="reply"><button class="copy" type="button" data-copy="fixed" id="copy-fixed">Copy line</button><span class="dim" style="font-size:12px">Procedure: <span class="mono">claude/packets/LANE_OPENER.md</span></span></div>
+  </div>
+  <div class="panel" aria-labelledby="h-path">
+    <h2 id="h-path">Path to the target set-up</h2>
+    <div class="path" id="path"></div>
+  </div>
+</section>
+
+<section class="panel" aria-labelledby="h-hand">
+  <h2 id="h-hand">Handoffs — today and at target</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Handoff</th><th>Today</th><th>How today</th><th>Target (subject to MA-NOV-000)</th></tr></thead>
+    <tbody id="hand"></tbody>
+  </table></div>
+</section>
+
+<section class="two">
+  <div class="panel" aria-labelledby="h-rec">
+    <h2 id="h-rec">Records waiting for the next commit</h2>
+    <ul class="plain" id="rec"></ul>
+  </div>
+  <div class="panel" aria-labelledby="h-carry">
+    <h2 id="h-carry">October carry-overs (queued, not committed scope)</h2>
+    <ul class="plain" id="carry"></ul>
+  </div>
+</section>
+
+<section class="panel" aria-labelledby="h-dec">
+  <h2 id="h-dec">Recent decisions</h2>
+  <ul class="plain" id="dec"></ul>
+</section>
+
+<footer>Maintained by the November Main Lane (Program Orchestrator). Records: <span class="mono">claude/packets/STATUS_BOARD.md</span>, <span class="mono">claude/packets/*_Status.json</span>, <span class="mono">claude/November_Decisions_Log.md</span>. October history: <span class="mono">claude/October_Decisions_Log.md</span>, Release Ledger October 2026.</footer>
+</div>
+
+<script>
+/* ===== STATE (Main Lane edits this block on every refresh) ===== */
+const REFRESHED = "2026-11-06T21:15:00Z";
+const FIXED_LINE = "Follow claude/packets/LANE_OPENER.md (sha256 3a5684b4ff777854aac95fc9d53f532c6ee66f0c626de7fc305f66cbc608cae2) and run the Founder-approved packet.";
+const ASKS = [
+ {kind:"start",t:"Start MA-NOV-000 — feasibility assessment",x:"Read-only check of your Mac and the repository; recommends how runs, reviews, this page and your approvals work; proposes the pilot. Writes one report. No D1, secrets, installs or model launches. Usage: medium.",reply:"approve MA-NOV-000",due:"When you are ready"},
+ {kind:"decision",t:"FIRDS weekly run — hold or leave?",x:"Failing every Sunday since 18 Oct (CR-11). The Main Lane sends the decision request with options before Sunday; nothing changes without your approval.",reply:"",due:"Before Sun 8 Nov"},
+ {kind:"note",t:"Optional tidy-up",x:"Three duplicate November documents sit at the repository root (the committed copies are in claude/). Delete them when convenient. Also: is meridian_atlas_november_kickoff_and_runbook.md needed? (NML-1106-3)",reply:"",due:"Any time"},
+];
+const WORK = {
+ RUNNING:[],
+ READY:[{id:"MA-NOV-000",t:"Delivery-factory feasibility assessment",x:"Awaiting your Start Approval. Then: report → Main Lane check → Architect review if you want it → your architecture decision.",chips:["LANE-NOV-ENG · Claude Code","medium","ctl 9afaea82…e1c0"]}],
+ REVIEW:[],
+ CLOSED:[{id:"MA-NOV-BOOT",t:"Governance commit + November-2026 branch",x:"a01ffe2 (15 files); both branches on origin = a01ffe2; verified 21:00Z.",chips:["LANE-NOV-ENG","light"]}],
+};
+const PATH = [
+ ["Fri 6","done","Bootstrap","November-2026 created at a01ffe2"],
+ ["Fri 6","now","Interim Tower + fixed line","This page and LANE_OPENER.md"],
+ ["Sat 7","next","MA-NOV-000 assessment","One run; you start it with the fixed line"],
+ ["Sat 7–Sun 8","next","Your architecture decision","One Decision Request"],
+ ["Sun 8–Mon 9","next","Pilot spec and build","Tower generated by code from Status files; tests for pause, duplicate launch, stale approval"],
+ ["Tue 10","next","Independent review of the pilot","Separate session"],
+ ["Wed 11","next","Pilot acceptance → target Tower live","Approvals on the Tower; this interim page retired"],
+];
+const HAND = [
+ ["Start a run","asst","You approve here; you type the fixed line in Claude Code","Automatic or one-click, if a safe launch method is proven"],
+ ["Find the packet and check hashes","auto","The session follows LANE_OPENER.md","Dispatcher (ordinary code)"],
+ ["Evidence back to the Main Lane","asst","You say \"done\"; the Main Lane reads the report from disk","Dispatcher marks review-needed"],
+ ["Start an independent review","man","New Claude Code session + fixed line","Automatic or one-click"],
+ ["Your approvals","asst","Reply to the Main Lane; it records them bound to file hashes","Buttons here, bound to the exact revision"],
+ ["Update this page","man","Main Lane rebuilds it on each state change","Generated by code, no model calls"],
+];
+const REC = [
+ ["new","claude/packets/MA-NOV-BOOT_Report.md + _Status.json"],
+ ["new","claude/packets/MA-NOV-000_Control_v1.md, _Task_v1.md, _Status.json"],
+ ["new","claude/packets/LANE_OPENER.md"],
+ ["edit","claude/packets/STATUS_BOARD.md (November section)"],
+ ["edit","claude/November_Decisions_Log.md (NML-1106-6, -7)"],
+];
+const CARRY = [
+ ["4","Immediate checks: boost pause lapse (Sat 7), public Ops GET routes, FIRDS (CR-11), enrich phase-1 stall"],
+ ["8","Dependencies for November scope: bond parser and DQ tickets, 010 notes, 007 Phase 2, ETF read cost and icon, 013 held subset, phone-width row, D1 board sync"],
+ ["4","Maintenance candidates: A2, CR-10 steps 3–5, holdings start events, runner and registry hygiene"],
+ ["—","Deferred: Access session length, cosmetic markers, low-priority known issues"],
+];
+const DEC = [
+ ["6 Nov 21:01","Founder: go interim — this page and the fixed line; target set-up by Wed 11"],
+ ["6 Nov 21:00","MA-NOV-BOOT closed: a01ffe2; November-2026 created and checked out"],
+ ["6 Nov 20:03","Founder kickoff: November-2026 approved; bootstrap first; design direction only; FIRDS decision before Sun 8"],
+ ["6 Nov 19:51","November Main Lane opened; all other October lanes archived"],
+ ["6 Nov","Founder closed October (ML-1106-4)"],
+];
+/* ===== RENDER ===== */
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const P={READY:["p-ready","Ready"],RUNNING:["p-run","Running"],REVIEW:["p-review","In review"],CLOSED:["p-closed","Closed"]};
+const pill=k=>`<span class="pill ${P[k][0]}"><i></i>${P[k][1]}</span>`;
+
+const r=new Date(REFRESHED);
+document.getElementById("refreshed").textContent=r.toLocaleString("en-GB",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",timeZone:"Europe/London"})+" UK";
+function freshness(){
+  const h=(Date.now()-r.getTime())/36e5, el=document.getElementById("fresh"), t=document.getElementById("fresh-t");
+  if(h<12){el.className="pill p-fresh";t.textContent="Current";}
+  else if(h<24){el.className="pill p-aging";t.textContent="Aging · "+Math.floor(h)+" h";}
+  else{el.className="pill p-stale";t.textContent="Stale · "+Math.floor(h)+" h — ask the Main Lane to refresh";}
+}
+freshness(); setInterval(freshness,60000);
+
+document.getElementById("asks").innerHTML=ASKS.map((a,i)=>`
+  <div class="ask ${a.kind==="decision"?"soft":a.kind==="note"?"note":""}">
+    <div class="k"><span class="t">${esc(a.t)}</span><span class="pill ${a.kind==="start"?"p-decision":a.kind==="decision"?"p-run":"p-interim"}"><i></i>${a.kind==="start"?"Start approval":a.kind==="decision"?"Decision coming":"Optional"}</span></div>
+    <div class="x">${esc(a.x)}</div>
+    <div class="reply">${a.reply?`<span class="dim" style="font-size:12px">Reply to the Main Lane:</span><code id="ask-${i}">${esc(a.reply)}</code><button class="copy" type="button" data-copy="ask-${i}" id="copy-ask-${i}">Copy</button>`:""}<span class="dim" style="font-size:12px;margin-left:auto">${esc(a.due)}</span></div>
+  </div>`).join("");
+
+document.getElementById("board").innerHTML=["RUNNING","READY","REVIEW","CLOSED"].map(k=>{
+  const it=WORK[k];
+  return `<div class="col"><div class="col-h">${pill(k)}<span class="n">${it.length}</span></div>${it.length?it.map(w=>`
+    <div class="card"><span class="id">${esc(w.id)}</span><span class="t">${esc(w.t)}</span><span class="x">${esc(w.x)}</span>
+    <div class="chips">${(w.chips||[]).map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div></div>`).join(""):`<span class="empty">${k==="RUNNING"?"Nothing running":k==="REVIEW"?"Nothing in review":"None"}</span>`}</div>`;
+}).join("");
+
+document.getElementById("fixed").textContent=FIXED_LINE;
+document.getElementById("path").innerHTML=PATH.map(([d,s,w,n])=>`<div class="stp"><span class="d">${esc(d)}</span><span class="dot ${s==="done"?"done":s==="now"?"now":""}" aria-label="${s}"></span><span class="w">${esc(w)}<span>${esc(n)}</span></span><span class="s">${s==="done"?'<span class="lab l-auto">Done</span>':s==="now"?'<span class="lab l-asst">Now</span>':""}</span></div>`).join("");
+const L={auto:["l-auto","Automatic"],asst:["l-asst","Assisted"],man:["l-man","Manual"]};
+document.getElementById("hand").innerHTML=HAND.map(([h,l,how,t])=>`<tr><td>${esc(h)}</td><td><span class="lab ${L[l][0]}">${L[l][1]}</span></td><td>${esc(how)}</td><td class="dim">${esc(t)}</td></tr>`).join("");
+document.getElementById("rec").innerHTML=REC.map(([k,p])=>`<li><span class="tag">${esc(k)}</span><span class="mono" style="font-size:12px;overflow-wrap:anywhere">${esc(p)}</span></li>`).join("");
+document.getElementById("carry").innerHTML=CARRY.map(([n,t])=>`<li><span class="tag">${esc(n)}</span><span>${esc(t)}</span></li>`).join("");
+document.getElementById("dec").innerHTML=DEC.map(([d,t])=>`<li><span class="tag">${esc(d)}</span><span>${esc(t)}</span></li>`).join("");
+
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button.copy"); if(!b) return;
+  const src=document.getElementById(b.dataset.copy); const old=b.textContent;
+  try{navigator.clipboard.writeText(src.textContent).then(()=>{b.textContent="Copied";setTimeout(()=>b.textContent=old,1500)},()=>{b.textContent="Select and copy";});}
+  catch(_){b.textContent="Select and copy";}
+});
+</script>
+</body>
+</html>

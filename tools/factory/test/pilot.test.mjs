@@ -1,6 +1,6 @@
 // MA-NOV-P1.BUILD pilot tests (Task §7). Run: node --test tools/factory/test
 // Every test builds its own temp repo; the dispatcher launches only the stub in fixtures/.
-// Numbering: 1–13 (+4b, 4c) BUILD, 16–22 FIX, 23–32 FIX2, 33–40 FIX3. Ids 14–15 are deliberately unused: BUILD skipped them and
+// Numbering: 1–13 (+4b, 4c) BUILD, 16–22 FIX, 23–32 FIX2, 33–40 FIX3, 41–48 FIX4. Ids 14–15 are deliberately unused: BUILD skipped them and
 // the FIX/REVIEW reports cite 16–22 by number, so renumbering would break those references.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,7 +12,7 @@ import { makeRepo, envFor, runNode, spawnNode, callCount, status, waitFor, strip
 import { writeStatus, listStatus, OwnershipError, TransitionError, RevConflictError } from '../lib/state.mjs';
 import { acquireLease, LeaseError } from '../lib/lease.mjs';
 import { evaluate } from '../lib/eligibility.mjs';
-import { project, BOARD_TITLE, BOARD_SECTION, SCOPE_SECTION, SCOPE_KINDS } from '../project.mjs';
+import { project, BOARD_TITLE, BOARD_SECTION, SCOPE_SECTION, SCOPE_KINDS, RECORD_KINDS, REQUEST_SECTION } from '../project.mjs';
 
 const A = 'MA-NOV-TA';
 const B = 'MA-NOV-TB';
@@ -268,7 +268,9 @@ test('12. generated board parses with LANE_OPENER step 3 and preserves every Con
   const parsed = laneOpenerReadyRows(board);
   assert.deepEqual(parsed.header, ['Packet', 'State', 'Control (SHA-256)', 'Lane / tool', 'Write owner', 'Next gate', 'Blocker', 'Usage']);
   // FIX3 item 7: outcome / carry-over records live in the November scope section, not the work table.
-  const all = listStatus('MA-NOV-', { root: repo.root }).filter((x) => !SCOPE_KINDS.includes(x.status.kind));
+  // FIX4 item 7: so do founder-request and plan records (RECORD_KINDS ⊇ SCOPE_KINDS).
+  assert.ok(SCOPE_KINDS.every((k) => RECORD_KINDS.includes(k)));
+  const all = listStatus('MA-NOV-', { root: repo.root }).filter((x) => !RECORD_KINDS.includes(x.status.kind));
   assert.equal(parsed.rows.length, all.length, 'no packet lost');
   for (const { id, status: s } of all) {
     const row = parsed.rows.find((r) => r.Packet.split(' — ')[0] === id);
@@ -332,7 +334,7 @@ test('16. begin -> EXECUTING + interactive lease + before.json; second begin ref
   assert.match(html, /mode-interactive">interactive</);
   assert.match(html, /no heartbeat expected/);
   assert.ok(!/class="hb"/.test(html), 'no heartbeat indicator for an interactive run');
-  assert.match(html, /How to start a run/);
+  assert.match(html, /<h2>Start a run<\/h2>/); // FIX4: the interim design's "Start a run" panel
 });
 
 test('17. end with report -> REVIEW_NEEDED + report hash (Main Lane write and PAUSE.json during the run ignored)', () => {
@@ -751,4 +753,137 @@ test('40. Outcomes view: outcome / carry-over records render in "November scope"
   assert.ok(scopeSec, 'November scope section present');
   for (const t of [`${OX}-R01`, `${CX}-R02`, `${OX} dep`, 'CX obs item', 'CX obs note']) assert.ok(scopeSec.includes(t), `Tower scope has ${t}`);
   for (const sct of secs.filter((x) => x !== scopeSec)) assert.ok(!sct.includes(OX) && !sct.includes(CX), `not in: ${sct.slice(0, 40)}`);
+});
+
+// ---- MA-NOV-P1.FIX4: start-branch check (H1), closure_by id validation (H2) ----
+test('41. branch created at the run and finished on -> BLOCKED "branch changed" (H1); begin records start_branch', () => {
+  const repo = makeRepo({ packets: [withCommits(A)] });
+  const br = branchOf(repo);
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 0);
+  const bf = JSON.parse(fs.readFileSync(P(repo, 'claude', 'factory', 'runs', status(repo, A).run.run_id, 'before.json'), 'utf8'));
+  assert.equal(bf.start_branch, br);
+  writeReport(repo, A);
+  gitIn(repo.root, 'checkout', '-q', '-b', 'stay');
+  const e = runNode(DISPATCH, ['end', A], envFor(repo));
+  assert.equal(e.status, 3, e.stderr + e.stdout);
+  assert.equal(status(repo, A).run.blocked_reason, `branch changed: ${br} → stay; ref changed: refs/heads/stay`);
+  const r = runJson(repo, A);
+  assert.equal(r.branch_check, 'branch changed');
+  assert.deepEqual([r.start_branch, r.end_branch], [br, 'stay']);
+});
+
+test('42. new branch with commits pushed (remote ref) under allow_commits -> BLOCKED (H1: only the start branch is skipped)', () => {
+  const repo = makeRepo({ packets: [withCommits(A)] });
+  const br = branchOf(repo);
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 0);
+  writeReport(repo, A);
+  gitIn(repo.root, 'checkout', '-q', '-b', 'stay2');
+  committer(repo)(report(A));
+  gitIn(repo.root, 'update-ref', 'refs/remotes/origin/stay2', 'HEAD'); // as `git push origin stay2` would
+  const e = runNode(DISPATCH, ['end', A], envFor(repo));
+  assert.equal(e.status, 3, e.stderr + e.stdout);
+  const why = status(repo, A).run.blocked_reason;
+  for (const t of [`branch changed: ${br} → stay2`, 'ref changed: refs/heads/stay2', 'ref changed: refs/remotes/origin/stay2']) assert.ok(why.includes(t), `${t} in: ${why}`);
+});
+
+test('43. before.json without start_branch (pre-FIX4 run) -> branch_check "unavailable", not BLOCKED', () => {
+  const repo = makeRepo({ packets: [A] });
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 0);
+  const bf = P(repo, 'claude', 'factory', 'runs', status(repo, A).run.run_id, 'before.json');
+  const b = JSON.parse(fs.readFileSync(bf, 'utf8'));
+  delete b.start_branch;
+  fs.writeFileSync(bf, JSON.stringify(b));
+  writeReport(repo, A);
+  const e = runNode(DISPATCH, ['end', A], envFor(repo));
+  assert.equal(e.status, 0, e.stderr + e.stdout);
+  assert.equal(runJson(repo, A).branch_check, 'unavailable');
+  assert.equal(runJson(repo, A).start_branch, null);
+});
+
+test('44. closure_by must be a packet id: "../" path or bad pattern refused, nothing written (H2)', () => {
+  const repo = makeRepo({ packets: [{ id: A, state: 'CHANGES_REQUESTED' }, { id: B, state: 'CLOSED' }], git: false });
+  const before = fs.readFileSync(statusFile(repo, A));
+  const w = (by) => writeStatus(A, (x) => { x.state = 'APPROVED'; x.closure_by = by; }, { writer: 'main-lane', expectRev: 1, root: repo.root });
+  for (const by of [`../packets/${B}`, `${B}/../${B}`, B.toLowerCase(), `MA-NOV-TB_x`, 'MA-', ` ${B}`]) {
+    assert.throws(() => w(by), (err) => err instanceof TransitionError && /not a packet id/.test(err.message), `refused: ${JSON.stringify(by)}`);
+  }
+  assert.deepEqual(fs.readFileSync(statusFile(repo, A)), before, 'nothing written');
+  assert.equal(w(B).state, 'APPROVED');
+});
+
+// ---- MA-NOV-P1.FIX4: Tower redesign — founder-request and plan records ----
+const FR_OPEN = 'MA-NOV-FR1'; const FR_DONE = 'MA-NOV-FR2'; const PLAN = 'MA-NOV-PLAN';
+const record = (id, kind, more = {}) => ({ id, state: 'DRAFT', approved: false, runProfile: false, extra: { kind, control: null, task: null, write_owner: 'NONE', ...more } });
+const frOpen = record(FR_OPEN, 'founder-request', { title: 'ETF batch size', request_type: 'decision', question: 'Keep the holdings batch size?', options: ['A keep', 'B halve'], reply: 'ETF batch: A', due: 'Before Sun 15', status: 'open' });
+const frDone = record(FR_DONE, 'founder-request', { request_type: 'note', question: 'FIRDS weekly run — hold or leave?', reply: 'FIRDS: leave', status: 'answered', answer: 'leave', answered_at: '2026-11-07T09:27:00Z' });
+const planRec = record(PLAN, 'plan', { title: 'November plan',
+  milestones: [{ when: 'Fri 6', title: 'Bootstrap done', detail: 'branch created', status: 'done' }, { when: 'Tue 10', title: 'FIX4 tower', detail: 'this packet', status: 'now' }, { when: 'Wed 11', title: 'Scope assessment', detail: 'after reset', status: 'next' }],
+  handoffs: [{ step: 'Start a run', today: 'assisted', how: 'fixed line', target: 'one click' }, { step: 'Find the packet', today: 'automatic', how: 'dispatcher', target: 'same' }, { step: 'Start a review', today: 'manual', how: 'new session', target: 'automatic' }] });
+const sections = (html) => {
+  const body = html.slice(0, html.indexOf('<script type="application/json"'));
+  return Object.fromEntries(body.split('<section>').slice(1).map((x) => [x.match(/^<h2>([^<]+?)(?: <span|<\/h2>)/)[1], x]));
+};
+
+test('45. founder-request: open -> "Waiting for you" with reply + Copy; answered -> "Recent decisions"; neither in Work', () => {
+  const repo = makeRepo({ packets: [A, { id: B, approved: false }, frOpen, frDone], git: false });
+  const { html, board } = project({ root: repo.root });
+  const s = sections(html);
+  assert.ok(s['Waiting for you'].includes(FR_OPEN) && s['Waiting for you'].includes('ETF batch size'));
+  assert.match(s['Waiting for you'], /<code id="(cp-\d+)">ETF batch: A<\/code><button class="copy" type="button" data-copy="\1">Copy<\/button>/);
+  assert.ok(s['Waiting for you'].includes('A keep') && s['Waiting for you'].includes('Before Sun 15'));
+  assert.ok(!s['Waiting for you'].includes(FR_DONE), 'answered request not waiting');
+  assert.ok(s['Recent decisions'].includes(FR_DONE) && s['Recent decisions'].includes('leave'));
+  assert.ok(!s['Recent decisions'].includes(FR_OPEN));
+  for (const id of [FR_OPEN, FR_DONE]) assert.ok(!s.Work.includes(id), `${id} not in Work`);
+  // READY without start_approval -> a start-approval card with reply "approve <ID>"
+  assert.match(s['Waiting for you'], new RegExp(`<code id="cp-\\d+">approve ${B}</code>`));
+  assert.ok(s.Work.includes(A) && s.Work.includes(B));
+  assert.ok(board.includes(REQUEST_SECTION) && board.includes('ETF batch: A') && !board.includes('FIRDS: leave'));
+  assert.ok(!board.slice(board.indexOf(BOARD_SECTION), board.indexOf(REQUEST_SECTION)).includes('MA-NOV-FR'), 'no request rows in the work table');
+});
+
+test('46. plan record renders Path milestones (Done/Now/Next) and the Handoffs table', () => {
+  const repo = makeRepo({ packets: [A, planRec], git: false });
+  const s = sections(project({ root: repo.root }).html);
+  for (const t of ['Bootstrap done', 'FIX4 tower', 'Scope assessment', 'dot done', 'dot now', 'l-auto">Done', 'l-asst">Now', 'l-next">Next']) assert.ok(s.Path.includes(t), `Path has ${t}`);
+  for (const t of ['Start a review', 'l-asst">Assisted', 'l-auto">Automatic', 'l-man">Manual', 'one click']) assert.ok(s.Handoffs.includes(t), `Handoffs has ${t}`);
+  assert.ok(!s.Work.includes(PLAN), 'plan not in Work');
+  const empty = sections(project({ root: makeRepo({ packets: [A], git: false }).root }).html);
+  assert.match(empty.Path, /No plan record/);
+});
+
+test('47. record kinds are never eligible (even READY with a valid approval); begin refuses them', () => {
+  const kinds = ['founder-request', 'plan', 'outcome', 'carry-over register'];
+  const ids = kinds.map((k, i) => `MA-NOV-RK${i}`);
+  const repo = makeRepo({ packets: [A, ...ids.map((id, i) => ({ id, extra: { kind: kinds[i] } }))] });
+  const ev = evaluate({ root: repo.root });
+  assert.deepEqual(ev.eligible, [A]);
+  for (const [i, id] of ids.entries()) {
+    assert.deepEqual(ev.ineligible.find((x) => x.id === id).reasons, [`record (kind ${kinds[i]}) — never runnable`]);
+  }
+  for (const f of ['interactive', 'headless']) assert.ok(!evaluate({ root: repo.root, forRun: f }).eligible.includes(ids[0]));
+  const r = runNode(DISPATCH, ['begin', ids[0]], envFor(repo));
+  assert.equal(r.status, 2, r.stderr);
+  assert.match(r.stderr, /never runnable/);
+  assert.equal(status(repo, ids[0]).state, 'READY', 'nothing written');
+});
+
+test('48. Tower HTML has no http:// or https:// URL and no "OFFLINE" (all sections populated)', () => {
+  const OX = 'MA-NOV-OX';
+  const repo = makeRepo({ packets: [A, { id: B, approved: false }, frOpen, frDone, planRec,
+    record(OX, 'outcome', { requirements: ['OX-R01'], observations: [{ at: '2026-11-08T12:00:00Z', item: 'i', note: 'n' }] })] });
+  assert.equal(runNode(DISPATCH, ['begin', A], envFor(repo)).status, 0);
+  writeReport(repo, A);
+  assert.equal(runNode(DISPATCH, ['end', A], envFor(repo)).status, 0);
+  fs.writeFileSync(P(repo, 'claude', 'factory', 'PAUSE.json'), JSON.stringify({ set_by: 'Founder', at: 'x', reason: 'r' }));
+  const { html } = project({ root: repo.root, now: new Date(Date.now() - 3600e3) });
+  assert.ok(!/https?:\/\//i.test(html), 'no URL');
+  assert.ok(!/OFFLINE/.test(html), 'no OFFLINE');
+  assert.ok(!/<link\b/i.test(html) && !/<script[^>]+src=/i.test(html) && !/@import/i.test(html), 'no external resources');
+  const s = sections(html);
+  for (const h of ['Waiting for you', 'Work', 'Start a run', 'Path', 'Handoffs', 'November scope', 'Recent runs', 'Recent decisions']) assert.ok(s[h], `section ${h}`);
+  assert.match(s['Recent decisions'], new RegExp(`${A} EXECUTING → <b>REVIEW_NEEDED</b>`), 'transitions.jsonl rows shown');
+  assert.match(s['Recent runs'], /REVIEW_NEEDED/);
+  assert.match(html, /navigator\.clipboard/);
+  assert.match(html, /Selected — press Cmd\+C/, 'copy fallback');
 });

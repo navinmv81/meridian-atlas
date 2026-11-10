@@ -1,0 +1,9 @@
+{
+  "packet": "MA-NOV-P1.FIX3",
+  "run_id": "r-20261109T064454Z-91b0",
+  "mode": "interactive",
+  "pid": 56381,
+  "acquired": "2026-11-09T06:44:54Z",
+  "expires": "2026-11-09T08:44:54Z",
+  "session_id": "4dae9d0d-531f-40d8-a048-c9621b2d1332"
+}

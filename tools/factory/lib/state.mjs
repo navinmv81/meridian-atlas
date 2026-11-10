@@ -85,6 +85,7 @@ function checkOwnership(id, writer, cur, next) {
 
 // Closure path (MA-NOV-P1.FIX3, NML-1108-1): CHANGES_REQUESTED → APPROVED is allowed only for writer `main-lane`, and
 // only when this mutation sets `closure_by` to the id of a CLOSED follow-up packet whose review covered the changes.
+export const CLOSURE_ID_RE = /^MA-[A-Z0-9][A-Z0-9.-]*$/;
 export function checkClosure(cur, next, writer, root) {
   if (!(cur.state === 'CHANGES_REQUESTED' && next.state === 'APPROVED')) return;
   if (writer !== 'main-lane') throw new TransitionError(`CHANGES_REQUESTED -> APPROVED is main-lane only (writer ${writer})`);
@@ -92,6 +93,8 @@ export function checkClosure(cur, next, writer, root) {
   if (typeof by !== 'string' || !by || by === cur.closure_by) {
     throw new TransitionError('CHANGES_REQUESTED -> APPROVED needs this write to set closure_by (a CLOSED follow-up packet id)');
   }
+  // H2 (FIX4): a packet id, never a path ("../packets/MA-NOV-X" resolved to the same file before).
+  if (!CLOSURE_ID_RE.test(by)) throw new TransitionError(`closure_by "${by}" is not a packet id (${CLOSURE_ID_RE})`);
   let f = null;
   try { f = JSON.parse(fs.readFileSync(statusPath(by, root), 'utf8')); } catch { /* missing or unreadable */ }
   if (!f || f.state !== 'CLOSED') throw new TransitionError(`closure_by ${by} is not a CLOSED packet`);

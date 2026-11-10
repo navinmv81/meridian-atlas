@@ -43,6 +43,12 @@ export function packetLease(root, id, status, nowMs) {
   return { source: file ? 'file' : 'status', lease, state: leaseState(lease, nowMs) };
 }
 
+// Record kinds (FIX3 item 7, FIX4 item 7): sprint scope, Founder requests and the plan. Rendered on the board and
+// Tower, write owner NONE, never runnable whatever their state or approval says.
+export const SCOPE_KINDS = ['outcome', 'carry-over register'];
+export const RECORD_KINDS = [...SCOPE_KINDS, 'founder-request', 'plan'];
+export const isRecordKind = (kind) => RECORD_KINDS.includes(kind);
+
 // forRun: false (check) | true or 'headless' (dispatch run) | 'interactive' (dispatch begin)
 export function evaluate({ root, nowMs = Date.now(), forRun = false, prefix = 'MA-NOV-' }) {
   const packets = listStatus(prefix, { root });
@@ -53,6 +59,7 @@ export function evaluate({ root, nowMs = Date.now(), forRun = false, prefix = 'M
   const stale = [];
   const warnings = {};
   for (const { id, status: s } of packets) {
+    if (isRecordKind(s.kind)) { ineligible.push({ id, reasons: [`record (kind ${s.kind}) — never runnable`] }); continue; }
     const reasons = [];
     if (s.state !== 'READY') reasons.push(`state ${s.state}`);
     const a = s.start_approval;

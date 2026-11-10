@@ -4,7 +4,7 @@
   "kind": "carry-over register",
   "state": "DRAFT",
   "phase": "SPEC",
-  "rev": 3,
+  "rev": 6,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "— (not admitted)",
   "write_owner": "NONE",
@@ -22,7 +22,7 @@
   "blocker": null,
   "review_needed": false,
   "usage_class": "—",
-  "updated": "2026-11-09T06:42:44Z",
+  "updated": "2026-11-10T06:52:00Z",
   "updated_by": "Main Lane",
   "observations": [
     {
@@ -44,6 +44,26 @@
       "at": "2026-11-09T06:42:44Z",
       "item": "Boost job_missed false positives (Operations Lead)",
       "note": "Boost fired 11:50Z and 17:50Z Sun 8 Nov with start+success recorded (HTTP 201), but the sweep raised sev3 EXC-S-BEAEC2CBA475 and EXC-S-F2F2329B57EC (missed slots). Investigate after the reset; boost also fired with the day over the 80k guard (wrote ~0)."
+    },
+    {
+      "at": "2026-11-09T18:43:06Z",
+      "item": "Boost job_missed (Operations Lead)",
+      "note": "Third false-positive: EXC-S-2F53044A1818 for the Mon 9 11:50Z slot although boost fired (log 11:50:05Z). Pattern confirmed; investigate after the reset."
+    },
+    {
+      "at": "2026-11-09T18:43:06Z",
+      "item": "Entities-seed first Monday with heartbeats",
+      "note": "Mon 9 Nov: 37,525 D1 writes by 08:00Z (seed window), no missed-run case raised, schedule drift 0 — consistent with a normal run; the run event itself is only visible in the Ops console. Write volume (~37k) is far above KI 22.40's ~2.4k re-stamp estimate → Data-Identity Lead to check after the reset."
+    },
+    {
+      "at": "2026-11-09T18:59:42Z",
+      "item": "Commit condition (NML-1108-2) lifted with notes",
+      "note": "Founder 9 Nov 18:59: commit-allowed packets may be admitted; no push-allowed packet until P1.FIX4 (H1, H2) lands."
+    },
+    {
+      "at": "2026-11-10T06:52:00Z",
+      "item": "ETF holdings batch size — DECIDED (Founder, 10 Nov 06:51)",
+      "note": "Option A: no change. The 80k guard stops the Sunday run cleanly and etf_offset advances only past finished ETFs, so there is no budget risk; cost is slow refresh (133/237, ~6–15 weeks to complete a cycle). Budget cases EXC-S-6E6D3D658179 / EXC-S-0985E036CADD to be acknowledged with this note. Option C (faster cycle; cron slots 5/5) goes to the November scope assessment because EXP-08 depends on holdings freshness."
     }
   ]
 }
