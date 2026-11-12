@@ -1,6 +1,24 @@
 // meridian-entities-api
 // Serves all Corporate Atlas API endpoints.
-// All routes read pre-computed tables only — no raw fund_holdings_monthly joins at request time.
+// All routes read pre-computed tables only — no raw fund_holdings_monthly joins at request time —
+// with ONE approved exception: R-EXP1 below (MA-NOV-EXP spec §5.2 decision D1, Founder-approved).
+//
+// READ BUDGET — R-EXP1 GET /api/exposure/etf/{symbol}[?month=YYYY-MM] (MA-NOV-EXP spec §4.4–4.5, §10 point 3;
+// amendment A1 as refined by D-1 c, NML-1112-2). Three-point check: claude/packets/MA-NOV-EXP.W1R2_Report.md §4.
+//   * At most 3 D1 calls per uncached request (spec ceiling 4): etf_master PK · month/snapshot lookup
+//     (ORDER BY report_month DESC LIMIT 1 on idx_holdings_status_series_month, never a correlated MAX) ·
+//     one single-pass look-through statement that aggregates and builds the JSON body inside D1.
+//   * Measured on live D1 2026-11-12 (W1R2): EEM 1,231 holdings → 5,763 rows (4.68/holding), 69 ms;
+//     VXUS 8,878 holdings → 38,254 rows (4.31/holding), 322 ms. The two lookup calls add ≈ 4 rows.
+//     Floor ≈ 4/holding (holdings range 1 · map probe 1 · redirect probe 1 · GROUP BY sorter 1) + 1 per company.
+//   * A1 cap: refuse with 422 too_large when the resolved month holds more than EXP_MAX_HOLDINGS (10,000)
+//     holdings = EXP_MAX_EST_ROWS (50,000) / EXP_ROWS_PER_HOLDING (5.0, the highest measured ratio rounded up
+//     to 0.5). Refusal costs ≤ 2 calls (≈ 4 rows). Refused today: BND, AGG, MBB (W1R2 report §1).
+//   * Cache API: 200 bodies 24 h at the edge (browser max-age=3600); 404 no_holdings 1 h; other errors never.
+//     A cached request reads 0 rows.
+//   * Every uncached look-through logs `exp_lookthrough <symbol> <month> <rows_read>` (meta.rows_read summed
+//     over the request's D1 calls) so Tech Ops can sum it from wrangler tail / Ops DQ. Review gate: a 7-day
+//     average above 500k rows/day attributable to R-EXP1 raises a KI (spec §4.5 control 5).
 
 const CORS = {
   'Content-Type': 'application/json',
@@ -277,15 +295,16 @@ async function loadEntityPayload(env, id) {
 // in, so a fund held across multiple N-PORT periods was counted more than
 // once and inflated the "N ETFs hold this entity" total past the overlap
 // panel's distinct count for the same entity.
+//
+// MA-NOV-EXP.W1 (spec §5.3): each holder now reports at its OWN latest month. The old entity-wide
+// MAX(report_month) showed only the funds that filed in that one month, so once later months land the
+// panel would shrink to a handful of funds. One D1 call: the entity's rows via idx_exposure_entity
+// (entity_id, report_month), grouped per holder, then the PK row for (month, entity, holder).
+// Response: `exposures` unchanged in shape (rows may now carry different report_month values);
+// additive `funds` (total holders, not capped by LIMIT 50), `months_min`, `months_max`, `computed_at`.
 async function handleEtfExposure(env, entityId) {
   const id = parseInt(entityId, 10);
   if (!Number.isInteger(id) || id <= 0) return err('Invalid entity_id', 400);
-
-  const monthRow = await env.DB.prepare(
-    `SELECT MAX(report_month) m FROM entity_exposure_monthly WHERE entity_id = ?`
-  ).bind(id).first();
-  const latestMonth = monthRow?.m ?? null;
-  if (!latestMonth) return json({ exposures: [] });
 
   const rows = await env.DB.prepare(`
     SELECT
@@ -293,16 +312,34 @@ async function handleEtfExposure(env, entityId) {
       em_fund.name AS etf_name,
       eem.weight_sum,
       eem.report_month,
-      eem.holder_entity_id
-    FROM entity_exposure_monthly eem
+      eem.holder_entity_id,
+      COUNT(*) OVER () AS _funds,
+      MIN(eem.report_month) OVER () AS _mmin,
+      MAX(eem.report_month) OVER () AS _mmax,
+      MAX(eem.computed_at) OVER () AS _cat
+    FROM (SELECT holder_entity_id, MAX(report_month) AS report_month
+          FROM entity_exposure_monthly WHERE entity_id = ?1 GROUP BY holder_entity_id) lm
+    JOIN entity_exposure_monthly eem
+      ON eem.report_month = lm.report_month AND eem.entity_id = ?1 AND eem.holder_entity_id = lm.holder_entity_id
     JOIN fund_entity_link fel ON eem.holder_entity_id = fel.entity_id
     LEFT JOIN entity_master em_fund ON fel.entity_id = em_fund.entity_id
-    WHERE eem.entity_id = ? AND eem.report_month = ?
-    ORDER BY eem.weight_sum DESC
+    ORDER BY eem.weight_sum DESC, fel.etf_symbol
     LIMIT 50
-  `).bind(id, latestMonth).all();
+  `).bind(id).all();
 
-  return json({ exposures: rows.results ?? [] });
+  const res = rows.results ?? [];
+  const head = res[0];
+  const exposures = res.map(r => ({
+    etf_symbol: r.etf_symbol, etf_name: r.etf_name, weight_sum: r.weight_sum,
+    report_month: r.report_month, holder_entity_id: r.holder_entity_id,
+  }));
+  return json({
+    exposures,
+    funds: head ? Number(head._funds) : 0,
+    months_min: head?._mmin ?? null,
+    months_max: head?._mmax ?? null,
+    computed_at: head?._cat ?? null,
+  });
 }
 
 // GET /api/entities/:id/instruments
@@ -903,6 +940,199 @@ async function handleIssuerPanels(env, entityId) {
   return json({ ownership, financials, events, filings, overlap });
 }
 
+// --- MA-NOV-EXP.W1: R-EXP1 per-ETF company look-through (spec §3.2, §4.2; amendment A1) -----------
+// One ETF + one stored complete month in, that fund's company weights out. Allocation-independent, so one
+// cached body serves every user. Identity rule §3.2: instrument key → instrument_entity_map (PK, one entity
+// per instrument, so no fan-out; entity_isin_map is NOT used) → entity_merge_redirect (two hops; a row still
+// on a duplicate after two hops is bucketed `redirect_unresolved`). No name matching. Read budget: file header.
+const EXP_CONTRACT = 'exp-1';
+const EXP_MAX_EST_ROWS = 50000;          // A1 (D-1 c): no single look-through may read more than this many rows
+// Measured on live D1 by MA-NOV-EXP.W1R2 (2026-11-12): EEM 5,763 rows / 1,231 holdings = 4.68; VXUS 38,254 /
+// 8,878 = 4.31. Highest measured ratio rounded up to 0.5 → 5.0 (margin for denser ETFs).
+const EXP_ROWS_PER_HOLDING = 5.0;
+// Derived, so the two A1 numbers cannot disagree (W1 D-3): floor(50,000 / 5.0) to the 100 below = 10,000.
+const EXP_MAX_HOLDINGS = Math.floor(EXP_MAX_EST_ROWS / EXP_ROWS_PER_HOLDING / 100) * 100;
+const EXP_EDGE_TTL = 86400;              // 24 h Worker cache for 200 bodies
+const EXP_BROWSER_CC = 'public, max-age=3600';
+const EXP_NO_HOLDINGS_TTL = 3600;        // 404 no_holdings: 1 h (edge and browser)
+const EXP_SOURCE = { dataset: 'SEC Form N-PORT holdings (meridian-holdings)', weights: 'percent of fund net assets as reported' };
+
+// The instrument key derivation of §3.2 step 1 (gate1 deriveInstrumentKey without its NAME: branch).
+// MA-NOV-EXP.W1R2 — single pass (W1 report §5 option c). The holdings range is read once and streamed
+// through the map + redirect probes into ONE GROUP BY (sorter): one group per company, plus one group per
+// unmapped / no-identifier / redirect_unresolved holding (keyed by its row id, so unmapped rows are never
+// merged). Tier totals are conditional sums in that same pass (the four `source` values are fixed by the
+// map's CHECK constraint, plus the three buckets); json_patch('{}', …) drops tiers with no rows. The outer
+// aggregate reads the groups once: names by entity_master rowid (1 seek per company — measured cheaper than
+// a separate names call, which costs 2 per company), entities in group order (entity_id ascending; the
+// client sorts — spec §4.2 SQL has no ORDER BY there), unmapped rows ordered by weight and cut to 25.
+// No MATERIALIZED CTE, no re-reads of the holdings, no GROUP_CONCAT(DISTINCT) b-trees.
+// Each entity's tier list is alphabetical (deterministic), e.g. "heuristic,isin_tier1".
+const EXP_LOOKTHROUGH_SQL = `
+WITH h AS (
+  SELECT id hid, weight_pct w, security_name nm,
+    CASE WHEN length(trim(isin)) = 12 THEN trim(isin)
+         WHEN length(trim(cusip)) >= 6 AND trim(cusip) <> '000000000' THEN 'CUSIP:' || trim(cusip)
+         WHEN trim(coalesce(security_ticker, '')) <> '' THEN 'TICKER:' || upper(trim(security_ticker)) END k
+  FROM fund_holdings_monthly
+  WHERE snapshot_status = 'complete' AND series_id = ?1 AND report_month = ?2),
+j AS (
+  SELECT h.hid, h.w, h.nm, h.k, m.source, m.confidence, m.entity_id raw_eid,
+         CASE WHEN m.entity_id IS NULL OR rd3.survivor_id IS NOT NULL THEN NULL
+              ELSE COALESCE(rd2.survivor_id, rd1.survivor_id, m.entity_id) END eid,
+         CASE WHEN h.k IS NULL THEN 'no_identifier'
+              WHEN m.entity_id IS NULL THEN 'unmapped'
+              WHEN rd3.survivor_id IS NOT NULL THEN 'redirect_unresolved'
+              ELSE m.source END t
+  FROM h LEFT JOIN instrument_entity_map m ON m.instrument_key = h.k
+         LEFT JOIN entity_merge_redirect rd1 ON rd1.duplicate_id = m.entity_id
+         LEFT JOIN entity_merge_redirect rd2 ON rd2.duplicate_id = rd1.survivor_id
+         LEFT JOIN entity_merge_redirect rd3 ON rd3.duplicate_id = rd2.survivor_id),
+g AS (
+  SELECT eid, CASE WHEN eid IS NULL THEN hid END hid, SUM(w) w, COUNT(*) n,
+         MIN(CASE WHEN source = 'heuristic' THEN 0 ELSE confidence END) minconf,
+         MAX(raw_eid <> eid) redirected, MIN(nm) nm, MIN(k) k,
+         SUM(t = 'cusip_tier1') n1,         SUM(CASE WHEN t = 'cusip_tier1' THEN w END) w1,
+         SUM(t = 'heuristic') n2,           SUM(CASE WHEN t = 'heuristic' THEN w END) w2,
+         SUM(t = 'isin_tier1') n3,          SUM(CASE WHEN t = 'isin_tier1' THEN w END) w3,
+         SUM(t = 'no_identifier') n4,       SUM(CASE WHEN t = 'no_identifier' THEN w END) w4,
+         SUM(t = 'openfigi_tier1') n5,      SUM(CASE WHEN t = 'openfigi_tier1' THEN w END) w5,
+         SUM(t = 'redirect_unresolved') n6, SUM(CASE WHEN t = 'redirect_unresolved' THEN w END) w6,
+         SUM(t = 'unmapped') n7,            SUM(CASE WHEN t = 'unmapped' THEN w END) w7
+  FROM j GROUP BY eid, 2),
+a AS (
+  SELECT
+    json_patch('{}', json_object(
+      'cusip_tier1',         CASE WHEN SUM(g.n1) > 0 THEN json_array(SUM(g.n1), ROUND(SUM(g.w1), 6)) END,
+      'heuristic',           CASE WHEN SUM(g.n2) > 0 THEN json_array(SUM(g.n2), ROUND(SUM(g.w2), 6)) END,
+      'isin_tier1',          CASE WHEN SUM(g.n3) > 0 THEN json_array(SUM(g.n3), ROUND(SUM(g.w3), 6)) END,
+      'no_identifier',       CASE WHEN SUM(g.n4) > 0 THEN json_array(SUM(g.n4), ROUND(SUM(g.w4), 6)) END,
+      'openfigi_tier1',      CASE WHEN SUM(g.n5) > 0 THEN json_array(SUM(g.n5), ROUND(SUM(g.w5), 6)) END,
+      'redirect_unresolved', CASE WHEN SUM(g.n6) > 0 THEN json_array(SUM(g.n6), ROUND(SUM(g.w6), 6)) END,
+      'unmapped',            CASE WHEN SUM(g.n7) > 0 THEN json_array(SUM(g.n7), ROUND(SUM(g.w7), 6)) END)) tiers,
+    json_group_array(json_array(g.eid, em.name, ROUND(g.w, 6), g.n,
+        rtrim(CASE WHEN g.n1 > 0 THEN 'cusip_tier1,' ELSE '' END || CASE WHEN g.n2 > 0 THEN 'heuristic,' ELSE '' END ||
+              CASE WHEN g.n3 > 0 THEN 'isin_tier1,' ELSE '' END || CASE WHEN g.n5 > 0 THEN 'openfigi_tier1,' ELSE '' END, ','),
+        g.minconf, g.redirected)) FILTER (WHERE g.eid IS NOT NULL) entities,
+    json_group_array(json_array(g.nm, g.k, g.w) ORDER BY g.w DESC, g.k) FILTER (WHERE g.eid IS NULL) u
+  FROM g LEFT JOIN entity_master em ON em.entity_id = g.eid)
+SELECT json_object(
+  'tiers', json(a.tiers),
+  'entities', json(a.entities),
+  'unmapped_top', (SELECT json_group_array(json(value)) FROM (SELECT value FROM json_each(a.u) LIMIT 25))) body
+FROM a`;
+
+// Month + snapshot in one statement. ?2 NULL = latest complete month. Each month probe is an index SEARCH
+// with ORDER BY report_month DESC LIMIT 1 (spec §4.2 step 2), never a correlated MAX (Q6: 104,559 rows).
+// holdings count for A1: the snapshot's reported count; only if that is missing, COUNT(*) on the index range.
+const EXP_MONTH_SQL = `
+WITH mm AS (
+  SELECT (SELECT report_month FROM fund_holdings_monthly
+           WHERE snapshot_status = 'complete' AND series_id = ?1 ORDER BY report_month DESC LIMIT 1) latest,
+         (SELECT report_month FROM fund_holdings_monthly
+           WHERE snapshot_status = 'complete' AND series_id = ?1 AND report_month = ?2 LIMIT 1) asked),
+m AS (SELECT latest, CASE WHEN ?2 IS NULL THEN latest ELSE asked END rm FROM mm)
+SELECT m.latest, m.rm report_month,
+  (SELECT report_month FROM fund_holdings_monthly
+    WHERE snapshot_status = 'complete' AND series_id = ?1 AND report_month < m.rm
+    ORDER BY report_month DESC LIMIT 1) previous_month,
+  s.filing_date, s.period_end, s.net_assets, s.holdings_count,
+  CASE WHEN m.rm IS NULL THEN NULL ELSE COALESCE(s.holdings_count,
+    (SELECT COUNT(*) FROM fund_holdings_monthly
+      WHERE snapshot_status = 'complete' AND series_id = ?1 AND report_month = m.rm)) END count_for_cap
+FROM m LEFT JOIN fund_snapshot_monthly s ON s.series_id = ?1 AND s.report_month = m.rm`;
+
+function expRowsRead(rs) {
+  const n = Number(rs && rs.meta && rs.meta.rows_read);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function expResponse(bodyText, status, cacheControl, extra = {}) {
+  return new Response(bodyText, { status, headers: { ...CORS, 'Cache-Control': cacheControl, ...extra } });
+}
+
+function expCacheKey(url) {
+  const u = new URL(url.toString());
+  u.searchParams.set('__exp_contract', EXP_CONTRACT);
+  return new Request(u.toString(), { method: 'GET' });
+}
+
+// Returns { status, text, edgeTtl } — edgeTtl 0 means "do not cache".
+async function expBuild(env, symbol, month) {
+  const errOut = (status, body, edgeTtl = 0) => ({ status, text: JSON.stringify({ ...body, contract: EXP_CONTRACT }), edgeTtl });
+  let rowsRead = 0;
+
+  const etfRs = await env.DB.prepare(`SELECT ticker, name, series_id FROM etf_master WHERE ticker = ?1`).bind(symbol).all();
+  rowsRead += expRowsRead(etfRs);
+  const etf = (etfRs.results ?? [])[0];
+  if (!etf) return errOut(404, { error: 'etf_not_found', symbol });
+  if (!etf.series_id) return errOut(404, { error: 'no_holdings', reason: 'no_series_id', symbol }, EXP_NO_HOLDINGS_TTL);
+
+  const mRs = await env.DB.prepare(EXP_MONTH_SQL).bind(etf.series_id, month).all();
+  rowsRead += expRowsRead(mRs);
+  const mo = (mRs.results ?? [])[0] ?? {};
+  if (!mo.latest) return errOut(404, { error: 'no_holdings', reason: 'none_complete', symbol }, EXP_NO_HOLDINGS_TTL);
+  if (!mo.report_month) return errOut(404, { error: 'month_not_stored', symbol, month, latest_month: mo.latest });
+
+  // A1 (binding): refuse before aggregating.
+  const count = Number(mo.count_for_cap ?? 0);
+  if (count > EXP_MAX_HOLDINGS) {
+    console.log(`exp_lookthrough_refused ${symbol} ${mo.report_month} holdings=${count} rows_read=${rowsRead}`);
+    return errOut(422, {
+      error: 'too_large', symbol, report_month: mo.report_month, holdings_count: count,
+      max_holdings: EXP_MAX_HOLDINGS, estimated_rows_read: Math.round(count * EXP_ROWS_PER_HOLDING), max_rows_read: EXP_MAX_EST_ROWS,
+    });
+  }
+
+  const aggRs = await env.DB.prepare(EXP_LOOKTHROUGH_SQL).bind(etf.series_id, mo.report_month).all();
+  rowsRead += expRowsRead(aggRs);
+  const body = String((aggRs.results ?? [])[0]?.body ?? '{"tiers":{},"entities":[],"unmapped_top":[]}');
+  console.log(`exp_lookthrough ${symbol} ${mo.report_month} ${rowsRead}`);
+
+  // The look-through body is assembled in SQL; the Worker splices it in without parsing it (CPU, spec §4.1 b).
+  const head = JSON.stringify({
+    symbol: etf.ticker, name: etf.name, series_id: etf.series_id,
+    report_month: mo.report_month, previous_month: mo.previous_month ?? null,
+    filing_date: mo.filing_date ?? null, period_end: mo.period_end ?? null,
+    net_assets: mo.net_assets ?? null, holdings_count: mo.holdings_count ?? null,
+  });
+  const tail = JSON.stringify({ source: EXP_SOURCE, computed_at: new Date().toISOString(), contract: EXP_CONTRACT });
+  return { status: 200, text: `${head.slice(0, -1)},${body.slice(1, -1)},${tail.slice(1)}`, edgeTtl: EXP_EDGE_TTL };
+}
+
+// GET /api/exposure/etf/:symbol[?month=YYYY-MM]
+async function handleExpLookthrough(env, rawSymbol, url, ctx) {
+  let symbol;
+  try { symbol = decodeURIComponent(rawSymbol).trim().toUpperCase(); } catch { symbol = ''; }
+  if (!/^[A-Z0-9][A-Z0-9.\-]{0,14}$/.test(symbol)) {
+    return expResponse(JSON.stringify({ error: 'invalid_symbol', contract: EXP_CONTRACT }), 400, 'no-store');
+  }
+  const month = url.searchParams.has('month') ? url.searchParams.get('month') : null;
+  if (month !== null && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return expResponse(JSON.stringify({ error: 'invalid_month', contract: EXP_CONTRACT }), 400, 'no-store');
+  }
+
+  const cache = fiCache();
+  const key = expCacheKey(url);
+  if (cache) {
+    const hit = await cache.match(key);
+    if (hit) {
+      const h = new Headers(hit.headers);
+      h.set('Cache-Control', hit.status === 200 ? EXP_BROWSER_CC : `public, max-age=${EXP_NO_HOLDINGS_TTL}`);
+      h.set('x-exp-cache', 'hit');
+      return new Response(hit.body, { status: hit.status, headers: h });
+    }
+  }
+
+  const out = await expBuild(env, symbol, month);
+  const browserCC = out.status === 200 ? EXP_BROWSER_CC : out.edgeTtl ? `public, max-age=${EXP_NO_HOLDINGS_TTL}` : 'no-store';
+  if (cache && out.edgeTtl) {
+    const put = cache.put(key, expResponse(out.text, out.status, `public, max-age=${out.edgeTtl}`, { 'x-exp-cache': 'miss' }));
+    if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(put); else await put;
+  }
+  return expResponse(out.text, out.status, browserCC, { 'x-exp-cache': 'miss' });
+}
+
 // --- MA-OCT-009: Fixed Income routes (spec rev 1 §4–§6) ---------------------------
 // F1  GET /api/fi/issuers/:entity_id/bonds?limit=&cursor=&include_matured=
 // F1b GET /api/fi/ciks/:cik/bonds?…
@@ -1333,6 +1563,10 @@ export default {
 
       const exposureMatch = path.match(/^\/api\/entities\/(\d+)\/exposure$/);
       if (exposureMatch) return await handleExposure(env, exposureMatch[1]);
+
+      // MA-NOV-EXP.W1 R-EXP1: per-ETF company look-through. GET only.
+      const expMatch = path.match(/^\/api\/exposure\/etf\/([^/]+)$/);
+      if (expMatch && request.method === 'GET') return await handleExpLookthrough(env, expMatch[1], url, ctx);
 
       // MA-OCT-009 Fixed Income (F1, F1b, F2, F3, F4). GET only.
       if (path.startsWith('/api/fi/') && request.method === 'GET') {
