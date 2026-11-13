@@ -1088,10 +1088,15 @@ function expResponse(body, status, cacheControl, extra = {}) {
   return new Response(body, { status, headers: { ...CORS, 'Cache-Control': cacheControl, ...extra } });
 }
 
-function expCacheKey(url) {
-  const u = new URL(url.toString());
-  u.searchParams.set('__exp_contract', EXP_CONTRACT);
-  return new Request(u.toString(), { method: 'GET' });
+// MA-NOV-EXP.W1R4: canonical, versioned cache key (W1.REVIEW N-2, W1R3.REVIEW N-2). Built only from validated
+// input — fixed internal origin + contract + generation + upper-case symbol + month or `latest` — never from the
+// raw URL, so case and extra query parameters cannot fork the cache.
+// Bump `EXP_CACHE_GEN` with every change to R-EXP1's SQL or body, so no build serves another build's cache.
+const EXP_CACHE_ORIGIN = 'https://exp-cache.meridian.internal';
+const EXP_CACHE_GEN = 'g2';
+function expCacheKey(symbol, month) {
+  const path = `/${EXP_CONTRACT}/${EXP_CACHE_GEN}/${encodeURIComponent(symbol)}/${month ?? 'latest'}`;
+  return new Request(EXP_CACHE_ORIGIN + path, { method: 'GET' });
 }
 
 // Returns { status, body, edgeTtl } — body is a string or (200) the UTF-8 bytes; edgeTtl 0 = "do not cache".
@@ -1146,7 +1151,7 @@ async function handleExpLookthrough(env, rawSymbol, url, ctx) {
   }
 
   const cache = fiCache();
-  const key = expCacheKey(url);
+  const key = expCacheKey(symbol, month);
   if (cache) {
     const hit = await cache.match(key);
     if (hit) {

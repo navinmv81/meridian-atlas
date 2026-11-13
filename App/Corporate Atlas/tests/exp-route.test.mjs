@@ -270,8 +270,8 @@ test('Cache API: 200 stored 24 h at the edge (browser 1 h); 404 no_holdings stor
     const first = await get('/api/exposure/etf/AAA');
     assert.equal(first.res.headers.get('Cache-Control'), 'public, max-age=3600');
     assert.equal(first.res.headers.get('x-exp-cache'), 'miss');
-    const key = [...store.keys()].find(k => k.includes('/api/exposure/etf/AAA'));
-    assert.ok(key && key.includes('__exp_contract=exp-1'), 'key = URL + contract');
+    const key = [...store.keys()].find(k => k.includes('/AAA/'));
+    assert.equal(key, 'https://exp-cache.meridian.internal/exp-1/g2/AAA/latest', 'W1R4 key = origin + contract + gen + symbol + month');
     assert.equal(store.get(key).headers['cache-control'], 'public, max-age=86400');
     const second = await get('/api/exposure/etf/AAA');
     assert.equal(second.calls.length, 0, 'cached: 0 D1 calls');
@@ -287,10 +287,80 @@ test('Cache API: 200 stored 24 h at the edge (browser 1 h); 404 no_holdings stor
     await get('/api/exposure/etf/ZZZZ');
     await get('/api/exposure/etf/BIG');
     await get('/api/exposure/etf/AAA?month=2026-05');
-    assert.ok(![...store.keys()].some(k => /\/(ZZZZ|BIG)\?|month=2026-05/.test(k)), 'etf_not_found / too_large / month_not_stored not cached');
+    assert.ok(![...store.keys()].some(k => /\/(ZZZZ|BIG)\/|\/2026-05$/.test(k)), 'etf_not_found / too_large / month_not_stored not cached');
   } finally {
     delete globalThis.caches;
   }
+});
+
+// ---------- MA-NOV-EXP.W1R4: canonical, versioned cache key ----------
+
+function keyCache() {
+  const store = new Map();
+  const seen = [];
+  globalThis.caches = { default: {
+    async match(req) { seen.push(req.url); const e = store.get(req.url); return e ? new Response(e.text, { status: e.status, headers: e.headers }) : undefined; },
+    async put(req, res) { store.set(req.url, { status: res.status, headers: Object.fromEntries(res.headers), text: await res.text() }); },
+  } };
+  return { store, seen };
+}
+
+test('W1R4 key: eem and EEM-style case variants map to one key; second request is a hit', async () => {
+  const { store, seen } = keyCache();
+  try {
+    const a = await get('/api/exposure/etf/aaa');
+    const b = await get('/api/exposure/etf/AAA');
+    assert.equal(seen[0], seen[1]);
+    assert.equal(store.size, 1);
+    assert.equal(a.res.headers.get('x-exp-cache'), 'miss');
+    assert.equal(b.res.headers.get('x-exp-cache'), 'hit');
+    assert.equal(b.calls.length, 0);
+    assert.equal(b.text, a.text);
+  } finally { delete globalThis.caches; }
+});
+
+test('W1R4 key: extra query parameters do not change the key', async () => {
+  const { store, seen } = keyCache();
+  try {
+    await get('/api/exposure/etf/AAA');
+    const x = await get('/api/exposure/etf/AAA?x=1');
+    assert.equal(seen[1], seen[0]);
+    assert.equal(x.res.headers.get('x-exp-cache'), 'hit');
+    await get('/api/exposure/etf/AAA?month=2026-03');
+    const y = await get('/api/exposure/etf/aaa?month=2026-03&y=2');
+    assert.equal(seen[3], seen[2]);
+    assert.equal(y.res.headers.get('x-exp-cache'), 'hit');
+    assert.equal(store.size, 2);
+    for (const k of store.keys()) assert.ok(!/[?#]/.test(k), `no query in key: ${k}`);
+  } finally { delete globalThis.caches; }
+});
+
+test('W1R4 key: month vs no month differ; key carries contract and EXP_CACHE_GEN', async () => {
+  const { seen } = keyCache();
+  try {
+    await get('/api/exposure/etf/AAA');
+    await get('/api/exposure/etf/AAA?month=2026-03');
+    assert.notEqual(seen[0], seen[1]);
+    assert.equal(seen[0], 'https://exp-cache.meridian.internal/exp-1/g2/AAA/latest');
+    assert.equal(seen[1], 'https://exp-cache.meridian.internal/exp-1/g2/AAA/2026-03');
+    const src = readFileSync(new URL('../src/entities-api.js', import.meta.url), 'utf8');
+    const gen = src.match(/const EXP_CACHE_GEN = '([^']+)'/)[1];
+    for (const k of seen) assert.ok(k.includes(`/${gen}/`), `key contains EXP_CACHE_GEN (${gen})`);
+  } finally { delete globalThis.caches; }
+});
+
+test('W1R4 key: invalid symbol or month never reaches the cache', async () => {
+  const { store, seen } = keyCache();
+  try {
+    for (const p of ['/api/exposure/etf/%27%20OR%201=1', '/api/exposure/etf/AAA?month=2026-13', '/api/exposure/etf/AAA?month=x',
+                     '/api/exposure/etf/' + 'A'.repeat(20), '/api/exposure/etf/%E0%A4%A']) {
+      const r = await get(p);
+      assert.equal(r.res.status, 400, p);
+      assert.equal(r.calls.length, 0, p);
+    }
+    assert.equal(seen.length, 0, 'no cache.match for invalid input');
+    assert.equal(store.size, 0, 'no cache.put for invalid input');
+  } finally { delete globalThis.caches; }
 });
 
 test('POST is not routed; CORS headers present', async () => {
