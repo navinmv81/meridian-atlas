@@ -2397,3 +2397,349 @@ document.addEventListener('ma:route', e => {
   // 'typed': the browser already made a new entry for the hand-typed hash; stamp it.
   _navOpen(d.type, d.id, { history: 'replace', from: d.from });
 });
+
+// ===== EXP (MA-NOV-EXP.W2) =====
+// Exposure-to-company calculation: pure functions only (spec claude/specs/MA-NOV-EXP_Spec.md §3.1–3.3, §5.1).
+// No DOM, no fetch, no storage. The UI (W3) fetches R-EXP1 bodies and passes them in here.
+//   exp_validate(inputs)                         → validation result (§3.1)
+//   exp_combine(inputs, indices)                 → new inputs with the duplicate rows merged into the first
+//   exp_compute(inputs, lookthroughs, opts)      → full result (§3.3, §5.1)
+// An input is { type: 'etf', symbol, allocation } or { type: 'eq', entity_id, resolved_id?, name, allocation }.
+// `lookthroughs` (and `opts.previous`) map ETF symbol → response { status, data } (the shape the existing
+// entities GET helper returns; `body` is accepted for `data`). Missing entry = still loading. status 0 / 5xx = not loaded.
+// Values keep full double precision; display rounds to 2 dp; reconciliation tolerance 0.01 pp (never forced).
+const _EXP_MAX_INPUTS = 10;
+const _EXP_TOL = 0.01;
+const _EXP_CONTRACT = 'exp-1';
+const _EXP_ALLOC_MSG = 'Allocation must be between 0.01 and 100';
+const _EXP_STALE_MONTHS = 3;
+const _EXP_MAPPED_TIERS = ['isin_tier1', 'openfigi_tier1', 'cusip_tier1', 'heuristic'];
+const _EXP_BAND_RANK = { low: 0, medium: 1, high: 2 };
+const _EXP_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function _expNum(x) {
+  if (typeof x === 'number') return x;
+  if (typeof x === 'string' && /^\s*[+-]?(\d+(\.\d*)?|\.\d+)\s*$/.test(x)) return Number(x);
+  return NaN;
+}
+function _expCents(x) { return Math.round(x * 100) / 100; }
+// "110" / "10.01" / "99.5": at most 2 dp, no trailing zeros (T3 wording).
+function _expPctText(x) { const s = String(Number(_expCents(x).toFixed(2))); return s === '-0' ? '0' : s; }
+function _expIs2dp(a) { return Math.abs(a * 100 - Math.round(a * 100)) < 1e-7; }
+function _expType(inp) { const t = String(inp && inp.type || '').toLowerCase(); return t === 'etf' ? 'etf' : (t === 'eq' || t === 'equity') ? 'eq' : ''; }
+function _expSymbol(inp) { return String(inp && inp.symbol || '').trim().toUpperCase(); }
+function _expEntityId(inp) { const v = inp && (inp.resolved_id ?? inp.entity_id); return v == null || v === '' ? null : Number(v); }
+// Duplicate key (§3.1): same ETF ticker; same entity after redirect. An ETF and a direct holding never collide.
+function _expInputKey(inp) {
+  const t = _expType(inp);
+  if (t === 'etf') return 'ETF:' + _expSymbol(inp);
+  if (t === 'eq') return 'EQ:' + _expEntityId(inp);
+  return null;
+}
+function _expLabel(inp) {
+  const t = _expType(inp);
+  if (t === 'etf') return _expSymbol(inp);
+  if (t === 'eq') return String(inp.name || ('Entity ' + _expEntityId(inp)));
+  return '';
+}
+function _expMonthIndex(m) { const x = /^(\d{4})-(\d{2})$/.exec(String(m || '')); return x ? Number(x[1]) * 12 + Number(x[2]) - 1 : null; }
+function exp_monthLabel(m) { const i = _expMonthIndex(m); return i == null ? String(m || '') : `${_EXP_MONTHS[i % 12]} ${Math.floor(i / 12)}`; }
+function _expGet(map, key) { if (!map) return undefined; return typeof map.get === 'function' ? map.get(key) : map[key]; }
+
+// §3.1. Returns { ok, empty, count, total, unallocated, show_unallocated, total_status, rows[{errors}], errors, duplicates }.
+function exp_validate(inputs) {
+  const list = Array.isArray(inputs) ? inputs : [];
+  const rows = list.map(() => ({ errors: [] }));
+  const errors = [];
+  if (list.length > _EXP_MAX_INPUTS) {
+    errors.push({ code: 'too_many_inputs', message: `At most ${_EXP_MAX_INPUTS} inputs (this list has ${list.length})` });
+  }
+  let total = 0;
+  list.forEach((inp, i) => {
+    const t = _expType(inp);
+    if (!t) rows[i].errors.push({ code: 'type', message: 'Unknown input type' });
+    else if (t === 'etf' && !_expSymbol(inp)) rows[i].errors.push({ code: 'symbol', message: 'Choose an ETF' });
+    else if (t === 'eq' && !Number.isFinite(_expEntityId(inp))) rows[i].errors.push({ code: 'entity', message: 'Choose a company' });
+    const a = _expNum(inp && inp.allocation);
+    if (!(Number.isFinite(a) && a > 0 && a <= 100 && _expIs2dp(a))) rows[i].errors.push({ code: 'allocation', message: _EXP_ALLOC_MSG });
+    else total += a;
+  });
+  total = _expCents(total);   // every counted value has ≤ 2 dp, so this only removes float drift
+  if (total > 100.005) {
+    errors.push({ code: 'over_allocated', message: `Allocations total ${_expPctText(total)}% — reduce by ${_expPctText(total - 100)}%`, total, excess: _expCents(total - 100) });
+  }
+  // Duplicates: blocked until the user removes one or presses Combine.
+  const groups = new Map();
+  list.forEach((inp, i) => {
+    const k = _expInputKey(inp);
+    if (k && !/^(ETF:|EQ:null|EQ:NaN)$/.test(k)) { if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); }
+  });
+  const duplicates = [];
+  for (const [key, idx] of groups) {
+    if (idx.length < 2) continue;
+    const parts = idx.map(i => _expNum(list[i].allocation)).filter(Number.isFinite);
+    const combined = _expCents(parts.reduce((s, a) => s + a, 0));
+    const label = _expLabel(list[idx[0]]);
+    duplicates.push({ key, indices: idx, label, combined_allocation: combined,
+      combine_label: `Combine into one row (${parts.map(_expPctText).join('+')}%)` });
+    idx.forEach(i => rows[i].errors.push({ code: 'duplicate', message: `${label} is entered more than once — remove one or combine` }));
+    errors.push({ code: 'duplicate', message: `${label} is entered more than once — remove one or combine`, indices: idx });
+  }
+  const empty = list.length === 0;
+  const total_status = empty ? 'empty' : total > 100.005 ? 'over' : total < 99.995 ? 'under' : 'ok';
+  const ok = !empty && errors.length === 0 && rows.every(r => r.errors.length === 0);
+  return { ok, empty, count: list.length, total, unallocated: _expCents(100 - total), show_unallocated: total < 99.995,
+    total_status, rows, errors, duplicates };
+}
+
+// Merge rows `indices` into the first of them (allocations summed to 2 dp). Does not mutate `inputs`.
+function exp_combine(inputs, indices) {
+  const list = Array.isArray(inputs) ? inputs : [];
+  const idx = [...new Set((indices || []).map(Number))].filter(i => i >= 0 && i < list.length).sort((a, b) => a - b);
+  if (idx.length < 2) return list.slice();
+  const sum = _expCents(idx.reduce((s, i) => s + (_expNum(list[i].allocation) || 0), 0));
+  const drop = new Set(idx.slice(1));
+  return list.map((inp, i) => (i === idx[0] ? { ...inp, allocation: sum } : inp)).filter((_, i) => !drop.has(i));
+}
+
+// One R-EXP1 response → outcome (spec §4.2 errors; W1R4 live contract incl. 422 limit "rows" | "size").
+function _expOutcome(res) {
+  if (res == null) return { status: 'pending', message: 'loading' };
+  const code = Number(res.status);
+  const body = res.data !== undefined ? res.data : res.body;
+  const err = body && typeof body === 'object' ? body.error : undefined;
+  if (code === 200) {
+    if (body && typeof body === 'object' && Array.isArray(body.entities) && (body.contract === undefined || body.contract === _EXP_CONTRACT)) {
+      return { status: 'computed', body };
+    }
+    return { status: 'not_loaded', reason: 'bad_body', message: 'not loaded – retry' };
+  }
+  if (code === 404 && err === 'no_holdings') return { status: 'unsupported', reason: 'no_holdings', detail: body.reason || null, message: 'not supported: no stored holdings' };
+  if (code === 404 && err === 'etf_not_found') return { status: 'unsupported', reason: 'etf_not_found', message: 'not supported: unknown ETF symbol' };
+  if (code === 404 && err === 'month_not_stored') return { status: 'unsupported', reason: 'month_not_stored', message: 'not supported: month not stored' };
+  if (code === 422 && err === 'too_large') {
+    return { status: 'unsupported', reason: 'too_large', limit: body.limit || null, message: 'not supported: too large for live look-through',
+      holdings_count: body.holdings_count ?? null, report_month: body.report_month ?? null,
+      max_holdings: body.max_holdings ?? null, body_bytes: body.body_bytes ?? null, max_body_bytes: body.max_body_bytes ?? null };
+  }
+  if (code === 400) return { status: 'invalid', reason: err || 'bad_request', message: `invalid input (${err || 'bad request'})` };
+  return { status: 'not_loaded', reason: code ? `http_${code}` : 'network', message: 'not loaded – retry' };
+}
+
+// Lowest band of one entity row: heuristic tier or confidence < 70 (or unknown) → low; 70–89 medium; ≥ 90 high.
+// minconf is MIN(confidence) with heuristic counted as 0 (route §4.2), so this equals the lowest navBand of its rows.
+function _expBand(tiers, minconf) {
+  const c = minconf == null || minconf === '' ? NaN : Number(minconf);
+  if (String(tiers || '').split(',').includes('heuristic') || !Number.isFinite(c) || c < 70) return 'low';
+  return c >= 90 ? 'high' : 'medium';
+}
+function _expMinBand(a, b) { if (!a) return b; if (!b) return a; return _EXP_BAND_RANK[a] <= _EXP_BAND_RANK[b] ? a : b; }
+
+// Per-ETF fund figures (§3.3): T reported total, M mapped, U unmapped, N no identifier, X redirect unresolved,
+// R = 100 − T residual; f: entity_id → fund weight row.
+function _expFund(body) {
+  const tiers = body.tiers && typeof body.tiers === 'object' ? body.tiers : {};
+  const tw = t => { const v = tiers[t]; return Array.isArray(v) ? (Number(v[1]) || 0) : 0; };
+  let T = 0;
+  for (const k of Object.keys(tiers)) T += tw(k);
+  const f = new Map();
+  let M = 0;
+  for (const r of body.entities) {
+    if (!Array.isArray(r) || r[0] == null) continue;
+    const id = Number(r[0]);
+    const w = Number(r[2]) || 0;
+    const prev = f.get(id);
+    const row = { entity_id: id, name: r[1] == null ? null : String(r[1]), w: (prev ? prev.w : 0) + w, n: (prev ? prev.n : 0) + (Number(r[3]) || 0),
+      tiers: [prev && prev.tiers, r[4]].filter(Boolean).join(','), band: _expMinBand(prev && prev.band, _expBand(r[4], r[5])),
+      merged: Boolean(prev && prev.merged) || Number(r[6]) === 1 };
+    f.set(id, row);
+    M += w;
+  }
+  const mappedTiers = _EXP_MAPPED_TIERS.reduce((s, t) => s + tw(t), 0);
+  return { T, M, U: tw('unmapped'), N: tw('no_identifier'), X: tw('redirect_unresolved'), R: 100 - T, f, mapped_tiers: mappedTiers };
+}
+
+function _expCompanySort(a, b) {
+  if (b.combined !== a.combined) return b.combined - a.combined;
+  const na = String(a.name || ''), nb = String(b.name || '');
+  if (na !== nb) return na < nb ? -1 : 1;
+  return a.entity_id - b.entity_id;
+}
+
+// §3.3 + §5.1. opts: { previous: symbol → previous-month response (Compare on), newest_stored_month: 'YYYY-MM' }.
+function exp_compute(inputs, lookthroughs, opts) {
+  opts = opts || {};
+  const validation = exp_validate(inputs);
+  if (!validation.ok) {
+    return { state: validation.empty ? 'empty' : 'invalid', validation, inputs: null, companies: null, shared: null, overlap: null,
+      low_confidence: null, reconciliation: null, months: null, gaps: null, delta: null };
+  }
+  const list = inputs;
+  const outInputs = [];
+  const funds = [];                       // computed ETFs: { index, symbol, a, fund, body }
+  const companies = new Map();
+  const company = (id, name) => {
+    let c = companies.get(id);
+    if (!c) { c = { entity_id: id, name: name || null, direct: 0, indirect: 0, combined: 0, k: 0, band: null, merged: false, notes: [], contributions: [] }; companies.set(id, c); }
+    if (!c.name && name) c.name = name;
+    return c;
+  };
+  const lines = { unmapped: 0, no_identifier: 0, redirect_unresolved: 0, residual: 0, unsupported: 0, not_loaded: 0 };
+
+  list.forEach((inp, index) => {
+    const a = _expNum(inp.allocation);
+    const type = _expType(inp);
+    if (type === 'eq') {
+      const id = _expEntityId(inp);
+      outInputs.push({ index, type, label: _expLabel(inp), allocation: a, status: 'direct', entity_id: id });
+      const c = company(id, inp.name ? String(inp.name) : null);
+      c.direct += a;
+      c.k += 1;
+      c.contributions.push({ input: index, kind: 'direct', label: _expLabel(inp), allocation: a, contribution: a });
+      return;
+    }
+    const symbol = _expSymbol(inp);
+    const oc = _expOutcome(_expGet(lookthroughs, symbol));
+    const row = { index, type, label: symbol, symbol, allocation: a, status: oc.status };
+    if (oc.status !== 'computed') {
+      Object.assign(row, { reason: oc.reason || null, message: oc.message });
+      if (oc.reason === 'too_large') Object.assign(row, { limit: oc.limit, holdings_count: oc.holdings_count, report_month: oc.report_month,
+        max_holdings: oc.max_holdings, body_bytes: oc.body_bytes, max_body_bytes: oc.max_body_bytes });
+      if (oc.status === 'unsupported' || oc.status === 'invalid') lines.unsupported += a;
+      else lines.not_loaded += a;       // not_loaded and pending: own line, never spread
+      outInputs.push(row);
+      return;
+    }
+    const body = oc.body;
+    const fund = _expFund(body);
+    Object.assign(row, { report_month: body.report_month ?? null, previous_month: body.previous_month ?? null,
+      filing_date: body.filing_date ?? null, period_end: body.period_end ?? null, holdings_count: body.holdings_count ?? null,
+      computed_at: body.computed_at ?? null, name: body.name ?? null,
+      fund: { reported_total: fund.T, mapped: fund.M, unmapped: fund.U, no_identifier: fund.N, redirect_unresolved: fund.X, residual: fund.R },
+      lines: { mapped: a * fund.M / 100, unmapped: a * fund.U / 100, no_identifier: a * fund.N / 100,
+        redirect_unresolved: a * fund.X / 100, residual: a * fund.R / 100 } });
+    outInputs.push(row);
+    lines.unmapped += a * fund.U / 100;
+    lines.no_identifier += a * fund.N / 100;
+    lines.redirect_unresolved += a * fund.X / 100;
+    lines.residual += a * fund.R / 100;
+    funds.push({ index, symbol, a, fund, body });
+    for (const fr of fund.f.values()) {
+      const cval = a * fr.w / 100;
+      const c = company(fr.entity_id, fr.name);
+      c.indirect += cval;
+      if (cval !== 0) c.k += 1;
+      c.band = _expMinBand(c.band, fr.band);
+      c.merged = c.merged || fr.merged;
+      c.contributions.push({ input: index, kind: 'etf', label: symbol, symbol, allocation: a, fund_weight: fr.w, contribution: cval,
+        holdings: fr.n, tiers: fr.tiers ? fr.tiers.split(',') : [], band: fr.band, merged: fr.merged, report_month: body.report_month ?? null });
+    }
+  });
+
+  const list2 = [...companies.values()];
+  for (const c of list2) {
+    c.combined = c.direct + c.indirect;
+    if (!c.name) c.name = `Entity ${c.entity_id}`;
+    if (c.merged) c.notes.push('merged record');
+    if (c.combined < 0) c.notes.push('net short / derivative');
+  }
+  list2.sort(_expCompanySort);
+  const shared = list2.filter(c => c.k >= 2);
+
+  // Pairwise ETF overlap at company level (fund-weight basis), entities with both weights > 0.
+  const overlap = [];
+  for (let x = 0; x < funds.length; x++) {
+    for (let y = x + 1; y < funds.length; y++) {
+      let o = 0, n = 0;
+      for (const [id, r] of funds[x].fund.f) {
+        const s = funds[y].fund.f.get(id);
+        if (s && r.w > 0 && s.w > 0) { o += Math.min(r.w, s.w); n += 1; }
+      }
+      overlap.push({ a: funds[x].symbol, b: funds[y].symbol, inputs: [funds[x].index, funds[y].index], overlap: o, companies: n, basis: 'by company' });
+    }
+  }
+
+  // Low-confidence share of ETF-derived exposure. Direct inputs carry no band.
+  let lowI = 0, allI = 0;
+  for (const c of list2) { allI += c.indirect; if (c.band === 'low') lowI += c.indirect; }
+  const low_confidence = { low_indirect: lowI, total_indirect: allI, share_pct: allI !== 0 ? lowI / allI * 100 : null };
+
+  // Reconciliation (§3.3): reported, checked, never forced.
+  const companiesSum = list2.reduce((s, c) => s + c.combined, 0);
+  const unallocated = 100 - validation.total;
+  const total = companiesSum + lines.unmapped + lines.no_identifier + lines.redirect_unresolved + lines.residual
+    + lines.unsupported + lines.not_loaded + unallocated;
+  const reconciliation = { companies: companiesSum, unmapped: lines.unmapped, no_identifier: lines.no_identifier,
+    redirect_unresolved: lines.redirect_unresolved, residual: lines.residual, unsupported: lines.unsupported,
+    not_loaded: lines.not_loaded, unallocated, total, difference: total - 100, ok: Math.abs(total - 100) <= _EXP_TOL };
+
+  // Months (§5.1): one per ETF; mixed when they differ; stale when > 3 months older than the newest stored month.
+  const etfMonths = funds.map(f => ({ symbol: f.symbol, input: f.index, report_month: f.body.report_month ?? null,
+    label: exp_monthLabel(f.body.report_month), filing_date: f.body.filing_date ?? null, previous_month: f.body.previous_month ?? null }));
+  const distinct = [...new Set(etfMonths.map(m => m.report_month).filter(Boolean))];
+  let newest = opts.newest_stored_month || null;
+  if (!newest) for (const m of distinct) if (newest == null || _expMonthIndex(m) > _expMonthIndex(newest)) newest = m;
+  const ni = _expMonthIndex(newest);
+  for (const m of etfMonths) {
+    const mi = _expMonthIndex(m.report_month);
+    m.months_behind = ni == null || mi == null ? null : ni - mi;
+    m.stale = m.months_behind != null && m.months_behind > _EXP_STALE_MONTHS;
+  }
+  const months = { etfs: etfMonths, mixed: distinct.length > 1, newest_stored_month: newest,
+    stale: etfMonths.filter(m => m.stale).map(m => m.symbol) };
+
+  // Gaps: largest unmapped holdings (route sends each fund's top 25), unsupported inputs, load errors.
+  const unmappedTop = [];
+  for (const f of funds) {
+    for (const u of Array.isArray(f.body.unmapped_top) ? f.body.unmapped_top : []) {
+      if (!Array.isArray(u)) continue;
+      const w = Number(u[2]) || 0;
+      unmappedTop.push({ input: f.index, symbol: f.symbol, name: u[0] ?? null, key: u[1] ?? null, fund_weight: w, contribution: f.a * w / 100 });
+    }
+  }
+  unmappedTop.sort((p, q) => (q.contribution - p.contribution) || String(p.name || '').localeCompare(String(q.name || '')));
+  const gaps = { unmapped_top: unmappedTop,
+    unsupported: outInputs.filter(r => r.status === 'unsupported' || r.status === 'invalid'),
+    not_loaded: outInputs.filter(r => r.status === 'not_loaded' || r.status === 'pending') };
+
+  const etfRows = outInputs.filter(r => r.type === 'etf');
+  const state = etfRows.some(r => r.status === 'pending') ? 'loading'
+    : etfRows.length > 0 && etfRows.every(r => r.status === 'not_loaded') ? 'total_failure'
+    : etfRows.some(r => r.status === 'not_loaded') ? 'partial_failure' : 'ok';
+
+  const delta = opts.previous ? _expDelta(funds, opts.previous) : null;
+
+  return { state, validation, inputs: outInputs, companies: list2, shared, overlap, low_confidence, reconciliation, months, gaps, delta };
+}
+
+// §5.1 period comparison: Δc_{i,e} = a_i (f_{i,e}(m) − f_{i,e}(m′)) / 100; ΔE_e = Σ_i Δc_{i,e}; direct inputs have no Δ.
+function _expDelta(funds, previous) {
+  const etfs = [];
+  const acc = new Map();
+  for (const f of funds) {
+    const cur = f.body.report_month ?? null;
+    const prevMonth = f.body.previous_month ?? null;
+    const base = { symbol: f.symbol, input: f.index, current: cur, previous: prevMonth };
+    if (!prevMonth) { etfs.push({ ...base, status: 'no_previous', message: 'no earlier stored month' }); continue; }
+    const oc = _expOutcome(_expGet(previous, f.symbol));
+    if (oc.status !== 'computed') { etfs.push({ ...base, status: oc.status, reason: oc.reason || null, message: oc.message }); continue; }
+    const pm = oc.body.report_month ?? prevMonth;
+    etfs.push({ ...base, previous: pm, status: 'compared', label: `${exp_monthLabel(cur)} vs ${exp_monthLabel(pm)}` });
+    const pf = _expFund(oc.body).f;
+    const ids = new Set([...f.fund.f.keys(), ...pf.keys()]);
+    for (const id of ids) {
+      const c = f.fund.f.get(id), p = pf.get(id);
+      let d = acc.get(id);
+      if (!d) { d = { entity_id: id, name: null, current: 0, previous: 0, delta: 0, in_current: false, in_previous: false }; acc.set(id, d); }
+      if (!d.name) d.name = (c && c.name) || (p && p.name) || null;
+      if (c) { d.in_current = true; d.current += f.a * c.w / 100; }
+      if (p) { d.in_previous = true; d.previous += f.a * p.w / 100; }
+      d.delta += f.a * ((c ? c.w : 0) - (p ? p.w : 0)) / 100;
+    }
+  }
+  const companies = [...acc.values()].map(d => ({ ...d, name: d.name || `Entity ${d.entity_id}`,
+    status: d.in_current && !d.in_previous ? 'new' : !d.in_current && d.in_previous ? 'exited' : 'changed' }));
+  companies.sort((a, b) => (Math.abs(b.delta) - Math.abs(a.delta)) || (String(a.name) < String(b.name) ? -1 : String(a.name) > String(b.name) ? 1 : a.entity_id - b.entity_id));
+  return { etfs, companies };
+}
+// ===== end EXP (MA-NOV-EXP.W2) =====

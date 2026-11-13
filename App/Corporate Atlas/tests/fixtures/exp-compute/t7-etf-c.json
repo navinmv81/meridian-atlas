@@ -1,0 +1,54 @@
+{
+ "symbol": "CCC",
+ "name": "Fixture ETF C",
+ "series_id": "S000000003",
+ "report_month": "2026-05",
+ "previous_month": "2026-04",
+ "filing_date": "2026-07-20",
+ "period_end": "2026-05-31",
+ "net_assets": 1000000000,
+ "holdings_count": 4,
+ "tiers": {
+  "isin_tier1": [
+   1,
+   30.0
+  ],
+  "unmapped": [
+   2,
+   70.0
+  ],
+  "no_identifier": [
+   1,
+   -2.0
+  ]
+ },
+ "entities": [
+  [
+   101,
+   "X Corp",
+   30.0,
+   1,
+   "isin_tier1",
+   100,
+   0
+  ]
+ ],
+ "unmapped_top": [
+  [
+   "BIG UNMAPPED",
+   "CUSIP:888888888",
+   50.0
+  ],
+  [
+   "SMALL UNMAPPED",
+   "US0000000001",
+   20.0
+  ]
+ ],
+ "source": {
+  "dataset": "SEC Form N-PORT holdings (meridian-holdings)",
+  "weights": "percent of fund net assets as reported"
+ },
+ "computed_at": "2026-11-13T12:00:00.000Z",
+ "contract": "exp-1"
+}

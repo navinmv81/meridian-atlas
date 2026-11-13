@@ -1,0 +1,11 @@
+{
+ "error": "too_large",
+ "limit": "rows",
+ "symbol": "BND",
+ "report_month": "2026-05",
+ "holdings_count": 17368,
+ "max_holdings": 10000,
+ "estimated_rows_read": 86840,
+ "max_rows_read": 50000,
+ "contract": "exp-1"
+}

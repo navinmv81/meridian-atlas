@@ -1,0 +1,10 @@
+{
+ "error": "too_large",
+ "limit": "size",
+ "symbol": "VXUS",
+ "report_month": "2026-04",
+ "holdings_count": 8878,
+ "body_bytes": 369480,
+ "max_body_bytes": 131072,
+ "contract": "exp-1"
+}

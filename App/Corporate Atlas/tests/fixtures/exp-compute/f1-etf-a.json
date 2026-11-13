@@ -1,0 +1,80 @@
+{
+ "symbol": "AAA",
+ "name": "Fixture ETF A",
+ "series_id": "S000000001",
+ "report_month": "2026-04",
+ "previous_month": "2026-03",
+ "filing_date": "2026-06-24",
+ "period_end": "2026-04-30",
+ "net_assets": 1000000000,
+ "holdings_count": 5,
+ "tiers": {
+  "cusip_tier1": [
+   1,
+   74.0
+  ],
+  "heuristic": [
+   1,
+   5.0
+  ],
+  "isin_tier1": [
+   2,
+   18.0
+  ],
+  "unmapped": [
+   1,
+   3.0
+  ]
+ },
+ "entities": [
+  [
+   101,
+   "X Corp",
+   10.0,
+   1,
+   "isin_tier1",
+   100,
+   0
+  ],
+  [
+   102,
+   "Y Corp",
+   8.0,
+   1,
+   "isin_tier1",
+   100,
+   0
+  ],
+  [
+   103,
+   "Z Corp",
+   5.0,
+   1,
+   "heuristic",
+   0,
+   0
+  ],
+  [
+   104,
+   "W Corp",
+   74.0,
+   1,
+   "cusip_tier1",
+   90,
+   0
+  ]
+ ],
+ "unmapped_top": [
+  [
+   "UNMAPPED HOLDING",
+   "CUSIP:999999999",
+   3.0
+  ]
+ ],
+ "source": {
+  "dataset": "SEC Form N-PORT holdings (meridian-holdings)",
+  "weights": "percent of fund net assets as reported"
+ },
+ "computed_at": "2026-11-13T12:00:00.000Z",
+ "contract": "exp-1"
+}

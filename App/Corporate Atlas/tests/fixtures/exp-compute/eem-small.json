@@ -1,0 +1,98 @@
+{
+ "symbol": "EEM",
+ "name": "iShares MSCI Emerging Markets ETF (fixture)",
+ "series_id": "S000004255",
+ "report_month": "2026-02",
+ "previous_month": "2026-01",
+ "filing_date": "2026-04-27",
+ "period_end": "2026-02-28",
+ "net_assets": 1000000000,
+ "holdings_count": 9,
+ "tiers": {
+  "heuristic": [
+   3,
+   52.5
+  ],
+  "isin_tier1": [
+   2,
+   30.25
+  ],
+  "openfigi_tier1": [
+   1,
+   7.75
+  ],
+  "unmapped": [
+   2,
+   6.4
+  ],
+  "no_identifier": [
+   1,
+   -0.15
+  ]
+ },
+ "entities": [
+  [
+   2191,
+   "Taiwan Semiconductor Manufacturing Co Ltd",
+   13.141305,
+   3,
+   "heuristic",
+   0,
+   0
+  ],
+  [
+   2200,
+   "Samsung Electronics Co Ltd",
+   6.767,
+   1,
+   "heuristic,isin_tier1",
+   0,
+   0
+  ],
+  [
+   3001,
+   "Tencent Holdings Ltd",
+   20.0,
+   1,
+   "isin_tier1",
+   95,
+   0
+  ],
+  [
+   3002,
+   "Alibaba Group Holding Ltd",
+   17.5,
+   1,
+   "openfigi_tier1",
+   80,
+   0
+  ],
+  [
+   3003,
+   "Reliance Industries Ltd",
+   33.091695,
+   1,
+   "heuristic,isin_tier1",
+   0,
+   0
+  ]
+ ],
+ "unmapped_top": [
+  [
+   "HOLDING ONE",
+   "CUSIP:Y00000001",
+   4.0
+  ],
+  [
+   "HOLDING TWO",
+   "TICKER:HTWO",
+   2.4
+  ]
+ ],
+ "source": {
+  "dataset": "SEC Form N-PORT holdings (meridian-holdings)",
+  "weights": "percent of fund net assets as reported"
+ },
+ "computed_at": "2026-11-13T12:00:00.000Z",
+ "contract": "exp-1"
+}
