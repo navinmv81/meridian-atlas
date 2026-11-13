@@ -5,19 +5,22 @@
 //
 // READ BUDGET — R-EXP1 GET /api/exposure/etf/{symbol}[?month=YYYY-MM] (MA-NOV-EXP spec §4.4–4.5, §10 point 3;
 // amendment A1 as refined by D-1 c, NML-1112-2). Three-point check: claude/packets/MA-NOV-EXP.W1R2_Report.md §4.
-//   * At most 3 D1 calls per uncached request (spec ceiling 4): etf_master PK · month/snapshot lookup
-//     (ORDER BY report_month DESC LIMIT 1 on idx_holdings_status_series_month, never a correlated MAX) ·
-//     one single-pass look-through statement that aggregates and builds the JSON body inside D1.
+//   * ONE D1 call per uncached request (spec ceiling 4; W1R3 — was 3): a single statement does the etf_master PK
+//     probe, the month/snapshot lookup (ORDER BY report_month DESC LIMIT 1 on idx_holdings_status_series_month,
+//     never a correlated MAX), the A1 guard, the single-pass look-through and the whole JSON body inside D1.
 //   * Measured on live D1 2026-11-12 (W1R2): EEM 1,231 holdings → 5,763 rows (4.68/holding), 69 ms;
 //     VXUS 8,878 holdings → 38,254 rows (4.31/holding), 322 ms. The two lookup calls add ≈ 4 rows.
 //     Floor ≈ 4/holding (holdings range 1 · map probe 1 · redirect probe 1 · GROUP BY sorter 1) + 1 per company.
 //   * A1 cap: refuse with 422 too_large when the resolved month holds more than EXP_MAX_HOLDINGS (10,000)
 //     holdings = EXP_MAX_EST_ROWS (50,000) / EXP_ROWS_PER_HOLDING (5.0, the highest measured ratio rounded up
-//     to 0.5). Refusal costs ≤ 2 calls (≈ 4 rows). Refused today: BND, AGG, MBB (W1R2 report §1).
-//   * Cache API: 200 bodies 24 h at the edge (browser max-age=3600); 404 no_holdings 1 h; other errors never.
+//     to 0.5). Refusal costs 1 call (live MBB 2026-11-13: 14 rows). Refused today: BND, AGG, MBB (W1R2 report §1).
+//   * W1R3 size cap (CPU, not rows): refuse with 422 too_large, limit "size", when the body would exceed
+//     EXP_MAX_BODY_BYTES (128 KiB). Measured and refused in D1, so the body never reaches the Worker; such a
+//     refusal still reads the full look-through, so it is cached 1 h. Refused today: VXUS (369 KB).
+//   * Cache API: 200 bodies 24 h at the edge (browser max-age=3600); 404 no_holdings and 422 size 1 h; other errors never.
 //     A cached request reads 0 rows.
-//   * Every uncached look-through logs `exp_lookthrough <symbol> <month> <rows_read>` (meta.rows_read summed
-//     over the request's D1 calls) so Tech Ops can sum it from wrangler tail / Ops DQ. Review gate: a 7-day
+//   * Every uncached look-through (served or size-refused) logs `exp_lookthrough <symbol> <month> <rows_read>`
+//     (meta.rows_read of the request's D1 call) so Tech Ops can sum it from wrangler tail / Ops DQ. Review gate: a 7-day
 //     average above 500k rows/day attributable to R-EXP1 raises a KI (spec §4.5 control 5).
 
 const CORS = {
@@ -952,30 +955,77 @@ const EXP_MAX_EST_ROWS = 50000;          // A1 (D-1 c): no single look-through m
 const EXP_ROWS_PER_HOLDING = 5.0;
 // Derived, so the two A1 numbers cannot disagree (W1 D-3): floor(50,000 / 5.0) to the 100 below = 10,000.
 const EXP_MAX_HOLDINGS = Math.floor(EXP_MAX_EST_ROWS / EXP_ROWS_PER_HOLDING / 100) * 100;
+// MA-NOV-EXP.W1R3 size cap (CPU). Workers Free allows 10 ms CPU; on the uncached path the Worker's CPU grows
+// with the body it receives from D1 and sends on. The body is built AND measured inside D1, so a body over
+// this cap never crosses into the Worker: the statement returns its byte count instead (refusal 422 too_large,
+// limit "size"). Value: the pre-fix C1 production samples (BNDX 51 KB 5 ms, SPAB 75 KB 8 ms, VXUS 369 KB 12 ms)
+// fit ≈ 5.3 ms + 1.85 ms per 100 KB; at 128 KiB that is ≈ 7.7 ms even WITHOUT the W1R3 savings (≤ 8 ms target,
+// 10 ms limit). Largest served today SPAB 74.6 KB (1.76× headroom). Detail: claude/packets/MA-NOV-EXP.W1R3_Report.md §3.
+const EXP_MAX_BODY_BYTES = 131072;
 const EXP_EDGE_TTL = 86400;              // 24 h Worker cache for 200 bodies
 const EXP_BROWSER_CC = 'public, max-age=3600';
-const EXP_NO_HOLDINGS_TTL = 3600;        // 404 no_holdings: 1 h (edge and browser)
+const EXP_NO_HOLDINGS_TTL = 3600;        // 404 no_holdings and 422 too_large (size): 1 h (edge and browser)
 const EXP_SOURCE = { dataset: 'SEC Form N-PORT holdings (meridian-holdings)', weights: 'percent of fund net assets as reported' };
+const EXP_SOURCE_JSON = JSON.stringify(EXP_SOURCE);
+const EXP_TE = new TextEncoder();
 
-// The instrument key derivation of §3.2 step 1 (gate1 deriveInstrumentKey without its NAME: branch).
-// MA-NOV-EXP.W1R2 — single pass (W1 report §5 option c). The holdings range is read once and streamed
-// through the map + redirect probes into ONE GROUP BY (sorter): one group per company, plus one group per
-// unmapped / no-identifier / redirect_unresolved holding (keyed by its row id, so unmapped rows are never
-// merged). Tier totals are conditional sums in that same pass (the four `source` values are fixed by the
-// map's CHECK constraint, plus the three buckets); json_patch('{}', …) drops tiers with no rows. The outer
-// aggregate reads the groups once: names by entity_master rowid (1 seek per company — measured cheaper than
-// a separate names call, which costs 2 per company), entities in group order (entity_id ascending; the
-// client sorts — spec §4.2 SQL has no ORDER BY there), unmapped rows ordered by weight and cut to 25.
-// No MATERIALIZED CTE, no re-reads of the holdings, no GROUP_CONCAT(DISTINCT) b-trees.
-// Each entity's tier list is alphabetical (deterministic), e.g. "heuristic,isin_tier1".
-const EXP_LOOKTHROUGH_SQL = `
-WITH h AS (
+// MA-NOV-EXP.W1R3 — ONE D1 call per uncached request (was 3: etf_master · month · look-through). Each D1 call
+// costs Worker CPU (request encode, response decode), so the ETF row, the month/snapshot lookup, the A1 row
+// cap, the single-pass look-through, the WHOLE 200 body (header fields + source + computed_at + contract) and
+// the size cap are one statement. Parameters: ?1 symbol · ?2 month or NULL (= latest complete) · ?3 max
+// holdings · ?4 max body bytes · ?5 source JSON · ?6 contract.
+//   * i: one row, always (LEFT JOIN from a constant row), so every refusal can be told apart in the Worker.
+//     MATERIALIZED (i and m, one row each): i is read in five places and m.rm in four; without the hint SQLite
+//     inlines them and re-runs the month probes (and the COUNT fallback) at each one. Materialized, each runs once.
+//     Month probes are index SEARCHes with ORDER BY report_month DESC LIMIT 1 (spec §4.2 step 2), never a
+//     correlated MAX (Q6: 104,559 rows). Holdings count for A1: the snapshot's reported count; only if that is
+//     missing, COUNT(*) on the index range.
+//   * h: the A1 guard is part of the index key — the month h seeks on is NULL when count_for_cap > ?3, so a
+//     refused ETF's range is empty and no holdings row is read. (A separate `AND (SELECT …) <= ?3` term would NOT
+//     do this: SQLite treats a scalar subquery as non-deterministic and tests it per row, after reading it —
+//     caught by the counting-view test in tests/exp-route.test.mjs.)
+//   * h → j → g → a: W1R2 single pass (W1 report §5 option c). The holdings range is read once and streamed
+//     through the map + redirect probes into ONE GROUP BY (sorter): one group per company, plus one group per
+//     unmapped / no-identifier / redirect_unresolved holding (keyed by its row id, so unmapped rows are never
+//     merged). Tier totals are conditional sums in that same pass (the four `source` values are fixed by the
+//     map's CHECK constraint, plus the three buckets); json_patch('{}', …) drops tiers with no rows. The outer
+//     aggregate reads the groups once: names by entity_master rowid (1 seek per company), entities in group
+//     order (entity_id ascending; the client sorts — spec §4.2 SQL has no ORDER BY there), unmapped rows
+//     ordered by weight and cut to 25. No re-reads of the holdings, no GROUP_CONCAT(DISTINCT) b-trees.
+//     Each entity's tier list is alphabetical (deterministic), e.g. "heuristic,isin_tier1".
+//   * b: the 200 body, in the spec §4.2 field order. It is the right side of a LEFT JOIN and itself a join,
+//     so SQLite does not flatten it and the body is built once even though the last SELECT reads it twice.
+//   * Last SELECT: body only when its UTF-8 byte count is ≤ ?4; body_bytes always (NULL if not built).
+const EXP_SQL = `
+WITH e AS (
+  SELECT etf_master.ticker, etf_master.name, etf_master.series_id
+  FROM (SELECT ?1 sym) p LEFT JOIN etf_master ON etf_master.ticker = p.sym),
+mm AS (
+  SELECT e.*,
+    (SELECT report_month FROM fund_holdings_monthly
+      WHERE snapshot_status = 'complete' AND series_id = e.series_id ORDER BY report_month DESC LIMIT 1) latest,
+    (SELECT report_month FROM fund_holdings_monthly
+      WHERE snapshot_status = 'complete' AND series_id = e.series_id AND report_month = ?2 LIMIT 1) asked
+  FROM e),
+m AS MATERIALIZED (SELECT mm.*, CASE WHEN ?2 IS NULL THEN latest ELSE asked END rm FROM mm),
+i AS MATERIALIZED (
+  SELECT m.ticker, m.name, m.series_id, m.latest, m.rm report_month,
+    (SELECT report_month FROM fund_holdings_monthly
+      WHERE snapshot_status = 'complete' AND series_id = m.series_id AND report_month < m.rm
+      ORDER BY report_month DESC LIMIT 1) previous_month,
+    s.filing_date, s.period_end, s.net_assets, s.holdings_count,
+    CASE WHEN m.rm IS NULL THEN NULL ELSE COALESCE(s.holdings_count,
+      (SELECT COUNT(*) FROM fund_holdings_monthly
+        WHERE snapshot_status = 'complete' AND series_id = m.series_id AND report_month = m.rm)) END count_for_cap
+  FROM m LEFT JOIN fund_snapshot_monthly s ON s.series_id = m.series_id AND s.report_month = m.rm),
+h AS (
   SELECT id hid, weight_pct w, security_name nm,
     CASE WHEN length(trim(isin)) = 12 THEN trim(isin)
          WHEN length(trim(cusip)) >= 6 AND trim(cusip) <> '000000000' THEN 'CUSIP:' || trim(cusip)
          WHEN trim(coalesce(security_ticker, '')) <> '' THEN 'TICKER:' || upper(trim(security_ticker)) END k
   FROM fund_holdings_monthly
-  WHERE snapshot_status = 'complete' AND series_id = ?1 AND report_month = ?2),
+  WHERE snapshot_status = 'complete' AND series_id = (SELECT series_id FROM i)
+    AND report_month = (SELECT CASE WHEN count_for_cap <= ?3 THEN report_month END FROM i)),
 j AS (
   SELECT h.hid, h.w, h.nm, h.k, m.source, m.confidence, m.entity_id raw_eid,
          CASE WHEN m.entity_id IS NULL OR rd3.survivor_id IS NOT NULL THEN NULL
@@ -1015,40 +1065,27 @@ a AS (
               CASE WHEN g.n3 > 0 THEN 'isin_tier1,' ELSE '' END || CASE WHEN g.n5 > 0 THEN 'openfigi_tier1,' ELSE '' END, ','),
         g.minconf, g.redirected)) FILTER (WHERE g.eid IS NOT NULL) entities,
     json_group_array(json_array(g.nm, g.k, g.w) ORDER BY g.w DESC, g.k) FILTER (WHERE g.eid IS NULL) u
-  FROM g LEFT JOIN entity_master em ON em.entity_id = g.eid)
-SELECT json_object(
-  'tiers', json(a.tiers),
-  'entities', json(a.entities),
-  'unmapped_top', (SELECT json_group_array(json(value)) FROM (SELECT value FROM json_each(a.u) LIMIT 25))) body
-FROM a`;
+  FROM g LEFT JOIN entity_master em ON em.entity_id = g.eid),
+b AS (
+  SELECT json_object(
+    'symbol', i.ticker, 'name', i.name, 'series_id', i.series_id,
+    'report_month', i.report_month, 'previous_month', i.previous_month,
+    'filing_date', i.filing_date, 'period_end', i.period_end,
+    'net_assets', i.net_assets, 'holdings_count', i.holdings_count,
+    'tiers', json(a.tiers),
+    'entities', json(a.entities),
+    'unmapped_top', (SELECT json_group_array(json(value)) FROM (SELECT value FROM json_each(a.u) LIMIT 25)),
+    'source', json(?5),
+    'computed_at', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+    'contract', ?6) body
+  FROM i, a WHERE i.count_for_cap <= ?3)
+SELECT i.ticker, i.name, i.series_id, i.latest, i.report_month, i.holdings_count, i.count_for_cap,
+  length(CAST(b.body AS BLOB)) body_bytes,
+  CASE WHEN length(CAST(b.body AS BLOB)) <= ?4 THEN b.body END body
+FROM i LEFT JOIN b ON 1`;
 
-// Month + snapshot in one statement. ?2 NULL = latest complete month. Each month probe is an index SEARCH
-// with ORDER BY report_month DESC LIMIT 1 (spec §4.2 step 2), never a correlated MAX (Q6: 104,559 rows).
-// holdings count for A1: the snapshot's reported count; only if that is missing, COUNT(*) on the index range.
-const EXP_MONTH_SQL = `
-WITH mm AS (
-  SELECT (SELECT report_month FROM fund_holdings_monthly
-           WHERE snapshot_status = 'complete' AND series_id = ?1 ORDER BY report_month DESC LIMIT 1) latest,
-         (SELECT report_month FROM fund_holdings_monthly
-           WHERE snapshot_status = 'complete' AND series_id = ?1 AND report_month = ?2 LIMIT 1) asked),
-m AS (SELECT latest, CASE WHEN ?2 IS NULL THEN latest ELSE asked END rm FROM mm)
-SELECT m.latest, m.rm report_month,
-  (SELECT report_month FROM fund_holdings_monthly
-    WHERE snapshot_status = 'complete' AND series_id = ?1 AND report_month < m.rm
-    ORDER BY report_month DESC LIMIT 1) previous_month,
-  s.filing_date, s.period_end, s.net_assets, s.holdings_count,
-  CASE WHEN m.rm IS NULL THEN NULL ELSE COALESCE(s.holdings_count,
-    (SELECT COUNT(*) FROM fund_holdings_monthly
-      WHERE snapshot_status = 'complete' AND series_id = ?1 AND report_month = m.rm)) END count_for_cap
-FROM m LEFT JOIN fund_snapshot_monthly s ON s.series_id = ?1 AND s.report_month = m.rm`;
-
-function expRowsRead(rs) {
-  const n = Number(rs && rs.meta && rs.meta.rows_read);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function expResponse(bodyText, status, cacheControl, extra = {}) {
-  return new Response(bodyText, { status, headers: { ...CORS, 'Cache-Control': cacheControl, ...extra } });
+function expResponse(body, status, cacheControl, extra = {}) {
+  return new Response(body, { status, headers: { ...CORS, 'Cache-Control': cacheControl, ...extra } });
 }
 
 function expCacheKey(url) {
@@ -1057,47 +1094,43 @@ function expCacheKey(url) {
   return new Request(u.toString(), { method: 'GET' });
 }
 
-// Returns { status, text, edgeTtl } — edgeTtl 0 means "do not cache".
+// Returns { status, body, edgeTtl } — body is a string or (200) the UTF-8 bytes; edgeTtl 0 = "do not cache".
 async function expBuild(env, symbol, month) {
-  const errOut = (status, body, edgeTtl = 0) => ({ status, text: JSON.stringify({ ...body, contract: EXP_CONTRACT }), edgeTtl });
-  let rowsRead = 0;
+  const errOut = (status, body, edgeTtl = 0) => ({ status, body: JSON.stringify({ ...body, contract: EXP_CONTRACT }), edgeTtl });
 
-  const etfRs = await env.DB.prepare(`SELECT ticker, name, series_id FROM etf_master WHERE ticker = ?1`).bind(symbol).all();
-  rowsRead += expRowsRead(etfRs);
-  const etf = (etfRs.results ?? [])[0];
-  if (!etf) return errOut(404, { error: 'etf_not_found', symbol });
-  if (!etf.series_id) return errOut(404, { error: 'no_holdings', reason: 'no_series_id', symbol }, EXP_NO_HOLDINGS_TTL);
+  const rs = await env.DB.prepare(EXP_SQL)
+    .bind(symbol, month, EXP_MAX_HOLDINGS, EXP_MAX_BODY_BYTES, EXP_SOURCE_JSON, EXP_CONTRACT).all();
+  const rowsRead = Number(rs && rs.meta && rs.meta.rows_read) || 0;
+  const r = (rs.results ?? [])[0] ?? {};
 
-  const mRs = await env.DB.prepare(EXP_MONTH_SQL).bind(etf.series_id, month).all();
-  rowsRead += expRowsRead(mRs);
-  const mo = (mRs.results ?? [])[0] ?? {};
-  if (!mo.latest) return errOut(404, { error: 'no_holdings', reason: 'none_complete', symbol }, EXP_NO_HOLDINGS_TTL);
-  if (!mo.report_month) return errOut(404, { error: 'month_not_stored', symbol, month, latest_month: mo.latest });
+  if (!r.ticker) return errOut(404, { error: 'etf_not_found', symbol });
+  if (!r.series_id) return errOut(404, { error: 'no_holdings', reason: 'no_series_id', symbol }, EXP_NO_HOLDINGS_TTL);
+  if (!r.latest) return errOut(404, { error: 'no_holdings', reason: 'none_complete', symbol }, EXP_NO_HOLDINGS_TTL);
+  if (!r.report_month) return errOut(404, { error: 'month_not_stored', symbol, month, latest_month: r.latest });
 
-  // A1 (binding): refuse before aggregating.
-  const count = Number(mo.count_for_cap ?? 0);
+  // A1 (binding): refused inside the statement before the holdings range is opened.
+  const count = Number(r.count_for_cap ?? 0);
   if (count > EXP_MAX_HOLDINGS) {
-    console.log(`exp_lookthrough_refused ${symbol} ${mo.report_month} holdings=${count} rows_read=${rowsRead}`);
+    console.log(`exp_lookthrough_refused ${symbol} ${r.report_month} holdings=${count} rows_read=${rowsRead}`);
     return errOut(422, {
-      error: 'too_large', symbol, report_month: mo.report_month, holdings_count: count,
+      error: 'too_large', limit: 'rows', symbol, report_month: r.report_month, holdings_count: count,
       max_holdings: EXP_MAX_HOLDINGS, estimated_rows_read: Math.round(count * EXP_ROWS_PER_HOLDING), max_rows_read: EXP_MAX_EST_ROWS,
     });
   }
 
-  const aggRs = await env.DB.prepare(EXP_LOOKTHROUGH_SQL).bind(etf.series_id, mo.report_month).all();
-  rowsRead += expRowsRead(aggRs);
-  const body = String((aggRs.results ?? [])[0]?.body ?? '{"tiers":{},"entities":[],"unmapped_top":[]}');
-  console.log(`exp_lookthrough ${symbol} ${mo.report_month} ${rowsRead}`);
-
-  // The look-through body is assembled in SQL; the Worker splices it in without parsing it (CPU, spec §4.1 b).
-  const head = JSON.stringify({
-    symbol: etf.ticker, name: etf.name, series_id: etf.series_id,
-    report_month: mo.report_month, previous_month: mo.previous_month ?? null,
-    filing_date: mo.filing_date ?? null, period_end: mo.period_end ?? null,
-    net_assets: mo.net_assets ?? null, holdings_count: mo.holdings_count ?? null,
-  });
-  const tail = JSON.stringify({ source: EXP_SOURCE, computed_at: new Date().toISOString(), contract: EXP_CONTRACT });
-  return { status: 200, text: `${head.slice(0, -1)},${body.slice(1, -1)},${tail.slice(1)}`, edgeTtl: EXP_EDGE_TTL };
+  // The look-through ran (rows were read), served or not: the budget line is logged either way.
+  console.log(`exp_lookthrough ${symbol} ${r.report_month} ${rowsRead}`);
+  if (r.body == null) {
+    // W1R3 size cap: the body was built and measured in D1 but not sent. Cached 1 h like no_holdings, because a
+    // repeat would re-read the whole look-through (a stored month does not change).
+    console.log(`exp_lookthrough_refused ${symbol} ${r.report_month} body_bytes=${r.body_bytes} rows_read=${rowsRead}`);
+    return errOut(422, {
+      error: 'too_large', limit: 'size', symbol, report_month: r.report_month, holdings_count: r.holdings_count ?? null,
+      body_bytes: r.body_bytes ?? null, max_body_bytes: EXP_MAX_BODY_BYTES,
+    }, EXP_NO_HOLDINGS_TTL);
+  }
+  // The body is assembled in SQL; the Worker encodes it once and hands the same bytes to the cache and the client.
+  return { status: 200, body: EXP_TE.encode(r.body), edgeTtl: EXP_EDGE_TTL };
 }
 
 // GET /api/exposure/etf/:symbol[?month=YYYY-MM]
@@ -1127,10 +1160,11 @@ async function handleExpLookthrough(env, rawSymbol, url, ctx) {
   const out = await expBuild(env, symbol, month);
   const browserCC = out.status === 200 ? EXP_BROWSER_CC : out.edgeTtl ? `public, max-age=${EXP_NO_HOLDINGS_TTL}` : 'no-store';
   if (cache && out.edgeTtl) {
-    const put = cache.put(key, expResponse(out.text, out.status, `public, max-age=${out.edgeTtl}`, { 'x-exp-cache': 'miss' }));
+    // A Response copies a BufferSource body (Fetch "extract a body"), so both Responses can share out.body.
+    const put = cache.put(key, expResponse(out.body, out.status, `public, max-age=${out.edgeTtl}`, { 'x-exp-cache': 'miss' }));
     if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(put); else await put;
   }
-  return expResponse(out.text, out.status, browserCC, { 'x-exp-cache': 'miss' });
+  return expResponse(out.body, out.status, browserCC, { 'x-exp-cache': 'miss' });
 }
 
 // --- MA-OCT-009: Fixed Income routes (spec rev 1 §4–§6) ---------------------------

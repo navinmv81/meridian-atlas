@@ -1,6 +1,8 @@
 // MA-NOV-EXP.W1 — route tests for R-EXP1 GET /api/exposure/etf/{symbol} (spec §3.2, §4.2; amendment A1)
 // and the /api/entities/:id/etf-exposure per-holder-latest-month fix (spec §5.3).
 // MA-NOV-EXP.W1R2: single-pass look-through, measured A1 cap (10,000 holdings = 50,000 rows / 5.0 per holding).
+// MA-NOV-EXP.W1R3: one D1 statement per request (ETF + month + A1 guard + look-through + whole body + size cap);
+// body-size cap (422 too_large, limit "size"); A1 guard proven to read no holdings rows (counting view).
 // Runs the real Worker handler against a D1-shaped adapter over node:sqlite (in memory).
 // No network, no D1.   Usage: node --test "App/Corporate Atlas/tests/exp-route.test.mjs"
 
@@ -210,21 +212,25 @@ test('A1 (measured cap): 10,001 holdings → 422 too_large before aggregating; e
   assert.equal(r.body.max_rows_read, 50000);
   assert.equal(r.body.estimated_rows_read, 10001 * 5, '5.0 rows/holding (highest measured 4.68, rounded up to 0.5)');
   assert.ok(r.body.max_holdings * 5 <= r.body.max_rows_read, 'the two A1 numbers agree');
-  assert.equal(r.calls.length, 2, 'refused after the etf + month calls, no look-through');
+  assert.equal(r.body.limit, 'rows', 'W1R3: which cap refused it');
+  assert.equal(r.calls.length, 1, 'W1R3: one statement; the guard inside it skips the look-through');
   assert.equal(r.res.headers.get('Cache-Control'), 'no-store');
   assert.ok(logs.some(l => /^exp_lookthrough_refused BIG 2026-04 holdings=10001/.test(l)), 'refusal logged');
   r = await get('/api/exposure/etf/EDGE');
   assert.equal(r.res.status, 200, 'cap exactly → served');
-  assert.equal(r.calls.length, 3);
+  assert.equal(r.calls.length, 1);
   r = await get('/api/exposure/etf/NOSNAP');
   assert.equal(r.res.status, 422);
   assert.equal(r.body.holdings_count, 10001, 'counted from the holdings index');
 });
 
-test('≤ 4 D1 calls per request (3 on the success path) and the exp_lookthrough log line', async () => {
+test('≤ 4 D1 calls per request (W1R3: exactly 1 on every path) and the exp_lookthrough log line', async () => {
+  for (const p of ['ZZZZ', 'NOSER', 'PART', 'AAA?month=2026-05', 'BIG', 'NOSNAP']) {
+    assert.equal((await get(`/api/exposure/etf/${p}`)).calls.length, 1, p);
+  }
   logs.length = 0;
   const r = await get('/api/exposure/etf/AAA');
-  assert.equal(r.calls.length, 3);
+  assert.equal(r.calls.length, 1);
   assert.ok(r.calls.length <= 4);
   assert.ok(r.calls.every(c => /^\s*(SELECT|WITH)\b/i.test(c.sql)), 'reads only');
   const line = logs.find(l => l.startsWith('exp_lookthrough '));
@@ -233,7 +239,7 @@ test('≤ 4 D1 calls per request (3 on the success path) and the exp_lookthrough
 
 test('month lookup uses ORDER BY report_month DESC LIMIT 1 — never a correlated MAX', async () => {
   const r = await get('/api/exposure/etf/AAA');
-  const monthSql = r.calls[1].sql;
+  const monthSql = r.calls[0].sql;
   assert.match(monthSql, /ORDER BY report_month DESC LIMIT 1/);
   assert.doesNotMatch(r.calls.map(c => c.sql).join('\n'), /MAX\s*\(\s*report_month/i);
 });
@@ -246,6 +252,10 @@ test('query plans (local SQLite): no SCAN of fund_holdings_monthly, instrument_e
       const plan = db.prepare(`EXPLAIN QUERY PLAN ${c.sql}`).all(...c.params).map(p => p.detail);
       assert.ok(!plan.some(d => BIG_TABLES.test(d)), `${sym}: ${plan.join(' | ')}`);
       assert.ok(!plan.some(d => /SCAN fund_holdings_monthly/.test(d)));
+      // W1R3: tables appear under aliases too (m, rd1…, s, em); every SCAN must be of a one-row CTE / constant
+      // row / the groups / json_each — never of a stored table under any name.
+      const scans = plan.filter(d => /^SCAN /.test(d));
+      assert.ok(scans.every(d => /^SCAN (p|m|i|a|b|g|CONSTANT ROW|json_each VIRTUAL TABLE.*|\(subquery-\d+\))( LEFT-JOIN)?$/.test(d)), scans.join(' | '));
     }
   }
 });
@@ -328,16 +338,137 @@ test('W1R2: unmapped_top = the 25 heaviest unmapped rows, weight desc then key; 
   assert.equal(new Set(keys).size, 25, 'one row per unmapped holding');
 });
 
-test('W1R2: single pass — one holdings range read, one GROUP BY sorter; no MATERIALIZED / DISTINCT / entity sort', async () => {
+test('W1R2: single pass — one holdings range read, one GROUP BY sorter; no DISTINCT / entity sort; only the one-row i, m materialized', async () => {
   const r = await get('/api/exposure/etf/AAA');
-  const sql = r.calls[2].sql;
-  assert.doesNotMatch(sql, /MATERIALIZED/i);
+  const sql = r.calls[0].sql;
+  assert.deepEqual([...sql.matchAll(/(\w+) AS MATERIALIZED/g)].map(x => x[1]), ['m', 'i'], 'W1R3: only the one-row month/info CTEs');
   assert.doesNotMatch(sql, /GROUP_CONCAT\s*\(\s*DISTINCT/i);
   assert.doesNotMatch(sql, /entity_isin_map/);
-  const plan = db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...r.calls[2].params).map(p => p.detail);
-  assert.equal(plan.filter(d => /fund_holdings_monthly/.test(d)).length, 1, plan.join(' | '));
+  const plan = db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...r.calls[0].params).map(p => p.detail);
+  // The holdings range (non-covering: it reads weight/name/keys) is opened once; the rest are month probes.
+  assert.equal(plan.filter(d => /fund_holdings_monthly USING INDEX/.test(d)).length, 1, plan.join(' | '));
+  assert.ok(plan.filter(d => /fund_holdings_monthly USING COVERING INDEX/.test(d)).every(d => /LIMIT|\(snapshot_status=\? AND series_id=\?( AND report_month[=<]\?)?\)/.test(d)));
   assert.equal(plan.filter(d => /TEMP B-TREE FOR GROUP BY/.test(d)).length, 1, plan.join(' | '));
   assert.equal(plan.filter(d => /\bentity_master\b|\bem\b/.test(d)).length, 1, 'names: one rowid probe per group');
+});
+
+// ---------- W1R3 body-size cap and A1 guard ----------
+
+// PAD: one holding mapped to entity 9001, whose name is resized to move the body across the size cap.
+db.exec(`INSERT INTO etf_master (ticker, name, series_id) VALUES ('PAD', 'Pad ETF', 'SPAD');
+  INSERT INTO fund_snapshot_monthly VALUES ('SPAD', '2026-04', 1.0e9, 1, '2026-06-21', '2026-04-30');
+  INSERT INTO fund_holdings_monthly (series_id, report_month, security_name, isin, weight_pct, snapshot_status)
+    VALUES ('SPAD', '2026-04', 'Pad ord', 'XP0000000P01', 100, 'complete');
+  INSERT INTO instrument_entity_map VALUES ('XP0000000P01', 9001, 'isin_tier1', 100);
+  INSERT INTO entity_master (entity_id, name) VALUES (9001, 'P');`);
+const padName = n => db.prepare('UPDATE entity_master SET name = ? WHERE entity_id = 9001').run('P'.repeat(n));
+
+test('W1R3 size cap: body > cap → 422 too_large limit "size" (bytes, cap); exactly cap → 200; cap + 1 → 422', async () => {
+  padName(1);
+  const small = await get('/api/exposure/etf/PAD');
+  assert.equal(small.res.status, 200);
+  const base = Buffer.byteLength(small.text) - 1;            // body bytes minus the 1-char name
+  padName(2_000_000);
+  let r = await get('/api/exposure/etf/PAD');
+  assert.equal(r.res.status, 422);
+  assert.equal(r.body.error, 'too_large');
+  assert.equal(r.body.limit, 'size');
+  assert.equal(r.body.body_bytes, base + 2_000_000, 'UTF-8 byte count measured in D1');
+  const cap = r.body.max_body_bytes;
+  assert.equal(cap, 131072, 'W1R3: 128 KiB (report §3) — serves EEM 68 KB, SPAB 75 KB, BNDX 51 KB; refuses VXUS 369 KB');
+  assert.equal(r.body.report_month, '2026-04');
+  assert.equal(r.body.holdings_count, 1);
+  assert.equal(r.calls.length, 1);
+  assert.ok(!r.text.includes('PPPPPPPPPP'), 'the refused body never reaches the Worker');
+  assert.equal(r.res.headers.get('Cache-Control'), 'public, max-age=3600', 'size refusal cached 1 h (re-reading it costs the full look-through)');
+
+  padName(cap - base);
+  r = await get('/api/exposure/etf/PAD');
+  assert.equal(r.res.status, 200, 'exactly at the cap → served');
+  assert.equal(Buffer.byteLength(r.text), cap);
+  assert.equal(r.body.entities[0][1].length, cap - base);
+
+  padName(cap - base + 1);
+  r = await get('/api/exposure/etf/PAD');
+  assert.equal(r.res.status, 422, 'cap + 1 byte → refused');
+  assert.equal(r.body.body_bytes, cap + 1);
+
+  // Multi-byte names: the cap counts UTF-8 bytes, not characters.
+  db.prepare('UPDATE entity_master SET name = ? WHERE entity_id = 9001').run('Ş'.repeat(Math.ceil((cap - base) / 2) + 1));
+  r = await get('/api/exposure/etf/PAD');
+  assert.equal(r.res.status, 422, '2-byte characters counted as 2');
+  padName(1);
+});
+
+test('W1R3 size refusal is cached at the edge 1 h; rows refusal is not', async () => {
+  const store = new Map();
+  globalThis.caches = { default: {
+    async match(req) { const e = store.get(req.url); return e ? new Response(e.text, { status: e.status, headers: e.headers }) : undefined; },
+    async put(req, res) { store.set(req.url, { status: res.status, headers: Object.fromEntries(res.headers), text: await res.text() }); },
+  } };
+  try {
+    padName(2_000_000);
+    const first = await get('/api/exposure/etf/PAD');
+    assert.equal(first.res.status, 422);
+    const k = [...store.keys()].find(x => x.includes('/PAD'));
+    assert.equal(store.get(k).headers['cache-control'], 'public, max-age=3600');
+    const second = await get('/api/exposure/etf/PAD');
+    assert.equal(second.calls.length, 0);
+    assert.equal(second.res.status, 422);
+    assert.equal(second.res.headers.get('x-exp-cache'), 'hit');
+    await get('/api/exposure/etf/BIG');
+    assert.ok(![...store.keys()].some(x => x.includes('/BIG')), 'rows refusal not cached (it costs ≈ 4 rows)');
+  } finally {
+    padName(1);
+    delete globalThis.caches;
+  }
+});
+
+test('W1R3 served body: byte-identical between client and cache copy; header fields from the same statement', async () => {
+  const store = new Map();
+  globalThis.caches = { default: {
+    async match() { return undefined; },
+    async put(req, res) { store.set(req.url, new Uint8Array(await res.arrayBuffer())); },
+  } };
+  try {
+    const r = await get('/api/exposure/etf/AAA');
+    const cached = [...store.values()][0];
+    assert.equal(Buffer.from(cached).toString('utf8'), r.text);
+    assert.deepEqual(Object.keys(r.body), ['symbol', 'name', 'series_id', 'report_month', 'previous_month', 'filing_date',
+      'period_end', 'net_assets', 'holdings_count', 'tiers', 'entities', 'unmapped_top', 'source', 'computed_at', 'contract'], 'spec §4.2 field order');
+    assert.equal(r.body.name, db.prepare(`SELECT name FROM etf_master WHERE ticker = 'AAA'`).get().name);
+  } finally {
+    delete globalThis.caches;
+  }
+});
+
+test('W1R3 A1 guard: a refused ETF reads no holdings rows (counting view over fund_holdings_monthly)', async () => {
+  const db2 = new DatabaseSync(':memory:');
+  db2.exec(SCHEMA);
+  db2.exec(SEED);
+  let ticks = 0;
+  db2.function('tick', { deterministic: false }, () => { ticks++; return 1; });
+  db2.exec(`ALTER TABLE fund_holdings_monthly RENAME TO fhm_base;
+    CREATE VIEW fund_holdings_monthly AS SELECT * FROM fhm_base WHERE tick();
+    INSERT INTO etf_master VALUES ('HUGE', 'Huge ETF', 'SHUGE');
+    INSERT INTO fund_snapshot_monthly VALUES ('SHUGE', '2026-04', 1.0e9, 10001, '2026-06-21', '2026-04-30');`);
+  const ins = db2.prepare(`INSERT INTO fhm_base (series_id, report_month, security_name, isin, weight_pct, snapshot_status)
+                           VALUES ('SHUGE', '2026-04', 'Row', ?, 0.01, 'complete')`);
+  db2.exec('BEGIN');
+  for (let i = 0; i < 10001; i++) ins.run(`ZH${String(i).padStart(10, '0')}`);
+  db2.exec('COMMIT');
+  const env2 = { DB: d1(db2) };
+  const call = async p => { ticks = 0; const res = await worker.fetch(new Request(`https://api.test${p}`), env2, { waitUntil() {} }); return { res, body: await res.json(), ticks }; };
+
+  let r = await call('/api/exposure/etf/HUGE');
+  assert.equal(r.res.status, 422);
+  assert.equal(r.body.limit, 'rows');
+  assert.ok(r.ticks <= 8, `refused: only the month probes touch holdings (${r.ticks} rows)`);
+  db2.exec(`UPDATE fund_snapshot_monthly SET holdings_count = 10000 WHERE series_id = 'SHUGE'`);
+  r = await call('/api/exposure/etf/HUGE');
+  assert.equal(r.res.status, 200);
+  assert.ok(r.ticks >= 10001, `served: the range is read (${r.ticks} rows)`);
+  assert.equal(r.body.tiers.unmapped[0], 10001);
 });
 
 // ---------- /api/entities/:id/etf-exposure per-holder month ----------
