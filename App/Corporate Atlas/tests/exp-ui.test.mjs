@@ -171,19 +171,167 @@ check('exp_viewState(null) → empty', exp_viewState(null) === 'empty');
   check('row: direct holding', rs({ type: 'eq', entity_id: 1, allocation: 5 }, undefined).text === 'direct holding · your stated allocation');
 }
 
-// --- cold deep link: the hash is claimed before the router's cold dispatch ---------------------
+// --- routing (MA-NOV-EXP.W3R2, M-1): the index.html router owns #/exposure ----------------------
+{
+  const INDEX = readFileSync(process.env.EXP_INDEX || path.join(HERE, '../../index.html'), 'utf8');
+  const script = INDEX.match(/<script>\n\/\/ MA-OCT-007 hash router[\s\S]*?<\/script>/)[0].replace(/^<script>|<\/script>$/g, '');
+  function router(hash) {
+    const events = [], replaced = [], docL = {}, winL = {}, timers = [];
+    const rctx = { location: { hash, pathname: '/', search: '' }, history: { state: null, replaceState(s, t, u) { replaced.push(u); } },
+      document: { addEventListener(t, f) { (docL[t] ||= []).push(f); }, dispatchEvent(ev) { events.push(ev.detail); },
+        createElement() { throw new Error('toast shown'); }, body: { appendChild() {} } },
+      URLSearchParams, CustomEvent: class { constructor(t, o) { this.type = t; this.detail = o.detail; } }, setTimeout: f => timers.push(f) };
+    rctx.window = rctx; rctx.addEventListener = (t, f) => { (winL[t] ||= []).push(f); };
+    vm.createContext(rctx); vm.runInContext(script, rctx);
+    return { rctx, events, replaced, docL, winL, timers };
+  }
+  const R = router('');
+  const P = h => JSON.stringify(R.rctx.maNavParse(h));
+  const X = (id) => JSON.stringify({ type: 'exposure', id, from: null });
+  check('router: #/exposure (entry link) → exposure, empty inputs', P('#/exposure') === X(''), P('#/exposure'));
+  check('router: #/exposure?i=… → the i= string', P('#/exposure?i=ETF:EEM:60,EQ:2191:15') === X('ETF:EEM:60,EQ:2191:15'), P('#/exposure?i=ETF:EEM:60,EQ:2191:15'));
+  check('router: i= is URI-decoded', P('#/exposure?i=ETF%3AEEM%3A60%2CEQ%3A2191%3A15') === X('ETF:EEM:60,EQ:2191:15'));
+  check('router: i= among other params', P('#/exposure?x=1&i=ETF:EEM:5') === X('ETF:EEM:5'));
+  check('router: malformed %-escape → empty inputs, not a throw', P('#/exposure?i=%E0%A4%A') === X(''));
+  check('router: junk tokens pass through to the screen (it rejects and lists them)', P('#/exposure?i=<script>') === X('<script>'));
+  check('router: agrees with exp_hashOf on the i= string', ['#/exposure', '#/exposure?i=ETF:EEM:60,EQ:2191:15', '#/exposure?i=%E0', '#/exposure?i=ETF%3AX%3A1']
+    .every(h => (R.rctx.maNavParse(h) || {}).id === exp_hashOf(h)));
+  for (const bad of ['#/exposures', '#/exposure/1', '#/exposurex?i=ETF:EEM:5', '#exposure', '#/Exposure', '#/exposure#x', ' #/exposure'])
+    check(`router rejects ${JSON.stringify(bad)}`, R.rctx.maNavParse(bad) === null, P(bad));
+  check('router: #/entity/… unchanged', P('#/entity/2191') === JSON.stringify({ type: 'entity', id: 2191, from: null })
+    && P('#/entity/2191?from=exposure%3AETF%3AEEM%3A60') === JSON.stringify({ type: 'entity', id: 2191, from: 'exposure:ETF:EEM:60' }));
+  check('router: #/instrument/… unchanged', P('#/instrument/US5949181045') === JSON.stringify({ type: 'instrument', id: 'US5949181045', from: null }));
+  check('router: #/fi routes unchanged', P('#/fi') === JSON.stringify({ type: 'fi', id: null, from: null })
+    && P('#/fi/cik/0002007029') === JSON.stringify({ type: 'fi_cik', id: '0002007029', from: null })
+    && P('#/bond/0001104659-24-022370/1') === JSON.stringify({ type: 'bond', id: '0001104659-24-022370/1', from: null }));
+  for (const bad of ['#/entity/0', '#/entity/abc', '#/fi/x', '#/nope']) check(`router still rejects ${bad}`, R.rctx.maNavParse(bad) === null);
+  // Cold deep link: one ma:route 'cold' event for exposure, no toast, the hash is not stripped.
+  const C = router('#/exposure?i=ETF:EEM:60,EQ:2191:15');
+  C.docL.DOMContentLoaded.forEach(f => f()); C.timers.forEach(f => f());
+  check('router cold #/exposure: one ma:route cold event with the inputs', C.events.length === 1 && C.events[0].type === 'exposure'
+    && C.events[0].mode === 'cold' && C.events[0].id === 'ETF:EEM:60,EQ:2191:15', C.events);
+  check('router cold #/exposure: no "invalid link" toast, hash kept', C.replaced.length === 0);
+  // Entry link: a hashchange to #/exposure dispatches 'typed'.
+  const T = router('');
+  T.rctx.location.hash = '#/exposure'; T.winL.hashchange.forEach(f => f());
+  check('router: entry link (hashchange) → ma:route typed exposure', T.events.length === 1 && T.events[0].mode === 'typed' && T.events[0].type === 'exposure' && T.events[0].id === '');
+  // Back to the exposure entry: popstate carries its depth.
+  const B = router('');
+  B.rctx.location.hash = '#/exposure?i=ETF:EEM:60'; B.winL.popstate.forEach(f => f({ state: { maNav: 1 } }));
+  check('router: popstate to the exposure entry → ma:route pop depth 1', B.events.length === 1 && B.events[0].mode === 'pop' && B.events[0].depth === 1 && B.events[0].type === 'exposure');
+}
+
+// --- ma-entities.js no longer claims hashes before the router ------------------------------------
 {
   const L = load('#/exposure?i=ETF:EEM:50');
-  check('cold #/exposure: hash hidden from the router at load', L.replaced.length === 1 && L.replaced[0].u === '/' && L.replaced[0].s === null, L.replaced);
-  check('cold #/exposure: popstate + hashchange claimed', (L.winListeners.popstate || []).length === 1 && (L.winListeners.hashchange || []).length === 1);
-  const L2 = load('#/entity/5');
-  check('other hashes untouched at load', L2.replaced.length === 0);
-  // An event for another hash passes through to the router (no stopImmediatePropagation).
-  let stopped = false;
-  L2.ctx.location.hash = '#/entity/7';
-  for (const f of L2.winListeners.popstate) f({ state: null, stopImmediatePropagation() { stopped = true; } });
-  for (const f of L2.winListeners.hashchange) f({ stopImmediatePropagation() { stopped = true; } });
-  check('router still receives non-exposure popstate/hashchange', stopped === false);
+  check('cold #/exposure: ma-entities.js leaves the URL alone at load', L.replaced.length === 0, L.replaced);
+  check('no window popstate/hashchange listeners in ma-entities.js', !(L.winListeners.popstate || []).length && !(L.winListeners.hashchange || []).length);
+  check('no stopImmediatePropagation / pre-router claim / two-timer wait in ma-entities.js',
+    !/stopImmediatePropagation|_expColdHash|_expSkipHashchange|_expOpenTyped|setTimeout\(\(\) => setTimeout/.test(SRC));
+  check('the index.html router owns #/exposure (UI block says so)', UI.includes('the index.html router parses #/exposure'));
+  // The shared ma:route handler opens the layer for cold / typed; pop closes layers down to its depth.
+  const calls = [];
+  L.ctx._navOpen = (k, id, o) => { calls.push([k, id, o && o.history, o && o.from]); };
+  const route = d => L.docListeners['ma:route'].forEach(f => f({ detail: d }));
+  route({ type: 'exposure', id: 'ETF:EEM:60,EQ:2191:15', from: null, mode: 'cold' });
+  check('ma:route cold exposure: Home made depth 0, then the layer pushed with the inputs',
+    L.replaced.length === 1 && L.replaced[0].s && L.replaced[0].s.maNav === 0 && L.replaced[0].u === '/'
+    && calls.length === 1 && calls[0][0] === 'exposure' && calls[0][1] === 'ETF:EEM:60,EQ:2191:15' && calls[0][2] === 'push', { r: L.replaced, calls });
+  calls.length = 0;
+  route({ type: 'exposure', id: '', from: null, mode: 'typed' });
+  check('ma:route typed exposure (entry link): layer opened replacing the typed entry', calls.length === 1 && calls[0][0] === 'exposure' && calls[0][1] === '' && calls[0][2] === 'replace', calls);
+  calls.length = 0;
+  route({ type: 'entity', id: 2191, from: 'exposure:ETF:EEM:60', mode: 'cold' });
+  check('ma:route cold entity from=exposure: exposure rebuilt underneath, then the entity', calls.length === 2
+    && calls[0][0] === 'exposure' && calls[0][1] === 'ETF:EEM:60' && calls[1][0] === 'entity' && calls[1][1] === 2191, calls);
+}
+
+// --- N-3: focus returns to the company link after Back --------------------------------------------
+{
+  const L = load('');
+  const stack = vm.runInContext('_navStack', L.ctx);
+  function fakeLayer() {
+    const root = { kids: new Set(), cards: [], h2: null, h3: null,
+      contains(x) { return this.kids.has(x); },
+      querySelectorAll(sel) { return sel === '.exp-results .exp-card' ? this.cards : []; },
+      querySelector(sel) {
+        if (sel === '.exp-results h3') return this.h3;
+        if (sel === 'h2') return this.h2;
+        const m = /^\.exp-results \[data-exp-act="entity"\]\[data-id="(\d+)"\]$/.exec(sel);
+        if (m) { for (const c of this.cards) { const a = c.find(m[1]); if (a) return a; } }
+        return null;
+      }, isConnected: true };
+    const mk = (tag, extra) => { const e = { tag, attrs: {}, focused: 0, focusOpts: undefined, isConnected: true, dataset: {},
+      focus(o) { this.focused++; this.focusOpts = o; }, setAttribute(k, v) { this.attrs[k] = v; }, closest() { return this.card || null; }, ...extra }; root.kids.add(e); return e; };
+    const card = (links) => { const c = { links, find(id) { return this.links.find(a => a.isConnected && a.dataset.id === String(id)) || null; },
+      querySelector(sel) { const m = /data-id="(\d+)"/.exec(sel); return m ? this.find(m[1]) : null; } }; links.forEach(a => { a.card = c; }); root.cards.push(c); return c; };
+    root.h2 = mk('h2'); root.h3 = mk('h3');
+    return { layer: { el: root, kind: 'exposure', exp: {} }, root, mk, card };
+  }
+  const { _expRememberLink, _expRestoreFocus } = L.ctx;
+  check('focus helpers present', typeof _expRememberLink === 'function' && typeof _expRestoreFocus === 'function');
+  // 1. Same element still in the layer → it gets focus, without scrolling.
+  {
+    const F = fakeLayer();
+    const a1 = F.mk('a', { dataset: { id: '2191' } }), a2 = F.mk('a', { dataset: { id: '7' } });
+    F.card([a1, a2]);
+    _expRememberLink(F.layer, a2);
+    const got = _expRestoreFocus(F.layer);
+    check('Back: the clicked company link is focused again', got === a2 && a2.focused === 1 && a2.focusOpts && a2.focusOpts.preventScroll === true && a1.focused === 0);
+    check('Back: the remembered link is used once', F.layer.exp.returnTo === null);
+  }
+  // 2. Results re-rendered meanwhile → the same company's link in the same card (not an earlier card's).
+  {
+    const F = fakeLayer();
+    const recon = F.mk('a', { dataset: { id: '9' } });
+    const oldA = F.mk('a', { dataset: { id: '2191' } });
+    F.card([recon]); F.card([oldA]);
+    _expRememberLink(F.layer, oldA);
+    oldA.isConnected = false;
+    const firstCardSame = F.mk('a', { dataset: { id: '2191' } }), newA = F.mk('a', { dataset: { id: '2191' } });
+    F.root.cards[0].links.push(firstCardSame); F.root.cards[1].links = [newA];
+    const got = _expRestoreFocus(F.layer);
+    check('Back after re-render: same company link in the same card is focused', got === newA && newA.focused === 1 && firstCardSame.focused === 0);
+  }
+  // 3. Link gone (or nothing remembered) → results heading, made focusable.
+  {
+    const F = fakeLayer();
+    const a = F.mk('a', { dataset: { id: '5' } }); F.card([a]);
+    _expRememberLink(F.layer, a); a.isConnected = false; F.root.cards[0].links = [];
+    const got = _expRestoreFocus(F.layer);
+    check('Back, link gone: results heading focused (tabindex -1)', got === F.root.h3 && F.root.h3.focused === 1 && F.root.h3.attrs.tabindex === '-1');
+    const G = fakeLayer(); G.root.h3 = null;
+    check('Back, no results yet: page heading focused', _expRestoreFocus(G.layer) === G.root.h2 && G.root.h2.focused === 1);
+  }
+  // 4. Wired: a pop ma:route that uncovers the exposure layer restores focus; other modes and layers do not.
+  {
+    const F = fakeLayer();
+    const a = F.mk('a', { dataset: { id: '2191' } }); F.card([a]);
+    _expRememberLink(F.layer, a);
+    let removed = 0;
+    stack.push(F.layer, { kind: 'entity', el: { remove() { removed++; }, isConnected: true } });
+    L.docListeners['ma:route'].forEach(f => f({ detail: { type: 'exposure', id: 'ETF:EEM:60', mode: 'pop', depth: 1 } }));
+    check('pop ma:route back to the exposure layer: entity layer closed, link focused', removed === 1 && stack.length === 1 && a.focused === 1);
+    stack.length = 0;
+    const b = F.mk('a', { dataset: { id: '1' } }); F.card([b]); _expRememberLink(F.layer, b);
+    stack.push({ kind: 'entity', el: { remove() {}, isConnected: true } });
+    L.ctx._navOpen = () => {};
+    L.docListeners['ma:route'].forEach(f => f({ detail: { type: 'entity', id: 1, mode: 'pop', depth: 1 } }));
+    check('pop to a non-exposure layer: no focus change in the exposure layer', b.focused === 0);
+    stack.length = 0;
+  }
+  check('entity link click remembers the link before opening the page', /a === 'entity'\) \{ e\.preventDefault\(\); _expRememberLink\(layer, b\); _navOpen\('entity'/.test(UI));
+}
+
+// --- N-4 contrast, N-6 wording ------------------------------------------------------------------
+{
+  const css = UI.slice(UI.indexOf("st.textContent = `"), UI.indexOf("document.head.appendChild(st);"));
+  const rule = sel => { const m = new RegExp(`(?:^|[}\n])${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\{([^}]*)\\}`).exec(css); return m ? m[1] : ''; };
+  for (const sel of ['.exp-row-type', '.exp-tr.head', '.exp-tbl2 th', '.exp-root h3', '.exp-picker label'])
+    check(`N-4: ${sel} uses --text2`, rule(sel).includes('color:var(--text2)') && !rule(sel).includes('var(--dim)'), rule(sel));
+  check('N-4: "Holdings dates" label uses --text2', UI.includes('<span style="font-size:10px;align-self:center;color:var(--text2)">Holdings dates:</span>'));
+  check('N-4: no new colours (only palette variables in the changed rules)', !/#[0-9a-f]{3,6}/i.test(['.exp-row-type', '.exp-tr.head', '.exp-tbl2 th'].map(rule).join('')));
+  check('N-6: reconciliation label "Companies (direct + via ETFs)"', UI.includes("['companies', 'Companies (direct + via ETFs)', 'var(--blue)']") && !UI.includes('Mapped companies'));
 }
 
 // --- §6 banned wording: no displayed text in the UI block uses it -------------------------------

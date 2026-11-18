@@ -83,7 +83,7 @@ function makeCtx({ gate = 'open', override = null } = {}) {
     setTimeout, clearTimeout,
     location: { pathname: '/', search: '', hash: '' },
     history: { state: null, entries: [], pushState(s, _, h) { this.state = s; this.entries.push(h); }, replaceState(s, _, h) { this.state = s; this.last = h; }, back() {}, go() {} },
-    document: { body, head, createElement: makeEl, addEventListener(t, f) { listeners[t] = f; }, dispatchEvent() {},
+    document: { body, head, createElement: makeEl, addEventListener(t, f) { const prev = listeners[t]; listeners[t] = prev ? (e => { prev(e); f(e); }) : f; }, dispatchEvent() {},   // all listeners, in registration order (as the DOM does)
       getElementById(id) { return head.kids.find(k => k.id === id) || null; }, querySelector() { return null; }, querySelectorAll() { return []; } },
     _nextAtlasOverlayZ: () => 1600,
     data_entitiesGet: async p => {

@@ -2755,8 +2755,8 @@ function _expDelta(funds, previous) {
 // Reads: R-EXP1 /api/exposure/etf/{symbol}[?month=] once per ETF per session (in-memory maps; failed calls may be
 // retried, settled 200/4xx answers are never requested again), /api/entities/search, /api/entities/{id} (names),
 // /api/etf-list (proxy) for the picker; on expanding a company, /etf-exposure and /issuer-panels for evidence labels.
-// The router in index.html does not parse #/exposure, so this block claims those hashes on cold load, popstate and
-// hashchange before the router's own listeners run (ma-entities.js loads first). Other hashes are untouched.
+// Routing: the index.html router parses #/exposure and dispatches `ma:route` (MA-NOV-EXP.W3R2); the shared handler
+// above opens the layer. This block only restores focus after Back from a company page.
 
 const _EXP_SYM_RE = /^[A-Z0-9][A-Z0-9.\-]{0,14}$/;
 const _EXP_EID_RE = /^[1-9]\d{0,9}$/;
@@ -2915,7 +2915,7 @@ function _expStyleOnce() {
 .exp-badge.ok{color:var(--green);border-color:var(--green-bd);background:var(--green-bg)}.exp-badge.warn{color:var(--amber);border-color:var(--amber-bd);background:var(--amber-bg)}
 .exp-badge.err{color:var(--red);border-color:var(--red-bd);background:var(--red-bg)}.exp-badge.wait{color:var(--blue);border-color:var(--blue-bd);background:var(--blue-bg)}
 .exp-row{display:grid;grid-template-columns:60px minmax(0,1fr) auto 104px auto;gap:6px 10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
-.exp-row-type{font-size:9px;font-weight:700;color:var(--dim);text-transform:uppercase}.exp-row-label{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.exp-row-type{font-size:9px;font-weight:700;color:var(--text2);text-transform:uppercase}.exp-row-label{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .exp-row-err{grid-column:2/-1;color:var(--red);font-size:11px}.exp-row-err:empty{display:none}
 .exp-alloc{display:flex;align-items:center;gap:4px}.exp-alloc input{width:72px;padding:5px 6px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:12px;text-align:right}
 .exp-alloc input[aria-invalid=true]{border-color:var(--red)}
@@ -2932,12 +2932,12 @@ function _expStyleOnce() {
 .exp-leg div{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--text2);padding:2px 0;border-bottom:1px dotted var(--border)}
 .exp-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:-1px}
 .exp-tr{display:grid;grid-template-columns:minmax(0,2.4fr) 78px 70px 78px 72px 104px;gap:4px 10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px}
-.exp-tr.head{font-size:9px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}.exp-num{text-align:right;font-family:var(--mono)}
+.exp-tr.head{font-size:9px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}.exp-num{text-align:right;font-family:var(--mono)}
 .exp-th{background:none;border:none;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer;padding:0;width:100%;text-align:inherit}
 .exp-detail{grid-column:1/-1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;margin:2px 0 6px;font-size:11px;color:var(--text2)}
 .exp-detail .exp-mob{display:none}.exp-detail ul{margin:4px 0;padding-left:16px}.exp-detail li{margin:2px 0}
 .exp-tbl2{width:100%;border-collapse:collapse;font-size:11px}.exp-tbl2 td,.exp-tbl2 th{padding:4px 6px;border-bottom:1px solid var(--border);text-align:left}
-.exp-tbl2 th{font-size:9px;color:var(--dim);text-transform:uppercase}.exp-tbl2 td.n{text-align:right;font-family:var(--mono)}
+.exp-tbl2 th{font-size:9px;color:var(--text2);text-transform:uppercase}.exp-tbl2 td.n{text-align:right;font-family:var(--mono)}
 .exp-err-panel{border:1px solid var(--red-bd);background:var(--red-bg);border-radius:var(--r);padding:12px;margin-top:12px}
 @media (max-width:600px){.exp-row{grid-template-columns:minmax(0,1fr) 96px auto}.exp-row-type{display:none}.exp-row-status{grid-column:1/-1;order:5}
 .exp-row-err{grid-column:1/-1}.exp-tr{grid-template-columns:minmax(0,1fr) 72px 30px}.exp-tr .exp-opt-col{display:none}.exp-detail .exp-mob{display:block}
@@ -3233,7 +3233,7 @@ function _expWire(layer) {
       _expRenderResults(layer);
       const h = root.querySelector(`[data-exp-act="expand"][data-id="${id}"]`); if (h) h.focus();
     }
-    else if (a === 'entity') { e.preventDefault(); _navOpen('entity', Number(b.dataset.id), { history: 'push', from: `exposure:${layer.id || ''}`, lastName: b.dataset.name || '' }); }
+    else if (a === 'entity') { e.preventDefault(); _expRememberLink(layer, b); _navOpen('entity', Number(b.dataset.id), { history: 'push', from: `exposure:${layer.id || ''}`, lastName: b.dataset.name || '' }); }
     else if (a === 'instrument') { e.preventDefault(); _navOpen('instrument', b.dataset.key, { history: 'push', from: `exposure:${layer.id || ''}` }); }
     else if (a === 'etf') {
       e.preventDefault();
@@ -3303,12 +3303,12 @@ function _expHeaderHtml(res) {
   return `<div class="exp-card">
     <div class="exp-note">Computed in your browser on ${_esc(_expToday())} from stored holdings; not live positions.${comp ? ` Company mappings as of ${_esc(_navFmtDate(comp))}.` : ''}</div>
     <div class="exp-chips" aria-label="Inputs">${ins}</div>
-    <div class="exp-chips" aria-label="Holdings dates"><span class="exp-dim" style="font-size:10px;align-self:center">Holdings dates:</span>${dates}</div>
+    <div class="exp-chips" aria-label="Holdings dates"><span style="font-size:10px;align-self:center;color:var(--text2)">Holdings dates:</span>${dates}</div>
     ${warn.length ? `<div class="exp-chips" role="note">${warn.join('')}</div>` : ''}</div>`;
 }
 
 const _EXP_RECON_LINES = [
-  ['companies', 'Mapped companies', 'var(--blue)'],
+  ['companies', 'Companies (direct + via ETFs)', 'var(--blue)'],
   ['unmapped', 'Unmapped holdings', 'var(--amber)'],
   ['no_identifier', 'No-identifier holdings', 'var(--amber-bd)'],
   ['redirect_unresolved', 'Merge redirect unresolved', 'var(--muted)'],
@@ -3453,42 +3453,35 @@ function _expCompareHtml(layer, res) {
       Compare with previous stored month</label>${body}</div>`;
 }
 
-// ── routing hooks: claim #/exposure before the index.html router (it does not parse this hash) ─────────
-function _expOpenTyped() {
-  _navOpen('exposure', exp_hashOf(location.hash) || '', { history: 'replace' });
+// ── focus after Back (MA-NOV-EXP.W3R2, N-3) ────────────────────────────────────────────────────
+// Remember the company link that opened a page; when Back returns to this layer, focus it again. Results may have
+// re-rendered meanwhile, so fall back to the same company's link in the same card, then any card, then the results heading.
+function _expRememberLink(layer, a) {
+  const cards = [...layer.el.querySelectorAll('.exp-results .exp-card')];
+  layer.exp.returnTo = { el: a, id: Number(a.dataset.id), card: cards.indexOf(a.closest('.exp-card')) };
 }
-let _expSkipHashchange = null;
-let _expColdHash = null;
-if (typeof window !== 'undefined' && typeof window.addEventListener === 'function' && typeof location !== 'undefined' && typeof history !== 'undefined') {
-  if (exp_hashOf(location.hash) !== null) {
-    // Cold deep link: hide the hash from the router's cold dispatch, then open the layer over Home (depth 0) like N7-13.
-    _expColdHash = location.hash;
-    history.replaceState(null, '', location.pathname + location.search);
+function _expRestoreFocus(layer) {
+  const r = layer.exp && layer.exp.returnTo, root = layer.el;
+  let el = null;
+  if (r) {
+    layer.exp.returnTo = null;
+    const sel = `[data-exp-act="entity"][data-id="${Number(r.id)}"]`;
+    el = r.el && r.el.isConnected && root.contains(r.el) ? r.el : null;
+    if (!el && r.card >= 0) { const c = root.querySelectorAll('.exp-results .exp-card')[r.card]; el = c ? c.querySelector(sel) : null; }
+    if (!el) el = root.querySelector(`.exp-results ${sel}`);
   }
-  window.addEventListener('popstate', e => {
-    if (exp_hashOf(location.hash) === null) return;
-    e.stopImmediatePropagation();
-    _expSkipHashchange = location.hash;
-    const depth = e.state && Number.isInteger(e.state.maNav) ? e.state.maNav : null;
-    if (depth === null) { _expOpenTyped(); return; }
-    while (_navStack.length > depth) _navStack.pop().el.remove();
-    if (depth === _navStack.length + 1) _navOpen('exposure', exp_hashOf(location.hash) || '', { history: 'none' });
+  if (el) { el.focus({ preventScroll: true }); return el; }
+  const h = root.querySelector('.exp-results h3') || root.querySelector('h2');
+  if (h) { h.setAttribute('tabindex', '-1'); h.focus(); }
+  return h;
+}
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  // Registered after the shared `ma:route` handler, so the layers above have already been closed.
+  document.addEventListener('ma:route', e => {
+    const d = e.detail || {};
+    if (d.mode !== 'pop') return;
+    const top = _navStack[_navStack.length - 1];
+    if (top && top.kind === 'exposure' && top.el.isConnected) _expRestoreFocus(top);
   });
-  window.addEventListener('hashchange', e => {
-    if (exp_hashOf(location.hash) === null) return;
-    e.stopImmediatePropagation();
-    if (_expSkipHashchange === location.hash) { _expSkipHashchange = null; return; }
-    _expOpenTyped();
-  });
-  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
-    // Two task hops: the router's own cold check (DOMContentLoaded → setTimeout 0) must run first and see no hash,
-    // or it would call #/exposure invalid and strip it from the URL.
-    document.addEventListener('DOMContentLoaded', () => setTimeout(() => setTimeout(() => {
-      if (!_expColdHash) return;
-      const h = _expColdHash; _expColdHash = null;
-      history.replaceState({ maNav: 0 }, '', location.pathname + location.search);
-      _navOpen('exposure', exp_hashOf(h) || '', { history: 'push' });
-    }, 0), 0));
-  }
 }
 // ===== end EXP UI (MA-NOV-EXP.W3) =====
