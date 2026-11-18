@@ -1682,6 +1682,7 @@ function _navHash(kind, id, from) {
     : kind === 'fi' ? '#/fi'
     : kind === 'fi_cik' ? `#/fi/cik/${id}`
     : kind === 'bond' ? `#/bond/${id}`
+    : kind === 'exposure' ? exp_hashFor(id)   // MA-NOV-EXP.W3: inputs live in the hash only
     : `#/instrument/${encodeURIComponent(id)}`;
   return from ? `${base}?from=${encodeURIComponent(from)}` : base;
 }
@@ -1697,6 +1698,7 @@ function _navParseFrom(from) {
     return j < 0 ? { type: 'direct' } : { type, key: rest.slice(0, j), sub: rest.slice(j + 1) };
   }
   if (type === 'instrument' || type === 'bond') return { type, key: rest };
+  if (type === 'exposure') return { type, key: rest };   // MA-NOV-EXP.W3: key = the serialised inputs
   return { type: 'direct' };
 }
 
@@ -1730,6 +1732,7 @@ function _navRender(layer, opts) {
     case 'fi': return _navRenderFiDirectory(layer, opts);
     case 'fi_cik': return _navRenderFiCik(layer, opts);
     case 'bond': return _navRenderBond(layer, opts);
+    case 'exposure': return _navRenderExposure(layer, opts);   // MA-NOV-EXP.W3
     default: return _navRenderInstrument(layer, opts);
   }
 }
@@ -2391,6 +2394,7 @@ document.addEventListener('ma:route', e => {
     // Phase 1 (ma-etf.js wiring is Phase 2).
     if (origin.type === 'entity' && /^\d+$/.test(origin.key)) _navOpen('entity', Number(origin.key), { history: 'push' });
     else if (origin.type === 'instrument' && origin.key) _navOpen('instrument', origin.key, { history: 'push' });
+    else if (origin.type === 'exposure') _navOpen('exposure', origin.key || '', { history: 'push' });   // MA-NOV-EXP.W3
     _navOpen(d.type, d.id, { history: 'push', from: d.from });
     return;
   }
@@ -2743,3 +2747,748 @@ function _expDelta(funds, previous) {
   return { etfs, companies };
 }
 // ===== end EXP (MA-NOV-EXP.W2) =====
+
+// ===== EXP UI (MA-NOV-EXP.W3) =====
+// Exposure-to-company screen, nav layer kind 'exposure' (spec claude/specs/MA-NOV-EXP_Spec.md §2, §5.1, §6, §7 UI states).
+// Hash: #/exposure?i=ETF:EEM:50,EQ:2191:15 — the inputs live in the URL hash only (no storage). Calculation is the
+// W2 block above (exp_validate / exp_combine / exp_compute); this block only fetches, renders and wires events.
+// Reads: R-EXP1 /api/exposure/etf/{symbol}[?month=] once per ETF per session (in-memory maps; failed calls may be
+// retried, settled 200/4xx answers are never requested again), /api/entities/search, /api/entities/{id} (names),
+// /api/etf-list (proxy) for the picker; on expanding a company, /etf-exposure and /issuer-panels for evidence labels.
+// The router in index.html does not parse #/exposure, so this block claims those hashes on cold load, popstate and
+// hashchange before the router's own listeners run (ma-entities.js loads first). Other hashes are untouched.
+
+const _EXP_SYM_RE = /^[A-Z0-9][A-Z0-9.\-]{0,14}$/;
+const _EXP_EID_RE = /^[1-9]\d{0,9}$/;
+const _EXP_ALLOC_RE = /^\d{0,3}(?:\.\d{0,2})?$/;
+const _EXP_PAGE = 50;
+const _EXP_BANNED = ['current ownership', 'all holders', 'complete', 'real-time'];   // §6 — never shown
+
+// ── hash (pure) ─────────────────────────────────────────────────────────────
+function _expAllocText(a) {
+  if (a == null) return '';
+  const t = typeof a === 'number' ? (Number.isFinite(a) ? String(_expCents(a)) : '') : String(a).trim();
+  return _EXP_ALLOC_RE.test(t) ? t : '';
+}
+// inputs → "ETF:EEM:50,EQ:2191:15". Rows with no identity are left out (they cannot be restored).
+function exp_hashSerialize(inputs) {
+  return (Array.isArray(inputs) ? inputs : []).map(inp => {
+    const t = _expType(inp);
+    if (t === 'etf' && _EXP_SYM_RE.test(_expSymbol(inp))) return `ETF:${_expSymbol(inp)}:${_expAllocText(inp.allocation)}`;
+    if (t === 'eq' && _EXP_EID_RE.test(String(inp.entity_id))) return `EQ:${Number(inp.entity_id)}:${_expAllocText(inp.allocation)}`;
+    return null;
+  }).filter(Boolean).join(',');
+}
+// "ETF:EEM:50,EQ:2191:15" → { inputs, rejected[] }. Allocations stay text so validation reports them as typed.
+function exp_hashParse(str) {
+  const inputs = [], rejected = [];
+  for (const raw of String(str || '').split(',')) {
+    const tok = raw.trim();
+    if (!tok) continue;
+    const m = /^(ETF|EQ):([^:]+):([^:]*)$/i.exec(tok);
+    if (!m || !_EXP_ALLOC_RE.test(m[3])) { rejected.push(tok); continue; }
+    const kind = m[1].toUpperCase();
+    if (kind === 'ETF') {
+      const sym = m[2].trim().toUpperCase();
+      if (!_EXP_SYM_RE.test(sym)) { rejected.push(tok); continue; }
+      inputs.push({ type: 'etf', symbol: sym, allocation: m[3] });
+    } else {
+      if (!_EXP_EID_RE.test(m[2])) { rejected.push(tok); continue; }
+      inputs.push({ type: 'eq', entity_id: Number(m[2]), name: null, allocation: m[3] });
+    }
+  }
+  return { inputs, rejected };
+}
+function exp_hashFor(id) { const s = String(id || ''); return s ? `#/exposure?i=${s}` : '#/exposure'; }
+// location.hash → the i= string, or null when the hash is not an exposure hash.
+function exp_hashOf(hash) {
+  const m = /^#\/exposure(?:\?(.*))?$/.exec(String(hash || ''));
+  if (!m) return null;
+  const q = /(?:^|&)i=([^&]*)/.exec(m[1] || '');
+  if (!q) return '';
+  try { return decodeURIComponent(q[1]); } catch (e) { return ''; }
+}
+
+// ── state selection (pure) ─────────────────────────────────────────────────
+// What the results area shows for an exp_compute result (§2 states). Partial failure still shows numbers.
+function exp_viewState(res) {
+  const s = res && res.state;
+  return s === 'empty' || s === 'invalid' || s === 'loading' || s === 'total_failure' || s === 'partial_failure' ? s : (s === 'ok' ? 'results' : 'empty');
+}
+// Row badge for one input, from its look-through response alone (works while the list is still invalid).
+function exp_rowStatus(inp, res) {
+  if (_expType(inp) === 'eq') return { status: 'direct', cls: 'ok', text: 'direct holding · your stated allocation' };
+  const oc = _expOutcome(res);
+  if (oc.status === 'pending') return { status: 'pending', cls: 'wait', text: 'loading stored holdings…' };
+  if (oc.status === 'computed') return { status: 'computed', cls: 'ok', text: `holdings available (${exp_monthLabel(oc.body.report_month)})` };
+  if (oc.status === 'not_loaded') return { status: 'not_loaded', cls: 'err', text: 'not loaded – retry', retry: true };
+  return { status: oc.status, cls: 'warn', text: oc.message, reason: oc.reason || null };
+}
+// Chips/warnings shown above the numbers (§2 Screen B §1 and the state table).
+function exp_viewFlags(res) {
+  const m = res && res.months;
+  const rows = (res && res.inputs) || [];
+  return { mixed: Boolean(m && m.mixed), stale: m ? m.stale.slice() : [],
+    unsupported: rows.filter(r => r.status === 'unsupported' || r.status === 'invalid').map(r => r.label),
+    not_loaded: rows.filter(r => r.status === 'not_loaded').map(r => r.label) };
+}
+
+// ── session caches (memory only) ───────────────────────────────────────────
+const _expLT = new Map();        // SYMBOL → settled R-EXP1 response (200 exp-1 or 4xx): never requested again
+const _expLTFail = new Map();    // SYMBOL → last failed response (status 0 / 5xx / bad body): Retry allowed
+const _expLTFlight = new Map();  // SYMBOL → in-flight promise
+const _expPrev = new Map();      // 'SYMBOL|YYYY-MM' → previous-month response (Compare only)
+const _expPrevFlight = new Map();
+const _expEnt = new Map();       // entity_id → { name, resolved_id } | { error }
+const _expEvid = new Map();      // entity_id → { etf, panels } evidence label data
+let _expEtfList = null, _expEtfListP = null, _expEtfListErr = false;
+let _expLTRequests = 0;          // look-through calls sent this session (diagnostic)
+
+function _expuiGet(path) {
+  if (typeof data_entitiesGet === 'function') return data_entitiesGet(path);
+  return fetch(`${ENTITIES_API_URL}${path}`).then(async r => ({ ok: r.ok, status: r.status, data: await r.json().catch(() => null) }))
+    .catch(e => ({ ok: false, status: 0, data: null, error: e && e.message }));
+}
+function _expSettled(res) { return _expOutcome(res).status !== 'not_loaded'; }
+function _expLookthrough(sym) {
+  if (_expLT.has(sym)) return Promise.resolve(_expLT.get(sym));
+  if (_expLTFlight.has(sym)) return _expLTFlight.get(sym);
+  _expLTRequests++;
+  const p = _expuiGet(`/api/exposure/etf/${encodeURIComponent(sym)}`).then(r => {
+    _expLTFlight.delete(sym);
+    if (_expSettled(r)) { _expLT.set(sym, r); _expLTFail.delete(sym); } else _expLTFail.set(sym, r);
+    return r;
+  });
+  _expLTFlight.set(sym, p);
+  return p;
+}
+function _expPrevious(sym, month) {
+  const k = `${sym}|${month}`;
+  if (_expPrev.has(k)) return Promise.resolve(_expPrev.get(k));
+  if (_expPrevFlight.has(k)) return _expPrevFlight.get(k);
+  _expLTRequests++;
+  const p = _expuiGet(`/api/exposure/etf/${encodeURIComponent(sym)}?month=${encodeURIComponent(month)}`).then(r => {
+    _expPrevFlight.delete(k);
+    _expPrev.set(k, r);   // failures are kept too and shown; Retry deletes the entry
+    return r;
+  });
+  _expPrevFlight.set(k, p);
+  return p;
+}
+function _expLoadEtfList() {
+  if (_expEtfList || _expEtfListP) return _expEtfListP || Promise.resolve(_expEtfList);
+  const base = typeof MY_WORKER_URL !== 'undefined' ? MY_WORKER_URL : null;
+  if (!base) { _expEtfListErr = true; return Promise.resolve(null); }
+  _expEtfListP = fetch(`${base}/api/etf-list?meta=fc`).then(r => (r.ok ? r.json() : null)).catch(() => null).then(list => {
+    _expEtfListP = null;
+    if (Array.isArray(list) && list.length) _expEtfList = list.filter(e => e && e.ticker).map(e => ({ ticker: String(e.ticker).toUpperCase(), name: e.name || '', hasNport: e.hasNport }));
+    else _expEtfListErr = true;
+    return _expEtfList;
+  });
+  return _expEtfListP;
+}
+
+// ── formatting ─────────────────────────────────────────────────────────────
+function _expF(x) { const v = Number(x); if (!Number.isFinite(v)) return '—'; const s = (Math.abs(v) < 0.005 ? 0 : v).toFixed(2); return s; }
+function _expPct(x) { return `${_expF(x)}%`; }
+function _expBandLabel(b) { return b === 'high' ? 'High' : b === 'medium' ? 'Medium' : b === 'low' ? 'Low' : '—'; }
+function _expToday() { return new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+function _expDepth(layer) { return _navStack.indexOf(layer) + 1; }
+function _expEntityHash(layer, id) { return _navHash('entity', Number(id), `exposure:${layer.id || ''}`); }
+
+function _expStyleOnce() {
+  if (typeof document === 'undefined' || !document.head || document.getElementById('exp-style')) return;
+  const st = document.createElement('style');
+  st.id = 'exp-style';
+  st.textContent = `.exp-root{max-width:1100px;margin:0 auto;color:var(--text);font-size:12px}
+.exp-root h2{font-size:15px;margin:0 0 4px;font-weight:700}.exp-root h3{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
+.exp-note{color:var(--text2);font-size:11px;line-height:1.5}.exp-root ul{list-style:disc;padding-left:18px;margin:4px 0}.exp-dim{color:var(--dim)}
+.exp-card{border:1px solid var(--border);background:var(--bg3);border-radius:var(--r);padding:12px;margin-top:12px}
+.exp-pickers{display:flex;gap:12px;flex-wrap:wrap}.exp-picker{position:relative;flex:1 1 280px;min-width:0}
+.exp-picker label{display:block;font-size:10px;font-weight:700;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.exp-in{width:100%;box-sizing:border-box;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:12px}
+.exp-in:focus,.exp-alloc input:focus,.exp-btn:focus-visible,.exp-link:focus-visible,.exp-th:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.exp-dd{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);max-height:280px;overflow-y:auto;display:none}
+.exp-dd.open{display:block}.exp-opt{padding:6px 10px;cursor:pointer;display:flex;gap:8px;align-items:baseline;border-bottom:1px solid var(--border)}
+.exp-opt[aria-selected=true],.exp-opt:hover{background:var(--blue-bg)}.exp-opt b{font-family:var(--mono);min-width:56px}
+.exp-badge{display:inline-block;font-size:9px;font-weight:600;padding:1px 6px;border-radius:var(--r);border:1px solid var(--border);white-space:nowrap}
+.exp-badge.ok{color:var(--green);border-color:var(--green-bd);background:var(--green-bg)}.exp-badge.warn{color:var(--amber);border-color:var(--amber-bd);background:var(--amber-bg)}
+.exp-badge.err{color:var(--red);border-color:var(--red-bd);background:var(--red-bg)}.exp-badge.wait{color:var(--blue);border-color:var(--blue-bd);background:var(--blue-bg)}
+.exp-row{display:grid;grid-template-columns:60px minmax(0,1fr) auto 104px auto;gap:6px 10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.exp-row-type{font-size:9px;font-weight:700;color:var(--dim);text-transform:uppercase}.exp-row-label{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.exp-row-err{grid-column:2/-1;color:var(--red);font-size:11px}.exp-row-err:empty{display:none}
+.exp-alloc{display:flex;align-items:center;gap:4px}.exp-alloc input{width:72px;padding:5px 6px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:12px;text-align:right}
+.exp-alloc input[aria-invalid=true]{border-color:var(--red)}
+.exp-btn{background:none;border:1px solid var(--border);border-radius:var(--r);color:var(--text2);font-size:11px;padding:4px 9px;cursor:pointer}
+.exp-btn:hover{border-color:var(--blue);color:var(--blue)}.exp-btn.primary{border-color:var(--blue-bd);color:var(--blue)}
+.exp-link{color:var(--blue);text-decoration:none;cursor:pointer;background:none;border:none;padding:0;font-size:inherit;text-align:left}.exp-link:hover{text-decoration:underline}
+.exp-total{margin-top:8px;font-size:12px}.exp-msgs div{margin-top:6px;color:var(--red);font-size:11px}
+.exp-spin{display:inline-block;width:9px;height:9px;border:2px solid var(--blue-bd);border-top-color:var(--blue);border-radius:50%;animation:expspin .8s linear infinite;vertical-align:-1px;margin-right:4px}
+@keyframes expspin{to{transform:rotate(360deg)}}
+.exp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.exp-chip{font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);color:var(--text2)}
+.exp-chip.warn{color:var(--amber);border-color:var(--amber-bd);background:var(--amber-bg)}
+.exp-bar{display:flex;height:14px;border-radius:var(--r);overflow:hidden;background:var(--bg2);border:1px solid var(--border);margin:8px 0}
+.exp-bar span{display:block;height:100%}.exp-leg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 16px}
+.exp-leg div{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--text2);padding:2px 0;border-bottom:1px dotted var(--border)}
+.exp-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.exp-tr{display:grid;grid-template-columns:minmax(0,2.4fr) 78px 70px 78px 72px 104px;gap:4px 10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px}
+.exp-tr.head{font-size:9px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}.exp-num{text-align:right;font-family:var(--mono)}
+.exp-th{background:none;border:none;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer;padding:0;width:100%;text-align:inherit}
+.exp-detail{grid-column:1/-1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;margin:2px 0 6px;font-size:11px;color:var(--text2)}
+.exp-detail .exp-mob{display:none}.exp-detail ul{margin:4px 0;padding-left:16px}.exp-detail li{margin:2px 0}
+.exp-tbl2{width:100%;border-collapse:collapse;font-size:11px}.exp-tbl2 td,.exp-tbl2 th{padding:4px 6px;border-bottom:1px solid var(--border);text-align:left}
+.exp-tbl2 th{font-size:9px;color:var(--dim);text-transform:uppercase}.exp-tbl2 td.n{text-align:right;font-family:var(--mono)}
+.exp-err-panel{border:1px solid var(--red-bd);background:var(--red-bg);border-radius:var(--r);padding:12px;margin-top:12px}
+@media (max-width:600px){.exp-row{grid-template-columns:minmax(0,1fr) 96px auto}.exp-row-type{display:none}.exp-row-status{grid-column:1/-1;order:5}
+.exp-row-err{grid-column:1/-1}.exp-tr{grid-template-columns:minmax(0,1fr) 72px 30px}.exp-tr .exp-opt-col{display:none}.exp-detail .exp-mob{display:block}
+.exp-pickers{flex-direction:column}.exp-picker{flex:0 0 auto}.exp-tbl2 .exp-opt-col{display:none}}`;
+  document.head.appendChild(st);
+}
+
+// ── layer ──────────────────────────────────────────────────────────────────
+async function _navRenderExposure(layer, opts) {
+  layer.title = 'Exposure';
+  if (!layer.exp) {
+    const p = exp_hashParse(layer.id || '');
+    layer.exp = { inputs: p.inputs, rejected: p.rejected, sort: { key: 'combined', dir: -1 }, hideLow: false, compare: false,
+      open: new Set(), limit: _EXP_PAGE };
+  }
+  _expStyleOnce();
+  const d = _expDepth(layer);
+  layer.el.innerHTML = _navShell(layer, `<div class="exp-root">
+    <h2>Exposure to companies</h2>
+    <div class="exp-note">Add the ETFs and shares you hold, each with its % of your portfolio. Meridian looks through each ETF's stored
+      holdings and shows the companies you reach, directly and via ETFs. Inputs stay in this page's link; nothing is saved.</div>
+    <section class="exp-card" aria-label="Inputs">
+      <div class="exp-pickers">
+        <div class="exp-picker"><label for="exp-etf-${d}">Add ETF</label>
+          <input id="exp-etf-${d}" class="exp-in" data-exp-picker="etf" type="search" autocomplete="off" placeholder="Ticker or fund name (e.g. EEM)"
+            role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="exp-etf-dd-${d}">
+          <div class="exp-dd" id="exp-etf-dd-${d}" role="listbox" aria-label="ETFs"></div></div>
+        <div class="exp-picker"><label for="exp-eq-${d}">Add company (direct holding)</label>
+          <input id="exp-eq-${d}" class="exp-in" data-exp-picker="eq" type="search" autocomplete="off" placeholder="Company name"
+            role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="exp-eq-dd-${d}">
+          <div class="exp-dd" id="exp-eq-dd-${d}" role="listbox" aria-label="Companies"></div></div>
+      </div>
+      <div class="exp-picker-note exp-note exp-dim" style="margin-top:6px"></div>
+      <div class="exp-rows" role="list" aria-label="Your inputs"></div>
+      <div class="exp-total" aria-live="polite"></div>
+      <div class="exp-msgs" role="alert"></div>
+    </section>
+    <section class="exp-results" aria-label="Results"></section>
+  </div>`);
+  _expWire(layer);
+  _expLoadEtfList().then(() => { if (layer.el.isConnected) _expRefresh(layer, { rows: false }); });
+  _expRefresh(layer);
+}
+
+function _expInputsKey(inputs) { return exp_hashSerialize(inputs); }
+
+// Model changed or a fetch settled: sync the hash, start missing fetches, re-render.
+function _expRefresh(layer, what) {
+  if (!layer.el.isConnected) return;
+  const st = layer.exp;
+  const id = _expInputsKey(st.inputs);
+  if (id !== layer.id) {
+    layer.id = id;
+    if (_navIsTop(layer) && history.state && history.state.maNav === _expDepth(layer)) history.replaceState(history.state, '', exp_hashFor(id));
+  }
+  _expEnsureFetches(layer);
+  if (!what || what.rows !== false) _expRenderRows(layer);
+  _expRenderResults(layer);
+}
+
+function _expEnsureFetches(layer) {
+  const st = layer.exp;
+  if (st.inputs.length > _EXP_MAX_INPUTS) return;   // over the limit: nothing is sent (budget §4.5)
+  const again = () => _expRefresh(layer, { rows: true });
+  for (const inp of st.inputs) {
+    if (_expType(inp) === 'etf') {
+      const s = _expSymbol(inp);
+      if (s && !_expLT.has(s) && !_expLTFail.has(s) && !_expLTFlight.has(s)) _expLookthrough(s).then(again);
+    } else if (_expType(inp) === 'eq' && !inp.name && !_expEnt.has(inp.entity_id)) {
+      _expEnt.set(inp.entity_id, { pending: true });
+      _expuiGet(`/api/entities/${Number(inp.entity_id)}`).then(r => {
+        const e = r && r.ok && r.data && r.data.entity;
+        _expEnt.set(inp.entity_id, e ? { name: e.legal_name || e.name || null, resolved_id: r.data.redirect ? Number(e.entity_id) : null } : { error: r ? r.status : 0 });
+        again();
+      });
+    }
+  }
+  for (const inp of st.inputs) {   // apply known names / merge redirects to hash-loaded company rows
+    if (_expType(inp) !== 'eq') continue;
+    const k = _expEnt.get(inp.entity_id);
+    if (k && k.name && !inp.name) inp.name = k.name;
+    if (k && k.resolved_id && k.resolved_id !== Number(inp.entity_id)) inp.resolved_id = k.resolved_id;
+  }
+  if (st.compare) {
+    for (const inp of st.inputs) {
+      if (_expType(inp) !== 'etf') continue;
+      const s = _expSymbol(inp), r = _expLT.get(s);
+      const pm = r && r.status === 200 && r.data && r.data.previous_month;
+      if (pm && !_expPrev.has(`${s}|${pm}`) && !_expPrevFlight.has(`${s}|${pm}`)) _expPrevious(s, pm).then(() => _expRefresh(layer, { rows: false }));
+    }
+  }
+}
+
+function _expLookthroughMap(inputs) {
+  const m = new Map();
+  for (const inp of inputs) {
+    if (_expType(inp) !== 'etf') continue;
+    const s = _expSymbol(inp);
+    const r = _expLT.get(s) || (_expLTFlight.has(s) ? undefined : _expLTFail.get(s));
+    if (r !== undefined) m.set(s, r);
+  }
+  return m;
+}
+function _expPreviousMap(inputs) {
+  const m = new Map();
+  for (const inp of inputs) {
+    if (_expType(inp) !== 'etf') continue;
+    const s = _expSymbol(inp), r = _expLT.get(s);
+    const pm = r && r.status === 200 && r.data && r.data.previous_month;
+    if (pm && _expPrev.has(`${s}|${pm}`)) m.set(s, _expPrev.get(`${s}|${pm}`));
+  }
+  return m;
+}
+
+// ── Screen A: rows, total, messages ─────────────────────────────────────────
+function _expRenderRows(layer) {
+  const root = layer.el, st = layer.exp;
+  const rowsEl = root.querySelector('.exp-rows');
+  if (!rowsEl) return;
+  const v = exp_validate(st.inputs);
+  const act = document.activeElement;
+  const focusKey = act && root.contains(act) && act.dataset ? act.dataset.expFocus : null;
+  const sel = focusKey && typeof act.selectionStart === 'number' ? [act.selectionStart, act.selectionEnd] : null;
+  const d = _expDepth(layer);
+  rowsEl.innerHTML = st.inputs.map((inp, i) => {
+    const t = _expType(inp);
+    const label = _expLabel(inp);
+    const name = t === 'eq' ? (inp.name ? '' : (_expEnt.get(inp.entity_id) || {}).error ? 'name unavailable' : 'loading name…')
+      : ((_expEtfList || []).find(e => e.ticker === _expSymbol(inp)) || {}).name || '';
+    const s = exp_rowStatus(inp, _expLT.get(_expSymbol(inp)) || (_expLTFlight.has(_expSymbol(inp)) ? undefined : _expLTFail.get(_expSymbol(inp))));
+    const errs = (v.rows[i] || { errors: [] }).errors.filter(e => e.code !== 'duplicate').map(e => e.message);
+    const merged = t === 'eq' && inp.resolved_id ? ` <span class="exp-badge warn">merged record → #${_esc(inp.resolved_id)}</span>` : '';
+    const lr = s.reason === 'too_large' ? _expOutcome(_expLT.get(_expSymbol(inp))) : null;
+    const reason = lr && lr.holdings_count != null ? ` (${Number(lr.holdings_count).toLocaleString('en-US')} holdings)` : '';
+    return `<div class="exp-row" role="listitem" aria-label="${_esc(label)}">
+      <span class="exp-row-type">${t === 'etf' ? 'ETF' : 'Company'}</span>
+      <span class="exp-row-label"><strong>${_esc(label)}</strong> <span class="exp-dim">${_esc(name)}</span>${merged}</span>
+      <span class="exp-row-status"><span class="exp-badge ${s.cls}">${s.status === 'pending' ? '<span class="exp-spin" aria-hidden="true"></span>' : ''}${_esc(s.text)}${_esc(reason)}</span>${s.retry ? ` <button class="exp-btn" data-exp-act="retry" data-sym="${_esc(_expSymbol(inp))}">Retry</button>` : ''}</span>
+      <label class="exp-alloc"><input data-exp-alloc="${i}" data-exp-focus="alloc-${i}" inputmode="decimal" value="${_esc(inp.allocation == null ? '' : String(inp.allocation))}"
+        aria-label="Edit allocation % for ${_esc(label)}" aria-invalid="${errs.length ? 'true' : 'false'}" aria-describedby="exp-err-${d}-${i}">%</label>
+      <button class="exp-btn" data-exp-act="remove" data-i="${i}" data-exp-focus="rm-${i}" aria-label="Remove ${_esc(label)}">Remove</button>
+      <div class="exp-row-err" id="exp-err-${d}-${i}">${errs.map(_esc).join(' · ')}</div>
+    </div>`;
+  }).join('');
+  const tot = root.querySelector('.exp-total');
+  const statusTxt = v.total_status === 'ok' ? 'OK (100%)' : v.total_status === 'under' ? `under (${_expF(v.unallocated)}% unallocated)`
+    : v.total_status === 'over' ? 'over: fix before results' : '';
+  tot.innerHTML = v.empty ? '' : `Total <strong>${_expF(v.total)}%</strong> · <span class="exp-badge ${v.total_status === 'over' ? 'err' : v.total_status === 'ok' ? 'ok' : 'warn'}">${_esc(statusTxt)}</span>
+    <span class="exp-dim"> · ${v.count} of ${_EXP_MAX_INPUTS} inputs</span>`;
+  const msgs = [];
+  if (st.rejected.length) msgs.push(`<div>Some inputs in the link could not be read and were left out: ${_esc(st.rejected.join(', '))}</div>`);
+  for (const e of v.errors) {
+    if (e.code === 'duplicate') {
+      const dup = v.duplicates.find(x => x.indices.join() === (e.indices || []).join());
+      msgs.push(`<div>${_esc(e.message)} <button class="exp-btn primary" data-exp-act="combine" data-idx="${_esc((e.indices || []).join(','))}">${_esc(dup ? dup.combine_label : 'Combine')}</button></div>`);
+    } else msgs.push(`<div>${_esc(e.message)}</div>`);
+  }
+  root.querySelector('.exp-msgs').innerHTML = msgs.join('');
+  const full = st.inputs.length >= _EXP_MAX_INPUTS;
+  root.querySelectorAll('[data-exp-picker]').forEach(p => { p.disabled = full; });
+  const pn = root.querySelector('.exp-picker-note');
+  if (pn) pn.textContent = full ? `At most ${_EXP_MAX_INPUTS} inputs.` : (_expEtfListErr ? "Couldn't load the ETF list; type a ticker and press Enter." : '');
+  if (focusKey) {
+    const el = rowsEl.querySelector(`[data-exp-focus="${focusKey}"]`) || root.querySelector(`[data-exp-focus="${focusKey}"]`);
+    if (el) { el.focus(); if (sel && el.setSelectionRange) try { el.setSelectionRange(sel[0], sel[1]); } catch (e) { /* ignore */ } }
+  }
+}
+
+function _expAdd(layer, inp) {
+  const st = layer.exp;
+  if (st.inputs.length >= _EXP_MAX_INPUTS) return;
+  const v = exp_validate(st.inputs);
+  const rest = _expCents(100 - (v.total || 0));
+  inp.allocation = rest > 0 && rest <= 100 ? String(rest) : '';
+  st.inputs.push(inp);
+  st.limit = _EXP_PAGE;
+  _expRefresh(layer);
+  const el = layer.el.querySelector(`[data-exp-focus="alloc-${st.inputs.length - 1}"]`);
+  if (el) { el.focus(); el.select && el.select(); }
+}
+
+// ── pickers ────────────────────────────────────────────────────────────────
+function _expEtfOptions(q) {
+  const s = String(q || '').trim().toUpperCase();
+  if (!s) return [];
+  const list = _expEtfList || [];
+  const starts = list.filter(e => e.ticker.startsWith(s));
+  const has = list.filter(e => !e.ticker.startsWith(s) && (e.ticker.includes(s) || e.name.toUpperCase().includes(s)));
+  const out = [...starts, ...has].slice(0, 30);
+  if (_EXP_SYM_RE.test(s) && !out.length) out.push({ ticker: s, name: 'not in the ETF list', hasNport: null, typed: true });
+  return out;
+}
+function _expEtfBadge(e) {
+  const r = _expLT.get(e.ticker);
+  if (r) { const s = exp_rowStatus({ type: 'etf', symbol: e.ticker }, r); return `<span class="exp-badge ${s.cls}">${_esc(s.text)}</span>`; }
+  if (e.hasNport === 0 || e.hasNport === false) return '<span class="exp-badge warn">not supported: no stored holdings</span>';
+  if (e.typed) return '<span class="exp-badge">checked when added</span>';
+  return '<span class="exp-badge ok">holdings available</span>';
+}
+function _expOpenDd(input, dd, html) {
+  dd.innerHTML = html;
+  const open = Boolean(html);
+  dd.classList.toggle('open', open);
+  input.setAttribute('aria-expanded', open ? 'true' : 'false');
+  input.removeAttribute('aria-activedescendant');
+}
+function _expMoveSel(input, dd, step) {
+  const opts = [...dd.querySelectorAll('.exp-opt')];
+  if (!opts.length) return;
+  let i = opts.findIndex(o => o.getAttribute('aria-selected') === 'true');
+  opts.forEach(o => o.setAttribute('aria-selected', 'false'));
+  i = i < 0 ? (step > 0 ? 0 : opts.length - 1) : (i + step + opts.length) % opts.length;
+  opts[i].setAttribute('aria-selected', 'true');
+  input.setAttribute('aria-activedescendant', opts[i].id);
+  opts[i].scrollIntoView && opts[i].scrollIntoView({ block: 'nearest' });
+}
+
+function _expWire(layer) {
+  const root = layer.el, st = layer.exp, d = _expDepth(layer);
+  let eqTimer = null, eqSeq = 0;
+  const etfIn = root.querySelector('[data-exp-picker="etf"]'), etfDd = root.querySelector(`#exp-etf-dd-${d}`);
+  const eqIn = root.querySelector('[data-exp-picker="eq"]'), eqDd = root.querySelector(`#exp-eq-dd-${d}`);
+  const renderEtf = () => {
+    const opts = _expEtfOptions(etfIn.value);
+    _expOpenDd(etfIn, etfDd, opts.map((e, i) => `<div class="exp-opt" role="option" id="exp-etf-o-${d}-${i}" aria-selected="false" data-sym="${_esc(e.ticker)}">
+      <b>${_esc(e.ticker)}</b><span class="exp-dim" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(e.name)}</span>${_expEtfBadge(e)}</div>`).join(''));
+  };
+  const pickEtf = sym => { etfIn.value = ''; _expOpenDd(etfIn, etfDd, ''); _expAdd(layer, { type: 'etf', symbol: sym, allocation: '' }); };
+  const pickEq = o => { eqIn.value = ''; _expOpenDd(eqIn, eqDd, ''); _expAdd(layer, { type: 'eq', entity_id: Number(o.dataset.id), name: o.dataset.name || null, allocation: '' }); };
+  etfIn.addEventListener('input', () => { if (!_expEtfList && !_expEtfListErr) _expLoadEtfList().then(renderEtf); renderEtf(); });
+  eqIn.addEventListener('input', () => {
+    clearTimeout(eqTimer);
+    const q = eqIn.value.trim();
+    if (q.length < 2) { _expOpenDd(eqIn, eqDd, ''); return; }
+    eqTimer = setTimeout(async () => {
+      const seq = ++eqSeq;
+      _expOpenDd(eqIn, eqDd, '<div class="exp-opt exp-dim" role="option" aria-disabled="true"><span class="exp-spin"></span>Searching…</div>');
+      const r = await _expuiGet(`/api/entities/search?q=${encodeURIComponent(q)}`);
+      if (seq !== eqSeq || !root.isConnected) return;
+      const rows = (r.ok && r.data && r.data.results) || [];
+      _expOpenDd(eqIn, eqDd, !r.ok ? `<div class="exp-opt exp-dim" role="option" aria-disabled="true">Couldn't reach Corporate Atlas — try again</div>`
+        : !rows.length ? '<div class="exp-opt exp-dim" role="option" aria-disabled="true">No companies found</div>'
+        : rows.slice(0, 20).map((x, i) => `<div class="exp-opt" role="option" id="exp-eq-o-${d}-${i}" aria-selected="false" data-id="${Number(x.entity_id)}" data-name="${_esc(x.legal_name || x.name || '')}">
+            <span style="flex:1;min-width:0">${_esc(x.legal_name || x.name || '#' + x.entity_id)}</span><span class="exp-dim">${_esc([x.country, x.type].filter(Boolean).join(' · '))} · #${Number(x.entity_id)}</span></div>`).join(''));
+    }, 250);
+  });
+  const keys = (input, dd, pick) => e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (!dd.classList.contains('open') && input === etfIn) renderEtf(); _expMoveSel(input, dd, e.key === 'ArrowDown' ? 1 : -1); }
+    else if (e.key === 'Enter') {
+      const o = dd.querySelector('.exp-opt[aria-selected="true"]') || dd.querySelector('.exp-opt[data-sym],.exp-opt[data-id]');
+      if (o && (o.dataset.sym || o.dataset.id)) { e.preventDefault(); pick(o); }
+    } else if (e.key === 'Escape') { _expOpenDd(input, dd, ''); }
+  };
+  etfIn.addEventListener('keydown', keys(etfIn, etfDd, o => pickEtf(o.dataset.sym)));
+  eqIn.addEventListener('keydown', keys(eqIn, eqDd, pickEq));
+  etfDd.addEventListener('mousedown', e => { const o = e.target.closest('.exp-opt[data-sym]'); if (o) { e.preventDefault(); pickEtf(o.dataset.sym); } });
+  eqDd.addEventListener('mousedown', e => { const o = e.target.closest('.exp-opt[data-id]'); if (o) { e.preventDefault(); pickEq(o); } });
+  etfIn.addEventListener('blur', () => setTimeout(() => _expOpenDd(etfIn, etfDd, ''), 120));
+  eqIn.addEventListener('blur', () => setTimeout(() => _expOpenDd(eqIn, eqDd, ''), 120));
+
+  root.addEventListener('input', e => {
+    const i = e.target && e.target.dataset ? e.target.dataset.expAlloc : undefined;
+    if (i === undefined) return;
+    const inp = st.inputs[Number(i)];
+    if (!inp) return;
+    inp.allocation = e.target.value.trim();
+    _expRefresh(layer);
+  });
+  root.addEventListener('change', e => {
+    const t = e.target;
+    if (t.dataset.expToggle === 'hideLow') { st.hideLow = t.checked; _expRenderResults(layer); }
+    else if (t.dataset.expToggle === 'compare') { st.compare = t.checked; _expRefresh(layer, { rows: false }); }
+  });
+  root.addEventListener('click', e => {
+    const b = e.target.closest('[data-exp-act]');
+    if (!b || !root.contains(b)) return;
+    const a = b.dataset.expAct;
+    if (a === 'remove') { st.inputs.splice(Number(b.dataset.i), 1); _expRefresh(layer); const nx = root.querySelector(`[data-exp-focus="rm-${Math.min(Number(b.dataset.i), st.inputs.length - 1)}"]`) || etfIn; nx.focus(); }
+    else if (a === 'combine') { st.inputs = exp_combine(st.inputs, b.dataset.idx.split(',').map(Number)); _expRefresh(layer); }
+    else if (a === 'retry') { const s = b.dataset.sym; _expLTFail.delete(s); _expRefresh(layer); }
+    else if (a === 'retry-all') { for (const inp of st.inputs) if (_expType(inp) === 'etf') _expLTFail.delete(_expSymbol(inp)); _expRefresh(layer); }
+    else if (a === 'retry-prev') { _expPrev.delete(b.dataset.key); _expRefresh(layer, { rows: false }); }
+    else if (a === 'sort') {
+      const k = b.dataset.key;
+      st.sort = st.sort.key === k ? { key: k, dir: -st.sort.dir } : { key: k, dir: k === 'name' ? 1 : -1 };
+      _expRenderResults(layer);
+      const h = root.querySelector(`[data-exp-act="sort"][data-key="${k}"]`); if (h) h.focus();
+    }
+    else if (a === 'more') { st.limit += _EXP_PAGE; _expRenderResults(layer); }
+    else if (a === 'expand') {
+      const id = Number(b.dataset.id);
+      if (st.open.has(id)) st.open.delete(id); else { st.open.add(id); _expLoadEvidence(layer, id); }
+      _expRenderResults(layer);
+      const h = root.querySelector(`[data-exp-act="expand"][data-id="${id}"]`); if (h) h.focus();
+    }
+    else if (a === 'entity') { e.preventDefault(); _navOpen('entity', Number(b.dataset.id), { history: 'push', from: `exposure:${layer.id || ''}`, lastName: b.dataset.name || '' }); }
+    else if (a === 'instrument') { e.preventDefault(); _navOpen('instrument', b.dataset.key, { history: 'push', from: `exposure:${layer.id || ''}` }); }
+    else if (a === 'etf') {
+      e.preventDefault();
+      if (typeof openEtfDetailView === 'function') openEtfDetailView(b.dataset.sym);   // ma-etf.js global, if loaded (no import)
+    }
+  });
+}
+
+function _expLoadEvidence(layer, id) {
+  if (_expEvid.has(id)) return;
+  const ev = { etf: null, panels: null };
+  _expEvid.set(id, ev);
+  _expuiGet(`/api/entities/${id}/etf-exposure`).then(r => { ev.etf = r.ok && r.data ? r.data : { error: true }; if (layer.el.isConnected) _expRenderResults(layer); });
+  _expuiGet(`/api/entities/${id}/issuer-panels`).then(r => { ev.panels = r.ok && r.data ? r.data : { error: true }; if (layer.el.isConnected) _expRenderResults(layer); });
+}
+
+// ── Screen B ───────────────────────────────────────────────────────────────
+function _expRenderResults(layer) {
+  const root = layer.el, st = layer.exp;
+  const out = root.querySelector('.exp-results');
+  if (!out) return;
+  const lts = _expLookthroughMap(st.inputs);
+  const res = exp_compute(st.inputs, lts, st.compare ? { previous: _expPreviousMap(st.inputs) } : undefined);
+  layer.expResult = res;
+  const view = exp_viewState(res);
+  out.dataset.expView = view;
+  if (view === 'empty') {
+    out.innerHTML = `<div class="exp-card exp-note">No inputs yet. Add an ETF or a company above, then give each one its % of your portfolio.
+      Allocations may total less than 100%; the rest is shown as unallocated. Over 100% is blocked.</div>`;
+    return;
+  }
+  if (view === 'invalid') {
+    const rules = [...new Set([...res.validation.errors.map(e => e.message), ...res.validation.rows.flatMap(r => r.errors.map(e => e.message))])];
+    out.innerHTML = `<div class="exp-card"><strong>Results are hidden until the inputs are fixed.</strong><ul class="exp-note">${rules.map(m => `<li>${_esc(m)}</li>`).join('')}</ul></div>`;
+    return;
+  }
+  if (view === 'loading') {
+    const pend = res.inputs.filter(r => r.status === 'pending').map(r => r.label);
+    out.innerHTML = `<div class="exp-card" aria-busy="true"><span class="exp-spin" aria-hidden="true"></span>Loading stored holdings for ${_esc(pend.join(', '))}… Results appear once every input has loaded.</div>`;
+    return;
+  }
+  if (view === 'total_failure') {
+    out.innerHTML = `<div class="exp-err-panel" role="alert"><strong>Couldn't load holdings for any ETF input.</strong>
+      <div class="exp-note">Corporate Atlas could not be reached, or every look-through failed. No numbers are shown.</div>
+      <button class="exp-btn primary" style="margin-top:8px" data-exp-act="retry-all">Retry</button></div>`;
+    return;
+  }
+  out.innerHTML = [_expHeaderHtml(res), _expReconHtml(res), _expTableHtml(layer, res), _expSharedHtml(layer, res),
+    _expGapsHtml(layer, res), _expCompareHtml(layer, res)].join('');
+}
+
+function _expHeaderHtml(res) {
+  const f = exp_viewFlags(res);
+  const ins = res.inputs.map(r => `<span class="exp-chip">${_esc(r.label)} ${_expF(r.allocation)}%${r.type === 'eq' ? ' · direct' : ''}</span>`).join('');
+  const dates = res.inputs.map(r => {
+    if (r.type === 'eq') return `<span class="exp-chip">${_esc(r.label)} · your stated allocation</span>`;
+    if (r.status !== 'computed') return `<span class="exp-chip warn">${_esc(r.label)} · ${_esc(r.message)}</span>`;
+    const stale = f.stale.includes(r.symbol);
+    return `<span class="exp-chip${stale ? ' warn' : ''}">${_esc(r.symbol)} · ${_esc(exp_monthLabel(r.report_month))} · filed ${_esc(_navFmtDate(r.filing_date) || '—')} · source SEC N-PORT${stale ? ' · stale' : ''}</span>`;
+  }).join('');
+  const etfMonths = res.months.etfs;
+  const warn = [];
+  if (f.mixed) warn.push(`<span class="exp-chip warn">Mixed months: ${_esc([...new Set(etfMonths.map(m => m.label))].join(', '))}. Each ETF uses its own latest stored month.</span>`);
+  if (f.stale.length) warn.push(`<span class="exp-chip warn">Stale: ${_esc(f.stale.join(', '))} — more than 3 months older than the newest stored month here (${_esc(exp_monthLabel(res.months.newest_stored_month))})</span>`);
+  if (f.not_loaded.length) warn.push(`<span class="exp-chip warn">Partial result: ${_esc(f.not_loaded.join(', '))} not loaded — see Gaps</span>`);
+  const comp = res.inputs.map(r => r.computed_at).filter(Boolean).sort()[0];
+  return `<div class="exp-card">
+    <div class="exp-note">Computed in your browser on ${_esc(_expToday())} from stored holdings; not live positions.${comp ? ` Company mappings as of ${_esc(_navFmtDate(comp))}.` : ''}</div>
+    <div class="exp-chips" aria-label="Inputs">${ins}</div>
+    <div class="exp-chips" aria-label="Holdings dates"><span class="exp-dim" style="font-size:10px;align-self:center">Holdings dates:</span>${dates}</div>
+    ${warn.length ? `<div class="exp-chips" role="note">${warn.join('')}</div>` : ''}</div>`;
+}
+
+const _EXP_RECON_LINES = [
+  ['companies', 'Mapped companies', 'var(--blue)'],
+  ['unmapped', 'Unmapped holdings', 'var(--amber)'],
+  ['no_identifier', 'No-identifier holdings', 'var(--amber-bd)'],
+  ['redirect_unresolved', 'Merge redirect unresolved', 'var(--muted)'],
+  ['residual', 'Fund residual (not reported as holdings)', 'var(--dim)'],
+  ['unsupported', 'Unsupported inputs', 'var(--red)'],
+  ['not_loaded', 'Not loaded', 'var(--red-bd)'],
+  ['unallocated', 'Unallocated', 'var(--border)'],
+];
+function _expReconHtml(res) {
+  const rc = res.reconciliation;
+  const pos = _EXP_RECON_LINES.reduce((s, [k]) => s + Math.max(0, rc[k]), 0) || 1;
+  const bar = _EXP_RECON_LINES.filter(([k]) => rc[k] > 0).map(([k, l, c]) =>
+    `<span style="width:${(rc[k] / pos * 100).toFixed(3)}%;background:${c}" title="${_esc(l)} ${_expPct(rc[k])}"></span>`).join('');
+  const leg = _EXP_RECON_LINES.map(([k, l, c]) => `<div><span><i style="background:${c}"></i>${_esc(l)}</span><span class="exp-num">${_expPct(rc[k])}</span></div>`).join('');
+  const lc = res.low_confidence;
+  return `<div class="exp-card"><h3 style="margin-top:0">Where 100% of your portfolio goes</h3>
+    <div class="exp-bar" role="img" aria-label="Reconciliation bar; the parts add to ${_expF(rc.total)}%">${bar}</div>
+    <div class="exp-leg">${leg}<div><strong>Sum</strong><strong class="exp-num">${_expPct(rc.total)}${rc.ok ? ' ✓' : ` (differs by ${_expF(rc.difference)})`}</strong></div></div>
+    <div class="exp-note" style="margin-top:6px">Nothing is redistributed: unknown, unmapped, unsupported and unallocated parts keep their own lines. Negative values (derivatives, shorts, cash offsets) are kept as reported.
+      ${lc && lc.share_pct != null ? `<br><strong>${_expF(lc.share_pct)}%</strong> of ETF-derived company exposure rests on Low-confidence mappings.` : ''}</div></div>`;
+}
+
+function _expSorted(list, sort) {
+  const k = sort.key, dir = sort.dir;
+  const val = c => k === 'name' ? String(c.name || '').toLowerCase() : k === 'band' ? (c.band ? _EXP_BAND_RANK[c.band] : -1) : c[k];
+  return list.slice().sort((a, b) => { const x = val(a), y = val(b); if (x < y) return -dir; if (x > y) return dir; return _expCompanySort(a, b); });
+}
+
+function _expTableHtml(layer, res) {
+  const st = layer.exp;
+  const all = _expSorted(res.companies, st.sort);
+  const hidden = st.hideLow ? all.filter(c => c.band === 'low') : [];
+  const list = st.hideLow ? all.filter(c => c.band !== 'low') : all;
+  const shown = list.slice(0, st.limit);
+  const th = (k, l, cls) => {
+    const on = st.sort.key === k;
+    return `<span class="${cls || ''}" role="columnheader" aria-sort="${on ? (st.sort.dir > 0 ? 'ascending' : 'descending') : 'none'}">
+      <button class="exp-th" data-exp-act="sort" data-key="${k}">${l}${on ? (st.sort.dir > 0 ? ' ▲' : ' ▼') : ''}</button></span>`;
+  };
+  const rows = shown.map(c => {
+    const open = st.open.has(c.entity_id);
+    const conf = c.band ? `<span class="exp-badge ${c.band === 'low' ? 'warn' : 'ok'}">${_expBandLabel(c.band)}${c.contributions.some(x => (x.tiers || []).includes('heuristic')) ? ' (heuristic)' : ''}</span>` : '<span class="exp-dim">— direct</span>';
+    const notes = c.notes.length ? ` <span class="exp-badge warn">${_esc(c.notes.join(' · '))}</span>` : '';
+    return `<div class="exp-tr" role="row">
+      <span role="cell" style="min-width:0;overflow:hidden;text-overflow:ellipsis"><a class="exp-link" href="${_esc(_expEntityHash(layer, c.entity_id))}" data-exp-act="entity" data-id="${c.entity_id}" data-name="${_esc(c.name)}">${_esc(c.name)}</a>${notes}</span>
+      <span role="cell" class="exp-num"><strong>${_expPct(c.combined)}</strong></span>
+      <span role="cell" class="exp-num exp-opt-col">${_expF(c.direct)}</span>
+      <span role="cell" class="exp-num exp-opt-col">${_expF(c.indirect)}</span>
+      <span role="cell" class="exp-num"><button class="exp-btn" style="padding:2px 6px" data-exp-act="expand" data-id="${c.entity_id}" aria-expanded="${open}" aria-label="${c.k} inputs reach ${_esc(c.name)}; ${open ? 'hide' : 'show'} contributions">${c.k} ${open ? '▾' : '▸'}</button></span>
+      <span role="cell" class="exp-opt-col">${conf}</span>
+      ${open ? _expDetailHtml(layer, res, c, conf) : ''}
+    </div>`;
+  }).join('');
+  const hiddenSum = hidden.reduce((s, c) => s + c.combined, 0);
+  return `<div class="exp-card"><h3 style="margin-top:0">Companies (${res.companies.length})</h3>
+    <label class="exp-note" style="display:inline-flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" data-exp-toggle="hideLow" ${st.hideLow ? 'checked' : ''}>
+      Hide low-confidence (display only; numbers above are unchanged)</label>
+    ${hidden.length ? `<div class="exp-chip warn" style="margin-top:6px;display:inline-block">Low-confidence (hidden): ${hidden.length} companies · ${_expPct(hiddenSum)} combined — still counted in every total</div>` : ''}
+    <div role="table" aria-label="Companies by combined exposure" style="margin-top:8px">
+      <div class="exp-tr head" role="row">${th('name', 'Company')}${th('combined', 'Combined %', 'exp-num')}${th('direct', 'Direct %', 'exp-num exp-opt-col')}${th('indirect', 'Via ETFs %', 'exp-num exp-opt-col')}${th('k', 'Inputs', 'exp-num')}${th('band', 'Mapping confidence', 'exp-opt-col')}</div>
+      ${rows || '<div class="exp-note" style="padding:8px 0">No companies to show.</div>'}
+    </div>
+    ${list.length > shown.length ? `<button class="exp-btn" style="margin-top:8px" data-exp-act="more">Show ${Math.min(_EXP_PAGE, list.length - shown.length)} more (${list.length - shown.length} not shown)</button>` : ''}
+  </div>`;
+}
+
+// §2 Screen B §5 (drill-down) + §6 evidence labels. Mobile shows the hidden columns here too.
+function _expDetailHtml(layer, res, c, conf) {
+  const lines = c.contributions.map(x => {
+    if (x.kind === 'direct') return `<li>${_esc(x.label)} — direct holding: your stated allocation <strong>${_expPct(x.contribution)}</strong></li>`;
+    const inp = res.inputs.find(r => r.index === x.input) || {};
+    const ev = `<a class="exp-link" href="#" data-exp-act="etf" data-sym="${_esc(x.symbol)}" title="Opens ETF Holdings, which closes this result; the browser's Forward button returns to it">Holdings ${_esc(exp_monthLabel(inp.report_month))}, filed ${_esc(_navFmtDate(inp.filing_date) || '—')}</a>`;
+    return `<li><strong>${_esc(x.symbol)}</strong>: ${_expPct(x.allocation)} allocation × ${_expPct(x.fund_weight)} fund weight = <strong>${_expPct(x.contribution)}</strong>
+      · ${x.holdings} holding row${x.holdings === 1 ? '' : 's'} · tier ${_esc((x.tiers || []).map(_navSourceLabel).join(', ') || '—')} · ${_esc(_expBandLabel(x.band))}${x.merged ? ' · merged record' : ''} · ${ev}</li>`;
+  }).join('');
+  const href = _esc(_expEntityHash(layer, c.entity_id));
+  const evd = _expEvid.get(c.entity_id) || {};
+  const months = !evd.etf ? 'months loading…' : evd.etf.error ? 'months unavailable'
+    : evd.etf.months_min ? `months ${exp_monthLabel(evd.etf.months_min)}–${exp_monthLabel(evd.etf.months_max)}` : 'no months recorded for this company';
+  const own = evd.panels && !evd.panels.error && Array.isArray(evd.panels.ownership) && evd.panels.ownership[0] ? evd.panels.ownership[0].report_period : null;
+  const period = !evd.panels ? 'quarter loading…' : own ? `quarter ending ${own}` : 'no 13F rows stored for this company';
+  const link = l => `<li><a class="exp-link" href="${href}" data-exp-act="entity" data-id="${c.entity_id}" data-name="${_esc(c.name)}">${_esc(l)}</a></li>`;
+  return `<div class="exp-detail" role="cell">
+    <div class="exp-mob">Direct ${_expPct(c.direct)} · via ETFs ${_expPct(c.indirect)} · ${conf}</div>
+    <strong>Contributions</strong> <span class="exp-dim">(allocation × fund weight = contribution)</span><ul>${lines}</ul>
+    <strong>Evidence on the company page</strong><ul>
+      ${link('Instruments mapped to this issuer; mapping tier shown')}
+      ${link(`Funds in Meridian's N-PORT set (241 of 264 listed ETFs have stored holdings); ${months}; not all ETFs`)}
+      ${link(`13F-HR filers in Meridian's set, ${period}; US-listed long positions only; not total ownership`)}
+      ${link('SEC-registered offerings parsed for 30 configured issuers since 2024-01-01; final records only')}
+    </ul></div>`;
+}
+
+function _expSharedHtml(layer, res) {
+  const sh = res.shared.slice(0, 15).map(c => `<tr><td><a class="exp-link" href="${_esc(_expEntityHash(layer, c.entity_id))}" data-exp-act="entity" data-id="${c.entity_id}" data-name="${_esc(c.name)}">${_esc(c.name)}</a></td>
+    <td class="n">${c.k}</td><td class="n">${_expPct(c.combined)}</td></tr>`).join('');
+  const ov = res.overlap.map(o => `<tr><td>${_esc(o.a)} × ${_esc(o.b)}</td><td class="n">${_expPct(o.overlap)}</td><td class="n">${o.companies}</td></tr>`).join('');
+  return `<div class="exp-card"><h3 style="margin-top:0">Shared exposure</h3>
+    <div class="exp-note">${res.shared.length} compan${res.shared.length === 1 ? 'y is' : 'ies are'} reached by 2 or more inputs.${res.shared.length > 15 ? ' Top 15 shown.' : ''}</div>
+    ${sh ? `<table class="exp-tbl2"><thead><tr><th>Company</th><th>Inputs</th><th>Combined</th></tr></thead><tbody>${sh}</tbody></table>` : ''}
+    ${ov ? `<div class="exp-note" style="margin-top:10px"><strong>ETF overlap by company</strong> — Σ min(fund weight) over companies both funds hold. This differs from the ETF page's overlap, which is by security.</div>
+      <table class="exp-tbl2"><thead><tr><th>ETF pair</th><th>Overlap by company</th><th>Companies</th></tr></thead><tbody>${ov}</tbody></table>` : ''}</div>`;
+}
+
+function _expGapsHtml(layer, res) {
+  const g = res.gaps;
+  const top = g.unmapped_top.slice(0, 25).map(u => `<tr><td>${_esc(u.name || '—')}</td><td>${_esc(u.symbol)}</td>
+    <td class="exp-opt-col" style="font-family:var(--mono)">${_esc(u.key || 'no identifier')}</td><td class="n">${_expPct(u.fund_weight)}</td><td class="n">${_expPct(u.contribution)}</td>
+    <td>${u.key ? `<a class="exp-link" href="${_esc(_navHash('instrument', u.key, `exposure:${layer.id || ''}`))}" data-exp-act="instrument" data-key="${_esc(u.key)}">Not mapped to a company</a>` : '<span class="exp-dim">Not mapped to a company</span>'}</td></tr>`).join('');
+  const why = r => r.reason === 'too_large'
+    ? `not supported: too large for live look-through (${r.holdings_count != null ? `${Number(r.holdings_count).toLocaleString('en-US')} holdings` : 'fund'}${r.limit === 'size' ? '; response size over the limit' : r.limit === 'rows' ? '; row limit' : ''})`
+    : r.message;
+  const uns = g.unsupported.map(r => `<li><strong>${_esc(r.label)}</strong> ${_expPct(r.allocation)} — ${_esc(why(r))}</li>`).join('');
+  const nl = g.not_loaded.map(r => `<li><strong>${_esc(r.label)}</strong> ${_expPct(r.allocation)} — not loaded – retry <button class="exp-btn" data-exp-act="retry" data-sym="${_esc(r.symbol)}">Retry</button></li>`).join('');
+  return `<div class="exp-card"><h3 style="margin-top:0">Gaps</h3>
+    ${top ? `<div class="exp-note">Largest holdings not mapped to a company (by contribution to your portfolio; up to 25 per fund are reported).</div>
+      <table class="exp-tbl2"><thead><tr><th>Holding</th><th>ETF</th><th class="exp-opt-col">Identifier</th><th>Fund weight</th><th>Of portfolio</th><th></th></tr></thead><tbody>${top}</tbody></table>`
+      : '<div class="exp-note">No unmapped holdings reported.</div>'}
+    ${uns ? `<div class="exp-note" style="margin-top:10px"><strong>Unsupported inputs</strong> (their allocation is on the unsupported line)</div><ul class="exp-note">${uns}</ul>` : ''}
+    ${nl ? `<div class="exp-note" style="margin-top:10px"><strong>Load errors</strong> (their allocation is on the not-loaded line)</div><ul class="exp-note">${nl}</ul>` : ''}</div>`;
+}
+
+function _expCompareHtml(layer, res) {
+  const st = layer.exp;
+  const hasEtf = res.inputs.some(r => r.status === 'computed');
+  if (!hasEtf) return '';
+  let body = '';
+  if (st.compare && res.delta) {
+    const etfs = res.delta.etfs.map(e => {
+      if (e.status === 'compared') return `<li><strong>${_esc(e.symbol)}</strong>: ${_esc(e.label)}</li>`;
+      if (e.status === 'no_previous') return `<li><strong>${_esc(e.symbol)}</strong>: ${_esc(exp_monthLabel(e.current))} — no earlier stored month</li>`;
+      if (e.status === 'pending') return `<li><strong>${_esc(e.symbol)}</strong>: <span class="exp-spin" aria-hidden="true"></span>loading ${_esc(exp_monthLabel(e.previous))}…</li>`;
+      return `<li><strong>${_esc(e.symbol)}</strong>: ${_esc(exp_monthLabel(e.previous))} ${_esc(e.message)} ${e.status === 'not_loaded' ? `<button class="exp-btn" data-exp-act="retry-prev" data-key="${_esc(`${e.symbol}|${e.previous}`)}">Retry</button>` : ''}</li>`;
+    }).join('');
+    const rows = res.delta.companies.slice(0, 25).map(c => `<tr><td><a class="exp-link" href="${_esc(_expEntityHash(layer, c.entity_id))}" data-exp-act="entity" data-id="${c.entity_id}" data-name="${_esc(c.name)}">${_esc(c.name)}</a>${c.status !== 'changed' ? ` <span class="exp-badge warn">${c.status}</span>` : ''}</td>
+      <td class="n exp-opt-col">${_expF(c.previous)}</td><td class="n exp-opt-col">${_expF(c.current)}</td><td class="n"><strong>${c.delta > 0 ? '+' : ''}${_expF(c.delta)}</strong></td></tr>`).join('');
+    body = `<ul class="exp-note">${etfs}</ul>${rows ? `<div class="exp-note">Largest changes in via-ETF exposure (percentage points of your portfolio; direct holdings have no change). Top 25 by size.</div>
+      <table class="exp-tbl2"><thead><tr><th>Company</th><th class="exp-opt-col">Previous</th><th class="exp-opt-col">Latest</th><th>Δ</th></tr></thead><tbody>${rows}</tbody></table>` : ''}`;
+  }
+  return `<div class="exp-card"><h3 style="margin-top:0">Period comparison</h3>
+    <label class="exp-note" style="display:inline-flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" data-exp-toggle="compare" ${st.compare ? 'checked' : ''}>
+      Compare with previous stored month</label>${body}</div>`;
+}
+
+// ── routing hooks: claim #/exposure before the index.html router (it does not parse this hash) ─────────
+function _expOpenTyped() {
+  _navOpen('exposure', exp_hashOf(location.hash) || '', { history: 'replace' });
+}
+let _expSkipHashchange = null;
+let _expColdHash = null;
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function' && typeof location !== 'undefined' && typeof history !== 'undefined') {
+  if (exp_hashOf(location.hash) !== null) {
+    // Cold deep link: hide the hash from the router's cold dispatch, then open the layer over Home (depth 0) like N7-13.
+    _expColdHash = location.hash;
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+  window.addEventListener('popstate', e => {
+    if (exp_hashOf(location.hash) === null) return;
+    e.stopImmediatePropagation();
+    _expSkipHashchange = location.hash;
+    const depth = e.state && Number.isInteger(e.state.maNav) ? e.state.maNav : null;
+    if (depth === null) { _expOpenTyped(); return; }
+    while (_navStack.length > depth) _navStack.pop().el.remove();
+    if (depth === _navStack.length + 1) _navOpen('exposure', exp_hashOf(location.hash) || '', { history: 'none' });
+  });
+  window.addEventListener('hashchange', e => {
+    if (exp_hashOf(location.hash) === null) return;
+    e.stopImmediatePropagation();
+    if (_expSkipHashchange === location.hash) { _expSkipHashchange = null; return; }
+    _expOpenTyped();
+  });
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    // Two task hops: the router's own cold check (DOMContentLoaded → setTimeout 0) must run first and see no hash,
+    // or it would call #/exposure invalid and strip it from the URL.
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => setTimeout(() => {
+      if (!_expColdHash) return;
+      const h = _expColdHash; _expColdHash = null;
+      history.replaceState({ maNav: 0 }, '', location.pathname + location.search);
+      _navOpen('exposure', exp_hashOf(h) || '', { history: 'push' });
+    }, 0), 0));
+  }
+}
+// ===== end EXP UI (MA-NOV-EXP.W3) =====
