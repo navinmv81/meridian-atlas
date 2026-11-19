@@ -122,6 +122,35 @@ const F1_LT = { AAA: ok200(A), BBB: ok200(B) };
   check('T1 exactly 3 months behind is not stale', JSON.stringify(st2.months.stale) === '["BBB"]', st2.months.stale);
 }
 
+// ===== T6 — stale vs the newest stored month from the route (MA-NOV-EXP.W1R5) ======================
+{
+  // IYLD-shaped body: Jan 2026, the route says the newest stored month anywhere is Aug 2026.
+  const IY = { ...A, symbol: 'IYLD', report_month: '2026-01', newest_stored_month: '2026-08' };
+  const one = [{ type: 'etf', symbol: 'IYLD', allocation: 100 }];
+  const t6 = plain(exp_compute(one, { IYLD: ok200(IY) }));
+  check('T6 IYLD-only → stale warning', JSON.stringify(t6.months.stale) === '["IYLD"]' && t6.months.etfs[0].months_behind === 7, t6.months);
+  check('T6 reference month from route', t6.months.newest_stored_month === '2026-08' && t6.months.newest_source === 'route', t6.months);
+  // Fresh-only portfolio: months within 3 of the newest stored → no warning.
+  const fresh = plain(exp_compute(F1_INPUTS.slice(0, 2).map((x, i) => ({ ...x, allocation: 50 })),
+    { AAA: ok200({ ...A, newest_stored_month: '2026-05' }), BBB: ok200({ ...B, newest_stored_month: '2026-05' }) }));
+  check('fresh-only (Apr, Feb vs newest May) → no stale warning', fresh.months.stale.length === 0 && fresh.months.newest_stored_month === '2026-05', fresh.months);
+  // Max over loaded inputs: one body newer than the other.
+  const mx = plain(exp_compute(F1_INPUTS, { AAA: ok200({ ...A, newest_stored_month: '2026-06' }), BBB: ok200({ ...B, newest_stored_month: '2026-08' }) }));
+  check('newest = max over loaded bodies (Aug)', mx.months.newest_stored_month === '2026-08' && JSON.stringify(mx.months.stale) === '["AAA","BBB"]', mx.months);
+  // Field missing (older cached body) → W2 behaviour: newest month in this portfolio; IYLD-only never stale.
+  const old = plain(exp_compute(one, { IYLD: ok200({ ...A, symbol: 'IYLD', report_month: '2026-01' }) }));
+  check('field missing → W2 fallback (portfolio month, no warning)', old.months.stale.length === 0 && old.months.newest_stored_month === '2026-01' && old.months.newest_source === 'portfolio', old.months);
+  // Mixed: one body has it, one does not → the one that has it is used.
+  const mix = plain(exp_compute(F1_INPUTS, { AAA: ok200(A), BBB: ok200({ ...B, newest_stored_month: '2026-08' }) }));
+  check('one body with the field is enough', mix.months.newest_stored_month === '2026-08' && mix.months.newest_source === 'route');
+  // Malformed value is ignored (falls back), never mis-read.
+  const bad = plain(exp_compute(one, { IYLD: ok200({ ...IY, newest_stored_month: 'Aug 2026' }) }));
+  check('malformed field ignored → fallback', bad.months.newest_source === 'portfolio' && bad.months.stale.length === 0, bad.months);
+  // opts still overrides the route field.
+  const ov = plain(exp_compute(one, { IYLD: ok200(IY) }, { newest_stored_month: '2026-03' }));
+  check('opts.newest_stored_month overrides', ov.months.newest_stored_month === '2026-03' && ov.months.stale.length === 0 && ov.months.newest_source === 'option');
+}
+
 // ===== T3 — over-allocation ========================================================================
 {
   const inputs = [{ type: 'etf', symbol: 'AAA', allocation: 60 }, { type: 'etf', symbol: 'BBB', allocation: 50 }];

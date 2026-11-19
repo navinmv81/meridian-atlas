@@ -19,6 +19,12 @@
 //     refusal still reads the full look-through, so it is cached 1 h. Refused today: VXUS (369 KB).
 //   * Cache API: 200 bodies 24 h at the edge (browser max-age=3600); 404 no_holdings and 422 size 1 h; other errors never.
 //     A cached request reads 0 rows.
+//   * MA-NOV-EXP.W1R5 — additive field `newest_stored_month` ('YYYY-MM' or null) on every 200 body and both 422
+//     too_large bodies: the newest month that ANY ETF has stored with snapshot_status = 'complete' (the same
+//     "complete" rule this route uses for `report_month`, so a partial load never moves it). The client uses it for
+//     the spec §5.1 stale warning (T6). No index leads with report_month, so it is a descending skip-scan of
+//     idx_holdings_status_series_month: one covering-index SEARCH (LIMIT 1) per ETF with complete holdings
+//     (≈ 242 rows live, 2026-11-19), inside the same single statement. Contract `exp-1` otherwise unchanged.
 //   * Every uncached look-through (served or size-refused) logs `exp_lookthrough <symbol> <month> <rows_read>`
 //     (meta.rows_read of the request's D1 call) so Tech Ops can sum it from wrangler tail / Ops DQ. Review gate: a 7-day
 //     average above 500k rows/day attributable to R-EXP1 raises a KI (spec §4.5 control 5).
@@ -995,9 +1001,13 @@ const EXP_TE = new TextEncoder();
 //     Each entity's tier list is alphabetical (deterministic), e.g. "heuristic,isin_tier1".
 //   * b: the 200 body, in the spec §4.2 field order. It is the right side of a LEFT JOIN and itself a join,
 //     so SQLite does not flatten it and the body is built once even though the last SELECT reads it twice.
+//   * ns (W1R5): recursive skip-scan for `newest_stored_month`. Each step is ONE reverse covering-index seek
+//     (snapshot_status = 'complete' AND series_id < previous) that lands on the previous series' newest complete
+//     month, returned as series_id || report_month (report_month is fixed 7 chars). Runs only when a month was
+//     resolved (so 404s skip it); read once, inside the materialized i.
 //   * Last SELECT: body only when its UTF-8 byte count is ≤ ?4; body_bytes always (NULL if not built).
 const EXP_SQL = `
-WITH e AS (
+WITH RECURSIVE e AS (
   SELECT etf_master.ticker, etf_master.name, etf_master.series_id
   FROM (SELECT ?1 sym) p LEFT JOIN etf_master ON etf_master.ticker = p.sym),
 mm AS (
@@ -1008,8 +1018,19 @@ mm AS (
       WHERE snapshot_status = 'complete' AND series_id = e.series_id AND report_month = ?2 LIMIT 1) asked
   FROM e),
 m AS MATERIALIZED (SELECT mm.*, CASE WHEN ?2 IS NULL THEN latest ELSE asked END rm FROM mm),
+ns(k) AS (
+  SELECT (SELECT series_id || report_month FROM fund_holdings_monthly
+           WHERE snapshot_status = 'complete' ORDER BY series_id DESC, report_month DESC LIMIT 1)
+  WHERE (SELECT rm FROM m) IS NOT NULL
+  UNION ALL
+  SELECT (SELECT series_id || report_month FROM fund_holdings_monthly
+           WHERE snapshot_status = 'complete' AND series_id < substr(ns.k, 1, length(ns.k) - 7)
+           ORDER BY series_id DESC, report_month DESC LIMIT 1)
+  FROM ns WHERE ns.k IS NOT NULL),
 i AS MATERIALIZED (
   SELECT m.ticker, m.name, m.series_id, m.latest, m.rm report_month,
+    (SELECT CASE WHEN x GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]' THEN x END
+       FROM (SELECT MAX(substr(k, -7)) x FROM ns)) newest_stored_month,
     (SELECT report_month FROM fund_holdings_monthly
       WHERE snapshot_status = 'complete' AND series_id = m.series_id AND report_month < m.rm
       ORDER BY report_month DESC LIMIT 1) previous_month,
@@ -1070,6 +1091,7 @@ b AS (
   SELECT json_object(
     'symbol', i.ticker, 'name', i.name, 'series_id', i.series_id,
     'report_month', i.report_month, 'previous_month', i.previous_month,
+    'newest_stored_month', i.newest_stored_month,
     'filing_date', i.filing_date, 'period_end', i.period_end,
     'net_assets', i.net_assets, 'holdings_count', i.holdings_count,
     'tiers', json(a.tiers),
@@ -1079,7 +1101,7 @@ b AS (
     'computed_at', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
     'contract', ?6) body
   FROM i, a WHERE i.count_for_cap <= ?3)
-SELECT i.ticker, i.name, i.series_id, i.latest, i.report_month, i.holdings_count, i.count_for_cap,
+SELECT i.ticker, i.name, i.series_id, i.latest, i.report_month, i.newest_stored_month, i.holdings_count, i.count_for_cap,
   length(CAST(b.body AS BLOB)) body_bytes,
   CASE WHEN length(CAST(b.body AS BLOB)) <= ?4 THEN b.body END body
 FROM i LEFT JOIN b ON 1`;
@@ -1093,7 +1115,7 @@ function expResponse(body, status, cacheControl, extra = {}) {
 // raw URL, so case and extra query parameters cannot fork the cache.
 // Bump `EXP_CACHE_GEN` with every change to R-EXP1's SQL or body, so no build serves another build's cache.
 const EXP_CACHE_ORIGIN = 'https://exp-cache.meridian.internal';
-const EXP_CACHE_GEN = 'g2';
+const EXP_CACHE_GEN = 'g3';              // g3: MA-NOV-EXP.W1R5 newest_stored_month
 function expCacheKey(symbol, month) {
   const path = `/${EXP_CONTRACT}/${EXP_CACHE_GEN}/${encodeURIComponent(symbol)}/${month ?? 'latest'}`;
   return new Request(EXP_CACHE_ORIGIN + path, { method: 'GET' });
@@ -1120,6 +1142,7 @@ async function expBuild(env, symbol, month) {
     return errOut(422, {
       error: 'too_large', limit: 'rows', symbol, report_month: r.report_month, holdings_count: count,
       max_holdings: EXP_MAX_HOLDINGS, estimated_rows_read: Math.round(count * EXP_ROWS_PER_HOLDING), max_rows_read: EXP_MAX_EST_ROWS,
+      newest_stored_month: r.newest_stored_month ?? null,
     });
   }
 
@@ -1132,6 +1155,7 @@ async function expBuild(env, symbol, month) {
     return errOut(422, {
       error: 'too_large', limit: 'size', symbol, report_month: r.report_month, holdings_count: r.holdings_count ?? null,
       body_bytes: r.body_bytes ?? null, max_body_bytes: EXP_MAX_BODY_BYTES,
+      newest_stored_month: r.newest_stored_month ?? null,
     }, EXP_NO_HOLDINGS_TTL);
   }
   // The body is assembled in SQL; the Worker encodes it once and hands the same bytes to the cache and the client.

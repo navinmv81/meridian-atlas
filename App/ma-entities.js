@@ -2681,15 +2681,26 @@ function exp_compute(inputs, lookthroughs, opts) {
   const etfMonths = funds.map(f => ({ symbol: f.symbol, input: f.index, report_month: f.body.report_month ?? null,
     label: exp_monthLabel(f.body.report_month), filing_date: f.body.filing_date ?? null, previous_month: f.body.previous_month ?? null }));
   const distinct = [...new Set(etfMonths.map(m => m.report_month).filter(Boolean))];
-  let newest = opts.newest_stored_month || null;
-  if (!newest) for (const m of distinct) if (newest == null || _expMonthIndex(m) > _expMonthIndex(newest)) newest = m;
+  // W1R5: the reference month is the newest stored month across ALL ETFs, taken from the R-EXP1 bodies'
+  // `newest_stored_month` (max over loaded inputs; an older cached body without it simply contributes nothing).
+  // opts.newest_stored_month still overrides. Neither available → the W2 rule: newest month in this portfolio.
+  let newest = _expMonthIndex(opts.newest_stored_month) != null ? opts.newest_stored_month : null;
+  let newestSource = newest ? 'option' : null;
+  if (!newest) {
+    for (const f of funds) {
+      const m = f.body.newest_stored_month;
+      if (_expMonthIndex(m) != null && (newest == null || _expMonthIndex(m) > _expMonthIndex(newest))) newest = m;
+    }
+    if (newest) newestSource = 'route';
+  }
+  if (!newest) { for (const m of distinct) if (newest == null || _expMonthIndex(m) > _expMonthIndex(newest)) newest = m; if (newest) newestSource = 'portfolio'; }
   const ni = _expMonthIndex(newest);
   for (const m of etfMonths) {
     const mi = _expMonthIndex(m.report_month);
     m.months_behind = ni == null || mi == null ? null : ni - mi;
     m.stale = m.months_behind != null && m.months_behind > _EXP_STALE_MONTHS;
   }
-  const months = { etfs: etfMonths, mixed: distinct.length > 1, newest_stored_month: newest,
+  const months = { etfs: etfMonths, mixed: distinct.length > 1, newest_stored_month: newest, newest_source: newestSource,
     stale: etfMonths.filter(m => m.stale).map(m => m.symbol) };
 
   // Gaps: largest unmapped holdings (route sends each fund's top 25), unsupported inputs, load errors.
@@ -3297,7 +3308,14 @@ function _expHeaderHtml(res) {
   const etfMonths = res.months.etfs;
   const warn = [];
   if (f.mixed) warn.push(`<span class="exp-chip warn">Mixed months: ${_esc([...new Set(etfMonths.map(m => m.label))].join(', '))}. Each ETF uses its own latest stored month.</span>`);
-  if (f.stale.length) warn.push(`<span class="exp-chip warn">Stale: ${_esc(f.stale.join(', '))} — more than 3 months older than the newest stored month here (${_esc(exp_monthLabel(res.months.newest_stored_month))})</span>`);
+  if (f.stale.length && res.months.newest_source === 'portfolio') {
+    // W2 wording, used only when no look-through body carries newest_stored_month (older cached bodies).
+    warn.push(`<span class="exp-chip warn">Stale: ${_esc(f.stale.join(', '))} — more than 3 months older than the newest stored month here (${_esc(exp_monthLabel(res.months.newest_stored_month))})</span>`);
+  } else if (f.stale.length) {
+    // W1R5: reference month is the newest stored month across all ETFs (R-EXP1 newest_stored_month).
+    warn.push(`<span class="exp-chip warn">Stale: ${_esc(f.stale.join(', '))} — more than 3 months older than the newest stored month</span>`);
+    warn.push(`<span class="exp-chip">newest stored: ${_esc(exp_monthLabel(res.months.newest_stored_month))}</span>`);
+  }
   if (f.not_loaded.length) warn.push(`<span class="exp-chip warn">Partial result: ${_esc(f.not_loaded.join(', '))} not loaded — see Gaps</span>`);
   const comp = res.inputs.map(r => r.computed_at).filter(Boolean).sort()[0];
   return `<div class="exp-card">

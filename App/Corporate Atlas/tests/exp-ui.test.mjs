@@ -156,6 +156,20 @@ check('exp_viewState(null) → empty', exp_viewState(null) === 'empty');
   check('reconciliation still 100 in partial failure', Math.abs(r3.reconciliation.total - 100) < 1e-9 && Math.abs(r3.reconciliation.not_loaded - 50) < 1e-9);
 }
 
+// MA-NOV-EXP.W1R5 header strip: stale chip + "newest stored: <Mon YYYY>" from the route field (spec T6).
+{
+  const H = ctx._expHeaderHtml;
+  check('header renderer present', typeof H === 'function');
+  const IYn = { ...IYLD, report_month: '2026-01', newest_stored_month: '2026-08' };
+  const html = H(exp_compute([{ ...E('IYLD'), allocation: '100' }], M({ IYLD: ok(IYn) })));
+  check('T6 header: stale chip for IYLD', /Stale: IYLD — more than 3 months older than the newest stored month</.test(html), html);
+  check('T6 header: "newest stored: Aug 2026" next to the stale chip', /Stale: IYLD[^<]*<\/span><span class="exp-chip">newest stored: Aug 2026<\/span>/.test(html), html);
+  const fresh = H(exp_compute([{ ...E('IYLD'), allocation: '100' }], M({ IYLD: ok({ ...IYLD, report_month: '2026-07', newest_stored_month: '2026-08' }) })));
+  check('fresh header: no stale chip', !/Stale:/.test(fresh) && !/newest stored:/.test(fresh), fresh);
+  const w2 = H(exp_compute([E('EEM'), E('IYLD')], M({ EEM: ok(EEM), IYLD: ok(IYLD) })));
+  check('field missing: W2 wording kept, no route chip', /newest stored month here \(Feb 2026\)</.test(w2) && !/newest stored: /.test(w2), w2);
+}
+
 // Row badges (shown even while the list is invalid).
 {
   const rs = (inp, res) => plain(exp_rowStatus(inp, res));

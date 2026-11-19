@@ -255,7 +255,7 @@ test('query plans (local SQLite): no SCAN of fund_holdings_monthly, instrument_e
       // W1R3: tables appear under aliases too (m, rd1…, s, em); every SCAN must be of a one-row CTE / constant
       // row / the groups / json_each — never of a stored table under any name.
       const scans = plan.filter(d => /^SCAN /.test(d));
-      assert.ok(scans.every(d => /^SCAN (p|m|i|a|b|g|CONSTANT ROW|json_each VIRTUAL TABLE.*|\(subquery-\d+\))( LEFT-JOIN)?$/.test(d)), scans.join(' | '));
+      assert.ok(scans.every(d => /^SCAN (p|m|i|a|b|g|ns|CONSTANT ROW|json_each VIRTUAL TABLE.*|\(subquery-\d+\))( LEFT-JOIN)?$/.test(d)), scans.join(' | '));
     }
   }
 });
@@ -271,7 +271,7 @@ test('Cache API: 200 stored 24 h at the edge (browser 1 h); 404 no_holdings stor
     assert.equal(first.res.headers.get('Cache-Control'), 'public, max-age=3600');
     assert.equal(first.res.headers.get('x-exp-cache'), 'miss');
     const key = [...store.keys()].find(k => k.includes('/AAA/'));
-    assert.equal(key, 'https://exp-cache.meridian.internal/exp-1/g2/AAA/latest', 'W1R4 key = origin + contract + gen + symbol + month');
+    assert.equal(key, 'https://exp-cache.meridian.internal/exp-1/g3/AAA/latest', 'W1R4 key = origin + contract + gen + symbol + month');
     assert.equal(store.get(key).headers['cache-control'], 'public, max-age=86400');
     const second = await get('/api/exposure/etf/AAA');
     assert.equal(second.calls.length, 0, 'cached: 0 D1 calls');
@@ -341,8 +341,8 @@ test('W1R4 key: month vs no month differ; key carries contract and EXP_CACHE_GEN
     await get('/api/exposure/etf/AAA');
     await get('/api/exposure/etf/AAA?month=2026-03');
     assert.notEqual(seen[0], seen[1]);
-    assert.equal(seen[0], 'https://exp-cache.meridian.internal/exp-1/g2/AAA/latest');
-    assert.equal(seen[1], 'https://exp-cache.meridian.internal/exp-1/g2/AAA/2026-03');
+    assert.equal(seen[0], 'https://exp-cache.meridian.internal/exp-1/g3/AAA/latest');
+    assert.equal(seen[1], 'https://exp-cache.meridian.internal/exp-1/g3/AAA/2026-03');
     const src = readFileSync(new URL('../src/entities-api.js', import.meta.url), 'utf8');
     const gen = src.match(/const EXP_CACHE_GEN = '([^']+)'/)[1];
     for (const k of seen) assert.ok(k.includes(`/${gen}/`), `key contains EXP_CACHE_GEN (${gen})`);
@@ -417,7 +417,8 @@ test('W1R2: single pass — one holdings range read, one GROUP BY sorter; no DIS
   const plan = db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...r.calls[0].params).map(p => p.detail);
   // The holdings range (non-covering: it reads weight/name/keys) is opened once; the rest are month probes.
   assert.equal(plan.filter(d => /fund_holdings_monthly USING INDEX/.test(d)).length, 1, plan.join(' | '));
-  assert.ok(plan.filter(d => /fund_holdings_monthly USING COVERING INDEX/.test(d)).every(d => /LIMIT|\(snapshot_status=\? AND series_id=\?( AND report_month[=<]\?)?\)/.test(d)));
+  // W1R5: the newest_stored_month skip-scan adds (snapshot_status=?) and (snapshot_status=? AND series_id<?) seeks.
+  assert.ok(plan.filter(d => /fund_holdings_monthly USING COVERING INDEX/.test(d)).every(d => /LIMIT|\(snapshot_status=\?( AND series_id(=\?( AND report_month[=<]\?)?|<\?))?\)/.test(d)), plan.join(' | '));
   assert.equal(plan.filter(d => /TEMP B-TREE FOR GROUP BY/.test(d)).length, 1, plan.join(' | '));
   assert.equal(plan.filter(d => /\bentity_master\b|\bem\b/.test(d)).length, 1, 'names: one rowid probe per group');
 });
@@ -504,8 +505,8 @@ test('W1R3 served body: byte-identical between client and cache copy; header fie
     const r = await get('/api/exposure/etf/AAA');
     const cached = [...store.values()][0];
     assert.equal(Buffer.from(cached).toString('utf8'), r.text);
-    assert.deepEqual(Object.keys(r.body), ['symbol', 'name', 'series_id', 'report_month', 'previous_month', 'filing_date',
-      'period_end', 'net_assets', 'holdings_count', 'tiers', 'entities', 'unmapped_top', 'source', 'computed_at', 'contract'], 'spec §4.2 field order');
+    assert.deepEqual(Object.keys(r.body), ['symbol', 'name', 'series_id', 'report_month', 'previous_month', 'newest_stored_month',
+      'filing_date', 'period_end', 'net_assets', 'holdings_count', 'tiers', 'entities', 'unmapped_top', 'source', 'computed_at', 'contract'], 'spec §4.2 field order');
     assert.equal(r.body.name, db.prepare(`SELECT name FROM etf_master WHERE ticker = 'AAA'`).get().name);
   } finally {
     delete globalThis.caches;
@@ -533,7 +534,10 @@ test('W1R3 A1 guard: a refused ETF reads no holdings rows (counting view over fu
   let r = await call('/api/exposure/etf/HUGE');
   assert.equal(r.res.status, 422);
   assert.equal(r.body.limit, 'rows');
-  assert.ok(r.ticks <= 8, `refused: only the month probes touch holdings (${r.ticks} rows)`);
+  // W1R5: plus the newest_stored_month skip-scan, one index entry per series with complete holdings (+1 seed).
+  const nSeries = db2.prepare(`SELECT COUNT(DISTINCT series_id) n FROM fhm_base WHERE snapshot_status = 'complete'`).get().n;
+  assert.ok(r.ticks <= 8 + nSeries + 1, `refused: only the month probes and the newest-month seeks touch holdings (${r.ticks} rows, ${nSeries} series)`);
+  assert.equal(r.body.newest_stored_month, '2026-04', '422 rows body carries newest_stored_month');
   db2.exec(`UPDATE fund_snapshot_monthly SET holdings_count = 10000 WHERE series_id = 'SHUGE'`);
   r = await call('/api/exposure/etf/HUGE');
   assert.equal(r.res.status, 200);
@@ -566,3 +570,54 @@ test('/etf-exposure: entity with no exposure → empty list, additive fields nul
   const bad = await get('/api/entities/0/etf-exposure');
   assert.equal(bad.res.status, 400, 'id 0 → Invalid entity_id (unchanged behaviour)');
 });
+
+// ---------- MA-NOV-EXP.W1R5: newest_stored_month ----------
+
+test('W1R5 newest_stored_month: newest COMPLETE month across all ETFs; partial months ignored; one statement; cost = one seek per series', async () => {
+  const db3 = new DatabaseSync(':memory:');
+  db3.exec(SCHEMA);
+  db3.exec(SEED);
+  let ticks = 0;
+  db3.function('tick', { deterministic: false }, () => { ticks++; return 1; });
+  db3.exec(`ALTER TABLE fund_holdings_monthly RENAME TO fhm_base;
+    CREATE VIEW fund_holdings_monthly AS SELECT * FROM fhm_base WHERE tick();`);
+  const env3 = { DB: d1(db3) };
+  const call = async p => { calls = []; ticks = 0; const res = await worker.fetch(new Request(`https://api.test${p}`), env3, { waitUntil() {} }); return { res, body: await res.json(), ticks, calls: calls.slice() }; };
+  const nSeries = () => db3.prepare(`SELECT COUNT(DISTINCT series_id) n FROM fhm_base WHERE snapshot_status = 'complete'`).get().n;
+
+  // Seed: SA 2026-05 is partial, so the newest complete month anywhere is 2026-04.
+  let r = await call('/api/exposure/etf/BBB');
+  assert.equal(r.res.status, 200);
+  assert.equal(r.body.report_month, '2026-02');
+  assert.equal(r.body.newest_stored_month, '2026-04', 'partial 2026-05 does not count');
+  assert.equal(r.calls.length, 1, 'still one D1 call');
+  const base = r.ticks;
+
+  // A partial newer month elsewhere does not move it; a complete one does (T6 shape: an old ETF vs a newer store).
+  db3.exec(`INSERT INTO fhm_base (series_id, report_month, security_name, isin, weight_pct, snapshot_status)
+            VALUES ('SZNEW', '2026-09', 'Row', 'ZN0000000001', 1, 'partial')`);
+  r = await call('/api/exposure/etf/BBB');
+  assert.equal(r.body.newest_stored_month, '2026-04');
+  db3.exec(`INSERT INTO fhm_base (series_id, report_month, security_name, isin, weight_pct, snapshot_status)
+            VALUES ('S0FIRST', '2026-08', 'Row', 'ZN0000000002', 1, 'complete'), ('S0FIRST', '2026-01', 'Row', 'ZN0000000003', 1, 'complete')`);
+  r = await call('/api/exposure/etf/BBB');
+  assert.equal(r.body.newest_stored_month, '2026-08', 'series sorting first (lowest id) is still reached by the skip-scan');
+  assert.match(r.body.newest_stored_month, /^\d{4}-\d{2}$/);
+  // Cost: one extra seek for the one extra series, not one per row.
+  assert.equal(r.ticks - base, 1, `one seek per added series (${base} → ${r.ticks})`);
+  assert.ok(r.ticks <= 6 + nSeries() + 1 + 10, `bounded by series count (${r.ticks}, ${nSeries()} series)`);
+
+  // ?month= bodies carry it too; 404s do not run the skip-scan.
+  r = await call('/api/exposure/etf/AAA?month=2026-03');
+  assert.equal(r.body.newest_stored_month, '2026-08');
+  r = await call('/api/exposure/etf/ZZZZ');
+  assert.equal(r.res.status, 404);
+  assert.equal(r.body.newest_stored_month, undefined);
+  assert.equal(r.ticks, 0, 'etf_not_found reads no holdings');
+  r = await call('/api/exposure/etf/AAA?month=2020-01');
+  assert.equal(r.res.status, 404);
+  assert.ok(r.ticks <= 4, `month_not_stored skips the skip-scan (${r.ticks})`);
+});
+
+// Note: newest_stored_month cannot be null on a 200 or 422 — those need a resolved complete month, which the
+// skip-scan always reaches. The SQL still yields NULL (not a bad string) if a stored month is not 'YYYY-MM'.
