@@ -1,0 +1,25 @@
+-- gate3 v2 dry run (read-only) for 2026-07: rows each INSERT would add, holders, rows already present.
+-- ONE pass over the month's holdings (rows read ≈ the month's holdings × the measured ratio; see README).
+WITH fel AS (SELECT DISTINCT series_id, entity_id FROM fund_entity_link WHERE series_id IS NOT NULL),
+h AS (
+  SELECT fel.entity_id holder, f.weight_pct w,
+    CASE WHEN length(trim(f.isin)) = 12 THEN trim(f.isin)
+         WHEN length(trim(f.cusip)) >= 6 AND trim(f.cusip) <> '000000000' THEN 'CUSIP:' || trim(f.cusip)
+         WHEN trim(coalesce(f.security_ticker, '')) <> '' THEN 'TICKER:' || upper(trim(f.security_ticker)) END k
+  FROM fel JOIN fund_holdings_monthly f
+    ON f.snapshot_status = 'complete' AND f.series_id = fel.series_id AND f.report_month = '2026-07'),
+j AS (
+  SELECT h.holder, h.w,
+    CASE WHEN m.entity_id IS NULL OR rd3.survivor_id IS NOT NULL THEN NULL
+         ELSE COALESCE(rd2.survivor_id, rd1.survivor_id, m.entity_id) END eid
+  FROM h LEFT JOIN instrument_entity_map m ON m.instrument_key = h.k
+         LEFT JOIN entity_merge_redirect rd1 ON rd1.duplicate_id = m.entity_id
+         LEFT JOIN entity_merge_redirect rd2 ON rd2.duplicate_id = rd1.survivor_id
+         LEFT JOIN entity_merge_redirect rd3 ON rd3.duplicate_id = rd2.survivor_id)
+SELECT '2026-07' report_month,
+  COUNT(DISTINCT CASE WHEN eid IS NOT NULL THEN eid || '|' || holder END) exposure_rows,
+  COUNT(DISTINCT holder) coverage_rows,
+  COUNT(*) holdings_rows,
+  (SELECT COUNT(*) FROM entity_exposure_monthly WHERE report_month = '2026-07') existing_exposure,
+  (SELECT COUNT(*) FROM fund_exposure_coverage WHERE report_month = '2026-07') existing_coverage
+FROM j;
