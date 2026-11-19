@@ -345,7 +345,8 @@ check('exp_viewState(null) → empty', exp_viewState(null) === 'empty');
     check(`N-4: ${sel} uses --text2`, rule(sel).includes('color:var(--text2)') && !rule(sel).includes('var(--dim)'), rule(sel));
   check('N-4: "Holdings dates" label uses --text2', UI.includes('<span style="font-size:10px;align-self:center;color:var(--text2)">Holdings dates:</span>'));
   check('N-4: no new colours (only palette variables in the changed rules)', !/#[0-9a-f]{3,6}/i.test(['.exp-row-type', '.exp-tr.head', '.exp-tbl2 th'].map(rule).join('')));
-  check('N-6: reconciliation label "Companies (direct + via ETFs)"', UI.includes("['companies', 'Companies (direct + via ETFs)', 'var(--blue)']") && !UI.includes('Mapped companies'));
+  // W3R3 replaced the N-6 label "Companies (direct + via ETFs)" with the Founder-approved "Companies we could identify".
+  check('W3R3: panel label "Companies we could identify"', UI.includes("['companies', 'Companies we could identify', 'var(--blue)']") && !UI.includes('Mapped companies'));
 }
 
 // --- §6 banned wording: no displayed text in the UI block uses it -------------------------------
@@ -362,13 +363,85 @@ check('exp_viewState(null) → empty', exp_viewState(null) === 'empty');
     'Not mapped to a company', '>Holdings ${', ', filed ${',
     'Computed in your browser on ', ' from stored holdings; not live positions.', 'Compare with previous stored month', 'no earlier stored month',
     'by company', 'Hide low-confidence', 'Low-confidence (hidden)', 'not supported: too large for live look-through',
-    'Fund residual (not reported as holdings)', 'Unallocated', 'Unsupported inputs', 'Not loaded', 'Unmapped holdings', 'No-identifier holdings']) {
+    'What your portfolio is made of', 'Companies we could identify', "Holdings we couldn't match to a company", 'Not linked to a company in our data',
+    "No identifier in the fund's filing", "Linked to a merged record we couldn't resolve", 'Fund cash, derivatives and other items', 'Not allocated']) {
     check(`label present: ${l}`, UI.includes(l) || SRC.includes(l));
   }
   // The W2 messages the UI displays carry no banned word either.
   const w2 = SRC.slice(SRC.indexOf('// ===== EXP (MA-NOV-EXP.W2) ====='), SRC.indexOf('// ===== end EXP (MA-NOV-EXP.W2) ====='));
   const msgs = (w2.match(/message: [`'][^`']*[`']/g) || []).join(' ').toLowerCase();
   for (const w of banned) check(`W2 messages have no "${w}"`, !msgs.includes(w));
+}
+
+// --- MA-NOV-EXP.W3R3: plain-language panel "What your portfolio is made of" -------------------------
+{
+  const R = ctx._expReconHtml, RM = ctx.exp_reconModel;
+  check('W3R3: panel renderer and model present', typeof R === 'function' && typeof RM === 'function');
+  const text = html => html.replace(/<[^>]*>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  const MX = body('MX', '2026-02', [[1, 'A Co', 60, 2, 'isin_tier1', 95, 0], [2, 'B Co', 30, 1, 'heuristic', 0, 0]],
+    { isin_tier1: [2, 60], heuristic: [1, 30], unmapped: [1, 4], no_identifier: [1, 2], redirect_unresolved: [1, 1] });
+  const HI = body('HI', '2026-02', [[1, 'A Co', 100, 1, 'isin_tier1', 95, 0]], { isin_tier1: [1, 100] });
+  const VX = er(422, { error: 'too_large', limit: 'rows', holdings_count: 8878 });
+  const SZ = er(422, { error: 'too_large', limit: 'size', holdings_count: 3000 });
+  const NH = er(404, { error: 'no_holdings', reason: 'no_series_id' });
+  const UK = er(404, { error: 'etf_not_found' });
+  const MN = er(404, { error: 'month_not_stored' });
+  const BQ = er(400, { error: 'bad_symbol' });
+  const r1 = exp_compute([{ ...E('MX'), allocation: '50' }, { ...E('VXUS'), allocation: '20' }, { ...E('SPY'), allocation: '10' }, { ...E('ZZZ'), allocation: '5' }, { ...E('IYLD'), allocation: '5' }],
+    M({ MX: ok(MX), VXUS: VX, SPY: NH, ZZZ: UK, IYLD: er(503, null) }));
+  const m1 = plain(RM(r1)), h1 = R(r1, { exp: {} }), t1 = text(h1);
+  const rc = r1.reconciliation;
+  // grouping: couldn't-match = unmapped + no-identifier + merge-unresolved, as one number
+  const um = m1.lines.find(l => l.key === 'unmatched');
+  check('W3R3 grouping: couldn\'t-match = unmapped + no-id + unresolved', um && Math.abs(um.value - (rc.unmapped + rc.no_identifier + rc.redirect_unresolved)) < 1e-12 && Math.abs(um.value - 3.5) < 1e-9, um);
+  check('W3R3 grouping: details list the three parts in order', um && um.details.map(d => d.label).join('|') === "Not linked to a company in our data|No identifier in the fund's filing|Linked to a merged record we couldn't resolve", um);
+  check('W3R3 order: companies · couldn\'t match · fund items · not analysed × 3 · couldn\'t load · not allocated',
+    m1.lines.map(l => l.key).join() === 'companies,unmatched,residual,unsupported,unsupported,unsupported,not_loaded,unallocated', m1.lines.map(l => l.key));
+  check('W3R3 heading', h1.includes('<h3 style="margin-top:0">What your portfolio is made of</h3>'));
+  check('W3R3 details collapsed by default: toggle shown, parts hidden', /data-exp-act="recon-details" aria-expanded="false">▸ details</.test(h1) && !t1.includes('Not linked to a company in our data'), t1);
+  const h1o = text(R(r1, { exp: { reconOpen: true } }));
+  check('W3R3 details open: three part lines with values', h1o.includes('Not linked to a company in our data 2.00%') && h1o.includes("No identifier in the fund's filing 1.00%") && h1o.includes("Linked to a merged record we couldn't resolve 0.50%"), h1o);
+  check('W3R3 residual line with tooltip', t1.includes('Fund cash, derivatives and other items') && h1.includes(`title="${'What the funds report outside their listed holdings, such as cash, derivatives and borrowings. It can be slightly negative.'}"`), h1);
+  // per-input "Not analysed" lines with the right sentence
+  check('W3R3 422 rows → too large sentence', t1.includes('Not analysed: VXUS (20.00%) This fund is too large to look through here.'), t1);
+  check('W3R3 404 no_holdings → no holdings sentence', t1.includes("Not analysed: SPY (10.00%) We don't have this fund's holdings."), t1);
+  check('W3R3 404 unknown symbol → don\'t recognise', t1.includes("Not analysed: ZZZ (5.00%) We don't recognise this fund."), t1);
+  check('W3R3 422 size / month not stored / invalid sentences', ctx.exp_unsupportedSentence(plain(exp_compute([E('A')], M({ A: SZ }))).gaps.unsupported[0]) === 'This fund is too large to look through here.'
+    && ctx.exp_unsupportedSentence(plain(exp_compute([E('A')], M({ A: MN }))).gaps.unsupported[0]) === "We don't recognise this fund."
+    && ctx.exp_unsupportedSentence(plain(exp_compute([E('A')], M({ A: BQ }))).gaps.unsupported[0]) === "We don't recognise this fund.");
+  check('W3R3 couldn\'t-load line with Retry', t1.includes("Couldn't load: IYLD (5.00%) Retry") && h1.includes('data-exp-act="retry" data-sym="IYLD"'), t1);
+  check('W3R3 not allocated line (10.00%)', t1.includes('Not allocated 10.00%'), t1);
+  check('W3R3 sum line ok', t1.includes('✓ Adds up to 100%') && m1.ok === true, t1);
+  check('W3R3 footnote', t1.includes("We don't guess. Anything we can't match to a company is shown separately, never spread across other companies."), t1);
+  check('W3R3 confidence line rounded and toggle "Hide them"', t1.includes('About 33% of the company exposure from your ETFs relies on lower-confidence matching. Treat those companies as indicative. Hide them') && h1.includes('data-exp-act="hide-low" aria-pressed="false"'), t1);
+  check('W3R3 toggle reads "Show them" when hidden', text(R(r1, { exp: { hideLow: true } })).includes('indicative. Show them'));
+  // bar follows the grouping; negative segments not drawn
+  check('W3R3 bar groups (positive residual drawn)', m1.bar.map(g => g.key).join() === 'companies,unmatched,residual,unsupported,not_loaded,unallocated', m1.bar);
+  check('W3R3 bar: not analysed is one segment of 35%', Math.abs(m1.bar.find(g => g.key === 'unsupported').value - 35) < 1e-9);
+  const NG = body('NG', '2026-02', [[1, 'A Co', 101, 1, 'isin_tier1', 95, 0]], { isin_tier1: [1, 101] });
+  const mN = plain(RM(exp_compute([{ ...E('NG'), allocation: '100' }], M({ NG: ok(NG) }))));
+  check('W3R3 negative residual shown as a line (-1.00%) but not drawn in the bar', mN.lines.some(l => l.key === 'residual' && Math.abs(l.value + 1) < 1e-9)
+    && mN.bar.map(g => g.key).join() === 'companies' && mN.ok === true, mN);
+  // zero lines hidden (except the first); sum failure; confidence hidden at 0
+  const r2 = exp_compute([{ ...E('HI'), allocation: '100' }], M({ HI: ok(HI) }));
+  const m2 = plain(RM(r2)), t2 = text(R(r2, { exp: {} }));
+  check('W3R3 zero lines hidden: only "Companies we could identify" left', m2.lines.map(l => l.key).join() === 'companies', m2.lines);
+  check('W3R3 zero lines absent from the text', !/couldn't match|Fund cash|Not analysed|Couldn't load|Not allocated/.test(t2), t2);
+  check('W3R3 confidence line hidden at 0%', m2.confidence === null && !t2.includes('lower-confidence') && !t2.includes('Hide them'), t2);
+  const r0 = exp_compute([{ type: 'eq', entity_id: 7, name: 'X', allocation: '0.01' }], M({}));
+  check('W3R3 first line kept even at 0.00%', plain(RM({ ...r0, reconciliation: { ...r0.reconciliation, companies: 0, unallocated: 100 } })).lines[0].key === 'companies');
+  const bad = { ...r2, reconciliation: { ...r2.reconciliation, total: 99.5, difference: -0.5, ok: false } };
+  check('W3R3 sum line when the check fails', text(R(bad, { exp: {} })).includes("⚠ Doesn't add up to 100% (99.50%). Please report this.") && !text(R(bad, {})).includes('Adds up'));
+  check('W3R3 confidence rounds to whole number; hidden when it rounds to 0', plain(RM({ ...r2, low_confidence: { share_pct: 0.4 } })).confidence === null
+    && plain(RM({ ...r2, low_confidence: { share_pct: 69.22 } })).confidence.startsWith('About 69% '));
+  // banned: old panel wording gone
+  const panel = UI.slice(UI.indexOf('const _EXP_RECON_GROUPS'), UI.indexOf('function _expSorted('));
+  for (const w of ['Merge redirect unresolved', 'No-identifier holdings', 'Unsupported inputs', 'Not loaded', '<strong>Sum</strong>', 'Nothing is redistributed',
+    'Where 100% of your portfolio goes', 'Unmapped holdings', 'Fund residual', 'Unallocated', 'Companies (direct + via ETFs)', 'Low-confidence mappings'])
+    check(`W3R3 old wording absent from the panel: ${w}`, !panel.includes(w) && !t1.includes(w) && !h1o.includes(w));
+  for (const w of ['current ownership', 'all holders', 'complete', 'real-time', 'realtime', 'real time'])
+    check(`W3R3 panel has no "${w}"`, !(t1 + h1o).toLowerCase().includes(w));
+  check('W3R3 panel toggles are display only (handler re-renders, no compute change)', /a === 'recon-details' \|\| a === 'hide-low'/.test(UI));
 }
 
 // --- boundaries ---------------------------------------------------------------------------------

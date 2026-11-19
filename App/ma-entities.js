@@ -3238,6 +3238,11 @@ function _expWire(layer) {
       const h = root.querySelector(`[data-exp-act="sort"][data-key="${k}"]`); if (h) h.focus();
     }
     else if (a === 'more') { st.limit += _EXP_PAGE; _expRenderResults(layer); }
+    else if (a === 'recon-details' || a === 'hide-low') {   // MA-NOV-EXP.W3R3 panel toggles (display only)
+      if (a === 'recon-details') st.reconOpen = !st.reconOpen; else st.hideLow = !st.hideLow;
+      _expRenderResults(layer);
+      const h = root.querySelector(`[data-exp-act="${a}"]`); if (h) h.focus();
+    }
     else if (a === 'expand') {
       const id = Number(b.dataset.id);
       if (st.open.has(id)) st.open.delete(id); else { st.open.add(id); _expLoadEvidence(layer, id); }
@@ -3292,7 +3297,7 @@ function _expRenderResults(layer) {
       <button class="exp-btn primary" style="margin-top:8px" data-exp-act="retry-all">Retry</button></div>`;
     return;
   }
-  out.innerHTML = [_expHeaderHtml(res), _expReconHtml(res), _expTableHtml(layer, res), _expSharedHtml(layer, res),
+  out.innerHTML = [_expHeaderHtml(res), _expReconHtml(res, layer), _expTableHtml(layer, res), _expSharedHtml(layer, res),
     _expGapsHtml(layer, res), _expCompareHtml(layer, res)].join('');
 }
 
@@ -3325,28 +3330,75 @@ function _expHeaderHtml(res) {
     ${warn.length ? `<div class="exp-chips" role="note">${warn.join('')}</div>` : ''}</div>`;
 }
 
-const _EXP_RECON_LINES = [
-  ['companies', 'Companies (direct + via ETFs)', 'var(--blue)'],
-  ['unmapped', 'Unmapped holdings', 'var(--amber)'],
-  ['no_identifier', 'No-identifier holdings', 'var(--amber-bd)'],
-  ['redirect_unresolved', 'Merge redirect unresolved', 'var(--muted)'],
-  ['residual', 'Fund residual (not reported as holdings)', 'var(--dim)'],
-  ['unsupported', 'Unsupported inputs', 'var(--red)'],
-  ['not_loaded', 'Not loaded', 'var(--red-bd)'],
-  ['unallocated', 'Unallocated', 'var(--border)'],
+// MA-NOV-EXP.W3R3: plain-language panel "What your portfolio is made of" (Founder-approved wording, Task v1).
+// Grouping only; every value comes from exp_compute's reconciliation, nothing is recalculated or forced.
+const _EXP_RECON_GROUPS = [
+  ['companies', 'Companies we could identify', 'var(--blue)'],
+  ['unmatched', "Holdings we couldn't match to a company", 'var(--amber)'],
+  ['residual', 'Fund cash, derivatives and other items', 'var(--dim)'],
+  ['unsupported', 'Not analysed', 'var(--red)'],
+  ['not_loaded', "Couldn't load", 'var(--red-bd)'],
+  ['unallocated', 'Not allocated', 'var(--border)'],
 ];
-function _expReconHtml(res) {
+const _EXP_RECON_DETAILS = [
+  ['unmapped', 'Not linked to a company in our data'],
+  ['no_identifier', "No identifier in the fund's filing"],
+  ['redirect_unresolved', "Linked to a merged record we couldn't resolve"],
+];
+const _EXP_RESIDUAL_TIP = 'What the funds report outside their listed holdings, such as cash, derivatives and borrowings. It can be slightly negative.';
+const _EXP_RECON_NOTE = "We don't guess. Anything we can't match to a company is shown separately, never spread across other companies.";
+// One plain sentence per unsupported input, by route outcome (422 too large / 404 no holdings / unknown, month, invalid).
+function exp_unsupportedSentence(r) {
+  if (r && r.reason === 'too_large') return 'This fund is too large to look through here.';
+  if (r && r.reason === 'no_holdings') return "We don't have this fund's holdings.";
+  return "We don't recognise this fund.";
+}
+// Panel model (pure): lines in display order with 0.00% lines hidden (except the first), the sum line and the confidence share.
+function exp_reconModel(res) {
   const rc = res.reconciliation;
-  const pos = _EXP_RECON_LINES.reduce((s, [k]) => s + Math.max(0, rc[k]), 0) || 1;
-  const bar = _EXP_RECON_LINES.filter(([k]) => rc[k] > 0).map(([k, l, c]) =>
-    `<span style="width:${(rc[k] / pos * 100).toFixed(3)}%;background:${c}" title="${_esc(l)} ${_expPct(rc[k])}"></span>`).join('');
-  const leg = _EXP_RECON_LINES.map(([k, l, c]) => `<div><span><i style="background:${c}"></i>${_esc(l)}</span><span class="exp-num">${_expPct(rc[k])}</span></div>`).join('');
+  const z = v => _expF(v) === '0.00';
+  const unmatched = rc.unmapped + rc.no_identifier + rc.redirect_unresolved;
+  const lines = [{ key: 'companies', label: _EXP_RECON_GROUPS[0][1], value: rc.companies }];
+  if (!z(unmatched)) lines.push({ key: 'unmatched', label: _EXP_RECON_GROUPS[1][1], value: unmatched,
+    details: _EXP_RECON_DETAILS.filter(([k]) => !z(rc[k])).map(([k, l]) => ({ key: k, label: l, value: rc[k] })) });
+  if (!z(rc.residual)) lines.push({ key: 'residual', label: _EXP_RECON_GROUPS[2][1], value: rc.residual, tip: _EXP_RESIDUAL_TIP });
+  for (const r of (res.gaps && res.gaps.unsupported) || []) if (!z(r.allocation))
+    lines.push({ key: 'unsupported', label: `Not analysed: ${r.label} (${_expF(r.allocation)}%)`, value: r.allocation, symbol: r.label, sentence: exp_unsupportedSentence(r) });
+  for (const r of (res.gaps && res.gaps.not_loaded) || []) if (!z(r.allocation))
+    lines.push({ key: 'not_loaded', label: `Couldn't load: ${r.label} (${_expF(r.allocation)}%)`, value: r.allocation, symbol: r.symbol || r.label, retry: true });
+  if (!z(rc.unallocated)) lines.push({ key: 'unallocated', label: _EXP_RECON_GROUPS[5][1], value: rc.unallocated });
+  const sum = rc.ok ? '✓ Adds up to 100%' : `⚠ Doesn't add up to 100% (${_expF(rc.total)}%). Please report this.`;
   const lc = res.low_confidence;
-  return `<div class="exp-card"><h3 style="margin-top:0">Where 100% of your portfolio goes</h3>
-    <div class="exp-bar" role="img" aria-label="Reconciliation bar; the parts add to ${_expF(rc.total)}%">${bar}</div>
-    <div class="exp-leg">${leg}<div><strong>Sum</strong><strong class="exp-num">${_expPct(rc.total)}${rc.ok ? ' ✓' : ` (differs by ${_expF(rc.difference)})`}</strong></div></div>
-    <div class="exp-note" style="margin-top:6px">Nothing is redistributed: unknown, unmapped, unsupported and unallocated parts keep their own lines. Negative values (derivatives, shorts, cash offsets) are kept as reported.
-      ${lc && lc.share_pct != null ? `<br><strong>${_expF(lc.share_pct)}%</strong> of ETF-derived company exposure rests on Low-confidence mappings.` : ''}</div></div>`;
+  const n = lc && lc.share_pct != null && Number.isFinite(lc.share_pct) ? Math.round(lc.share_pct) : 0;
+  const confidence = n === 0 ? null : `About ${n}% of the company exposure from your ETFs relies on lower-confidence matching. Treat those companies as indicative.`;
+  // Bar: one segment per group (same grouping as the lines); negative and zero segments are not drawn.
+  const groups = { companies: rc.companies, unmatched, residual: rc.residual, unsupported: rc.unsupported, not_loaded: rc.not_loaded, unallocated: rc.unallocated };
+  const bar = _EXP_RECON_GROUPS.filter(([k]) => groups[k] > 0 && !z(groups[k])).map(([k, l, c]) => ({ key: k, label: l, color: c, value: groups[k] }));
+  return { lines, sum, ok: rc.ok, total: rc.total, confidence, confidence_pct: n, bar };
+}
+function _expReconHtml(res, layer) {
+  const st = (layer && layer.exp) || {};
+  const m = exp_reconModel(res);
+  const pos = m.bar.reduce((s, g) => s + g.value, 0) || 1;
+  const bar = m.bar.map(g => `<span style="width:${(g.value / pos * 100).toFixed(3)}%;background:${g.color}" title="${_esc(g.label)} ${_expPct(g.value)}"></span>`).join('');
+  const color = k => (_EXP_RECON_GROUPS.find(([g]) => g === k) || [])[2] || 'var(--border)';
+  const leg = m.lines.map(l => {
+    const extra = l.details ? ` <button class="exp-btn" style="padding:0 6px" data-exp-act="recon-details" aria-expanded="${st.reconOpen ? 'true' : 'false'}">${st.reconOpen ? '▾' : '▸'} details</button>`
+      : l.tip ? ` <span tabindex="0" title="${_esc(l.tip)}" aria-label="${_esc(l.tip)}" style="cursor:help">ⓘ</span>`
+      : l.retry ? ` <button class="exp-btn" style="padding:0 6px" data-exp-act="retry" data-sym="${_esc(l.symbol)}">Retry</button>` : '';
+    const row = `<div><span><i style="background:${color(l.key)}"></i>${_esc(l.label)}${extra}</span>${l.key === 'unsupported' || l.key === 'not_loaded' ? '' : `<span class="exp-num">${_expPct(l.value)}</span>`}</div>`;
+    const sent = l.sentence ? `<div><span class="exp-dim" style="padding-left:15px">${_esc(l.sentence)}</span></div>` : '';
+    const det = l.details && st.reconOpen ? l.details.map(d => `<div><span style="padding-left:15px">${_esc(d.label)}</span><span class="exp-num">${_expPct(d.value)}</span></div>`).join('') : '';
+    return row + sent + det;
+  }).join('');
+  const conf = m.confidence ? `<div class="exp-note" style="margin-top:6px">${_esc(m.confidence)}
+      <button class="exp-btn" style="padding:0 6px" data-exp-act="hide-low" aria-pressed="${st.hideLow ? 'true' : 'false'}">${st.hideLow ? 'Show them' : 'Hide them'}</button></div>` : '';
+  return `<div class="exp-card"><h3 style="margin-top:0">What your portfolio is made of</h3>
+    <div class="exp-bar" role="img" aria-label="What your portfolio is made of; the parts add to ${_expF(m.total)}%">${bar}</div>
+    <div class="exp-leg" style="grid-template-columns:1fr;max-width:620px">${leg}</div>
+    <div style="margin-top:6px"><strong>${_esc(m.sum)}</strong></div>
+    <div class="exp-note" style="margin-top:4px;font-size:10px">${_esc(_EXP_RECON_NOTE)}</div>
+    ${conf}</div>`;
 }
 
 function _expSorted(list, sort) {
