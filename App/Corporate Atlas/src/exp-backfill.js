@@ -36,6 +36,17 @@ export const MULT_COVERAGE = 2;                  // table + PK autoindex
 export const CANDIDATE_LIMIT = 300;
 export const SKIP_UTC_DAYS = [0, 1];             // Sun (holdings 04:00), Mon (entities-seed 04:00). C1 adds Wed (3).
 
+// Per-invocation budget (CR three-point check 3; MA-NOV-EXP.BFS.FIX M1). Before each batch the run projects the
+// batch's D1 calls (1 count + 2 in batch() = 3) and rows read, and stops `partial` (detail.reason `run_limit`) if
+// the next batch would pass any of these. D1 calls include the controls read (1) and the candidates statement (1),
+// so 1 + 1 + 3 × 3 = 11 ≤ 12. Rows read: before the count, the previous batch's reads are the estimate; after it,
+// the INSERT pair is projected at ≈ 1 × the count's reads. The count itself is still capped by ROWS_READ_STOP.
+export const EXPBF_MAX_BATCHES_PER_RUN = 3;
+export const EXPBF_MAX_D1_CALLS_PER_RUN = 12;
+export const EXPBF_MAX_ROWS_READ_PER_RUN = 150000;
+export const D1_CALLS_PER_BATCH = 3;              // count + exposure INSERT + coverage INSERT
+export const INSERT_PAIR_READ_FACTOR = 1;         // INSERT pair reads ≈ 1 × the count's reads (BFS.REVIEW check 7)
+
 // ── SQL ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Bound parameters only: ?1 = report_month, ?2 = holder lo, ?3 = holder hi, ?4 = run token.
 // Candidates: the EXISTS probe is pinned INDEXED BY idx_holdings_status_series_month. The live plan (B10, 20 Nov) chose
@@ -176,7 +187,7 @@ export async function runExpBackfill(env, { U = null, now = new Date(), controls
   const ctl = controls || await readControls(env, now);
   const metrics = { batches: 0, holders_done: 0, rows_written: 0, rows_read_max_stmt: 0, rows_read_total: 0, exposure_rows: 0,
                     remaining_holder_months: 0, oldest_open_month: 0, budget_B: 0, analytics_U: Number.isInteger(U) ? U : 0,
-                    oversize_skipped: 0 };
+                    oversize_skipped: 0, d1_calls: 1 /* controls read, here or in the step */ };
   const out = (event, extra = {}) => ({ event, metrics, rows_written: metrics.rows_written, rows_read: metrics.rows_read_total,
                                        items_attempted: extra.attempted ?? 0, items_progressed: metrics.holders_done, ...extra });
   if (!ctl.enabled) return out('skipped', { reason: 'not_enabled' });
@@ -191,6 +202,7 @@ export async function runExpBackfill(env, { U = null, now = new Date(), controls
   metrics.budget_B = B;
 
   const cand = await env.DB.prepare(SQL.candidates).all();
+  metrics.d1_calls++;
   const cr = rowsRead(cand);
   metrics.rows_read_total += cr; metrics.rows_read_max_stmt = Math.max(metrics.rows_read_max_stmt, cr);
   const { batches, oversize, holderMonths } = packBatches(cand.results || []);
@@ -206,16 +218,26 @@ export async function runExpBackfill(env, { U = null, now = new Date(), controls
   if (!batches.length) return finish('skipped', { reason: 'empty_input' });
   if (cr > ROWS_READ_STOP) return finish('failed', { error: overrun(`candidates rows_read ${cr} > ${ROWS_READ_STOP}`) });
 
-  let left = B, attempted = 0;
+  let left = B, attempted = 0, lastBatchReads = 0;
+  const runLimit = (b, why) => {
+    log(`[entities-enrich][expbf] stop: run_limit (${why}) before m=${b.m} holders=${b.lo}..${b.hi}`);
+    return finish('partial', { attempted, reason: 'run_limit' });
+  };
   for (const b of batches) {
+    if (metrics.batches + 1 > EXPBF_MAX_BATCHES_PER_RUN) return runLimit(b, `batches ${metrics.batches} of ${EXPBF_MAX_BATCHES_PER_RUN}`);
+    if (metrics.d1_calls + D1_CALLS_PER_BATCH > EXPBF_MAX_D1_CALLS_PER_RUN) return runLimit(b, `d1_calls ${metrics.d1_calls} + ${D1_CALLS_PER_BATCH} > ${EXPBF_MAX_D1_CALLS_PER_RUN}`);
+    if (metrics.rows_read_total + lastBatchReads > EXPBF_MAX_ROWS_READ_PER_RUN) return runLimit(b, `rows_read ${metrics.rows_read_total} + ~${lastBatchReads} > ${EXPBF_MAX_ROWS_READ_PER_RUN}`);
     const cnt = await env.DB.prepare(SQL.count).bind(b.m, b.lo, b.hi).all();
+    metrics.d1_calls++;
     const r0 = rowsRead(cnt);
     metrics.rows_read_total += r0; metrics.rows_read_max_stmt = Math.max(metrics.rows_read_max_stmt, r0);
     const c = (cnt.results && cnt.results[0]) || {};
     const exp = Number(c.exposure_rows) || 0, cov = Number(c.coverage_rows) || 0;
     if (r0 > ROWS_READ_STOP) return finish('failed', { attempted, error: overrun(`count m=${b.m} holders=${b.lo}..${b.hi} rows_read ${r0} > ${ROWS_READ_STOP}`) });
     const projection = exp * MULT_EXPOSURE + cov * MULT_COVERAGE;
-    if (cov === 0) { b.done = true; remaining -= b.holders.length; continue; }   // nothing complete any more: no write
+    if (cov === 0) { b.done = true; remaining -= b.holders.length; lastBatchReads = r0; continue; }   // nothing complete any more: no write
+    const pairReads = Math.ceil(r0 * INSERT_PAIR_READ_FACTOR);
+    if (metrics.rows_read_total + pairReads > EXPBF_MAX_ROWS_READ_PER_RUN) return runLimit(b, `rows_read ${metrics.rows_read_total} + ~${pairReads} > ${EXPBF_MAX_ROWS_READ_PER_RUN}`);
     if (projection > left) {
       log(`[entities-enrich][expbf] stop: m=${b.m} holders=${b.lo}..${b.hi} projection=${projection} > remaining=${left}`);
       return finish('partial', { attempted });
@@ -229,19 +251,24 @@ export async function runExpBackfill(env, { U = null, now = new Date(), controls
         env.DB.prepare(SQL.coverageInsert).bind(b.m, b.lo, b.hi, token),
       ]);
     } catch (err) {
+      metrics.d1_calls += 2;
       log(`[entities-enrich][expbf] batch failed m=${b.m} holders=${b.lo}..${b.hi} token=${token}: ${(err && err.message) || err}`);
       return finish('failed', { attempted, error: { class: 'EXPBF_D1_ERROR', summary: String((err && err.message) || err).slice(0, 300) } });
     }
+    metrics.d1_calls += 2;
     const written = res.reduce((s, r) => s + rowsWritten(r), 0);
     const readMax = Math.max(...res.map(rowsRead));
     const readSum = res.reduce((s, r) => s + rowsRead(r), 0);
     metrics.batches++; metrics.rows_written += written; metrics.rows_read_total += readSum;
     metrics.rows_read_max_stmt = Math.max(metrics.rows_read_max_stmt, readMax);
     metrics.exposure_rows += exp; metrics.holders_done += cov;
-    b.done = true; remaining -= b.holders.length; left -= written;
+    // M2: the hard ceiling holds whatever the projection — writing more than was left (before subtracting) is an overrun.
+    const overBudget = written > left;
+    const leftBefore = left;
+    b.done = true; remaining -= b.holders.length; left -= written; lastBatchReads = r0 + readSum;
     log(`[entities-enrich][expbf] m=${b.m} holders=${b.lo}..${b.hi} n=${b.holders.length} exp_rows=${exp} rows_read=${r0} rows_written=${written} projection=${projection} token=${token}`);
-    if (readMax > ROWS_READ_STOP || written > OVERRUN_FACTOR * projection) {
-      return finish('failed', { attempted, error: overrun(`m=${b.m} holders=${b.lo}..${b.hi} rows_written ${written} (projection ${projection}), rows_read max ${readMax}`) });
+    if (readMax > ROWS_READ_STOP || written > OVERRUN_FACTOR * projection || overBudget) {
+      return finish('failed', { attempted, error: overrun(`m=${b.m} holders=${b.lo}..${b.hi} rows_written ${written} (projection ${projection}, left ${leftBefore}), rows_read max ${readMax}`) });
     }
   }
   return finish(remaining > 0 ? 'partial' : 'success', { attempted });

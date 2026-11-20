@@ -105,16 +105,17 @@ test('B8 + B9: Tuesday 06:00, enabled → Phase 1 as before, then the back-fill;
   assert.equal(r.fetches.length, 5, JSON.stringify(r.fetches.map(f => f.kind + (f.body ? ':' + f.body.job_id + ':' + f.body.event : ''))));
   assert.equal(r.fetches.filter(f => f.kind === 'd1-today').length, 1, 'analytics fetched once (Phase 1), reused by the back-fill');
   assert.deepEqual(r.p1.map(e => e.body.event), ['start', 'success']);
-  assert.deepEqual(r.bf.map(e => e.body.event), ['start', 'success']);
+  assert.deepEqual(r.bf.map(e => e.body.event), ['start', 'partial']);   // BFS.FIX M1: ≤ 3 batches per run
+  assert.equal(endOf(r.bf).body.detail.reason, 'run_limit');
   assert.ok(accepted(r.p1) && accepted(r.bf), JSON.stringify([...r.p1, ...r.bf].map(e => [e.status, e.resp])));
   const order = r.fetches.filter(f => f.kind === 'event').map(f => `${f.body.job_id.split('.').pop()}:${f.body.event}`);
   assert.ok(order.indexOf('phase1:success') < order.indexOf('expbf:start'), `back-fill starts after Phase 1 ends: ${order}`);
   const m = endOf(r.bf).body.detail.metrics;
-  assert.equal(m.analytics_U, 1200); assert.equal(m.budget_B, 40000); assert.ok(m.batches >= 6 && m.rows_written > 0);
+  assert.equal(m.analytics_U, 1200); assert.equal(m.budget_B, 40000); assert.ok(m.batches === 3 && m.rows_written > 0 && m.d1_calls === 11);
   assert.equal(endOf(r.bf).body.rows_written, m.rows_written);
   assert.ok(count(db, 'fund_exposure_coverage') > 0);
   const stored = opsDb.prepare(`SELECT event_type, detail FROM ops_job_run WHERE job_id = ? AND phase = 'end' ORDER BY event_id DESC LIMIT 1`).get(EXPBF_JOB_ID);
-  assert.equal(stored.event_type, 'success'); assert.equal(Object.keys(JSON.parse(stored.detail).metrics).length, 11);
+  assert.equal(stored.event_type, 'partial'); assert.equal(Object.keys(JSON.parse(stored.detail).metrics).length, 12);
 });
 
 test('B8: a back-fill exception never changes Phase 1 — controls unreadable, or a D1 error inside the batch', async () => {
@@ -168,8 +169,12 @@ test('B9: partial, empty_input and overrun-failed end events are accepted by the
   let r = await fire(db);
   assert.equal(endOf(r.bf).body.event, 'partial'); assert.ok(accepted(r.bf));
   db = workerDb(); enable(db);
-  await fire(db);
-  r = await fire(db, { at: '2026-11-25T06:00:20Z' });
+  // BFS.FIX M1: ≤ 3 batches a run, so run the days Tue 24 – Sat 28 Nov until the back-fill is done, then one more.
+  const days = ['2026-11-24', '2026-11-25', '2026-11-26', '2026-11-27', '2026-11-28', '2026-12-01', '2026-12-02'];
+  let i = 0;
+  do { r = await fire(db, { at: `${days[i++]}T06:00:20Z` }); assert.ok(accepted(r.bf)); } while (endOf(r.bf).body.event === 'partial' && i < days.length - 1);
+  assert.equal(endOf(r.bf).body.event, 'success');
+  r = await fire(db, { at: `${days[i]}T06:00:20Z` });
   assert.equal(endOf(r.bf).body.event, 'skipped'); assert.equal(endOf(r.bf).body.detail.reason, 'empty_input'); assert.ok(accepted(r.bf));
   db = workerDb(); enable(db);
   r = await fire(db, { dbOpts: { meta: (sql, m) => { if (/INTO entity_exposure_monthly/.test(sql)) m.rows_written = m.changes * 9; } } });

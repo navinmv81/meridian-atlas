@@ -13,7 +13,8 @@ import { makeDb, enable, d1, FUNDS } from './exp-backfill-fixture.mjs';
 const rd = rel => readFileSync(new URL(rel, import.meta.url), 'utf8');
 const TEMPLATE = rd('../gate3v2/gate3v2-month.sql.tmpl');
 const BF = await import(new URL('../src/exp-backfill.js', import.meta.url).href);
-const { SQL, EXPBF_JOB_ID, packBatches, runExpBackfill, runExpBackfillStep, runToken, capFromProfile, dayBudget, isSkipDay } = BF;
+const { SQL, EXPBF_JOB_ID, packBatches, runExpBackfill, runExpBackfillStep, runToken, capFromProfile, dayBudget, isSkipDay,
+        EXPBF_MAX_BATCHES_PER_RUN, EXPBF_MAX_D1_CALLS_PER_RUN, EXPBF_MAX_ROWS_READ_PER_RUN } = BF;
 
 const TUE = new Date('2026-11-24T06:00:20Z');   // run day
 const SUN = new Date('2026-11-22T06:00:20Z');
@@ -77,7 +78,9 @@ test('B2 identity: all batches of 2026-04..06 give exactly the whole-month gate3
   // 2-hop redirect resolves to the survivor; 3-hop is not mapped.
   const ents = new Set(a.prepare(`SELECT DISTINCT entity_id e FROM entity_exposure_monthly`).all().map(x => x.e));
   for (const dup of [1001, 1003, 1004, 1006, 1007, 1008]) assert.ok(!ents.has(dup), `no row on ${dup}`);   // 1009 is 1008's survivor
-  assert.ok(a.prepare(`SELECT COUNT(*) n FROM entity_exposure_monthly WHERE computed_at NOT LIKE 'g3v2s-20261124-__'`).get().n === 0);
+  // BFS.FIX M1: ≤ 3 batches per run, so the fixture takes several run days; every token is a back-fill token g3v2s-YYYYMMDD-NN.
+  assert.ok(runs.length >= 2 && runs.every(r => r.metrics.batches <= EXPBF_MAX_BATCHES_PER_RUN));
+  assert.ok(a.prepare(`SELECT computed_at t FROM entity_exposure_monthly`).all().every(x => /^g3v2s-\d{8}-\d{2}$/.test(x.t)));
 });
 
 test('B2 drift: the module key CASE and redirect CTE are character-identical to gate3v2-month.sql.tmpl', () => {
@@ -233,6 +236,76 @@ test('B5 overrun: rows_written > 1.25 × projection, or a statement reading > 50
   assert.equal(r.event, 'failed'); assert.equal(r.error.class, 'EXPBF_BUDGET_OVERRUN'); assert.equal(r.metrics.batches, 1);
 });
 
+// ── BFS.FIX M1 (per-run limits) and M2 (overrun against what was left) ──────────────────────────────────────────
+test('M1 limits: constants are the CR budget (3 batches, 12 D1 calls, 150,000 rows read)', () => {
+  assert.equal(EXPBF_MAX_BATCHES_PER_RUN, 3); assert.equal(EXPBF_MAX_D1_CALLS_PER_RUN, 12); assert.equal(EXPBF_MAX_ROWS_READ_PER_RUN, 150000);
+});
+
+test('M1 60-fund synthetic (BFS.REVIEW case): ≤ 3 batches and ≤ 12 D1 calls per run → partial/run_limit; later runs finish', async () => {
+  const funds = Array.from({ length: 60 }, (_, i) => [`F${i}`, `X${String(i).padStart(2, '0')}`, 100 + i, 12000]);
+  const db = makeDb({ funds, rowsPerFund: 6, incomplete: [] }); enable(db);
+  const env = { DB: d1(db) };
+  const r = await runExpBackfill(env, { U: 0, now: TUE, log: quiet });
+  assert.equal(r.event, 'partial'); assert.equal(r.reason, 'run_limit');
+  assert.equal(r.metrics.batches, 3);
+  assert.ok(env.DB.log.length <= 12, `D1 calls ${env.DB.log.length}`);
+  assert.equal(r.metrics.d1_calls, env.DB.log.length, 'd1_calls metric = statements actually issued');
+  assert.equal(r.metrics.d1_calls, 11);                     // controls 1 + candidates 1 + 3 × 3
+  assert.ok(r.metrics.remaining_holder_months === 177, JSON.stringify(r.metrics));
+  // every later run also stays within the limits, and the back-fill completes
+  let runs = 1, last = r;
+  while (last.event === 'partial' && runs < 80) {
+    const e = { DB: d1(db) };
+    last = await runExpBackfill(e, { U: 0, now: TUE, log: quiet }); runs++;
+    assert.ok(last.metrics.batches <= 3 && e.DB.log.length <= 12, `run ${runs}: ${last.metrics.batches} batches, ${e.DB.log.length} calls`);
+  }
+  assert.equal(last.event, 'success'); assert.equal(runs, 60);
+  assert.equal(count(db, 'fund_exposure_coverage'), 180);
+});
+
+test('M1 rows-read limit: stops partial/run_limit before a batch whose projected reads would pass 150,000; never after writing it', async () => {
+  // count reads 40,000 → after the 3rd count, + ≈ 40,000 for the INSERT pair would pass 150,000: stop with 2 batches written.
+  let db = makeDb(); enable(db);
+  let env = { DB: d1(db, { meta: (sql, m) => { if (/SELECT COUNT\(DISTINCT/.test(sql)) m.rows_read = 40000; } }) };
+  let r = await runExpBackfill(env, { U: 0, now: TUE, log: quiet });
+  assert.equal(r.event, 'partial'); assert.equal(r.reason, 'run_limit'); assert.equal(r.metrics.batches, 2);
+  assert.ok(r.metrics.rows_read_total <= EXPBF_MAX_ROWS_READ_PER_RUN, String(r.metrics.rows_read_total));
+  assert.equal(env.DB.log.filter(x => /INSERT/.test(x.sql)).length, 4, 'no INSERT for the batch that would pass');
+  // heavy INSERTs (batch total ≈ 80,000): before the 2nd count the previous batch's reads say it would pass → no 2nd count.
+  db = makeDb(); enable(db);
+  env = { DB: d1(db, { meta: (sql, m) => { if (/SELECT COUNT\(DISTINCT/.test(sql)) m.rows_read = 20000; if (/INSERT/.test(sql)) m.rows_read = 30000; } }) };
+  r = await runExpBackfill(env, { U: 0, now: TUE, log: quiet });
+  assert.equal(r.event, 'partial'); assert.equal(r.reason, 'run_limit'); assert.equal(r.metrics.batches, 1);
+  assert.equal(env.DB.log.filter(x => /SELECT COUNT\(DISTINCT/.test(x.sql)).length, 1);
+  assert.ok(r.metrics.rows_read_total <= EXPBF_MAX_ROWS_READ_PER_RUN);
+  // the event is accepted shape-wise: partial with detail.reason run_limit
+  const f = BF.expbfEventFields(r);
+  assert.equal(f.detail.reason, 'run_limit'); assert.equal(f.detail.metrics.d1_calls, 5);
+});
+
+test('M2 overrun: 1.24 × multiplier writes more than was left → failed/EXPBF_BUDGET_OVERRUN (under the 1.25 factor); no further batch', async () => {
+  const P = await projections((() => { const d = makeDb(); enable(d); return d; })());
+  const x124 = (sql, m) => { if (/INSERT/.test(sql)) m.rows_written = Math.round(m.rows_written * 1.24); };
+  let db = makeDb(); enable(db, { cap: P[0].proj });
+  let env = { DB: d1(db, { meta: x124 }) };
+  let r = await runExpBackfill(env, { U: 0, now: TUE, log: quiet });
+  assert.equal(r.event, 'failed'); assert.equal(r.error.class, 'EXPBF_BUDGET_OVERRUN'); assert.equal(r.metrics.batches, 1);
+  assert.ok(r.metrics.rows_written > r.metrics.budget_B, 'the overrun that M2 catches');
+  assert.ok(r.metrics.rows_written <= 1.25 * P[0].proj, 'the 1.25 × projection check alone would not have fired');
+  assert.equal(env.DB.log.filter(x => /SELECT COUNT\(DISTINCT/.test(x.sql)).length, 1, 'no further batch after the overrun');
+  // the BFS.REVIEW sweep: for every cap, a 1.24 × run never ends partial/success above its budget
+  for (let cap = 200; cap <= 4000; cap += 113) {
+    db = makeDb(); enable(db, { cap });
+    r = await runExpBackfill({ DB: d1(db, { meta: x124 }) }, { U: 0, now: TUE, log: quiet });
+    if (r.metrics.rows_written > r.metrics.budget_B) assert.equal(r.event, 'failed', `cap ${cap}`);
+    else assert.notEqual(r.error && r.error.class, 'EXPBF_BUDGET_OVERRUN', `cap ${cap}: no false overrun`);
+  }
+  // with room to spare 1.24 × is not an overrun
+  db = makeDb(); enable(db, { cap: 50000 });
+  r = await runExpBackfill({ DB: d1(db, { meta: x124 }) }, { U: 0, now: TUE, log: quiet });
+  assert.notEqual(r.event, 'failed');
+});
+
 // ── B6 month floor, B7 incomplete ────────────────────────────────────────────────────────────────────────────────
 test('B6 month floor: a complete 2026-03 is never selected or written', async () => {
   const db = makeDb(); enable(db);
@@ -295,7 +368,7 @@ test('heartbeat metrics: ≤ 16 flat integer keys, all present on every outcome'
   const keys = Object.keys(f.detail.metrics);
   assert.ok(keys.length <= 16 && keys.every(k => k.length <= 32 && Number.isInteger(f.detail.metrics[k])), JSON.stringify(f));
   assert.deepEqual(keys.sort(), ['analytics_U', 'batches', 'budget_B', 'exposure_rows', 'holders_done', 'oldest_open_month', 'oversize_skipped',
-    'remaining_holder_months', 'rows_read_max_stmt', 'rows_read_total', 'rows_written'].sort());
+    'remaining_holder_months', 'rows_read_max_stmt', 'rows_read_total', 'rows_written', 'd1_calls'].sort());
   assert.equal(f.detail.metrics.analytics_U, 1234);
 });
 
