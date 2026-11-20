@@ -63,7 +63,7 @@ export async function analyticsWritesToday(env, fetchImpl = fetch) {
   } catch { return null; }
 }
 
-async function checkWriteBudget(env, { analytics = false } = {}) {
+async function checkWriteBudget(env, { analytics = false, out = null } = {}) {
   // FIXED MA-AUG-002, July 28 2026: aligned to holdings-pipeline.js's key
   // format (dashes kept) — same bug as entities-seed.js had, fixed there
   // at the same time. See that file's comment for the full explanation.
@@ -83,6 +83,7 @@ async function checkWriteBudget(env, { analytics = false } = {}) {
   const REQUIRED_HEADROOM = 5000;
   if (analytics) {
     const used = await analyticsWritesToday(env);
+    if (out) out.analyticsUsed = used;   // MA-NOV-EXP.BFS.BUILD: the back-fill reuses this figure (no fetch of its own)
     if (used !== null) {
       const room = ANALYTICS_CEILING - used;
       if (room < REQUIRED_HEADROOM) {
@@ -538,6 +539,7 @@ async function persistCombinedSubrequestCount(env, phase2Result, phase3Result) {
 // ── Cron dispatcher ───────────────────────────────────────────────────────────
 
 import { heartbeat, cronTrigger } from './ops-heartbeat.js';   // MA-OCT-002b B2
+import { runExpBackfillStep } from './exp-backfill.js';         // MA-NOV-EXP.BFS.BUILD
 
 export default {
   async scheduled(event, env, ctx) {
@@ -549,12 +551,20 @@ export default {
                                      trigger: cronTrigger(event), endOnly: !isPhase1 });
     hb.start();
 
+    // MA-NOV-EXP.BFS.BUILD: the exposure back-fill runs in the 06:00 firing only (isPhase1), after Phase 1, isolated
+    // (runExpBackfillStep never throws). When Phase 1 stops early it still reports the day as skipped (hold / budget).
     if (await checkHold(env)) {
       console.log('[entities-enrich] hold_all_jobs = true — exiting immediately');
       hb.end('skipped', { detail: { reason: 'hold' } });
+      if (isPhase1) await runExpBackfillStep(env, ctx, event, { forced: 'hold' });
       return;
     }
-    if (!(await checkWriteBudget(env, { analytics: isPhase1 }))) { hb.end('skipped', { detail: { reason: 'budget' } }); return; }
+    const budget = {};
+    if (!(await checkWriteBudget(env, { analytics: isPhase1, out: budget }))) {
+      hb.end('skipped', { detail: { reason: 'budget' } });
+      if (isPhase1) await runExpBackfillStep(env, ctx, event, { forced: 'budget' });
+      return;
+    }
 
     const mins = new Date().getMinutes();
     const hour = new Date().getHours();
@@ -572,6 +582,8 @@ export default {
         hb.end(phase3Result.deferred ? 'partial' : 'success', enrichPhase23Fields(phase2Result, phase3Result));
       }
     } catch (err) { hb.fail(err); throw err; }
+
+    if (isPhase1) await runExpBackfillStep(env, ctx, event, { U: budget.analyticsUsed ?? null });   // MA-NOV-EXP.BFS.BUILD
 
     console.log('[entities-enrich] Cron complete');
   },
