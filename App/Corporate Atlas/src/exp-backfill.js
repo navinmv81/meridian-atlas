@@ -43,7 +43,7 @@ export const SKIP_UTC_DAYS = [0, 1];             // Sun (holdings 04:00), Mon (e
 // the INSERT pair is projected at ≈ 1 × the count's reads. The count itself is still capped by ROWS_READ_STOP.
 export const EXPBF_MAX_BATCHES_PER_RUN = 3;
 export const EXPBF_MAX_D1_CALLS_PER_RUN = 12;
-export const EXPBF_MAX_ROWS_READ_PER_RUN = 150000;
+export const EXPBF_MAX_ROWS_READ_PER_RUN = 300000;
 export const D1_CALLS_PER_BATCH = 3;              // count + exposure INSERT + coverage INSERT
 export const INSERT_PAIR_READ_FACTOR = 1;         // INSERT pair reads ≈ 1 × the count's reads (BFS.REVIEW check 7)
 

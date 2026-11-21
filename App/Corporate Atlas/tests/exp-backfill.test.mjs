@@ -237,8 +237,8 @@ test('B5 overrun: rows_written > 1.25 × projection, or a statement reading > 50
 });
 
 // ── BFS.FIX M1 (per-run limits) and M2 (overrun against what was left) ──────────────────────────────────────────
-test('M1 limits: constants are the CR budget (3 batches, 12 D1 calls, 150,000 rows read)', () => {
-  assert.equal(EXPBF_MAX_BATCHES_PER_RUN, 3); assert.equal(EXPBF_MAX_D1_CALLS_PER_RUN, 12); assert.equal(EXPBF_MAX_ROWS_READ_PER_RUN, 150000);
+test('M1 limits: constants are the CR budget (3 batches, 12 D1 calls, 300,000 rows read — BFS.GO)', () => {
+  assert.equal(EXPBF_MAX_BATCHES_PER_RUN, 3); assert.equal(EXPBF_MAX_D1_CALLS_PER_RUN, 12); assert.equal(EXPBF_MAX_ROWS_READ_PER_RUN, 300000);
 });
 
 test('M1 60-fund synthetic (BFS.REVIEW case): ≤ 3 batches and ≤ 12 D1 calls per run → partial/run_limit; later runs finish', async () => {
@@ -263,24 +263,30 @@ test('M1 60-fund synthetic (BFS.REVIEW case): ≤ 3 batches and ≤ 12 D1 calls 
   assert.equal(count(db, 'fund_exposure_coverage'), 180);
 });
 
-test('M1 rows-read limit: stops partial/run_limit before a batch whose projected reads would pass 150,000; never after writing it', async () => {
-  // count reads 40,000 → after the 3rd count, + ≈ 40,000 for the INSERT pair would pass 150,000: stop with 2 batches written.
+test('M1 rows-read limit: stops partial/run_limit before a batch whose projected reads would pass 300,000; never after writing it', async () => {
+  // Every statement stays ≤ ROWS_READ_STOP (50,000), so the 300,000 limit is reached over several batches.
+  // Path 1 — after the count: count reads 40,000 / 29,000 / 50,000 and each INSERT reads what its count read →
+  // batches 120,000 + 87,000; before the 3rd count 207,000 + ~87,000 ≤ 300,000, after it 257,000 + ~50,000 > 300,000:
+  // stop with 2 batches written.
   let db = makeDb(); enable(db);
-  let env = { DB: d1(db, { meta: (sql, m) => { if (/SELECT COUNT\(DISTINCT/.test(sql)) m.rows_read = 40000; } }) };
+  let counts = [40000, 29000, 50000], k = -1;
+  let env = { DB: d1(db, { meta: (sql, m) => { if (/SELECT COUNT\(DISTINCT/.test(sql)) m.rows_read = counts[++k] ?? 50000; else if (/INSERT/.test(sql)) m.rows_read = counts[k]; } }) };
   let r = await runExpBackfill(env, { U: 0, now: TUE, log: quiet });
   assert.equal(r.event, 'partial'); assert.equal(r.reason, 'run_limit'); assert.equal(r.metrics.batches, 2);
+  assert.equal(env.DB.log.filter(x => /SELECT COUNT\(DISTINCT/.test(x.sql)).length, 3, 'the 3rd count ran');
   assert.ok(r.metrics.rows_read_total <= EXPBF_MAX_ROWS_READ_PER_RUN, String(r.metrics.rows_read_total));
   assert.equal(env.DB.log.filter(x => /INSERT/.test(x.sql)).length, 4, 'no INSERT for the batch that would pass');
-  // heavy INSERTs (batch total ≈ 80,000): before the 2nd count the previous batch's reads say it would pass → no 2nd count.
+  // Path 2 — before the count: heavy INSERTs (count 40,000 + 2 × 50,000 = 140,000 per batch); before the 3rd count
+  // the previous batch's reads say it would pass (280,000 + ~140,000) → no 3rd count.
   db = makeDb(); enable(db);
-  env = { DB: d1(db, { meta: (sql, m) => { if (/SELECT COUNT\(DISTINCT/.test(sql)) m.rows_read = 20000; if (/INSERT/.test(sql)) m.rows_read = 30000; } }) };
+  env = { DB: d1(db, { meta: (sql, m) => { if (/SELECT COUNT\(DISTINCT/.test(sql)) m.rows_read = 40000; if (/INSERT/.test(sql)) m.rows_read = 50000; } }) };
   r = await runExpBackfill(env, { U: 0, now: TUE, log: quiet });
-  assert.equal(r.event, 'partial'); assert.equal(r.reason, 'run_limit'); assert.equal(r.metrics.batches, 1);
-  assert.equal(env.DB.log.filter(x => /SELECT COUNT\(DISTINCT/.test(x.sql)).length, 1);
+  assert.equal(r.event, 'partial'); assert.equal(r.reason, 'run_limit'); assert.equal(r.metrics.batches, 2);
+  assert.equal(env.DB.log.filter(x => /SELECT COUNT\(DISTINCT/.test(x.sql)).length, 2);
   assert.ok(r.metrics.rows_read_total <= EXPBF_MAX_ROWS_READ_PER_RUN);
   // the event is accepted shape-wise: partial with detail.reason run_limit
   const f = BF.expbfEventFields(r);
-  assert.equal(f.detail.reason, 'run_limit'); assert.equal(f.detail.metrics.d1_calls, 5);
+  assert.equal(f.detail.reason, 'run_limit'); assert.equal(f.detail.metrics.d1_calls, 8);   // controls 1 + candidates 1 + 2 × 3
 });
 
 test('M2 overrun: 1.24 × multiplier writes more than was left → failed/EXPBF_BUDGET_OVERRUN (under the 1.25 factor); no further batch', async () => {
