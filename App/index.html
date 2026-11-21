@@ -1120,6 +1120,22 @@ body.dark .res-table td{border-bottom-color:var(--border)}
 .btn:focus-visible,.action-tile:focus-visible,.seg-btn:focus-visible,
 #home-research a:focus-visible,#hr-q:focus-visible,#search:focus-visible,#wl-input:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
 
+/* ─── MA-NOV-UI.POLISH: desktop header search width (> 900 px) ──────────────
+   The search keeps at least 180 px. 901–1279: the tiles take a second header row (as at ≤ 900, desktop order kept).
+   1280–1499: one row, the clock is hidden and the gaps are 8 px. ≥ 1500: one row with the clock. */
+@media (min-width: 901px){
+  #sw{flex:1 1 180px;min-width:180px}
+}
+@media (min-width: 901px) and (max-width: 1279px){
+  #header{flex-wrap:wrap;height:auto;padding:6px 16px;row-gap:6px}
+  .htiles{order:10;flex:1 0 100%;min-width:0;overflow-x:auto;flex-wrap:nowrap}
+  .htiles .action-tile{flex-shrink:0}
+}
+@media (min-width: 1280px) and (max-width: 1499px){
+  #header,.htiles{gap:8px}
+  #clock{display:none}
+}
+
 /* ─── MA-NOV-UI.HOME.BUILD: phone and tablet width (HOME-07, carry-over 12) ── */
 @media (max-width: 900px){
   #header{flex-wrap:wrap;height:auto;padding:6px 10px;row-gap:6px;column-gap:8px}

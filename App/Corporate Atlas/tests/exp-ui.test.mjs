@@ -162,12 +162,14 @@ check('exp_viewState(null) → empty', exp_viewState(null) === 'empty');
   check('header renderer present', typeof H === 'function');
   const IYn = { ...IYLD, report_month: '2026-01', newest_stored_month: '2026-08' };
   const html = H(exp_compute([{ ...E('IYLD'), allocation: '100' }], M({ IYLD: ok(IYn) })));
-  check('T6 header: stale chip for IYLD', /Stale: IYLD — more than 3 months older than the newest stored month</.test(html), html);
-  check('T6 header: "newest stored: Aug 2026" next to the stale chip', /Stale: IYLD[^<]*<\/span><span class="exp-chip">newest stored: Aug 2026<\/span>/.test(html), html);
+  // UI.POLISH §3.3: "Older data" chip names the newest stored month itself; the separate "newest stored:" chip is gone.
+  check('T6 header: older-data chip for IYLD with the newest month', /Older data: IYLD — more than 3 months older than the newest holdings we store \(Aug 2026\)</.test(html), html);
+  check('T6 header: no separate "newest stored" chip', !/newest stored: /.test(html) && !/Stale:/.test(html), html);
+  check('T6 header: date chip reads "from SEC N-PORT · older data"', /IYLD · Jan 2026 · filed [^<]* · from SEC N-PORT · older data</.test(html), html);
   const fresh = H(exp_compute([{ ...E('IYLD'), allocation: '100' }], M({ IYLD: ok({ ...IYLD, report_month: '2026-07', newest_stored_month: '2026-08' }) })));
-  check('fresh header: no stale chip', !/Stale:/.test(fresh) && !/newest stored:/.test(fresh), fresh);
+  check('fresh header: no older-data chip', !/Older data:/.test(fresh) && !/older data/.test(fresh) && !/newest stored:/.test(fresh), fresh);
   const w2 = H(exp_compute([E('EEM'), E('IYLD')], M({ EEM: ok(EEM), IYLD: ok(IYLD) })));
-  check('field missing: W2 wording kept, no route chip', /newest stored month here \(Feb 2026\)</.test(w2) && !/newest stored: /.test(w2), w2);
+  check('field missing: portfolio-reference wording, no route chip', /newest holdings we store here \(Feb 2026\)</.test(w2) && !/newest stored: /.test(w2), w2);
 }
 
 // Row badges (shown even while the list is invalid).
@@ -177,9 +179,9 @@ check('exp_viewState(null) → empty', exp_viewState(null) === 'empty');
   check('row: computed shows month', rs(E('EEM'), ok(EEM)).text === 'holdings available (Feb 2026)');
   check('row: 404 no_holdings', rs(E('SPY'), er(404, { error: 'no_holdings' })).text === 'not supported: no stored holdings');
   check('row: 404 etf_not_found', rs(E('ZZZ'), er(404, { error: 'etf_not_found' })).text === 'not supported: unknown ETF symbol');
-  check('row: 422 too_large', rs(E('VXUS'), er(422, { error: 'too_large', limit: 'rows' })).text === 'not supported: too large for live look-through'
+  check('row: 422 too_large', rs(E('VXUS'), er(422, { error: 'too_large', limit: 'rows' })).text === 'not supported: too large to look through here'
     && rs(E('VXUS'), er(422, { error: 'too_large', limit: 'rows' })).reason === 'too_large');
-  check('row: 503 → not loaded with retry', rs(E('EEM'), er(503, null)).text === 'not loaded – retry' && rs(E('EEM'), er(503, null)).retry === true);
+  check("row: 503 → couldn't load with retry", rs(E('EEM'), er(503, null)).text === "couldn't load – try again" && rs(E('EEM'), er(503, null)).retry === true);
   check('row: network → not loaded with retry', rs(E('EEM'), { ok: false, status: 0, data: null }).retry === true);
   check('row: wrong contract → not loaded', rs(E('EEM'), ok({ ...EEM, contract: 'exp-2' })).status === 'not_loaded');
   check('row: direct holding', rs({ type: 'eq', entity_id: 1, allocation: 5 }, undefined).text === 'direct holding · your stated allocation');
@@ -357,12 +359,12 @@ check('exp_viewState(null) → empty', exp_viewState(null) === 'empty');
   for (const w of banned) check(`UI block has no "${w}"`, !scan.toLowerCase().includes(w), w);
   // Labels the spec fixes (§6) are present verbatim.
   for (const l of ['Instruments mapped to this issuer; mapping tier shown',
-    "Funds in Meridian's N-PORT set (241 of 264 listed ETFs have stored holdings)", '; not all ETFs',
+    "Funds in Meridian's N-PORT set (", ' listed ETFs have stored holdings); ', '; not all ETFs',
     "13F-HR filers in Meridian's set, ", '; US-listed long positions only; not total ownership',
     'SEC-registered offerings parsed for 30 configured issuers since 2024-01-01; final records only',
     'Not mapped to a company', '>Holdings ${', ', filed ${',
     'Computed in your browser on ', ' from stored holdings; not live positions.', 'Compare with previous stored month', 'no earlier stored month',
-    'by company', 'Hide low-confidence', 'Low-confidence (hidden)', 'not supported: too large for live look-through',
+    'by company', 'Hide low-confidence', 'Low-confidence (hidden)', 'not supported: too large to look through here',
     'What your portfolio is made of', 'Companies we could identify', "Holdings we couldn't match to a company", 'Not linked to a company in our data',
     "No identifier in the fund's filing", "Linked to a merged record we couldn't resolve", 'Fund cash, derivatives and other items', 'Not allocated']) {
     check(`label present: ${l}`, UI.includes(l) || SRC.includes(l));
@@ -442,6 +444,60 @@ check('exp_viewState(null) → empty', exp_viewState(null) === 'empty');
   for (const w of ['current ownership', 'all holders', 'complete', 'real-time', 'realtime', 'real time'])
     check(`W3R3 panel has no "${w}"`, !(t1 + h1o).toLowerCase().includes(w));
   check('W3R3 panel toggles are display only (handler re-renders, no compute change)', /a === 'recon-details' \|\| a === 'hide-low'/.test(UI));
+}
+
+// --- MA-NOV-UI.POLISH (spec MA-NOV-UI §3, tests P-1 / P-2; N-7) ----------------------------------
+{
+  // P-1: "What we couldn't analyse" panel, rendered from a partial result (unmapped rows, a 422, a 404, a 503).
+  const EEMu = { ...EEM, unmapped_top: [['BIG UNMAPPED', 'CUSIP:999999999', 8]] };
+  const res = exp_compute([{ ...E('EEM'), allocation: '40' }, { ...E('VXUS'), allocation: '20' }, { ...E('SPY'), allocation: '10' }, { ...E('IYLD'), allocation: '30' }],
+    M({ EEM: ok(EEMu), VXUS: er(422, { error: 'too_large', limit: 'rows', holdings_count: 8512 }), SPY: er(404, { error: 'no_holdings' }), IYLD: er(503, null) }));
+  const g = ctx._expGapsHtml({ id: 'L1' }, res);
+  for (const s of ["<h3 style=\"margin-top:0\">What we couldn't analyse</h3>",
+    "The largest holdings we couldn't match to a company, by their share of your portfolio (up to 25 per fund).",
+    '<th>Share of fund</th><th>Share of your portfolio</th>', '<th class="exp-opt-col">Identifier</th>', 'Not mapped to a company',
+    '<strong>Not analysed</strong> (shown as "Not analysed" in What your portfolio is made of)',
+    'This fund is too large to look through here (8,512 holdings).', "We don't have this fund's holdings.",
+    "<strong>Couldn't load</strong> (shown as \"Couldn't load\" in What your portfolio is made of)",
+    '— the request failed. <button class="exp-btn" data-exp-act="retry" data-sym="IYLD">Try again</button>'])
+    check(`POLISH gaps panel has: ${s}`, g.includes(s), g);
+  const empty = ctx._expGapsHtml({ id: 'L1' }, exp_compute([{ ...E('EEM'), allocation: '100' }], M({ EEM: ok(EEM) })));
+  check('POLISH gaps: nothing unmatched sentence', empty.includes('Every holding in these funds was matched to a company.'), empty);
+  const unk = ctx._expGapsHtml({ id: 'L1' }, exp_compute([{ ...E('ZZZ'), allocation: '100' }], M({ ZZZ: er(404, { error: 'etf_not_found' }) })));
+  check('POLISH gaps: unknown fund sentence', unk.includes("— We don't recognise this fund."), unk);
+  // Chips, badges, total failure, overlap note (§3.3).
+  const hh = ctx._expHeaderHtml(res).replace(/&#39;|&#x27;|&apos;/g, "'");
+  check('POLISH partial chip', hh.includes("Partial result: IYLD couldn't load — see What we couldn't analyse"), hh);
+  check('POLISH header chip: 422 in plain words', hh.includes('VXUS · not supported: too large to look through here'), hh);
+  check("POLISH header chip: 503 couldn't load", hh.includes("IYLD · couldn't load – try again"), hh);
+  check('POLISH _expMsgUI keeps other messages', ctx._expMsgUI({ status: 'unsupported', reason: 'no_holdings', message: 'not supported: no stored holdings' }) === 'not supported: no stored holdings');
+  for (const s of ["Corporate Atlas could not be reached, or no fund's holdings could be loaded. No numbers are shown.",
+    "' (name match)'", "— for each company both funds hold, the smaller of its two fund weights, added up. The ETF page's overlap is by security, so the numbers differ.",
+    'Each ETF uses its own latest stored month.'])
+    check(`POLISH UI block has: ${s}`, UI.includes(s));
+  // Old strings are gone from the UI block (the W2 data-layer messages tested by exp-compute stay as they are).
+  for (const s of ['>Gaps<', 'see Gaps', 'Largest holdings not mapped', '<th>Fund weight</th>', '<th>Of portfolio</th>', 'No unmapped holdings reported.',
+    'Unsupported inputs', 'Load errors', "not loaded – retry", 'too large for live look-through', 'source SEC N-PORT', "' · stale'", 'Stale:',
+    'newest stored:', 'every look-through failed', "' (heuristic)'", 'Σ min(fund weight)', 'This differs from the ETF page', '241 of 264'])
+    check(`POLISH old wording absent from the UI block: ${s}`, !UI.includes(s));
+  // P-2: .exp-dim uses --muted, and --muted clears 4.5:1 on --bg2 and --bg3 in both theme blocks of index.html.
+  check('POLISH .exp-dim → var(--muted)', UI.includes('.exp-dim{color:var(--muted)}') && !UI.includes('.exp-dim{color:var(--dim)}'));
+  const HTML = readFileSync(path.join(HERE, '../../index.html'), 'utf8');
+  const lum = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const blocks = [...HTML.matchAll(/--bg2:(#[0-9A-Fa-f]{6}); --bg3:(#[0-9A-Fa-f]{6});[\s\S]*?--muted:(#[0-9A-Fa-f]{6})/g)];
+  check('POLISH two theme blocks found', blocks.length === 2, blocks.length);
+  for (const [, bg2, bg3, muted] of blocks) for (const bg of [bg2, bg3])
+    check(`POLISH contrast --muted ${muted} on ${bg} ≥ 4.5`, ratio(muted, bg) >= 4.5, ratio(muted, bg).toFixed(2));
+  // N-7: the N-PORT evidence label counts from the picker's loaded ETF list; fallback when it is not loaded.
+  const c = { entity_id: 1, name: 'A Co', contributions: [], direct: 0, indirect: 0 };
+  vm.runInContext('_expEtfList = null;', ctx);
+  const d0 = ctx._expDetailHtml({ id: 'L1' }, res, c, '');
+  check("N-7 fallback: \"Funds in Meridian's N-PORT set; …; not all ETFs\"", /Funds in Meridian's N-PORT set; months loading…; not all ETFs</.test(d0), d0);
+  vm.runInContext("_expEtfList = [{ ticker: 'A', hasNport: 1 }, { ticker: 'B', hasNport: 0 }, { ticker: 'C', hasNport: true }];", ctx);
+  const d1 = ctx._expDetailHtml({ id: 'L1' }, res, c, '');
+  check('N-7 counts from the list: 2 of 3', d1.includes("Funds in Meridian's N-PORT set (2 of 3 listed ETFs have stored holdings); months loading…; not all ETFs"), d1);
+  vm.runInContext('_expEtfList = null;', ctx);
 }
 
 // --- boundaries ---------------------------------------------------------------------------------

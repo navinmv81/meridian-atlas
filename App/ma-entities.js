@@ -2826,14 +2826,21 @@ function exp_viewState(res) {
   const s = res && res.state;
   return s === 'empty' || s === 'invalid' || s === 'loading' || s === 'total_failure' || s === 'partial_failure' ? s : (s === 'ok' ? 'results' : 'empty');
 }
+// UI.POLISH §3.3: plain wording for a failed or too-large look-through wherever the screen shows it (row badge,
+// header chip, compare line). _expOutcome's messages are data-layer values tested by exp-compute and stay as they are.
+function _expMsgUI(o) {
+  if (o && o.status === 'not_loaded') return "couldn't load – try again";
+  if (o && o.reason === 'too_large') return 'not supported: too large to look through here';
+  return o ? o.message : '';
+}
 // Row badge for one input, from its look-through response alone (works while the list is still invalid).
 function exp_rowStatus(inp, res) {
   if (_expType(inp) === 'eq') return { status: 'direct', cls: 'ok', text: 'direct holding · your stated allocation' };
   const oc = _expOutcome(res);
   if (oc.status === 'pending') return { status: 'pending', cls: 'wait', text: 'loading stored holdings…' };
   if (oc.status === 'computed') return { status: 'computed', cls: 'ok', text: `holdings available (${exp_monthLabel(oc.body.report_month)})` };
-  if (oc.status === 'not_loaded') return { status: 'not_loaded', cls: 'err', text: 'not loaded – retry', retry: true };
-  return { status: oc.status, cls: 'warn', text: oc.message, reason: oc.reason || null };
+  if (oc.status === 'not_loaded') return { status: 'not_loaded', cls: 'err', text: _expMsgUI(oc), retry: true };
+  return { status: oc.status, cls: 'warn', text: _expMsgUI(oc), reason: oc.reason || null };
 }
 // Chips/warnings shown above the numbers (§2 Screen B §1 and the state table).
 function exp_viewFlags(res) {
@@ -2913,7 +2920,7 @@ function _expStyleOnce() {
   st.id = 'exp-style';
   st.textContent = `.exp-root{max-width:1100px;margin:0 auto;color:var(--text);font-size:12px}
 .exp-root h2{font-size:15px;margin:0 0 4px;font-weight:700}.exp-root h3{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
-.exp-note{color:var(--text2);font-size:11px;line-height:1.5}.exp-root ul{list-style:disc;padding-left:18px;margin:4px 0}.exp-dim{color:var(--dim)}
+.exp-note{color:var(--text2);font-size:11px;line-height:1.5}.exp-root ul{list-style:disc;padding-left:18px;margin:4px 0}.exp-dim{color:var(--muted)}
 .exp-card{border:1px solid var(--border);background:var(--bg3);border-radius:var(--r);padding:12px;margin-top:12px}
 .exp-pickers{display:flex;gap:12px;flex-wrap:wrap}.exp-picker{position:relative;flex:1 1 280px;min-width:0}
 .exp-picker label{display:block;font-size:10px;font-weight:700;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
@@ -3293,7 +3300,7 @@ function _expRenderResults(layer) {
   }
   if (view === 'total_failure') {
     out.innerHTML = `<div class="exp-err-panel" role="alert"><strong>Couldn't load holdings for any ETF input.</strong>
-      <div class="exp-note">Corporate Atlas could not be reached, or every look-through failed. No numbers are shown.</div>
+      <div class="exp-note">Corporate Atlas could not be reached, or no fund's holdings could be loaded. No numbers are shown.</div>
       <button class="exp-btn primary" style="margin-top:8px" data-exp-act="retry-all">Retry</button></div>`;
     return;
   }
@@ -3306,22 +3313,22 @@ function _expHeaderHtml(res) {
   const ins = res.inputs.map(r => `<span class="exp-chip">${_esc(r.label)} ${_expF(r.allocation)}%${r.type === 'eq' ? ' · direct' : ''}</span>`).join('');
   const dates = res.inputs.map(r => {
     if (r.type === 'eq') return `<span class="exp-chip">${_esc(r.label)} · your stated allocation</span>`;
-    if (r.status !== 'computed') return `<span class="exp-chip warn">${_esc(r.label)} · ${_esc(r.message)}</span>`;
+    if (r.status !== 'computed') return `<span class="exp-chip warn">${_esc(r.label)} · ${_esc(_expMsgUI(r))}</span>`;
     const stale = f.stale.includes(r.symbol);
-    return `<span class="exp-chip${stale ? ' warn' : ''}">${_esc(r.symbol)} · ${_esc(exp_monthLabel(r.report_month))} · filed ${_esc(_navFmtDate(r.filing_date) || '—')} · source SEC N-PORT${stale ? ' · stale' : ''}</span>`;
+    return `<span class="exp-chip${stale ? ' warn' : ''}">${_esc(r.symbol)} · ${_esc(exp_monthLabel(r.report_month))} · filed ${_esc(_navFmtDate(r.filing_date) || '—')} · from SEC N-PORT${stale ? ' · older data' : ''}</span>`;
   }).join('');
   const etfMonths = res.months.etfs;
   const warn = [];
   if (f.mixed) warn.push(`<span class="exp-chip warn">Mixed months: ${_esc([...new Set(etfMonths.map(m => m.label))].join(', '))}. Each ETF uses its own latest stored month.</span>`);
   if (f.stale.length && res.months.newest_source === 'portfolio') {
     // W2 wording, used only when no look-through body carries newest_stored_month (older cached bodies).
-    warn.push(`<span class="exp-chip warn">Stale: ${_esc(f.stale.join(', '))} — more than 3 months older than the newest stored month here (${_esc(exp_monthLabel(res.months.newest_stored_month))})</span>`);
+    warn.push(`<span class="exp-chip warn">Older data: ${_esc(f.stale.join(', '))} — more than 3 months older than the newest holdings we store here (${_esc(exp_monthLabel(res.months.newest_stored_month))})</span>`);
   } else if (f.stale.length) {
     // W1R5: reference month is the newest stored month across all ETFs (R-EXP1 newest_stored_month).
-    warn.push(`<span class="exp-chip warn">Stale: ${_esc(f.stale.join(', '))} — more than 3 months older than the newest stored month</span>`);
-    warn.push(`<span class="exp-chip">newest stored: ${_esc(exp_monthLabel(res.months.newest_stored_month))}</span>`);
+    // UI.POLISH §3.3: one chip; the newest stored month is named inside it (was a separate "newest stored" chip).
+    warn.push(`<span class="exp-chip warn">Older data: ${_esc(f.stale.join(', '))} — more than 3 months older than the newest holdings we store (${_esc(exp_monthLabel(res.months.newest_stored_month))})</span>`);
   }
-  if (f.not_loaded.length) warn.push(`<span class="exp-chip warn">Partial result: ${_esc(f.not_loaded.join(', '))} not loaded — see Gaps</span>`);
+  if (f.not_loaded.length) warn.push(`<span class="exp-chip warn">Partial result: ${_esc(f.not_loaded.join(', '))} couldn't load — see What we couldn't analyse</span>`);
   const comp = res.inputs.map(r => r.computed_at).filter(Boolean).sort()[0];
   return `<div class="exp-card">
     <div class="exp-note">Computed in your browser on ${_esc(_expToday())} from stored holdings; not live positions.${comp ? ` Company mappings as of ${_esc(_navFmtDate(comp))}.` : ''}</div>
@@ -3420,7 +3427,7 @@ function _expTableHtml(layer, res) {
   };
   const rows = shown.map(c => {
     const open = st.open.has(c.entity_id);
-    const conf = c.band ? `<span class="exp-badge ${c.band === 'low' ? 'warn' : 'ok'}">${_expBandLabel(c.band)}${c.contributions.some(x => (x.tiers || []).includes('heuristic')) ? ' (heuristic)' : ''}</span>` : '<span class="exp-dim">— direct</span>';
+    const conf = c.band ? `<span class="exp-badge ${c.band === 'low' ? 'warn' : 'ok'}">${_expBandLabel(c.band)}${c.contributions.some(x => (x.tiers || []).includes('heuristic')) ? ' (name match)' : ''}</span>` : '<span class="exp-dim">— direct</span>';
     const notes = c.notes.length ? ` <span class="exp-badge warn">${_esc(c.notes.join(' · '))}</span>` : '';
     return `<div class="exp-tr" role="row">
       <span role="cell" style="min-width:0;overflow:hidden;text-overflow:ellipsis"><a class="exp-link" href="${_esc(_expEntityHash(layer, c.entity_id))}" data-exp-act="entity" data-id="${c.entity_id}" data-name="${_esc(c.name)}">${_esc(c.name)}</a>${notes}</span>
@@ -3466,7 +3473,7 @@ function _expDetailHtml(layer, res, c, conf) {
     <strong>Contributions</strong> <span class="exp-dim">(allocation × fund weight = contribution)</span><ul>${lines}</ul>
     <strong>Evidence on the company page</strong><ul>
       ${link('Instruments mapped to this issuer; mapping tier shown')}
-      ${link(`Funds in Meridian's N-PORT set (241 of 264 listed ETFs have stored holdings); ${months}; not all ETFs`)}
+      ${link(_expEtfList ? `Funds in Meridian's N-PORT set (${_expEtfList.filter(e => e.hasNport === 1 || e.hasNport === true).length} of ${_expEtfList.length} listed ETFs have stored holdings); ${months}; not all ETFs` : `Funds in Meridian's N-PORT set; ${months}; not all ETFs`)}
       ${link(`13F-HR filers in Meridian's set, ${period}; US-listed long positions only; not total ownership`)}
       ${link('SEC-registered offerings parsed for 30 configured issuers since 2024-01-01; final records only')}
     </ul></div>`;
@@ -3479,7 +3486,7 @@ function _expSharedHtml(layer, res) {
   return `<div class="exp-card"><h3 style="margin-top:0">Shared exposure</h3>
     <div class="exp-note">${res.shared.length} compan${res.shared.length === 1 ? 'y is' : 'ies are'} reached by 2 or more inputs.${res.shared.length > 15 ? ' Top 15 shown.' : ''}</div>
     ${sh ? `<table class="exp-tbl2"><thead><tr><th>Company</th><th>Inputs</th><th>Combined</th></tr></thead><tbody>${sh}</tbody></table>` : ''}
-    ${ov ? `<div class="exp-note" style="margin-top:10px"><strong>ETF overlap by company</strong> — Σ min(fund weight) over companies both funds hold. This differs from the ETF page's overlap, which is by security.</div>
+    ${ov ? `<div class="exp-note" style="margin-top:10px"><strong>ETF overlap by company</strong> — for each company both funds hold, the smaller of its two fund weights, added up. The ETF page's overlap is by security, so the numbers differ.</div>
       <table class="exp-tbl2"><thead><tr><th>ETF pair</th><th>Overlap by company</th><th>Companies</th></tr></thead><tbody>${ov}</tbody></table>` : ''}</div>`;
 }
 
@@ -3488,17 +3495,18 @@ function _expGapsHtml(layer, res) {
   const top = g.unmapped_top.slice(0, 25).map(u => `<tr><td>${_esc(u.name || '—')}</td><td>${_esc(u.symbol)}</td>
     <td class="exp-opt-col" style="font-family:var(--mono)">${_esc(u.key || 'no identifier')}</td><td class="n">${_expPct(u.fund_weight)}</td><td class="n">${_expPct(u.contribution)}</td>
     <td>${u.key ? `<a class="exp-link" href="${_esc(_navHash('instrument', u.key, `exposure:${layer.id || ''}`))}" data-exp-act="instrument" data-key="${_esc(u.key)}">Not mapped to a company</a>` : '<span class="exp-dim">Not mapped to a company</span>'}</td></tr>`).join('');
-  const why = r => r.reason === 'too_large'
-    ? `not supported: too large for live look-through (${r.holdings_count != null ? `${Number(r.holdings_count).toLocaleString('en-US')} holdings` : 'fund'}${r.limit === 'size' ? '; response size over the limit' : r.limit === 'rows' ? '; row limit' : ''})`
-    : r.message;
+  // UI.POLISH §3.1: one plain sentence per input (exp_unsupportedSentence); too large also names the holdings count.
+  const why = r => r.reason === 'too_large' && r.holdings_count != null
+    ? exp_unsupportedSentence(r).replace(/\.$/, ` (${Number(r.holdings_count).toLocaleString('en-US')} holdings).`)
+    : exp_unsupportedSentence(r);
   const uns = g.unsupported.map(r => `<li><strong>${_esc(r.label)}</strong> ${_expPct(r.allocation)} — ${_esc(why(r))}</li>`).join('');
-  const nl = g.not_loaded.map(r => `<li><strong>${_esc(r.label)}</strong> ${_expPct(r.allocation)} — not loaded – retry <button class="exp-btn" data-exp-act="retry" data-sym="${_esc(r.symbol)}">Retry</button></li>`).join('');
-  return `<div class="exp-card"><h3 style="margin-top:0">Gaps</h3>
-    ${top ? `<div class="exp-note">Largest holdings not mapped to a company (by contribution to your portfolio; up to 25 per fund are reported).</div>
-      <table class="exp-tbl2"><thead><tr><th>Holding</th><th>ETF</th><th class="exp-opt-col">Identifier</th><th>Fund weight</th><th>Of portfolio</th><th></th></tr></thead><tbody>${top}</tbody></table>`
-      : '<div class="exp-note">No unmapped holdings reported.</div>'}
-    ${uns ? `<div class="exp-note" style="margin-top:10px"><strong>Unsupported inputs</strong> (their allocation is on the unsupported line)</div><ul class="exp-note">${uns}</ul>` : ''}
-    ${nl ? `<div class="exp-note" style="margin-top:10px"><strong>Load errors</strong> (their allocation is on the not-loaded line)</div><ul class="exp-note">${nl}</ul>` : ''}</div>`;
+  const nl = g.not_loaded.map(r => `<li><strong>${_esc(r.label)}</strong> ${_expPct(r.allocation)} — the request failed. <button class="exp-btn" data-exp-act="retry" data-sym="${_esc(r.symbol)}">Try again</button></li>`).join('');
+  return `<div class="exp-card"><h3 style="margin-top:0">What we couldn't analyse</h3>
+    ${top ? `<div class="exp-note">The largest holdings we couldn't match to a company, by their share of your portfolio (up to 25 per fund).</div>
+      <table class="exp-tbl2"><thead><tr><th>Holding</th><th>ETF</th><th class="exp-opt-col">Identifier</th><th>Share of fund</th><th>Share of your portfolio</th><th></th></tr></thead><tbody>${top}</tbody></table>`
+      : '<div class="exp-note">Every holding in these funds was matched to a company.</div>'}
+    ${uns ? `<div class="exp-note" style="margin-top:10px"><strong>Not analysed</strong> (shown as "Not analysed" in What your portfolio is made of)</div><ul class="exp-note">${uns}</ul>` : ''}
+    ${nl ? `<div class="exp-note" style="margin-top:10px"><strong>Couldn't load</strong> (shown as "Couldn't load" in What your portfolio is made of)</div><ul class="exp-note">${nl}</ul>` : ''}</div>`;
 }
 
 function _expCompareHtml(layer, res) {
@@ -3511,7 +3519,7 @@ function _expCompareHtml(layer, res) {
       if (e.status === 'compared') return `<li><strong>${_esc(e.symbol)}</strong>: ${_esc(e.label)}</li>`;
       if (e.status === 'no_previous') return `<li><strong>${_esc(e.symbol)}</strong>: ${_esc(exp_monthLabel(e.current))} — no earlier stored month</li>`;
       if (e.status === 'pending') return `<li><strong>${_esc(e.symbol)}</strong>: <span class="exp-spin" aria-hidden="true"></span>loading ${_esc(exp_monthLabel(e.previous))}…</li>`;
-      return `<li><strong>${_esc(e.symbol)}</strong>: ${_esc(exp_monthLabel(e.previous))} ${_esc(e.message)} ${e.status === 'not_loaded' ? `<button class="exp-btn" data-exp-act="retry-prev" data-key="${_esc(`${e.symbol}|${e.previous}`)}">Retry</button>` : ''}</li>`;
+      return `<li><strong>${_esc(e.symbol)}</strong>: ${_esc(exp_monthLabel(e.previous))} ${_esc(_expMsgUI(e))} ${e.status === 'not_loaded' ? `<button class="exp-btn" data-exp-act="retry-prev" data-key="${_esc(`${e.symbol}|${e.previous}`)}">Retry</button>` : ''}</li>`;
     }).join('');
     const rows = res.delta.companies.slice(0, 25).map(c => `<tr><td><a class="exp-link" href="${_esc(_expEntityHash(layer, c.entity_id))}" data-exp-act="entity" data-id="${c.entity_id}" data-name="${_esc(c.name)}">${_esc(c.name)}</a>${c.status !== 'changed' ? ` <span class="exp-badge warn">${c.status}</span>` : ''}</td>
       <td class="n exp-opt-col">${_expF(c.previous)}</td><td class="n exp-opt-col">${_expF(c.current)}</td><td class="n"><strong>${c.delta > 0 ? '+' : ''}${_expF(c.delta)}</strong></td></tr>`).join('');
