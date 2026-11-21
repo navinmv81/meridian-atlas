@@ -1,11 +1,14 @@
-// ma-ops.js — Meridian Atlas Ops Visibility Panel
+// ma-ops.js — Meridian Atlas operator console (Ops views)
 // Pure vanilla JS + inline SVG/CSS. No external dependencies.
 //
 // MA-OCT-OPS.A (Founder "Ops option A", ML-1031-4): this file runs only inside the signed-in
 // operator console (GET /api/ops/admin/console on meridian-ops, which loads it from GitHub Pages).
 // The public terminal no longer loads it: its OPS button is a link to the console, so there is no
-// anonymous Ops panel. The console holds all seven views: System Health, Cases, DQ Tickets,
-// Drift & Budget, Events, Sprint Board (read-only) and Release Ledger (read-only).
+// anonymous Ops panel. The console holds four views: System Health, Cases, DQ Tickets and
+// Drift & Budget.
+// Events, Sprint Board and Release Ledger removed from the console by MA-NOV-UI (OPS-01); routes and tables unchanged (OPS-05).
+// MA-NOV-UI (OPS-03/04): one injected <style id="ops-theme"> carries the main product's tokens and the
+// .ops-* classes; every colour below comes from a token through a class. Shared states: ops_stateHtml().
 
 const OPS_HEALTH_PATH = '/api/ops-health';   // on meridian-proxy, through data_proxyGet (ma-data.js)
 const OPS_POLL_MS = 10 * 60 * 1000; // 10 minutes
@@ -26,25 +29,174 @@ function _opsPref(key, value) {
   return null;
 }
 
-const OPS_COLORS = {
-  teal: '#4DC8C8',
-  amber: '#D4A843',
-  red: '#C85050',
-  green: '#4CC880',
-  grey: '#5a6068',
-  bg: '#0a0c10',
-  bg2: 'var(--bg2, #0f1117)',
-  text: '#e8eaed',
-  textDim: '#9aa0a8'
-};
+// ---------------------------------------------------------------------------------------------
+// ops-theme (MA-NOV-UI §1.5). The console CSP allows inline <style> ('unsafe-inline') but no font
+// or stylesheet host, so Inter shows only where it is installed locally (UD-5). This block is the
+// only place in this file that holds colour literals.
+// ---------------------------------------------------------------------------------------------
+const OPS_THEME_CSS = `
+/* Copied from App/index.html :root — keep in step (test O-9 compares every value). */
+:root {
+  --bg:#07111F; --bg2:#0B1730; --bg3:#0F1B34; --bg4:#13213D;
+  --border:rgba(160, 184, 214, 0.14); --border2:rgba(160, 184, 214, 0.25);
+  --text:#E6EEF8; --text2:#93A4BD; --muted:#7D8D9F; --dim:#68788D;
+  --green:#2D9C75; --green-bg:rgba(45, 156, 117, 0.10); --green-bd:rgba(45, 156, 117, 0.25);
+  --red:#D9534F; --red-bg:rgba(217, 83, 79, 0.10); --red-bd:rgba(217, 83, 79, 0.25);
+  --blue:#5A9BC8; --blue-bg:rgba(90, 155, 200, 0.12); --blue-bd:rgba(90, 155, 200, 0.30);
+  --amber:#D99C3D; --amber-bg:rgba(217, 156, 61, 0.10); --amber-bd:rgba(217, 156, 61, 0.25);
+  --cyan:#4E9CAF; --purple:#8E82C2; --teal:#3F928A;
+  --mono:'Inter',sans-serif; --sans:'Inter',sans-serif;
+  --r:2px; --sh:none;
+  --sh-md:none;
+  --row-h:28px;
+}
+/* End of the copied block. */
+html,body{background:var(--bg)}
+#ops-panel.ops-root{position:fixed;top:0;left:0;width:100vw;height:100vh;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;z-index:3000;
+  background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:12px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.ops-root *,.ops-root *::before,.ops-root *::after{box-sizing:border-box}
+.ops-root :focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.ops-head{position:sticky;top:0;z-index:5;background:var(--bg2)}
+.ops-titlebar{height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 24px;border-bottom:1px solid var(--border)}
+.ops-logo{display:flex;align-items:center;gap:8px;min-width:0}
+.ops-logo svg{width:24px;height:24px;flex-shrink:0}
+.ops-logo .l0{fill:#eef4fc}.ops-logo .l1{fill:#93c2e8}.ops-logo .l2{fill:#4a90d9}.ops-logo .l3{fill:#1a56a0}
+.ops-logo .l4{stroke:#0e7490;fill:none}.ops-logo .l5{fill:#0e7490}
+.ops-logo-name{font-size:13px;font-weight:600;color:var(--text);letter-spacing:-.01em;line-height:1.2}
+.ops-logo-name span{color:var(--blue)}
+.ops-logo-sub{font-size:8px;color:var(--muted);letter-spacing:.02em;line-height:1.2}
+.ops-role{font-size:10.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ops-tabs{display:flex;flex-wrap:nowrap;gap:2px;padding:0 20px;border-bottom:1px solid var(--border);overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ops-tabs::-webkit-scrollbar{display:none}
+.ops-tab{flex:0 0 auto;scroll-snap-align:start;background:none;border:0;border-bottom:2px solid transparent;color:var(--text2);font-family:inherit;
+  font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:10px 10px 8px;cursor:pointer;white-space:nowrap}
+.ops-tab:hover{color:var(--text)}
+.ops-tab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--blue)}
+.ops-tab:focus-visible{outline-offset:-2px}
+.ops-body{padding:16px 24px 40px}
+.ops-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;min-width:0}
+.ops-chdr{padding:6px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;min-height:30px}
+.ops-ctitle{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text);margin:0}
+.ops-cbody{padding:12px}
+.ops-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.ops-h1{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text);margin:0}
+.ops-note{font-size:11px;color:var(--text2)}
+.ops-dim{color:var(--text2)}
+.ops-num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.ops-big{font-size:18px;font-weight:600;color:var(--text)}
+.ops-mid{font-size:14px;font-weight:600;color:var(--text)}
+.ops-line{margin-top:6px}
+.ops-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.ops-grid>.ops-card{margin-bottom:0}
+.ops-stack{margin-bottom:10px}
+.ops-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.ops-row{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.ops-stats{display:flex;gap:28px;flex-wrap:wrap}
+.ops-rows>div{padding:6px 0;border-bottom:1px solid var(--border);font-size:11.5px}
+.ops-rows>div:last-child{border-bottom:none}
+.ops-ok{color:var(--green)}.ops-bad{color:var(--red)}
+.ops-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:6px 0 0}
+.ops-bar{height:8px;width:100%;background:var(--bg4);border-radius:var(--r);overflow:hidden;display:flex;margin-top:6px}
+.ops-bar.thick{height:12px}
+.ops-bar>i{display:block;height:100%}
+.ops-fill-blue{background:var(--blue)}.ops-fill-green{background:var(--green)}.ops-fill-amber{background:var(--amber)}
+.ops-fill-muted{background:var(--muted)}.ops-fill-cyan{background:var(--cyan)}
+.ops-gauge{position:relative;display:inline-block;width:150px;height:150px;flex-shrink:0}
+.ops-gauge svg{width:150px;height:150px;display:block}
+.ops-gauge path{fill:none;stroke-width:14;stroke-linecap:round}
+.ops-gauge .ops-g-track{stroke:var(--bg4)}
+.ops-gauge .ops-g-guard{stroke:var(--red);stroke-width:20;stroke-linecap:butt;opacity:.85}
+.ops-stroke-green{stroke:var(--green)}.ops-stroke-amber{stroke:var(--amber)}.ops-stroke-red{stroke:var(--red)}.ops-stroke-muted{stroke:var(--muted)}
+.ops-gauge-val{position:absolute;top:50%;left:50%;transform:translate(-50%,-40%);text-align:center}
+.ops-center{text-align:center}
+.ops-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-family:inherit;font-size:10.5px;font-weight:500;line-height:1.4;
+  padding:3px 8px;border-radius:var(--r);cursor:pointer;white-space:nowrap;transition:background-color .15s ease,border-color .15s ease,color .15s ease}
+.ops-btn:hover{background:var(--bg4);border-color:var(--border2);color:var(--text)}
+.ops-btn.primary,.ops-btn[aria-pressed="true"]{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
+.ops-btn:disabled{opacity:.5;cursor:default}
+.ops-chips{display:flex;gap:6px;flex-wrap:wrap}
+.ops-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.ops-btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.ops-tbl-wrap{overflow-x:auto;max-width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-top:10px}
+.ops-tbl-wrap.bare{background:none;border:0;margin-top:0}
+.ops-tbl{width:100%;border-collapse:collapse}
+.ops-tbl.wide{min-width:760px}
+.ops-tbl th{padding:5px 8px;font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);background:var(--bg3);
+  text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+.ops-tbl td{padding:6px 8px;height:var(--row-h);font-size:11.5px;border-bottom:1px solid var(--border);vertical-align:top;overflow-wrap:break-word}
+.ops-tbl tbody tr:last-child td{border-bottom:none}
+.ops-tbl tbody tr:hover td{background:rgba(160, 184, 214, 0.05)}
+.ops-tbl tr[data-opsc-open]{cursor:pointer}
+.ops-tbl tr[data-opsc-open]:focus-visible{outline-offset:-2px}
+.ops-tbl tr[aria-current="true"] td{background:var(--bg4)}
+.ops-tbl tr[aria-current="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blue)}
+.ops-tbl td.ops-state-cell{padding:0}
+.ops-tbl td .ops-mono{white-space:nowrap}
+.ops-sev{display:inline-block;font-size:9px;font-weight:600;padding:1px 6px;border-radius:var(--r);border:1px solid var(--border);white-space:nowrap;color:var(--muted)}
+.ops-sev.s1{color:var(--red);background:var(--red-bg);border-color:var(--red-bd)}
+.ops-sev.s2{color:var(--amber);background:var(--amber-bg);border-color:var(--amber-bd)}
+.ops-sev.s3{color:var(--blue);background:var(--blue-bg);border-color:var(--blue-bd)}
+.ops-sev.s4{color:var(--muted)}
+.ops-flag{font-size:9.5px;font-weight:600;white-space:nowrap}
+.ops-flag.red{color:var(--red)}.ops-flag.amber{color:var(--amber)}
+.ops-mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.ops-small{font-size:10.5px;color:var(--text2)}
+.ops-state{padding:10px 12px;font-size:11.5px;color:var(--text2)}
+.ops-state.error{color:var(--red);background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--r)}
+.ops-tbl .ops-state.error{border:0;border-radius:0}
+.ops-spin{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px;border:1.5px solid var(--border2);border-top-color:var(--blue);
+  border-radius:50%;animation:ops-sp 1s linear infinite}
+@keyframes ops-sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ops-spin{animation:none}}
+.ops-msg{margin-top:10px;font-size:11.5px}
+.ops-msg.ok{color:var(--green)}.ops-msg.warn{color:var(--amber)}.ops-msg.error{color:var(--red)}
+.ops-drawer{position:fixed;top:0;right:0;width:min(720px,100vw);height:100vh;overflow-y:auto;overflow-x:hidden;z-index:3100;background:var(--bg2);
+  border-left:1px solid var(--border2);padding:20px 24px;box-sizing:border-box;color:var(--text);box-shadow:var(--sh);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:12px;line-height:1.45}
+.ops-drawer *,.ops-drawer *::before,.ops-drawer *::after{box-sizing:border-box}
+.ops-drawer :focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.ops-dhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.ops-dtitle{font-size:15px;font-weight:600;margin:6px 0 8px;color:var(--text);overflow-wrap:anywhere}
+.ops-dtitle:focus{outline:none}
+.ops-badges{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ops-strong{font-weight:600}
+.ops-sec{margin-top:16px}
+.ops-sec-title{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin:0 0 6px}
+.ops-kv{border-collapse:collapse}
+.ops-kv th{text-align:left;padding:3px 12px 3px 0;color:var(--text2);font-weight:500;vertical-align:top;font-size:11px;white-space:nowrap}
+.ops-kv td{padding:3px 0;overflow-wrap:anywhere;font-size:11.5px}
+.ops-pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.ops-hist{list-style:none;margin:0;padding:0}
+.ops-hist li{padding:6px 0;border-bottom:1px solid var(--border);font-size:11.5px}
+.ops-form{margin-top:12px;padding:12px;border:1px solid var(--border2);border-radius:var(--r)}
+.ops-form-title{font-weight:600;font-size:12px}
+.ops-label{display:block;margin-top:10px;font-size:11px;color:var(--text2)}
+.ops-field{display:block;margin-top:4px;width:100%;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:var(--r);
+  padding:5px 8px;font-family:inherit;font-size:11.5px}
+select.ops-field{width:auto;max-width:100%}
+.ops-field:focus{border-color:var(--blue);background:var(--bg4)}
+.ops-check{display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:11px}
+.ops-gap{margin-top:8px}
+@media (max-width:640px){
+  .ops-titlebar{padding:0 12px}
+  .ops-logo-sub{display:none}
+  .ops-tabs{padding:0 6px}
+  .ops-body{padding:12px 12px 32px}
+  .ops-grid,.ops-trio{grid-template-columns:minmax(0,1fr)}
+  .ops-drawer{padding:16px}
+  .ops-btn{min-height:32px}
+  .ops-tab{min-height:38px}
+}
+`;
 
-// Static worker status table — updated manually when status changes
-const OPS_WORKERS = [
-  { name: 'meridian-holdings',        schedule: 'Every 2h',     status: 'active' },
-  { name: 'meridian-bootstrap',       schedule: 'Every 4h',     status: 'active' },
-  { name: 'meridian-entities-enrich', schedule: 'Every 30m',    status: 'frozen' },
-  { name: 'meridian-entities-seed',   schedule: 'Daily 03:00',  status: 'frozen' }
-];
+function _opsInjectTheme(panel) {
+  if (document.getElementById('ops-theme')) return;
+  const style = document.createElement('style');
+  style.id = 'ops-theme';
+  style.textContent = OPS_THEME_CSS;
+  (document.head || panel).appendChild(style);
+}
 
 let _opsPollTimer = null;
 let _opsActiveTab = null;
@@ -114,15 +266,22 @@ function _escapeHtml(s) {
   }[c]));
 }
 
-// Circular arc gauge — returns inline SVG markup string.
-// value/max define the fill fraction; guardAt (optional) draws a marker line.
-function _svgGauge(value, max, guardAt, opts) {
-  opts = opts || {};
+// --- shared states (§1.6) ----------------------------------------------------------------------
+// kind: 'loading' | 'empty' | 'error'. Errors carry role="alert"; loading shows the spinner.
+function ops_stateHtml(kind, text) {
+  if (kind === 'loading') return `<div class="ops-state loading"><span class="ops-spin" aria-hidden="true"></span>${_escapeHtml(text || 'Loading…')}</div>`;
+  if (kind === 'error') return `<div class="ops-state error" role="alert">${_escapeHtml(text)}</div>`;
+  return `<div class="ops-state empty">${_escapeHtml(text)}</div>`;
+}
+function _opsBusy(el, busy) { if (el && el.setAttribute) el.setAttribute('aria-busy', busy ? 'true' : 'false'); }
+
+// Circular arc gauge — returns inline SVG markup. value/max define the fill fraction; guardAt (optional)
+// draws a marker. Colours come from .ops-stroke-* / .ops-g-* classes (presentation attributes take no var()).
+function _svgGauge(value, max, guardAt, tone) {
   const size = 180;
   const cx = size / 2;
   const cy = size / 2;
   const r = 70;
-  const strokeWidth = 14;
 
   // Arc spans 270 degrees, starting at 135deg (bottom-left) going clockwise
   const startAngle = 135;
@@ -142,48 +301,41 @@ function _svgGauge(value, max, guardAt, opts) {
 
   const pct = max > 0 ? Math.min(value / max, 1) : 0;
   const fillEndAngle = startAngle + sweepAngle * pct;
-
-  let fillColor = opts.color;
-  if (!fillColor) {
-    if (max > 0) {
-      const ratio = value / max;
-      fillColor = ratio > 0.7 ? OPS_COLORS.red : ratio > 0.4 ? OPS_COLORS.amber : OPS_COLORS.green;
-    } else {
-      fillColor = OPS_COLORS.grey;
-    }
-  }
+  const t = tone || (max > 0 ? (value / max > 0.7 ? 'red' : value / max > 0.4 ? 'amber' : 'green') : 'muted');
 
   let guardMarker = '';
   if (guardAt != null && max > 0) {
     const guardAngle = startAngle + sweepAngle * Math.min(guardAt / max, 1);
     const gp1 = polarToXY(guardAngle - 1.5);
     const gp2 = polarToXY(guardAngle + 1.5);
-    guardMarker = `<path d="M ${gp1.x.toFixed(2)} ${gp1.y.toFixed(2)} L ${gp2.x.toFixed(2)} ${gp2.y.toFixed(2)}"
-      stroke="${OPS_COLORS.red}" stroke-width="${strokeWidth + 6}" stroke-linecap="butt" opacity="0.85"/>`;
+    guardMarker = `<path class="ops-g-guard" d="M ${gp1.x.toFixed(2)} ${gp1.y.toFixed(2)} L ${gp2.x.toFixed(2)} ${gp2.y.toFixed(2)}"/>`;
   }
 
-  return `
-    <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-      <path d="${arcPath(startAngle, startAngle + sweepAngle)}"
-        fill="none" stroke="#1c2028" stroke-width="${strokeWidth}" stroke-linecap="round"/>
+  return `<svg viewBox="0 0 ${size} ${size}" aria-hidden="true" focusable="false">
+      <path class="ops-g-track" d="${arcPath(startAngle, startAngle + sweepAngle)}"/>
       ${guardMarker}
-      <path d="${arcPath(startAngle, fillEndAngle)}"
-        fill="none" stroke="${fillColor}" stroke-width="${strokeWidth}" stroke-linecap="round"/>
+      ${pct > 0 ? `<path class="ops-stroke-${t}" d="${arcPath(startAngle, fillEndAngle)}"/>` : ''}
     </svg>`;
 }
 
-function _pipelineColor(pct) {
-  if (pct > 80) return OPS_COLORS.green;
-  if (pct > 50) return OPS_COLORS.amber;
-  return OPS_COLORS.teal;
+function _pipelineTone(pct) {
+  if (pct > 80) return 'green';
+  if (pct > 50) return 'amber';
+  return 'blue';
 }
 
-function _coverageBar(value, total, color) {
-  const pct = total > 0 ? Math.min((value / total) * 100, 100) : 0;
-  return `
-    <div style="height:8px;width:100%;background:#1c2028;border-radius:4px;overflow:hidden;margin-top:6px;">
-      <div style="height:100%;width:${pct.toFixed(1)}%;background:${color};border-radius:4px;"></div>
-    </div>`;
+// One horizontal bar; segments: [[pct, tone], …]. Widths are the only inline styles here (dynamic).
+function _opsBar(segments, thick) {
+  return `<div class="ops-bar${thick ? ' thick' : ''}">${segments.map(([pct, tone]) =>
+    `<i class="ops-fill-${tone}" style="width:${Math.max(0, Math.min(pct, 100)).toFixed(1)}%"></i>`).join('')}</div>`;
+}
+
+function _coverageBar(value, total, tone) {
+  return _opsBar([[total > 0 ? (value / total) * 100 : 0, tone]]);
+}
+
+function _opsCard(title, body, extraHead) {
+  return `<section class="ops-card"><div class="ops-chdr"><h2 class="ops-ctitle">${title}</h2>${extraHead || ''}</div><div class="ops-cbody">${body}</div></section>`;
 }
 
 function _renderOpsPanel(data) {
@@ -198,7 +350,6 @@ function _renderOpsPanel(data) {
   const pipelinePct = pipeline.total > 0
     ? (pipeline.offset / pipeline.total) * 100
     : 0;
-  const pipelineColor = _pipelineColor(pipelinePct);
   const lastRunAgo = _timeAgo(pipeline.last_run);
   const statusHuman = _parseStatus(pipeline.last_status);
 
@@ -207,8 +358,6 @@ function _renderOpsPanel(data) {
     pipeline.writes_limit || 100000,
     pipeline.writes_guard || 80000
   );
-
-  const readsGaugeSvg = _svgGauge(0, 1, null, { color: OPS_COLORS.grey });
 
   const coverageTotal = coverage.total_deep || 244;
   // MA-OCT-MON26 / ML-1026-1 note: since 26 Oct /api/ops-health returns null enrichment counts with
@@ -224,182 +373,75 @@ function _renderOpsPanel(data) {
     ? Math.min((bootstrap.current_cik / bootstrap.discovery_threshold) * 100, 100)
     : 0;
 
-  const workerRows = OPS_WORKERS.map(w => {
-    const dot = w.status === 'active' ? '🟢 Active' : '🔴 Frozen';
-    return `
-      <tr>
-        <td style="padding:10px 16px;color:${OPS_COLORS.text};">${_escapeHtml(w.name)}</td>
-        <td style="padding:10px 16px;color:${OPS_COLORS.textDim};font-family:var(--mono, monospace);">${_escapeHtml(w.schedule)}</td>
-        <td style="padding:10px 16px;">${dot}</td>
-      </tr>`;
-  }).join('');
-
-  // CHANGED 30 July 2026 (August Operating Layer): this used to target
-  // `panel` (the whole #ops-panel element) directly. Now targets the
-  // #ops-tab-health sub-container instead, since #ops-panel now also hosts
-  // the persistent tab bar and the 4 new tab containers (Sprint Board,
-  // Release Ledger, Events, Drift) — see ops_renderTabBar() below. Nothing
-  // about the rendered health-tab content or logic below changed, only
-  // where it gets written to.
+  // Since 30 Jul 2026 the Health view writes only into #ops-tab-health (the tab chrome lives above it).
   const healthContainer = document.getElementById('ops-tab-health') || panel;
+  _opsBusy(healthContainer, false);
+
+  const coverageCell = (n, label, tone) => `
+        <div>
+          <div class="ops-num ops-big">${n}</div>
+          <div class="ops-note">${label}</div>
+          ${_coverageBar(n, coverageTotal, tone)}
+        </div>`;
 
   healthContainer.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
-      <div style="font-size:20px;font-weight:700;letter-spacing:0.05em;color:${OPS_COLORS.teal};">
-        MERIDIAN ATLAS — OPS
-      </div>
-    </div>
+    ${_opsCard('Pipeline Health', `
+      ${_opsBar([[pipelinePct, _pipelineTone(pipelinePct)]], true)}
+      <div class="ops-line ops-num ops-mid">ETF Second Pass — ${pipeline.offset} of ${pipeline.total} complete (${pipelinePct.toFixed(1)}%)</div>
+      <div class="ops-line ops-note">Last run: ${_escapeHtml(lastRunAgo)}</div>
+      <div>${_escapeHtml(statusHuman)}</div>`)}
 
-    <!-- SECTION 1 — PIPELINE HEALTH -->
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:24px;margin-bottom:24px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">
-        Pipeline Health
-      </div>
-      <div style="height:18px;width:100%;background:#1c2028;border-radius:9px;overflow:hidden;">
-        <div style="height:100%;width:${pipelinePct.toFixed(1)}%;background:${pipelineColor};border-radius:9px;
-          transition:width 0.4s ease;"></div>
-      </div>
-      <div style="margin-top:10px;font-family:var(--mono, monospace);font-size:15px;color:${OPS_COLORS.text};">
-        ETF Second Pass — ${pipeline.offset} of ${pipeline.total} complete (${pipelinePct.toFixed(1)}%)
-      </div>
-      <div style="margin-top:6px;font-size:13px;color:${OPS_COLORS.textDim};">
-        Last run: ${_escapeHtml(lastRunAgo)}
-      </div>
-      <div style="margin-top:2px;font-size:13px;color:${OPS_COLORS.text};">
-        ${_escapeHtml(statusHuman)}
-      </div>
-    </div>
-
-    <!-- SECTION 2 — D1 BUDGET GAUGES -->
-    <div style="display:flex;gap:24px;margin-bottom:24px;">
-      <div style="flex:1;background:${OPS_COLORS.bg2};border-radius:10px;padding:24px;text-align:center;">
-        <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">
-          Writes Today
-        </div>
-        <div style="position:relative;display:inline-block;">
-          ${writesGaugeSvg}
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-40%);text-align:center;">
-            <div style="font-family:var(--mono, monospace);font-size:24px;font-weight:700;color:${OPS_COLORS.text};">
-              ${(pipeline.writes_today || 0).toLocaleString()}
-            </div>
-            <div style="font-size:12px;color:${OPS_COLORS.textDim};">
-              of ${(pipeline.writes_limit || 100000).toLocaleString()}
+    <div class="ops-grid ops-stack">
+      ${_opsCard('Writes Today', `
+        <div class="ops-row">
+          <div class="ops-gauge">${writesGaugeSvg}
+            <div class="ops-gauge-val">
+              <div class="ops-num ops-big">${(pipeline.writes_today || 0).toLocaleString()}</div>
+              <div class="ops-note">of ${(pipeline.writes_limit || 100000).toLocaleString()}</div>
             </div>
           </div>
-        </div>
-      </div>
-      <div style="flex:1;background:${OPS_COLORS.bg2};border-radius:10px;padding:24px;text-align:center;">
-        <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">
-          Reads Today
-        </div>
-        <div style="position:relative;display:inline-block;">
-          ${readsGaugeSvg}
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-40%);text-align:center;">
-            <div style="font-family:var(--mono, monospace);font-size:16px;font-weight:700;color:${OPS_COLORS.textDim};">
-              CHECK_DASHBOARD
-            </div>
-            <div style="font-size:11px;color:${OPS_COLORS.textDim};max-width:140px;margin:4px auto 0;">
-              Read metrics via Cloudflare dashboard
-            </div>
-          </div>
-        </div>
-      </div>
+          <div class="ops-note">Reads today: see Drift &amp; Budget → Cloudflare usage today.</div>
+        </div>`)}
+      ${_opsCard(`Coverage Depth (${coverageTotal} ETFs)`, `
+        <div class="ops-trio">
+          ${coverageCell(coverage.null_depth ?? 0, 'No data', 'muted')}
+          ${coverageCell(coverage.depth_1 ?? 0, '1 month', 'blue')}
+          ${coverageCell(coverage.depth_2_plus ?? 0, '2+ months', 'cyan')}
+        </div>`)}
     </div>
 
-    <!-- SECTION 3 — COVERAGE DEPTH -->
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:24px;margin-bottom:24px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;">
-        Coverage Depth (${coverageTotal} ETFs)
-      </div>
-      <div style="display:flex;gap:24px;">
-        <div style="flex:1;">
-          <div style="font-family:var(--mono, monospace);font-size:22px;color:${OPS_COLORS.text};">${coverage.null_depth ?? 0}</div>
-          <div style="font-size:12px;color:${OPS_COLORS.textDim};">No data</div>
-          ${_coverageBar(coverage.null_depth ?? 0, coverageTotal, OPS_COLORS.grey)}
-        </div>
-        <div style="flex:1;">
-          <div style="font-family:var(--mono, monospace);font-size:22px;color:${OPS_COLORS.text};">${coverage.depth_1 ?? 0}</div>
-          <div style="font-size:12px;color:${OPS_COLORS.textDim};">1 month</div>
-          ${_coverageBar(coverage.depth_1 ?? 0, coverageTotal, OPS_COLORS.teal)}
-        </div>
-        <div style="flex:1;">
-          <div style="font-family:var(--mono, monospace);font-size:22px;color:${OPS_COLORS.text};">${coverage.depth_2_plus ?? 0}</div>
-          <div style="font-size:12px;color:${OPS_COLORS.textDim};">2+ months</div>
-          ${_coverageBar(coverage.depth_2_plus ?? 0, coverageTotal, '#7CF0F0')}
-        </div>
-      </div>
-    </div>
-
-    <!-- SECTION 4 — ENTITY ENRICHMENT -->
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:24px;margin-bottom:24px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;">
-        Entity Enrichment Status
-      </div>
-      <div style="height:18px;width:100%;border-radius:9px;overflow:hidden;display:flex;">
-        <div style="height:100%;width:${enrichedPct.toFixed(1)}%;background:${OPS_COLORS.teal};"></div>
-        <div style="height:100%;width:${pendingPct.toFixed(1)}%;background:${OPS_COLORS.amber};"></div>
-      </div>
+    ${_opsCard('Entity Enrichment Status', `
+      ${_opsBar([[enrichedPct, 'blue'], [pendingPct, 'amber']], true)}
       ${enrichmentRemoved ? `
-      <div style="margin-top:10px;font-size:14px;color:${OPS_COLORS.text};">
-        Enrichment counts removed (ML-1025-3) — not shown since 26 Oct
-      </div>
-      <div style="margin-top:4px;font-size:12px;color:${OPS_COLORS.textDim};">
-        The count read the whole entity table on every refresh, so it was taken out to save D1 reads.
-      </div>` : `
-      <div style="margin-top:10px;font-family:var(--mono, monospace);font-size:14px;color:${OPS_COLORS.text};">
-        ${(enrichment.version_2_complete || 0).toLocaleString()} enriched · ${(enrichment.version_1_pending || 0).toLocaleString()} pending enrichment
-      </div>
-      <div style="margin-top:4px;font-size:12px;color:${OPS_COLORS.textDim};">
-        Enrichment resumes after ETF Phase 3 gate
-      </div>`}
-    </div>
+      <div class="ops-line">Enrichment counts removed (ML-1025-3) — not shown since 26 Oct</div>
+      <div class="ops-note">The count read the whole entity table on every refresh, so it was taken out to save D1 reads.</div>` : `
+      <div class="ops-line ops-num">${(enrichment.version_2_complete || 0).toLocaleString()} enriched · ${(enrichment.version_1_pending || 0).toLocaleString()} pending enrichment</div>
+      <div class="ops-note">Enrichment resumes after ETF Phase 3 gate</div>`}`)}
 
-    <!-- SECTION 5 — BOOTSTRAP PROGRESS -->
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:24px;margin-bottom:24px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">
-        Bootstrap Progress
-      </div>
-      <div style="height:14px;width:100%;background:#1c2028;border-radius:7px;overflow:hidden;">
-        <div style="height:100%;width:${bootstrapPct.toFixed(1)}%;background:${OPS_COLORS.teal};border-radius:7px;"></div>
-      </div>
-      <div style="margin-top:10px;font-family:var(--mono, monospace);font-size:14px;color:${OPS_COLORS.text};">
-        Bootstrap CIK: ${bootstrap.current_cik != null ? bootstrap.current_cik.toLocaleString() : 'unknown'} — next ETF discovery at CIK ${(bootstrap.discovery_threshold || 0).toLocaleString()}
-      </div>
-    </div>
+    ${_opsCard('Bootstrap Progress', `
+      ${_opsBar([[bootstrapPct, 'blue']])}
+      <div class="ops-line ops-num">Bootstrap CIK: ${bootstrap.current_cik != null ? bootstrap.current_cik.toLocaleString() : 'unknown'} — next ETF discovery at CIK ${(bootstrap.discovery_threshold || 0).toLocaleString()}</div>`)}
 
-    <!-- SECTION 6 — WORKER STATUS -->
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:24px;margin-bottom:24px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px;">
-        Worker Status
-      </div>
-      <table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <thead>
-          <tr style="border-bottom:1px solid #1c2028;">
-            <th style="text-align:left;padding:8px 16px;color:${OPS_COLORS.textDim};font-weight:500;">Worker</th>
-            <th style="text-align:left;padding:8px 16px;color:${OPS_COLORS.textDim};font-weight:500;">Schedule</th>
-            <th style="text-align:left;padding:8px 16px;color:${OPS_COLORS.textDim};font-weight:500;">Status</th>
-          </tr>
-        </thead>
-        <tbody>${workerRows}</tbody>
-      </table>
-    </div>
+    <p class="ops-note">Job schedules and missed runs are checked by the Ops sweep; problems appear in Cases.</p>
 
-    <!-- FOOTER -->
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 0 40px;
-      color:${OPS_COLORS.textDim};font-size:12px;">
+    <div class="ops-footer ops-note">
       <div>
         Last refreshed: ${new Date(data.snapshot_at || Date.now()).toLocaleTimeString()}<br/>
         Auto-refresh every 10 minutes
       </div>
-      <button id="ops-refresh-btn" style="background:${OPS_COLORS.teal};color:#0a0c10;border:none;
-        border-radius:6px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;">
-        Refresh Now
-      </button>
+      <button type="button" id="ops-refresh-btn" class="ops-btn primary">Refresh Now</button>
     </div>
   `;
+}
 
-  const refreshBtn = panel.querySelector('#ops-refresh-btn');
-  if (refreshBtn) refreshBtn.addEventListener('click', () => openOps({ skipCreate: true }));
+// Health clicks (Refresh Now, Try again): one delegated listener on the Health container.
+function _opsWireHealth(container) {
+  if (!container || container.dataset.opsWired === '1') return;
+  container.dataset.opsWired = '1';
+  container.addEventListener('click', ev => {
+    const t = ev.target && ev.target.closest ? ev.target : null;
+    if (t && (t.closest('#ops-refresh-btn') || t.closest('[data-ops-retry]'))) openOps({ skipCreate: true });
+  });
 }
 
 async function openOps(opts) {
@@ -414,409 +456,259 @@ async function openOps(opts) {
   if (!panel) {
     panel = document.createElement('div');
     panel.id = 'ops-panel';
-    // MA-OCT-OPS.A: border-box, so the 40px side padding sits inside 100vw (it was 80px wider and clipped right).
-    panel.style.cssText = `position:fixed;top:0;left:0;width:100vw;box-sizing:border-box;
-      height:100vh;background:#0a0c10;z-index:3000;overflow-y:auto;
-      padding:32px 40px;font-family:system-ui,-apple-system,sans-serif;color:${OPS_COLORS.text};`;
+    panel.className = 'ops-root';
     document.body.appendChild(panel);
+    _opsInjectTheme(panel);
 
-    // ADDED 30 July 2026 (August Operating Layer): persistent tab chrome —
-    // built once at panel creation, survives every _renderOpsPanel() refresh
-    // because that function now only touches #ops-tab-health's innerHTML.
-    // MA-OCT-005: ops_switchTab() loads Health (and starts its poll) only when Health is the active tab.
+    // Persistent chrome (title bar + tab bar), built once at panel creation; survives every Health
+    // refresh because _renderOpsPanel() only touches #ops-tab-health. ops_switchTab() loads Health
+    // (and starts its poll) only when Health is the active tab (MA-OCT-005).
     ops_renderTabBar();
     return;
   }
   if (!_opsHealthWanted()) return;   // M-3: ops-health is read only on the visible Health tab
 
+  const healthContainer = document.getElementById('ops-tab-health') || panel;
+  _opsWireHealth(healthContainer);
+  if (!healthContainer.innerHTML) { _opsBusy(healthContainer, true); healthContainer.innerHTML = ops_stateHtml('loading'); }
   const res = await data_proxyGet(OPS_HEALTH_PATH);
   if (res.ok && res.data) {
     _renderOpsPanel(res.data);
   } else {
-    const healthContainer = document.getElementById('ops-tab-health') || panel;
-    const why = res.status ? `HTTP ${res.status}` : (res.type || 'network error');
-    healthContainer.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
-        <div style="font-size:20px;font-weight:700;color:${OPS_COLORS.teal};">MERIDIAN ATLAS — OPS</div>
-      </div>
-      <div style="color:${OPS_COLORS.red};">Failed to load ops health: ${_escapeHtml(why)}</div>
-    `;
+    _opsBusy(healthContainer, false);
+    const why = res.status ? `HTTP ${res.status}` : 'network error';
+    healthContainer.innerHTML = `<section class="ops-card"><div class="ops-cbody">
+        ${ops_stateHtml('error', `Couldn't load system health (${why}).`)}
+        <div class="ops-btnrow"><button type="button" class="ops-btn primary" data-ops-retry="health">Try again</button></div>
+      </div></section>`;
   }
 }
 
 // ============================================================
-// August Operating Layer — Sprint Board / Release Ledger / Events / Drift
-// Added 30 July 2026. All new top-level functions below are ops_-prefixed
-// (unlike this file's original, unprefixed functions) per the naming
-// convention adopted after the _freshnessBadge collision incident
-// (Current State v11, Section 7.4) — new code follows the safer pattern,
-// existing code is left untouched.
-//
-// All network calls route through ma-data.js (data_opsGet here; data_opsAdmin
-// for the 005 console views; data_proxyGet for openOps()'s Health read, moved
-// out of its inline fetch() by MA-OCT-005 §5.6). Sprint Board and Release
-// Ledger are read-only since MA-OCT-005 (Founder Q2): their actions posted to
-// paths closed since 001.
+// Console chrome and the Drift & Budget view.
+// Top-level functions added since 30 July 2026 are ops_-prefixed per the naming convention adopted
+// after the _freshnessBadge collision incident (Current State v11, Section 7.4).
+// All network calls route through ma-data.js (data_opsGet for Drift & Budget; data_opsAdmin for
+// Cases/DQ; data_proxyGet for openOps()'s Health read, moved out of its inline fetch() by MA-OCT-005 §5.6).
 // ============================================================
 
 // MA-OCT-005 (§5): Cases and DQ Tickets are the console section at the end of this file (ops_loadCases / ops_loadDq).
 // Fleet (§5.5) and the "New case" form are pre-cut (Ops review M-6; Founder Q3 order).
+// MA-NOV-UI (OPS-01): exactly these four views, in this order; the console opens on Cases.
 const OPS_TABS = [
   { id: 'health', label: 'System Health' },
   { id: 'cases', label: 'Cases' },
   { id: 'dq', label: 'DQ Tickets' },
-  { id: 'drift', label: 'Drift & Budget' },
-  { id: 'events', label: 'Events' },
-  { id: 'sprint', label: 'Sprint Board' },
-  { id: 'release', label: 'Release Ledger' }
+  { id: 'drift', label: 'Drift & Budget' }
 ];
 
-const OPS_STAGE_COLORS = {
-  IDEA: OPS_COLORS.grey, PRODUCT_SPEC: OPS_COLORS.teal, ARCH_REVIEW: OPS_COLORS.amber,
-  UX_REVIEW: OPS_COLORS.amber, ENG_DIAGNOSTIC: OPS_COLORS.amber, FOUNDER_APPROVAL: OPS_COLORS.amber,
-  ENG_IMPLEMENT: OPS_COLORS.teal, OPS_RELEASE_REVIEW: OPS_COLORS.amber, RELEASE_READY: OPS_COLORS.green,
-  CLOSED: OPS_COLORS.green, BLOCKED: OPS_COLORS.red
-};
+function ops_tabButtonsHtml(active) {
+  return OPS_TABS.map(t => {
+    const on = t.id === active;
+    return `<button type="button" class="ops-tab" role="tab" id="ops-tabbtn-${t.id}" aria-controls="ops-tab-${t.id}" aria-selected="${on}" tabindex="${on ? '0' : '-1'}" data-ops-tab="${t.id}">${_escapeHtml(t.label)}</button>`;
+  }).join('');
+}
+
+function ops_titlebarRoleHtml() {
+  const r = _opsPref('ops_acting_role');
+  return OPSC_ROLES.includes(r) ? `Acting as ${_escapeHtml(r)}` : '';
+}
+function ops_refreshTitlebarRole() {
+  const el = document.getElementById('ops-role');
+  if (el) el.innerHTML = ops_titlebarRoleHtml();
+}
 
 function ops_renderTabBar() {
   const panel = document.getElementById('ops-panel');
   if (!panel || document.getElementById('ops-tab-bar')) return; // idempotent — build once
 
-  // §6.5: role tablist/tab/tabpanel; Left/Right/Home/End move between tabs.
+  const head = document.createElement('div');
+  head.className = 'ops-head';
+  const title = document.createElement('div');
+  title.className = 'ops-titlebar';
+  title.innerHTML = `
+    <div class="ops-logo">
+      <svg viewBox="0 0 30 30" aria-hidden="true" focusable="false">
+        <rect class="l0" width="30" height="30" rx="6"/>
+        <rect class="l1" x="3" y="19" width="5" height="8" rx="1"/>
+        <rect class="l2" x="10" y="13" width="5" height="14" rx="1"/>
+        <rect class="l3" x="17" y="7" width="5" height="20" rx="1"/>
+        <polyline class="l4" points="3,21 12,14 19,8 27,4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle class="l5" cx="27" cy="4" r="2"/>
+      </svg>
+      <div><div class="ops-logo-name"><span>Meridian</span> Atlas</div><div class="ops-logo-sub">Operator console</div></div>
+    </div>
+    <div class="ops-role" id="ops-role">${ops_titlebarRoleHtml()}</div>`;
+
+  // §6.5: role tablist/tab/tabpanel; Left/Right/Home/End move between tabs. One delegated listener each.
   const bar = document.createElement('div');
   bar.id = 'ops-tab-bar';
+  bar.className = 'ops-tabs';
   bar.setAttribute('role', 'tablist');
   bar.setAttribute('aria-label', 'Ops views');
-  bar.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-bottom:20px;border-bottom:1px solid #1c2028;padding-bottom:0;';
-  bar.innerHTML = OPS_TABS.map(t => `
-    <button class="ops-tab-btn" role="tab" id="ops-tabbtn-${t.id}" aria-controls="ops-tab-${t.id}" aria-selected="false" tabindex="-1"
-      data-ops-tab="${t.id}" style="background:none;border:none;
-      color:${OPS_COLORS.textDim};font-size:13px;font-weight:600;padding:10px 16px;cursor:pointer;
-      border-bottom:2px solid transparent;">${_escapeHtml(t.label)}</button>
-  `).join('');
+  bar.innerHTML = ops_tabButtonsHtml(null);
 
   const contentWrap = document.createElement('div');
   contentWrap.id = 'ops-tab-content';
+  contentWrap.className = 'ops-body';
   OPS_TABS.forEach(t => {
     const div = document.createElement('div');
     div.id = `ops-tab-${t.id}`;
     div.setAttribute('role', 'tabpanel');
     div.setAttribute('aria-labelledby', `ops-tabbtn-${t.id}`);
-    div.style.display = 'none';
+    div.setAttribute('tabindex', '-1');
+    div.hidden = true;
     contentWrap.appendChild(div);
   });
 
-  panel.insertBefore(contentWrap, panel.firstChild);
-  panel.insertBefore(bar, panel.firstChild);
+  head.appendChild(title);
+  head.appendChild(bar);
+  panel.appendChild(head);
+  panel.appendChild(contentWrap);
 
-  bar.querySelectorAll('.ops-tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => ops_switchTab(btn.dataset.opsTab));
-    btn.addEventListener('keydown', ev => {
-      const i = OPS_TABS.findIndex(t => t.id === btn.dataset.opsTab);
-      const j = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: OPS_TABS.length - 1 }[ev.key];
-      if (j === undefined) return;
-      ev.preventDefault();
-      const next = OPS_TABS[(j + OPS_TABS.length) % OPS_TABS.length].id;
-      ops_switchTab(next);
-      const nb = document.getElementById(`ops-tabbtn-${next}`);
-      if (nb) nb.focus();
-    });
+  bar.addEventListener('click', ev => {
+    const btn = ev.target && ev.target.closest ? ev.target.closest('[data-ops-tab]') : null;
+    if (btn) ops_switchTab(btn.dataset.opsTab);
   });
+  bar.addEventListener('keydown', ops_onTabKey);
 
   ops_switchTab('cases');   // the console opens on Cases (§5)
+}
+
+function ops_onTabKey(ev) {
+  const btn = ev.target && ev.target.closest ? ev.target.closest('[data-ops-tab]') : null;
+  if (!btn) return;
+  const i = OPS_TABS.findIndex(t => t.id === btn.dataset.opsTab);
+  const j = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: OPS_TABS.length - 1 }[ev.key];
+  if (j === undefined) return;
+  ev.preventDefault();
+  const next = OPS_TABS[(j + OPS_TABS.length) % OPS_TABS.length].id;
+  ops_switchTab(next);
+  const nb = document.getElementById(`ops-tabbtn-${next}`);
+  if (nb && nb.focus) nb.focus();
 }
 
 function ops_switchTab(tabName) {
   _opsActiveTab = tabName;
   OPS_TABS.forEach(t => {
     const el = document.getElementById(`ops-tab-${t.id}`);
-    if (el) el.style.display = t.id === tabName ? 'block' : 'none';
+    if (el) el.hidden = t.id !== tabName;
   });
-  document.querySelectorAll('.ops-tab-btn').forEach(btn => {
-    const active = btn.dataset.opsTab === tabName;
-    btn.style.color = active ? OPS_COLORS.teal : OPS_COLORS.textDim;
-    btn.style.borderBottomColor = active ? OPS_COLORS.teal : 'transparent';
-    btn.setAttribute('aria-selected', active ? 'true' : 'false');
-    btn.setAttribute('tabindex', active ? '0' : '-1');
-  });
+  const bar = document.getElementById('ops-tab-bar');
+  if (bar) {
+    const hadFocus = !!(bar.contains && document.activeElement && bar.contains(document.activeElement));
+    bar.innerHTML = ops_tabButtonsHtml(tabName);
+    const nb = document.getElementById(`ops-tabbtn-${tabName}`);
+    if (nb && hadFocus && nb.focus) nb.focus();
+    if (nb && nb.scrollIntoView) nb.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
 
   // M-3: Health reads and polls only while it is the visible tab.
   if (tabName === 'health') { openOps({ skipCreate: true }); _opsStartPoll(); }
   else _opsStopPoll();
   if (tabName === 'cases') ops_loadCases();
   else if (tabName === 'dq') ops_loadDq();
-  else if (tabName === 'sprint') ops_loadSprintBoard();
-  else if (tabName === 'release') ops_loadReleaseLedger();
-  else if (tabName === 'events') ops_loadEventTimeline();
   else if (tabName === 'drift') ops_loadDriftTab();
 }
 
 // The views draw their Refresh buttons as data-ops-refresh="<tab>"; one delegated listener per
 // container wires them, so no inline on*= handler is ever emitted (Ops review M-1).
 function _opsWireRefresh(container, load) {
-  const btn = container.querySelector('[data-ops-refresh]');
-  if (btn) btn.addEventListener('click', load);
-}
-const OPS_READ_ONLY_NOTE = 'Read-only. Changes are made by the Main Lane.';
-
-// --- Sprint Board --------------------------------------------------------
-
-async function ops_loadSprintBoard() {
-  const container = document.getElementById('ops-tab-sprint');
-  if (!container) return;
-  container.innerHTML = `<div style="color:${OPS_COLORS.textDim};padding:20px;">Loading sprint board…</div>`;
-
-  const res = await data_opsGet('/api/ops/sprint-board');
-  if (!res.ok) {
-    container.innerHTML = `<div style="color:${OPS_COLORS.red};padding:20px;">Failed to load sprint board: ${_escapeHtml(res.error || res.status)}</div>`;
-    return;
-  }
-  ops_renderSprintBoard(res.data.items || []);
+  if (!container || container.dataset.opsWired === '1') return;
+  container.dataset.opsWired = '1';
+  container.addEventListener('click', ev => {
+    const t = ev.target && ev.target.closest ? ev.target : null;
+    if (t && t.closest('[data-ops-refresh]')) load();
+  });
 }
 
-function ops_renderSprintBoard(items) {
-  const container = document.getElementById('ops-tab-sprint');
-  if (!container) return;
+// --- Drift & Budget (one combined tab) ---------------------------------------------------------
 
-  const cards = items.map(t => {
-    const stageColor = OPS_STAGE_COLORS[t.stage] || OPS_COLORS.grey;
-    return `
-      <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:18px 20px;margin-bottom:12px;border-left:3px solid ${stageColor};">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-          <div>
-            <div style="font-family:var(--mono, monospace);font-size:11px;color:${OPS_COLORS.textDim};">${_escapeHtml(t.ticket_id)} · ${_escapeHtml(t.domain)} · ${_escapeHtml(t.owner_role)}</div>
-            <div style="font-size:15px;font-weight:600;margin-top:4px;">${_escapeHtml(t.title)}</div>
-          </div>
-          <span style="font-size:11px;font-weight:700;color:${stageColor};white-space:nowrap;">${_escapeHtml(t.stage)}</span>
-        </div>
-        ${t.next_step ? `<div style="margin-top:8px;font-size:13px;color:${OPS_COLORS.text};">Next: ${_escapeHtml(t.next_step)}</div>` : ''}
-        ${t.blocker ? `<div style="margin-top:4px;font-size:13px;color:${OPS_COLORS.red};">Blocker: ${_escapeHtml(t.blocker)}</div>` : ''}
-        ${t.approval_needed ? `<div style="margin-top:4px;font-size:12px;color:${OPS_COLORS.amber};">Approval needed: ${_escapeHtml(t.approval_needed)}</div>` : ''}
-      </div>`;
-  }).join('');
-
-  container.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;">Sprint Board — ${items.length} tickets</div>
-      <button type="button" data-ops-refresh="sprint" style="background:${OPS_COLORS.teal};color:#0a0c10;border:none;
-        border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;">Refresh</button>
-    </div>
-    ${cards || `<div style="color:${OPS_COLORS.textDim};padding:20px;">No tickets yet.</div>`}
-    <div style="margin-top:12px;font-size:12px;color:${OPS_COLORS.textDim};">${OPS_READ_ONLY_NOTE}</div>
-  `;
-  _opsWireRefresh(container, ops_loadSprintBoard);
-}
-
-
-// --- Release Ledger -------------------------------------------------------
-
-async function ops_loadReleaseLedger() {
-  const container = document.getElementById('ops-tab-release');
-  if (!container) return;
-  container.innerHTML = `<div style="color:${OPS_COLORS.textDim};padding:20px;">Loading release ledger…</div>`;
-
-  const res = await data_opsGet('/api/ops/release-ledger');
-  if (!res.ok) {
-    container.innerHTML = `<div style="color:${OPS_COLORS.red};padding:20px;">Failed to load release ledger: ${_escapeHtml(res.error || res.status)}</div>`;
-    return;
-  }
-  ops_renderReleaseLedger(res.data.items || []);
-}
-
-function ops_renderReleaseLedger(items) {
-  const container = document.getElementById('ops-tab-release');
-  if (!container) return;
-
-  const statusColor = s => ({
-    NOT_READY: OPS_COLORS.grey, READY: OPS_COLORS.teal, DEPLOYING: OPS_COLORS.amber,
-    DEPLOYED: OPS_COLORS.teal, VERIFIED: OPS_COLORS.green, ROLLED_BACK: OPS_COLORS.red
-  }[s] || OPS_COLORS.grey);
-
-  const rows = items.map(r => `
-    <tr>
-      <td style="padding:10px 14px;font-family:var(--mono, monospace);font-size:12px;">${_escapeHtml(r.release_id)}</td>
-      <td style="padding:10px 14px;font-size:13px;">${_escapeHtml(r.change_summary)}</td>
-      <td style="padding:10px 14px;font-size:11px;">D1: ${_escapeHtml(r.d1_migration_status)}<br/>Worker: ${_escapeHtml(r.worker_deploy_status)}<br/>Frontend: ${_escapeHtml(r.frontend_push_status)}</td>
-      <td style="padding:10px 14px;"><span style="color:${statusColor(r.status)};font-weight:700;font-size:12px;">${_escapeHtml(r.status)}</span></td>
-    </tr>`).join('');
-
-  container.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;">Release Ledger — ${items.length} releases</div>
-      <button type="button" data-ops-refresh="release" style="background:${OPS_COLORS.teal};color:#0a0c10;border:none;
-        border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;">Refresh</button>
-    </div>
-    <table style="width:100%;border-collapse:collapse;background:${OPS_COLORS.bg2};border-radius:10px;overflow:hidden;">
-      <thead><tr style="border-bottom:1px solid #1c2028;">
-        <th style="text-align:left;padding:8px 14px;color:${OPS_COLORS.textDim};font-size:10px;text-transform:uppercase;">Release</th>
-        <th style="text-align:left;padding:8px 14px;color:${OPS_COLORS.textDim};font-size:10px;text-transform:uppercase;">Summary</th>
-        <th style="text-align:left;padding:8px 14px;color:${OPS_COLORS.textDim};font-size:10px;text-transform:uppercase;">Deploy status</th>
-        <th style="text-align:left;padding:8px 14px;color:${OPS_COLORS.textDim};font-size:10px;text-transform:uppercase;">Status</th>
-      </tr></thead>
-      <tbody>${rows || `<tr><td colspan="4" style="padding:20px;color:${OPS_COLORS.textDim};">No releases yet.</td></tr>`}</tbody>
-    </table>
-    <div style="margin-top:12px;font-size:12px;color:${OPS_COLORS.textDim};">${OPS_READ_ONLY_NOTE}</div>
-  `;
-  _opsWireRefresh(container, ops_loadReleaseLedger);
-}
-
-
-// --- Event Timeline --------------------------------------------------------
-
-async function ops_loadEventTimeline() {
-  const container = document.getElementById('ops-tab-events');
-  if (!container) return;
-  container.innerHTML = `<div style="color:${OPS_COLORS.textDim};padding:20px;">Loading events…</div>`;
-
-  const res = await data_opsGet('/api/ops/events?limit=100');
-  if (!res.ok) {
-    container.innerHTML = `<div style="color:${OPS_COLORS.red};padding:20px;">Failed to load events: ${_escapeHtml(res.error || res.status)}</div>`;
-    return;
-  }
-  ops_renderEventTimeline(res.data.events || []);
-}
-
-function ops_renderEventTimeline(events) {
-  const container = document.getElementById('ops-tab-events');
-  if (!container) return;
-
-  const rows = events.map(e => `
-    <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid #1c2028;">
-      <div style="font-family:var(--mono, monospace);font-size:11px;color:${OPS_COLORS.textDim};white-space:nowrap;">${_escapeHtml(_timeAgo(e.created_at))}</div>
-      <div style="font-size:12px;font-weight:700;color:${OPS_COLORS.teal};white-space:nowrap;">${_escapeHtml(e.event_type)}</div>
-      <div style="font-size:12px;color:${OPS_COLORS.textDim};white-space:nowrap;">${_escapeHtml(e.ticket_id || e.release_id || '—')}</div>
-      <div style="font-size:12px;color:${OPS_COLORS.text};flex:1;">${_escapeHtml(e.actor_role)}</div>
-    </div>`).join('');
-
-  container.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;">Event Timeline — last ${events.length}</div>
-      <button type="button" data-ops-refresh="events" style="background:${OPS_COLORS.teal};color:#0a0c10;border:none;
-        border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;">Refresh</button>
-    </div>
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:8px 20px;">
-      ${rows || `<div style="color:${OPS_COLORS.textDim};padding:20px 0;">No events recorded yet.</div>`}
-    </div>
-  `;
-  _opsWireRefresh(container, ops_loadEventTimeline);
-}
-
-// --- Drift, Budget Risk, OpenFIGI Status (one combined tab) ---------------
-
-// MA-AUG-006, 2 August 2026 — Workers whose cron firing history is worth a
-// live glance. Kept short and explicit rather than deriving from anywhere
-// else, since this list controls real API calls against Cloudflare's GraphQL
-// Analytics — see ops-api.js's TRACKED_SCRIPTS for the enforced allowlist.
+// MA-AUG-006, 2 August 2026 — Workers whose cron firing history is worth a glance. Kept short and
+// explicit, since this list controls real API calls against Cloudflare's GraphQL Analytics — see
+// ops-api.js's TRACKED_SCRIPTS for the enforced allowlist.
 const OPS_CRON_SCRIPTS = ['meridian-holdings', 'meridian-entities-seed', 'meridian-entities-enrich'];
 
+// MA-NOV-UI (UD-2): the deployment-drift panel is gone (it read the frozen releaseledger);
+// /api/ops/drift itself is unchanged and simply no longer requested here.
 async function ops_loadDriftTab() {
   const container = document.getElementById('ops-tab-drift');
   if (!container) return;
-  container.innerHTML = `<div style="color:${OPS_COLORS.textDim};padding:20px;">Loading…</div>`;
+  _opsWireRefresh(container, ops_loadDriftTab);
+  _opsBusy(container, true);
+  container.innerHTML = `${ops_driftToolbar()}${ops_stateHtml('loading')}`;
 
-  const [driftRes, budgetRes, figiRes, cfD1Res, ...cfInvocationResults] = await Promise.all([
-    data_opsGet('/api/ops/drift'),
+  const [budgetRes, figiRes, cfD1Res, ...cfInvocationResults] = await Promise.all([
     data_opsGet('/api/ops/budget-risk'),
     data_opsGet('/api/ops/openfigi-status'),
     data_opsGet('/api/ops/cf/d1-today'),
     ...OPS_CRON_SCRIPTS.map(s => data_opsGet(`/api/ops/cf/invocations?script=${encodeURIComponent(s)}`))
   ]);
 
-  const driftHtml = ops_renderDriftPanel(driftRes.ok ? driftRes.data : null);
   const budgetHtml = ops_renderBudgetRisk(budgetRes.ok ? budgetRes.data : null);
-  const figiHtml = ops_renderOpenFigiStatus(figiRes.ok ? figiRes.data : null);
   const cfHtml = ops_renderLiveCfMetrics(
     cfD1Res.ok ? cfD1Res.data : null,
     OPS_CRON_SCRIPTS.map((s, i) => ({ script: s, data: cfInvocationResults[i].ok ? cfInvocationResults[i].data : null }))
   );
+  const figiHtml = ops_renderOpenFigiStatus(figiRes.ok ? figiRes.data : null);
 
+  _opsBusy(container, false);
   container.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;">Drift & Budget</div>
-      <button type="button" data-ops-refresh="drift" style="background:${OPS_COLORS.teal};color:#0a0c10;border:none;
-        border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;">Refresh</button>
-    </div>
+    ${ops_driftToolbar()}
     ${budgetHtml}
     ${cfHtml}
-    ${driftHtml}
     ${figiHtml}
   `;
-  _opsWireRefresh(container, ops_loadDriftTab);
 }
 
-// MA-AUG-006: live Cloudflare-metered numbers (real, authoritative) shown
-// alongside the app's own self-reported writes_today_ counter above — the 2
-// August incident showed these two can diverge (real per-run multiplier
-// ranged 2.56x-3.69x against assumptions), so surfacing both side by side,
-// not replacing one with the other, is deliberate.
+function ops_driftToolbar() {
+  return `<div class="ops-toolbar"><h1 class="ops-h1">Drift &amp; Budget</h1>
+      <button type="button" class="ops-btn primary" data-ops-refresh="drift">Refresh</button></div>`;
+}
+
+// MA-AUG-006: Cloudflare-metered numbers (authoritative) shown alongside the app's own self-reported
+// writes_today_ counter — the 2 August incident showed these two can diverge (real per-run multiplier
+// ranged 2.56x-3.69x against assumptions), so surfacing both side by side is deliberate.
 function ops_renderLiveCfMetrics(d1Data, invocations) {
   const d1Html = d1Data
-    ? `<div style="font-family:var(--mono, monospace);font-size:22px;font-weight:700;">${d1Data.rowsWritten.toLocaleString()} <span style="font-size:13px;color:${OPS_COLORS.textDim};">of ${d1Data.daily_cap.toLocaleString()} rows written today (${d1Data.pct_of_cap}%) — Cloudflare-metered, account-wide</span></div>
-       <div style="font-size:11px;color:${OPS_COLORS.textDim};margin-top:4px;">${d1Data.rowsRead.toLocaleString()} rows read · ${d1Data.writeQueries.toLocaleString()} write queries · ${d1Data.readQueries.toLocaleString()} read queries</div>`
-    : `<div style="color:${OPS_COLORS.red};font-size:13px;">Live D1 metrics unavailable — check CF_ANALYTICS_TOKEN is set and the query's field names are verified (see ops-api.js).</div>`;
+    ? `<div><span class="ops-num ops-big">${d1Data.rowsWritten.toLocaleString()}</span> <span class="ops-note">of ${d1Data.daily_cap.toLocaleString()} rows written today (${d1Data.pct_of_cap}%), as metered by Cloudflare for the whole account</span></div>
+       <div class="ops-line ops-note">${d1Data.rowsRead.toLocaleString()} rows read · ${d1Data.writeQueries.toLocaleString()} write queries · ${d1Data.readQueries.toLocaleString()} read queries</div>`
+    : ops_stateHtml('error', "Couldn't load Cloudflare usage. If this keeps happening, check the CF_ANALYTICS_TOKEN secret on meridian-ops.");
 
   const rows = invocations.map(({ script, data }) => {
-    if (!data) return `<div style="padding:8px 0;border-bottom:1px solid #1c2028;font-size:12px;color:${OPS_COLORS.red};">${_escapeHtml(script)} — failed to load</div>`;
+    if (!data) return `<div>${ops_stateHtml('error', `Couldn't load ${script}.`)}</div>`;
     const last = data.cron_invocations[data.cron_invocations.length - 1];
     const flag = data.matches_cron_only
-      ? `<span style="color:${OPS_COLORS.green};">cron-only ✓</span>`
-      : `<span style="color:${OPS_COLORS.red};">mismatch — ${data.all_trigger_invocation_count} total vs ${data.cron_invocation_count} cron-only</span>`;
+      ? '<span class="ops-ok">cron-only ✓</span>'
+      : `<span class="ops-bad">mismatch — ${data.all_trigger_invocation_count} total vs ${data.cron_invocation_count} cron-only</span>`;
     return `
-      <div style="padding:8px 0;border-bottom:1px solid #1c2028;font-size:12px;">
-        <strong>${_escapeHtml(script)}</strong> — ${data.cron_invocation_count} invocation(s) today, ${flag}
-        ${last ? `<br/><span style="color:${OPS_COLORS.textDim};">last: ${_escapeHtml(last.datetime)} · cron "${_escapeHtml(last.cron)}" · ${_escapeHtml(last.status)}</span>` : ''}
+      <div>
+        <span class="ops-strong">${_escapeHtml(script)}</span> — ${data.cron_invocation_count} invocation(s) today, ${flag}
+        ${last ? `<br/><span class="ops-small">last: ${_escapeHtml(last.datetime)} · cron "${_escapeHtml(last.cron)}" · ${_escapeHtml(last.status)}</span>` : ''}
       </div>`;
   }).join('');
 
-  return `
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">Live Cloudflare Metrics (MA-AUG-006)</div>
-      ${d1Html}
-      <div style="margin-top:16px;">${rows}</div>
-    </div>`;
-}
-
-function ops_renderDriftPanel(data) {
-  if (!data) return `<div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;color:${OPS_COLORS.red};">Failed to load drift check.</div>`;
-  const rows = (data.drift || []).map(d => `
-    <div style="padding:10px 0;border-bottom:1px solid #1c2028;font-size:13px;">
-      <strong>${_escapeHtml(d.release_id)}</strong> — ${_escapeHtml(d.change_summary)}<br/>
-      <span style="color:${OPS_COLORS.textDim};font-size:11px;">Worker: ${_escapeHtml(d.worker_deploy_status)} · Frontend: ${_escapeHtml(d.frontend_push_status)}</span>
-    </div>`).join('');
-
-  return `
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">
-        Deployment Drift ${data.has_drift ? `<span style="color:${OPS_COLORS.red};">— ${data.drift.length} found</span>` : `<span style="color:${OPS_COLORS.green};">— none</span>`}
-      </div>
-      ${rows || `<div style="color:${OPS_COLORS.textDim};font-size:13px;">Worker deploys and frontend pushes are in sync across every tracked release.</div>`}
-    </div>`;
+  return _opsCard('Cloudflare usage today', `${d1Html}<div class="ops-rows ops-gap">${rows}</div>`);
 }
 
 function ops_renderBudgetRisk(data) {
-  if (!data) return `<div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;color:${OPS_COLORS.red};">Failed to load budget risk.</div>`;
+  if (!data) return _opsCard('Shared D1 Write Budget Today', ops_stateHtml('error', "Couldn't load the write budget."));
   const gaugeSvg = _svgGauge(data.writes_today, data.daily_limit, data.daily_limit * 0.9);
-  return `
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:center;gap:24px;">
-      <div>${gaugeSvg}</div>
-      <div>
-        <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Shared D1 Write Budget Today</div>
-        <div style="font-family:var(--mono, monospace);font-size:22px;font-weight:700;">${data.writes_today.toLocaleString()} <span style="font-size:13px;color:${OPS_COLORS.textDim};">of ${data.daily_limit.toLocaleString()} (${data.pct}%)</span></div>
-      </div>
-    </div>`;
+  return _opsCard('Shared D1 Write Budget Today', `
+      <div class="ops-row">
+        <div class="ops-gauge">${gaugeSvg}</div>
+        <div><span class="ops-num ops-big">${data.writes_today.toLocaleString()}</span> <span class="ops-note">of ${data.daily_limit.toLocaleString()} (${data.pct}%)</span></div>
+      </div>`);
 }
 
 function ops_renderOpenFigiStatus(data) {
-  if (!data) return `<div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;margin-bottom:16px;color:${OPS_COLORS.red};">Failed to load OpenFIGI status.</div>`;
-  return `
-    <div style="background:${OPS_COLORS.bg2};border-radius:10px;padding:20px;">
-      <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">Instrument → Entity Resolution</div>
-      <div style="display:flex;gap:32px;flex-wrap:wrap;">
-        <div><div style="font-family:var(--mono, monospace);font-size:20px;">${data.coverage_pct}%</div><div style="font-size:11px;color:${OPS_COLORS.textDim};">Coverage (${data.instrument_entity_map_total.toLocaleString()} / ${data.instrument_master_total.toLocaleString()})</div></div>
-        <div><div style="font-family:var(--mono, monospace);font-size:20px;">${data.openfigicache_total.toLocaleString()}</div><div style="font-size:11px;color:${OPS_COLORS.textDim};">Instruments checked (cached)</div></div>
-        <div><div style="font-family:var(--mono, monospace);font-size:20px;">${data.openfigi_matched_no_entity.toLocaleString()}</div><div style="font-size:11px;color:${OPS_COLORS.textDim};">Matched, no entity yet — cheap re-match candidates</div></div>
-      </div>
-    </div>`;
+  if (!data) return _opsCard('Instrument → Entity Resolution', ops_stateHtml('error', "Couldn't load instrument → entity resolution."));
+  return _opsCard('Instrument → Entity Resolution', `
+      <div class="ops-stats">
+        <div><div class="ops-num ops-big">${data.coverage_pct}%</div><div class="ops-note">Coverage (${data.instrument_entity_map_total.toLocaleString()} / ${data.instrument_master_total.toLocaleString()})</div></div>
+        <div><div class="ops-num ops-big">${data.openfigicache_total.toLocaleString()}</div><div class="ops-note">Instruments checked (cached)</div></div>
+        <div><div class="ops-num ops-big">${data.openfigi_matched_no_entity.toLocaleString()}</div><div class="ops-note">Matched, no entity yet — cheap re-match candidates</div></div>
+      </div>`);
 }
 
 // ============================================================
@@ -1059,25 +951,29 @@ function opsc_mapResponse(res) {
 }
 
 // --- pure: rendering ----------------------------------------------------------------------------
+// MA-NOV-UI §1.5: every element takes an .ops-* class from ops-theme; no colour or inline style here.
 
-const OPSC_SEV_COLOR = { sev1: OPS_COLORS.red, sev2: OPS_COLORS.amber, sev3: OPS_COLORS.teal, sev4: OPS_COLORS.grey };
 function opsc_sevBadge(sev) {
-  const c = OPSC_SEV_COLOR[sev] || OPS_COLORS.grey;
-  const label = /^sev[1-4]$/.test(sev || '') ? `Sev ${sev.slice(3)}` : (sev || '—');
-  return `<span style="display:inline-block;border:1px solid ${c};color:${c};border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;white-space:nowrap;">${opscEsc(label)}</span>`;
+  const ok = /^sev[1-4]$/.test(sev || '');
+  const label = ok ? `Sev ${sev.slice(3)}` : (sev || '—');
+  return `<span class="ops-sev${ok ? ` s${sev.slice(3)}` : ''}">${opscEsc(label)}</span>`;
 }
-const OPSC_TH = `style="text-align:left;padding:8px 10px;color:${OPS_COLORS.textDim};font-size:10px;text-transform:uppercase;font-weight:600;"`;
-const OPSC_TD = 'style="padding:9px 10px;font-size:13px;vertical-align:top;"';
-const opscBtn = (extra = '') => `style="background:none;border:1px solid #2a3038;color:${OPS_COLORS.text};border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;${extra}"`;
-const OPSC_BTN = opscBtn();
-const OPSC_BTN_PRIMARY = `style="background:${OPS_COLORS.teal};color:#0a0c10;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;"`;
+const OPSC_TH = 'scope="col"';
+const OPSC_BTN = 'class="ops-btn"';
+const OPSC_BTN_PRIMARY = 'class="ops-btn primary"';
 
 function opsc_statusChips(view, statuses, active) {
-  return `<div role="group" aria-label="Status filter" style="display:flex;gap:6px;flex-wrap:wrap;">${statuses.map(s => {
+  return `<div role="group" aria-label="Status filter" class="ops-chips">${statuses.map(s => {
     const on = active.includes(s);
-    return `<button type="button" data-opsc-chip="${s}" aria-pressed="${on}" style="border-radius:12px;padding:4px 10px;font-size:12px;cursor:pointer;
-      border:1px solid ${on ? OPS_COLORS.teal : '#2a3038'};background:${on ? 'rgba(77,200,200,0.12)' : 'none'};color:${on ? OPS_COLORS.teal : OPS_COLORS.textDim};">${opscEsc(OPSC_STATUS_LABELS[s] || s)}${on ? ' ✓' : ''}</button>`;
+    return `<button type="button" class="ops-btn ops-chip" data-opsc-chip="${s}" aria-pressed="${on}">${opscEsc(OPSC_STATUS_LABELS[s] || s)}${on ? ' ✓' : ''}</button>`;
   }).join('')}</div>`;
+}
+
+// §1.6: "No open cases…" only while the filter holds open statuses alone; any other filter gets the neutral line.
+function opsc_emptyText(kind, statuses) {
+  if (kind === 'DQ') return 'No tickets with these statuses.';
+  return (statuses || []).length && statuses.every(s => s === 'open' || s === 'acknowledged')
+    ? 'No open cases. The last sweep raised nothing new.' : 'No cases with these statuses.';
 }
 
 // state: { items, statuses, next_cursor, loading, error, rows_read }
@@ -1090,78 +986,81 @@ function opsc_renderList(kind, state) {
   const head = isDq
     ? ['Sev', 'Ref', 'Type', 'Title', 'Object', 'Owner', 'Status', 'Age']
     : ['Sev', 'Ref', 'Type', 'Title', 'Job', 'Opened', 'Owner', 'Status'];
+  const openRef = opscState.drawer && opscState.drawer.kind === kind ? opscState.drawer.ref : null;
   const rows = items.map(i => {
-    const overdue = i.overdue ? ` <span style="color:${OPS_COLORS.red};font-size:11px;font-weight:700;">Overdue</span>` : '';
-    const prot = isDq && opsc_isProtected(i) ? ` <span style="color:${OPS_COLORS.amber};font-size:11px;font-weight:700;">Protected decision</span>` : '';
+    const overdue = i.overdue ? ' <span class="ops-flag red">Overdue</span>' : '';
+    const prot = isDq && opsc_isProtected(i) ? ' <span class="ops-flag amber">Protected decision</span>' : '';
     const opened = `<span title="${opscEsc(i.opened_at)}">${opscEsc(_timeAgo(i.opened_at))}</span>`;
     const cells = isDq
-      ? [opsc_sevBadge(i.severity), `<span style="font-family:var(--mono, monospace);">${opscEsc(i.case_ref)}</span>`, opscEsc(opscLabel(OPSC_DQ_LABELS, i.ticket_type)),
-         opscEsc(i.title) + prot, `<span style="font-family:var(--mono, monospace);font-size:12px;">${opscEsc(i.object_domain)}:${opscEsc(i.object_key)}</span>`
-           + (i.merged_into ? `<br/><span style="font-size:11px;color:${OPS_COLORS.textDim};">merged into ${opscEsc(i.merged_into)}</span>` : ''),
+      ? [opsc_sevBadge(i.severity), `<span class="ops-mono">${opscEsc(i.case_ref)}</span>`, opscEsc(opscLabel(OPSC_DQ_LABELS, i.ticket_type)),
+         opscEsc(i.title) + prot, `<span class="ops-mono">${opscEsc(i.object_domain)}:${opscEsc(i.object_key)}</span>`
+           + (i.merged_into ? `<br/><span class="ops-small">merged into ${opscEsc(i.merged_into)}</span>` : ''),
          opscEsc(i.owner_role || '—'), opscEsc(OPSC_STATUS_LABELS[i.status] || i.status), `${opened}${overdue}`]
-      : [opsc_sevBadge(i.severity), `<span style="font-family:var(--mono, monospace);">${opscEsc(i.case_ref)}</span>`, opscEsc(opscLabel(OPSC_EXC_LABELS, i.exception_type)),
+      : [opsc_sevBadge(i.severity), `<span class="ops-mono">${opscEsc(i.case_ref)}</span>`, opscEsc(opscLabel(OPSC_EXC_LABELS, i.exception_type)),
          opscEsc(i.title), opscEsc(i.job_id || '—'), `${opened}${overdue}`, opscEsc(i.owner_role || '—'), opscEsc(OPSC_STATUS_LABELS[i.status] || i.status)];
-    return `<tr tabindex="0" data-opsc-open="${opscEsc(i.case_ref)}" aria-label="${opscEsc(i.case_ref)} ${opscEsc(i.title)}" style="border-bottom:1px solid #1c2028;cursor:pointer;">
-      ${cells.map(c => `<td ${OPSC_TD}>${c}</td>`).join('')}</tr>`;
+    return `<tr tabindex="0" data-opsc-open="${opscEsc(i.case_ref)}" aria-label="${opscEsc(i.case_ref)} ${opscEsc(i.title)}"${i.case_ref === openRef ? ' aria-current="true"' : ''}>
+      ${cells.map(c => `<td>${c}</td>`).join('')}</tr>`;
   }).join('');
-  const empty = isDq ? 'No tickets with these statuses.' : 'No open cases. The last sweep raised nothing new.';
-  const body = state.loading && !items.length
-    ? `<tr><td colspan="${head.length}" ${OPSC_TD}><span style="color:${OPS_COLORS.textDim};">Loading…</span></td></tr>`
-    : rows || `<tr><td colspan="${head.length}" ${OPSC_TD}><span style="color:${OPS_COLORS.textDim};">${empty}</span></td></tr>`;
+  const stateRow = html => `<tr><td colspan="${head.length}" class="ops-state-cell">${html}</td></tr>`;
+  const body = state.loading && !items.length ? stateRow(ops_stateHtml('loading'))
+    : state.error && !items.length ? stateRow(ops_stateHtml('error', state.error))
+    : rows || stateRow(ops_stateHtml('empty', opsc_emptyText(kind, state.statuses)));
   return `
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+    <div class="ops-toolbar">
       <div>
-        <div style="font-size:13px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;">${title}</div>
-        <div style="font-size:12px;color:${OPS_COLORS.textDim};margin-top:4px;" aria-live="polite">${countLine}</div>
+        <h1 class="ops-h1">${title}</h1>
+        <div class="ops-note" aria-live="polite">${countLine}</div>
       </div>
       <button type="button" data-opsc-refresh="1" ${OPSC_BTN_PRIMARY}>Refresh</button>
     </div>
     ${opsc_statusChips(kind, isDq ? OPSC_DQ_STATUSES : OPSC_CASE_STATUSES, state.statuses)}
-    ${state.error ? `<div role="alert" style="margin-top:12px;color:${OPS_COLORS.red};font-size:13px;">${opscEsc(state.error)}</div>` : ''}
-    <table style="width:100%;border-collapse:collapse;margin-top:12px;background:${OPS_COLORS.bg2};border-radius:10px;overflow:hidden;">
-      <thead><tr style="border-bottom:1px solid #1c2028;">${head.map(h => `<th ${OPSC_TH} scope="col">${h}</th>`).join('')}</tr></thead>
-      <tbody>${body}</tbody>
-    </table>
-    ${state.next_cursor ? `<div style="margin-top:10px;font-size:12px;color:${OPS_COLORS.textDim};">Showing ${items.length} · <button type="button" data-opsc-more="1" ${OPSC_BTN}>Load more</button></div>` : ''}`;
+    ${state.error && items.length ? `<div class="ops-gap">${ops_stateHtml('error', state.error)}</div>` : ''}
+    <div class="ops-tbl-wrap">
+      <table class="ops-tbl wide">
+        <thead><tr>${head.map(h => `<th ${OPSC_TH}>${h}</th>`).join('')}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+    ${state.next_cursor ? `<div class="ops-line ops-note">Showing ${items.length} · <button type="button" data-opsc-more="1" ${OPSC_BTN}>Load more</button></div>` : ''}`;
 }
 
 function opsc_kv(rows) {
-  return `<table style="border-collapse:collapse;font-size:12px;">${rows.filter(([, v]) => v != null && v !== '').map(([k, v]) =>
-    `<tr><th scope="row" style="text-align:left;padding:3px 12px 3px 0;color:${OPS_COLORS.textDim};font-weight:500;vertical-align:top;">${opscEsc(k)}</th>
-     <td style="padding:3px 0;word-break:break-word;">${opscEsc(typeof v === 'object' ? JSON.stringify(v) : v)}</td></tr>`).join('')}</table>`;
+  return `<table class="ops-kv">${rows.filter(([, v]) => v != null && v !== '').map(([k, v]) =>
+    `<tr><th scope="row">${opscEsc(k)}</th>
+     <td>${opscEsc(typeof v === 'object' ? JSON.stringify(v) : v)}</td></tr>`).join('')}</table>`;
 }
 function opsc_section(title, inner) {
-  return `<section style="margin-top:18px;"><h3 style="font-size:12px;color:${OPS_COLORS.textDim};text-transform:uppercase;letter-spacing:0.08em;margin:0 0 8px;">${opscEsc(title)}</h3>${inner}</section>`;
+  return `<section class="ops-sec"><h3 class="ops-sec-title">${opscEsc(title)}</h3>${inner}</section>`;
 }
 
 function opsc_renderHistory(events) {
   const list = events || [];
   const rows = list.map(e => `
-    <li style="padding:8px 0;border-bottom:1px solid #1c2028;font-size:12px;">
-      <div><strong>${opscEsc(opscSentence(e.event_type))}</strong>
-        ${e.from_value || e.to_value ? `<span style="color:${OPS_COLORS.textDim};">${opscEsc(e.from_value || '—')} → ${opscEsc(e.to_value || '—')}</span>` : ''}
-        <span style="color:${OPS_COLORS.textDim};" title="${opscEsc(e.occurred_at)}">· ${opscEsc(_timeAgo(e.occurred_at))}</span></div>
-      <div style="color:${OPS_COLORS.textDim};">${opscEsc(e.actor)}${e.actor_role ? ` (${opscEsc(e.actor_role)})` : ''}</div>
-      ${e.body ? `<div style="margin-top:4px;white-space:pre-wrap;">${opscEsc(e.body)}</div>` : ''}
+    <li>
+      <div><span class="ops-strong">${opscEsc(opscSentence(e.event_type))}</span>
+        ${e.from_value || e.to_value ? `<span class="ops-dim">${opscEsc(e.from_value || '—')} → ${opscEsc(e.to_value || '—')}</span>` : ''}
+        <span class="ops-dim" title="${opscEsc(e.occurred_at)}">· ${opscEsc(_timeAgo(e.occurred_at))}</span></div>
+      <div class="ops-dim">${opscEsc(e.actor)}${e.actor_role ? ` (${opscEsc(e.actor_role)})` : ''}</div>
+      ${e.body ? `<div class="ops-pre ops-gap">${opscEsc(e.body)}</div>` : ''}
     </li>`).join('');
-  const cap = list.length >= 200 ? `<div style="font-size:11px;color:${OPS_COLORS.textDim};margin-top:6px;">Showing the first 200 events.</div>` : '';
-  return `<ol style="list-style:none;margin:0;padding:0;">${rows || `<li style="font-size:12px;color:${OPS_COLORS.textDim};">No events.</li>`}</ol>${cap}`;
+  const cap = list.length >= 200 ? '<div class="ops-line ops-small">Showing the first 200 events.</div>' : '';
+  return `<ol class="ops-hist">${rows || '<li class="ops-dim">No events.</li>'}</ol>${cap}`;
 }
 
 function opsc_select(name, label, options, value, extra = '') {
-  return `<label style="display:block;margin-top:10px;font-size:12px;" for="opsc-f-${name}">${opscEsc(label)}</label>
-    <select id="opsc-f-${name}" name="${name}" ${extra} style="margin-top:4px;background:#0a0c10;color:${OPS_COLORS.text};border:1px solid #2a3038;border-radius:6px;padding:6px;">
+  return `<label class="ops-label" for="opsc-f-${name}">${opscEsc(label)}</label>
+    <select id="opsc-f-${name}" name="${name}" class="ops-field" ${extra}>
       ${options.map(o => {
         const [v, l, dis] = Array.isArray(o) ? o : [o, o];
         return `<option value="${opscEsc(v)}"${v === value ? ' selected' : ''}${dis ? ' disabled' : ''}>${opscEsc(l)}</option>`;
       }).join('')}</select>`;
 }
 function opsc_input(name, label, value, extra = '') {
-  return `<label style="display:block;margin-top:10px;font-size:12px;" for="opsc-f-${name}">${opscEsc(label)}</label>
-    <input id="opsc-f-${name}" name="${name}" value="${opscEsc(value || '')}" ${extra} style="margin-top:4px;width:100%;box-sizing:border-box;background:#0a0c10;color:${OPS_COLORS.text};border:1px solid #2a3038;border-radius:6px;padding:6px;">`;
+  return `<label class="ops-label" for="opsc-f-${name}">${opscEsc(label)}</label>
+    <input id="opsc-f-${name}" name="${name}" class="ops-field" value="${opscEsc(value || '')}" ${extra}>`;
 }
 function opsc_check(name, label) {
-  return `<label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:12px;"><input type="checkbox" name="${name}" id="opsc-f-${name}"> <span>${opscEsc(label)}</span></label>`;
+  return `<label class="ops-check"><input type="checkbox" name="${name}" id="opsc-f-${name}"> <span>${opscEsc(label)}</span></label>`;
 }
 
 // ctx: { row, events, membersOpen, actingRole, draft, error, errorField }
@@ -1176,7 +1075,7 @@ function opsc_renderForm(kind, action, ctx) {
   if (has('assignee')) html += opsc_input('assignee', 'Assignee (email or service:<name>, optional)', d.assignee);
   if (has('severity')) {
     html += opsc_select('severity', `Severity${req('severity') ? ' (required)' : ''}`, [['', '—']].concat(OPSC_SEVERITIES.map(s => [s, `Sev ${s.slice(3)}`])), d.severity || '');
-    html += `<div style="font-size:11px;color:${OPS_COLORS.textDim};margin-top:4px;">Sev 1 and Sev 2 notify the Founder at the next health check.</div>`;
+    html += '<div class="ops-line ops-small">Sev 1 and Sev 2 notify the Founder at the next health check.</div>';
   }
   if (has('fix_ref')) html += opsc_input('fix_ref', 'Fix ref — the packet or CR doing the fix (required)', d.fix_ref, 'placeholder="MA-OCT-019"');
   if (has('exception_ref')) html += opsc_input('exception_ref', 'Exception ref (EXC-…, required)', d.exception_ref);
@@ -1184,7 +1083,7 @@ function opsc_renderForm(kind, action, ctx) {
   if (has(codeField)) {
     const gated = kind === 'DQ' && action === 'resolve' && !fixScheduled;
     html += opsc_select(codeField, 'Resolution (required)', [['', 'Choose…']].concat(spec.codes.map(c => [c, opscSentence(c) + (gated && c === 'fixed' ? ' — schedule the fix first' : ''), gated && c === 'fixed'])), d[codeField] || '');
-    if (gated) html += `<div style="font-size:11px;color:${OPS_COLORS.textDim};margin-top:4px;">"Fixed" is available after a Schedule fix event.</div>`;
+    if (gated) html += '<div class="ops-line ops-small">"Fixed" is available after a Schedule fix event.</div>';
   }
   if (has('duplicate_of')) html += opsc_input('duplicate_of', `Duplicate of (${kind === 'EXC' ? 'EXC-' : 'DQ-'}…; only for "Duplicate")`, d.duplicate_of);
   if (kind === 'DQ' && action === 'resolve' && ctx.membersOpen) {
@@ -1192,23 +1091,23 @@ function opsc_renderForm(kind, action, ctx) {
     html += opsc_check('confirm', 'I confirm: force-resolve with open members');
   }
   if (kind === 'DQ' && action === 'reopen' && opsc_isProtected(ctx.row)) {
-    html += `<div style="margin-top:10px;font-size:12px;color:${OPS_COLORS.amber};">Protected Founder decision (do not merge). Reopening needs the Founder's supersession.</div>`;
+    html += '<div class="ops-msg warn">Protected Founder decision (do not merge). Reopening needs the Founder\'s supersession.</div>';
     html += opsc_input('supersession_reference', 'Founder supersession reference (required)', d.supersession_reference);
     html += opsc_input('supersession_decided_at', 'Decided at (YYYY-MM-DD, required)', d.supersession_decided_at, 'placeholder="2026-10-31"');
     html += opsc_check('confirm', 'I confirm: reopen a protected Founder decision');
   }
   if (kind === 'DQ' && (action === 'resolve' || action === 'dismiss') && OPSC_ENTITIES_TYPES.has(ctx.row.ticket_type)) {
-    html += `<div style="margin-top:10px;font-size:12px;color:${OPS_COLORS.textDim};">Resolve and dismiss are for the Data-Identity Lead or the Founder.</div>`;
+    html += '<div class="ops-line ops-small">Resolve and dismiss are for the Data-Identity Lead or the Founder.</div>';
   }
   if (has('note')) {
-    html += `<label style="display:block;margin-top:10px;font-size:12px;" for="opsc-f-note">Note${req('note') ? ' (required)' : ' (optional)'}</label>
-      <textarea id="opsc-f-note" name="note" maxlength="2000" rows="3" style="margin-top:4px;width:100%;box-sizing:border-box;background:#0a0c10;color:${OPS_COLORS.text};border:1px solid #2a3038;border-radius:6px;padding:6px;">${opscEsc(d.note || '')}</textarea>`;
+    html += `<label class="ops-label" for="opsc-f-note">Note${req('note') ? ' (required)' : ' (optional)'}</label>
+      <textarea id="opsc-f-note" name="note" class="ops-field" maxlength="2000" rows="3">${opscEsc(d.note || '')}</textarea>`;
   }
   html += opsc_select('actor_role', 'Acting as (recorded as your role; your identity comes from sign-in)', OPSC_ROLES.map(r => [r, r]), ctx.actingRole || 'Founder');
-  const err = ctx.error ? `<div id="opsc-form-error" role="alert" style="margin-top:10px;color:${OPS_COLORS.red};font-size:12px;">${opscEsc(ctx.error)}</div>` : '';
-  return `<form data-opsc-form="${action}" aria-describedby="${ctx.error ? 'opsc-form-error' : ''}" style="margin-top:12px;padding:14px;border:1px solid #2a3038;border-radius:8px;">
-      <div style="font-weight:700;font-size:13px;">${opscEsc(spec.label)}</div>${html}${err}
-      <div style="display:flex;gap:8px;margin-top:12px;"><button type="submit" ${OPSC_BTN_PRIMARY}>${opscEsc(spec.label)}</button>
+  const err = ctx.error ? `<div id="opsc-form-error" role="alert" class="ops-msg error">${opscEsc(ctx.error)}</div>` : '';
+  return `<form data-opsc-form="${action}" aria-describedby="${ctx.error ? 'opsc-form-error' : ''}" class="ops-form">
+      <div class="ops-form-title">${opscEsc(spec.label)}</div>${html}${err}
+      <div class="ops-btnrow"><button type="submit" ${OPSC_BTN_PRIMARY}>${opscEsc(spec.label)}</button>
       <button type="button" data-opsc-cancel="1" ${OPSC_BTN}>Cancel</button></div></form>`;
 }
 
@@ -1219,27 +1118,27 @@ function opsc_renderMembers(row, members, cursor, ui) {
     const ref = (() => { try { return m.object_ref ? JSON.parse(m.object_ref) : null; } catch { return m.object_ref; } })();
     const editing = ui && ui.memberIndex === i;
     const form = editing ? `
-      <form data-opsc-member-form="${i}" style="margin-top:8px;">
+      <form data-opsc-member-form="${i}" class="ops-gap">
         ${opsc_select('member_status', 'New status', OPSC_MEMBER_STATUSES.filter(s => s !== m.member_status).map(s => [s, OPSC_STATUS_LABELS[s]]), (ui.draft || {}).member_status || '')}
-        <label style="display:block;margin-top:8px;font-size:12px;" for="opsc-f-mnote">Note (required for Fixed: name the applied fix packet)</label>
-        <textarea id="opsc-f-mnote" name="note" maxlength="500" rows="2" style="width:100%;box-sizing:border-box;background:#0a0c10;color:${OPS_COLORS.text};border:1px solid #2a3038;border-radius:6px;padding:6px;">${opscEsc((ui.draft || {}).note || '')}</textarea>
+        <label class="ops-label" for="opsc-f-mnote">Note (required for Fixed: name the applied fix packet)</label>
+        <textarea id="opsc-f-mnote" name="note" class="ops-field" maxlength="500" rows="2">${opscEsc((ui.draft || {}).note || '')}</textarea>
         ${opsc_check('confirm', 'I confirm: mark Fixed (only after the fix packet was applied)')}
-        ${ui.error ? `<div role="alert" style="margin-top:6px;color:${OPS_COLORS.red};font-size:12px;">${opscEsc(ui.error)}</div>` : ''}
-        <div style="display:flex;gap:8px;margin-top:8px;"><button type="submit" ${OPSC_BTN_PRIMARY}>Save member</button><button type="button" data-opsc-cancel="1" ${OPSC_BTN}>Cancel</button></div>
+        ${ui.error ? `<div role="alert" class="ops-msg error">${opscEsc(ui.error)}</div>` : ''}
+        <div class="ops-btnrow"><button type="submit" ${OPSC_BTN_PRIMARY}>Save member</button><button type="button" data-opsc-cancel="1" ${OPSC_BTN}>Cancel</button></div>
       </form>` : '';
-    return `<tr style="border-bottom:1px solid #1c2028;">
-      <td ${OPSC_TD}><span style="font-family:var(--mono, monospace);font-size:12px;">${opscEsc(m.object_domain)}:${opscEsc(m.object_key)}</span>
-        ${m.merged_into ? `<br/><span style="font-size:11px;color:${OPS_COLORS.textDim};">merged into ${opscEsc(m.merged_into)}</span>` : ''}
-        ${ref && ref.name ? `<br/><span style="font-size:11px;color:${OPS_COLORS.textDim};">${opscEsc(ref.name)}</span>` : ''}</td>
-      <td ${OPSC_TD}>${opscEsc(opscSentence(m.proposed_action))}</td>
-      <td ${OPSC_TD}>${opscEsc(OPSC_STATUS_LABELS[m.member_status] || m.member_status)}</td>
-      <td ${OPSC_TD}>${opscEsc(m.note || '')}${form}</td>
-      <td ${OPSC_TD}>${editable && !editing ? `<button type="button" data-opsc-member="${i}" ${OPSC_BTN}>Change status</button>` : ''}</td></tr>`;
+    return `<tr>
+      <td><span class="ops-mono">${opscEsc(m.object_domain)}:${opscEsc(m.object_key)}</span>
+        ${m.merged_into ? `<br/><span class="ops-small">merged into ${opscEsc(m.merged_into)}</span>` : ''}
+        ${ref && ref.name ? `<br/><span class="ops-small">${opscEsc(ref.name)}</span>` : ''}</td>
+      <td>${opscEsc(opscSentence(m.proposed_action))}</td>
+      <td>${opscEsc(OPSC_STATUS_LABELS[m.member_status] || m.member_status)}</td>
+      <td>${opscEsc(m.note || '')}${form}</td>
+      <td>${editable && !editing ? `<button type="button" data-opsc-member="${i}" ${OPSC_BTN}>Change status</button>` : ''}</td></tr>`;
   }).join('');
   return opsc_section(`Members (${members.length}${cursor ? '+' : ''})`, `
-    <table style="width:100%;border-collapse:collapse;"><thead><tr>${['Object', 'Proposed action', 'Status', 'Note', ''].map(h => `<th ${OPSC_TH} scope="col">${h}</th>`).join('')}</tr></thead>
-    <tbody>${rows}</tbody></table>
-    ${cursor ? `<button type="button" data-opsc-members-more="1" ${opscBtn('margin-top:8px;')}>Load more members</button>` : ''}`);
+    <div class="ops-tbl-wrap"><table class="ops-tbl"><thead><tr>${['Object', 'Proposed action', 'Status', 'Note', ''].map(h => `<th ${OPSC_TH}>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    ${cursor ? `<div class="ops-gap"><button type="button" data-opsc-members-more="1" ${OPSC_BTN}>Load more members</button></div>` : ''}`);
 }
 
 // detail: the C-1 response. ui: { form, draft, error, status, memberIndex, members, membersCursor, loading }
@@ -1247,9 +1146,9 @@ function opsc_renderDrawer(kind, detail, ui) {
   const row = detail.case;
   const isDq = kind === 'DQ';
   const actions = opsc_legalActions(kind, row, detail.events);
-  const status = ui.status ? `<div role="status" aria-live="polite" style="margin-top:10px;font-size:13px;color:${ui.status.tone === 'ok' ? OPS_COLORS.green : ui.status.tone === 'warn' ? OPS_COLORS.amber : OPS_COLORS.red};">
+  const status = ui.status ? `<div role="status" aria-live="polite" class="ops-msg ${ui.status.tone === 'ok' ? 'ok' : ui.status.tone === 'warn' ? 'warn' : 'error'}">
       ${opscEsc(ui.status.text)}${ui.status.signedOut ? ` <button type="button" data-opsc-signin="1" ${OPSC_BTN}>Sign in again</button>` : ''}${ui.status.retrySame ? ` <button type="button" data-opsc-retry="1" ${OPSC_BTN}>Retry</button>` : ''}</div>`
-    : `<div role="status" aria-live="polite"></div>`;
+    : '<div role="status" aria-live="polite"></div>';
   let sections = '';
   if (isDq) {
     sections += opsc_section('Problem', opsc_kv([['Summary', row.summary], ['Object', `${row.object_domain}:${row.object_key}`], ['Merged into', row.merged_into],
@@ -1262,36 +1161,36 @@ function opsc_renderDrawer(kind, detail, ui) {
       sections += opsc_section('Linked exception', `<button type="button" data-opsc-open="${opscEsc(x.case_ref)}" ${OPSC_BTN}>${opscEsc(x.case_ref)} — ${opscEsc(x.title)} (${opscEsc(OPSC_STATUS_LABELS[x.status] || x.status)})</button>`);
     }
   } else {
-    sections += opsc_section('Summary', `<div style="font-size:13px;white-space:pre-wrap;">${opscEsc(row.summary || '—')}</div>`
+    sections += opsc_section('Summary', `<div class="ops-pre">${opscEsc(row.summary || '—')}</div>`
       + opsc_kv([['Owner', row.owner_role], ['Assignee', row.assignee], ['Resolution', row.resolution ? opscSentence(row.resolution) : null], ['Resolved by', row.resolved_by], ['Raised by', `${row.raised_by} (${row.raised_via})`]]));
     let snap = null;
     try { snap = row.run_snapshot ? JSON.parse(row.run_snapshot) : null; } catch { snap = row.run_snapshot; }
     if (detail.registry || snap || (detail.runs || []).length) {
       sections += opsc_section('Job and run', opsc_kv([['Job', row.job_id], ['Run', row.run_id], ['Mode', detail.registry && detail.registry.execution_mode],
         ['Registry status', detail.registry && detail.registry.status]])
-        + (snap ? `<div style="margin-top:6px;">${opsc_kv(Object.entries(Array.isArray(snap) ? (snap[0] || {}) : snap))}</div>` : ''));
+        + (snap ? `<div class="ops-gap">${opsc_kv(Object.entries(Array.isArray(snap) ? (snap[0] || {}) : snap))}</div>` : ''));
     }
     if ((detail.linked_dq_tickets || []).length) {
-      sections += opsc_section('Linked DQ tickets', detail.linked_dq_tickets.map(t =>
-        `<button type="button" data-opsc-open="${opscEsc(t.case_ref)}" ${opscBtn('margin:0 6px 6px 0;')}>${opscEsc(t.case_ref)} — ${opscEsc(t.title)}</button>`).join(''));
+      sections += opsc_section('Linked DQ tickets', `<div class="ops-chips">${detail.linked_dq_tickets.map(t =>
+        `<button type="button" data-opsc-open="${opscEsc(t.case_ref)}" ${OPSC_BTN}>${opscEsc(t.case_ref)} — ${opscEsc(t.title)}</button>`).join('')}</div>`);
     }
   }
   sections += opsc_section('History', opsc_renderHistory(detail.events));
   const membersOpen = (ui.members || detail.members || []).some(m => m.member_status === 'open') || !!(detail.members_cursor);
   const form = ui.form ? opsc_renderForm(kind, ui.form, { row, events: detail.events, membersOpen, actingRole: ui.actingRole, draft: ui.draft, error: ui.error }) : '';
   return `
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+    <div class="ops-dhead">
       <div>
-        <div style="font-family:var(--mono, monospace);font-size:12px;color:${OPS_COLORS.textDim};">${opscEsc(row.case_ref)} · ${opscEsc(isDq ? opscLabel(OPSC_DQ_LABELS, row.ticket_type) : opscLabel(OPSC_EXC_LABELS, row.exception_type))}</div>
-        <h2 id="opsc-drawer-title" tabindex="-1" style="font-size:17px;margin:6px 0 8px;outline:none;">${opscEsc(row.title)}</h2>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${opsc_sevBadge(row.severity)}
-          <span style="font-size:12px;font-weight:700;">${opscEsc(OPSC_STATUS_LABELS[row.status] || row.status)}</span>
-          ${isDq && opsc_isProtected(row) ? `<span style="color:${OPS_COLORS.amber};font-size:11px;font-weight:700;">Protected decision</span>` : ''}
-          ${ui.loading ? `<span style="font-size:12px;color:${OPS_COLORS.textDim};">Loading…</span>` : ''}</div>
+        <div class="ops-mono ops-small">${opscEsc(row.case_ref)} · ${opscEsc(isDq ? opscLabel(OPSC_DQ_LABELS, row.ticket_type) : opscLabel(OPSC_EXC_LABELS, row.exception_type))}</div>
+        <h2 id="opsc-drawer-title" class="ops-dtitle" tabindex="-1">${opscEsc(row.title)}</h2>
+        <div class="ops-badges">${opsc_sevBadge(row.severity)}
+          <span class="ops-strong">${opscEsc(OPSC_STATUS_LABELS[row.status] || row.status)}</span>
+          ${isDq && opsc_isProtected(row) ? '<span class="ops-flag amber">Protected decision</span>' : ''}
+          ${ui.loading ? '<span class="ops-small"><span class="ops-spin" aria-hidden="true"></span>Loading…</span>' : ''}</div>
       </div>
       <button type="button" data-opsc-close="1" aria-label="Close" ${OPSC_BTN}>Close</button>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;" role="group" aria-label="Actions">
+    <div class="ops-actions" role="group" aria-label="Actions">
       ${actions.map(a => `<button type="button" data-opsc-action="${a.action}" aria-pressed="${ui.form === a.action}" ${OPSC_BTN}>${opscEsc(a.label)}</button>`).join('')}
     </div>
     ${status}${form}${sections}`;
@@ -1326,9 +1225,11 @@ async function opsc_loadList(kind, more) {
   const st = opscState[kind];
   st.loading = true; st.error = null;
   if (!more) { st.items = []; st.next_cursor = null; }
+  _opsBusy(el, true);
   el.innerHTML = opsc_renderList(kind, st);
   const res = await data_opsAdmin(opsc_listPath(kind, more ? st.next_cursor : null));
   st.loading = false;
+  _opsBusy(el, false);
   if (res.ok) {
     st.items = more ? st.items.concat(res.data.items || []) : (res.data.items || []);
     st.next_cursor = res.data.next_cursor || null;
@@ -1394,13 +1295,11 @@ function opsc_drawerEl() {
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-modal', 'true');
   el.setAttribute('aria-labelledby', 'opsc-drawer-title');
-  el.style.cssText = `position:fixed;top:0;right:0;width:min(720px,100vw);height:100vh;overflow-y:auto;z-index:3100;
-    background:#0d1016;border-left:1px solid #2a3038;padding:24px;box-sizing:border-box;color:${OPS_COLORS.text};
-    font-family:system-ui,-apple-system,sans-serif;box-shadow:-12px 0 32px rgba(0,0,0,0.5);`;
+  el.className = 'ops-drawer';   // ops-theme: --bg2, left border --border2, no shadow (--sh is none)
   (document.getElementById('ops-panel') || document.body).appendChild(el);
   el.addEventListener('click', opsc_onDrawerClick);
   el.addEventListener('submit', opsc_onDrawerSubmit);
-  el.addEventListener('change', ev => { if (ev.target.name === 'actor_role') _opsPref('ops_acting_role', ev.target.value); });
+  el.addEventListener('change', ev => { if (ev.target.name === 'actor_role') { _opsPref('ops_acting_role', ev.target.value); ops_refreshTitlebarRole(); } });
   el.addEventListener('keydown', ev => { if (ev.key === 'Escape') opsc_closeDrawer(); });
   return el;
 }
@@ -1425,9 +1324,9 @@ async function opsc_openDrawer(ref, returnFocus) {
   d.ui.loading = false;
   if (!res.ok) {
     const el = opsc_drawerEl();
-    el.innerHTML = `<h2 id="opsc-drawer-title" tabindex="-1" style="font-size:16px;">${opscEsc(ref)}</h2>
-      <div role="alert" style="color:${OPS_COLORS.red};font-size:13px;">${opscEsc(opsc_mapResponse(res).text)}</div>
-      <button type="button" data-opsc-close="1" ${opscBtn('margin-top:12px;')}>Close</button>`;
+    el.innerHTML = `<h2 id="opsc-drawer-title" class="ops-dtitle" tabindex="-1">${opscEsc(ref)}</h2>
+      ${ops_stateHtml('error', opsc_mapResponse(res).text)}
+      <div class="ops-btnrow"><button type="button" data-opsc-close="1" ${OPSC_BTN}>Close</button></div>`;
     return;
   }
   d.detail = res.data;
@@ -1435,6 +1334,21 @@ async function opsc_openDrawer(ref, returnFocus) {
   d.ui.membersCursor = res.data.members_cursor;
   opsc_writeHash(kind);
   opsc_paintDrawer(true);
+  opsc_markSelected();
+}
+
+// §1.6 Selected: the list row whose drawer is open carries aria-current="true" (styled by ops-theme).
+function opsc_markSelected() {
+  const d = opscState.drawer;
+  Object.entries(OPSC_CONTAINER).forEach(([kind, id]) => {
+    const el = document.getElementById(id);
+    if (!el || !el.querySelectorAll) return;
+    el.querySelectorAll('tr[aria-current]').forEach(r => r.removeAttribute('aria-current'));
+    if (d && d.kind === kind) {
+      const r = el.querySelector(`tr[data-opsc-open="${d.ref}"]`);   // refs match OPSC_REF_RE: no quotes
+      if (r && r.setAttribute) r.setAttribute('aria-current', 'true');
+    }
+  });
 }
 
 async function opsc_rereadDrawer(status) {
@@ -1452,7 +1366,16 @@ function opsc_closeDrawer() {
   const el = document.getElementById('opsc-drawer');
   if (el) el.remove();
   opscState.drawer = null;
-  if (d) { opsc_writeHash(d.kind); if (d.returnFocus && d.returnFocus.isConnected !== false && d.returnFocus.focus) d.returnFocus.focus(); }
+  opsc_markSelected();
+  if (!d) return;
+  opsc_writeHash(d.kind);
+  let back = d.returnFocus && d.returnFocus.isConnected !== false && d.returnFocus.focus ? d.returnFocus : null;
+  if (!back) {   // the list was re-rendered after an action: return focus to the same row
+    const list = document.getElementById(OPSC_CONTAINER[d.kind]);
+    const r = list && list.querySelector ? list.querySelector(`tr[data-opsc-open="${d.ref}"]`) : null;
+    if (r && r.focus) back = r;
+  }
+  if (back) back.focus();
 }
 
 function opsc_formValues(form) {

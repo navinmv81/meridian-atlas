@@ -414,11 +414,13 @@ const settle = async () => { for (let i = 0; i < 20; i++) await tick(); };
   check('[M-3] console: leaving Health stops the poll', c.intervals.size === 0, null);
   c.doc.hidden = false; c.fireDoc('visibilitychange');
   check('[M-3] console: becoming visible on an admin tab does not read ops-health', c.sent.filter(s => s.host === 'meridian-proxy.navinmv1981.workers.dev').length === 2 && c.intervals.size === 0, null);
-  c.run(`ops_renderSprintBoard([{ ticket_id: 'MA-OCT-005', domain: 'Ops', owner_role: 'Engineering Lead', title: 'Console', stage: 'ENG_IMPLEMENT' }])`);
-  c.run(`ops_renderReleaseLedger([{ release_id: 'R-1', change_summary: 's', d1_migration_status: 'n/a', worker_deploy_status: 'n/a', frontend_push_status: 'n/a', status: 'READY' }])`);
-  const sb = c.run(`document.getElementById('ops-tab-sprint').innerHTML`), rl = c.run(`document.getElementById('ops-tab-release').innerHTML`);
-  check('[AC-13] Sprint Board and Release Ledger: data shown, no action buttons, read-only footnote', sb.includes('MA-OCT-005') && rl.includes('R-1') && !/Change stage|Record event/.test(sb + rl)
-    && sb.includes('Read-only. Changes are made by the Main Lane.') && rl.includes('Read-only. Changes are made by the Main Lane.'), null);
+  // MA-NOV-UI (OPS-01) changed this expectation: Sprint Board and Release Ledger (AC-13's read-only views) and Events
+  // are no longer in the console. Their loaders/renderers are gone and no panel exists for them; routes are untouched (OPS-05).
+  const gone = ['ops_loadSprintBoard', 'ops_renderSprintBoard', 'ops_loadReleaseLedger', 'ops_renderReleaseLedger', 'ops_loadEventTimeline', 'ops_renderEventTimeline']
+    .filter(f => c.run(`typeof ${f}`) !== 'undefined');
+  check('[AC-13 → MA-NOV-UI OPS-01] Sprint Board, Release Ledger and Events are not in the console (no functions, no panels, no Main-Lane footnote)',
+    gone.length === 0 && ['sprint', 'release', 'events'].every(id => c.run(`document.getElementById('ops-tab-${id}')`) === null)
+    && !/Read-only\. Changes are made by the Main Lane\./.test(read(APP, 'ma-ops.js')), gone);
   check('[§6.2] localStorage holds only ops_acting_role', [...c.storage.keys(), ...t.storage.keys()].every(k => k === 'ops_acting_role'), [...c.storage.keys()]);
 }
 

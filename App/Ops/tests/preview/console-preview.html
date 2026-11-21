@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian Atlas — Operator console (PREVIEW, fixtures)</title>
+<!-- MA-NOV-UI.OPS.BUILD (spec §1.9): test-only preview of the operator console. It loads the working copies of
+     App/ma-data.js and App/ma-ops.js exactly as the meridian-ops shell does (same flag, same order, same base
+     style), but fetch is replaced by fixtures.js, so no live Ops endpoint is ever called. Never copied to docs/.
+     Switches: see fixtures.js (?fail=health,drift · ?fail=signedout · ?fail=offline · ?empty=cases,dq · ?delay=ms). -->
+<style>html,body{margin:0;background:#0a0c10;color:#e8eaed;font:14px/1.45 system-ui,-apple-system,sans-serif}
+#preview-switch{position:fixed;right:8px;bottom:8px;z-index:4000;font:11px/1.4 system-ui,sans-serif;background:#13213D;color:#93A4BD;
+  border:1px solid rgba(160,184,214,.25);padding:4px 8px;border-radius:2px;max-width:calc(100vw - 16px)}
+#preview-switch a{color:#5A9BC8;margin-left:6px}</style>
+</head>
+<body>
+<nav id="preview-switch" aria-label="Preview fixtures">PREVIEW ·
+  <a href="?">normal</a><a href="?empty=cases,dq">empty</a><a href="?fail=health,drift,cases">errors</a><a href="?fail=signedout">signed out</a><a href="?fail=offline">offline</a><a href="?delay=4000">slow</a>
+</nav>
+<script>window.MA_OPS_CONSOLE = true;</script>
+<script src="fixtures.js"></script>
+<script src="../../../ma-data.js"></script>
+<script src="../../../ma-ops.js"></script>
+<script>(function () {
+  if (window.OPS_CONSOLE_SUPPORTED !== true || typeof window.openOps !== 'function') { document.body.insertAdjacentText('beforeend', 'ma-ops.js did not load.'); return; }
+  window.openOps({ console: true });
+})();</script>
+</body>
+</html>
