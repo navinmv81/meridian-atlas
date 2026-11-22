@@ -288,4 +288,4 @@ test('R-2 Home Depot: the tranche\'s own "Compounded SOFR plus 0.330%" past the 
   const x = tr(parse('homedepot-424b2-frn-2024-06-18'), 1);
   assert.equal(x.rate_type, 'floating'); assert.equal(x.spread_bps, 33); assert.equal(x.benchmark, 'SOFR');
 });
-test('FIX1: parser version is bonds-1.3.0 (was R-2 1.2.0)', () => { assert.equal(parse('toyota-424b2-mtn-frn-2026-03-11').rows[0].parser_version, 'bonds-1.3.0'); });
+test('FIX2: parser version is bonds-1.3.1 (was FIX1 1.3.0, R-2 1.2.0)', () => { assert.equal(parse('toyota-424b2-mtn-frn-2026-03-11').rows[0].parser_version, 'bonds-1.3.1'); });

@@ -81,6 +81,24 @@ const flag = (P, name) => existsSync(P[name]);
 // lines. The nearest such final is taken. No tranche-level link: drafts carry no tranche identity.
 // filings: [{ accession, cik, row_cik?, file_number, filing_date, status, draft_lines?, rows }]
 // parentOf: co-registrant CIK → parent CIK (L8-12 / bond_issuer_link family). Mutates the draft rows.
+// F2b (MA-NOV-BOND.FIX2): a final with fewer tranches than the draft still replaces it when its tranches are a
+// subset of the draft's cover lines (each final tranche matches its own draft line on rate type, and on maturity
+// year where the draft prints one) — a tranche dropped at pricing. The draft row gets the note
+// "tranche dropped at pricing" (run log; no column until CR1 decides one).
+export function trancheSubset(finalRows, draftTranches) {
+  if (!Array.isArray(draftTranches) || !draftTranches.length) return false;
+  const free = draftTranches.map(d => ({ ...d, used: false }));
+  const ft = finalRows.map(r => ({ rate: r.rate_type, year: r.maturity_date ? Number(r.maturity_date.slice(0, 4)) : null }))
+    .sort((a, b) => (a.year === null) - (b.year === null));
+  for (const t of ft) {
+    const fit = free.filter(d => !d.used && d.rate === t.rate && (d.year === null || d.year === t.year))
+      .sort((a, b) => (a.year === null) - (b.year === null))[0];   // a line that names the year first
+    if (!fit) return false;
+    fit.used = true;
+  }
+  return ft.length >= 1;
+}
+
 export function linkDrafts(filings, { parentOf = new Map(), days = 14 } = {}) {
   const fam = c => (c ? parentOf.get(c) || c : null);
   const familyOf = f => fam(f.cik) || fam(f.row_cik);
@@ -90,16 +108,22 @@ export function linkDrafts(filings, { parentOf = new Map(), days = 14 } = {}) {
     if (d.status !== 'preliminary') continue;
     const t0 = Date.parse(d.filing_date + 'T00:00:00Z');
     const lines = Number.isInteger(d.draft_lines) ? d.draft_lines : 0;
-    const hit = finals.filter(f => f.file_number && f.file_number === d.file_number && familyOf(f) === familyOf(d)
-        && f.rows.filter(r => r.tranche_seq > 0).length >= lines)
-      .map(f => ({ f, gap: (Date.parse(f.filing_date + 'T00:00:00Z') - t0) / 86400000 }))
-      .filter(x => x.gap >= 0 && x.gap <= days)
+    const hit = finals.filter(f => f.file_number && f.file_number === d.file_number && familyOf(f) === familyOf(d))
+      .map(f => {
+        const tr = f.rows.filter(r => r.tranche_seq > 0);
+        const rule = tr.length >= lines ? 'count' : trancheSubset(tr, d.draft_tranches) ? 'subset' : null;
+        return { f, rule, dropped: rule === 'subset' ? (d.draft_tranches.length - tr.length) : 0, gap: (Date.parse(f.filing_date + 'T00:00:00Z') - t0) / 86400000 };
+      })
+      .filter(x => x.rule && x.gap >= 0 && x.gap <= days)
       .sort((a, b) => a.gap - b.gap || (a.f.accession < b.f.accession ? -1 : 1))[0];
+    const note = hit && hit.dropped > 0 ? 'tranche dropped at pricing' : null;
     for (const r of d.rows) {
       r.status_reason = hit ? 'superseded' : 'draft_no_final';
       r.superseded_by = hit ? hit.f.accession : null;
+      if (note) r.status_note = note; else delete r.status_note;
     }
-    links.push({ draft: d.accession, final: hit ? hit.f.accession : null, gap_days: hit ? hit.gap : null, draft_lines: lines });
+    links.push({ draft: d.accession, final: hit ? hit.f.accession : null, gap_days: hit ? hit.gap : null, draft_lines: lines,
+                 ...(hit ? { rule: hit.rule } : {}), ...(note ? { note } : {}) });
   }
   return links;
 }
@@ -220,7 +244,7 @@ export async function run(args, deps = {}) {
           rows: res.rows.length, final_paths: paths, status_reasons: reasons, held });   // B-3 condition 4: the path of every final row
         filingsOut.push({ accession: f.accessionNumber, cik: iss.cik, issuer: iss.name, form: f.form, filing_date: f.filingDate, file_number: f.fileNumber,
           url: f.url, status: res.status, rule: res.rule, reason: res.reason || null, title: res.title, notes: res.notes, fwps: fwpUsed,
-          co_issuers: res.coIssuers || [], row_cik: coCik, held, draft_lines: res.draftLines ?? null, rows: res.rows });
+          co_issuers: res.coIssuers || [], row_cik: coCik, held, draft_lines: res.draftLines ?? null, draft_tranches: res.draftTranches ?? null, rows: res.rows });
       }
     }
   } catch (e) {

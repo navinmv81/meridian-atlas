@@ -1,0 +1,97 @@
+{
+  "packet": "MA-NOV-BOND.FIX2",
+  "generated": "2026-11-22T10:57:44Z",
+  "parser": "bonds-1.3.1",
+  "run": "NOT RUN",
+  "inputs": {
+    "before": {
+      "file": "d1-q2-rows.json",
+      "sha256": "1a94593c62312795f431b66356def3acaee9fec69bb3362ab6835ee37c2f3426",
+      "rows": 943,
+      "filings": 632
+    },
+    "after": {
+      "file": "after-1.3.1.json",
+      "sha256": "cb845503749a805c92dd39c0a19ca6fc7148ec5d0e58b42167d465c71432b806",
+      "filings": 653
+    }
+  },
+  "scope": {
+    "filings_touched": 632,
+    "d1_filings_not_in_corpus": [],
+    "corpus_filings_not_in_d1": 21
+  },
+  "changes": {
+    "reason only": 264,
+    "values: instrument_key+isin+cusip": 252,
+    "version only": 359,
+    "status preliminary→skipped_non_debt": 9,
+    "tranche set change": 2,
+    "status parse_failed→final": 6,
+    "values: instrument_key+cusip": 19,
+    "status preliminary→skipped_other": 1,
+    "values: parse_confidence": 2,
+    "status parse_failed→skipped_other": 1,
+    "status preliminary→skipped_structured": 28
+  },
+  "diff_rows": 584,
+  "runs": [
+    {
+      "file": "fix2-apply-run1.sql",
+      "batches": 10,
+      "statements": 945,
+      "est_writes": 1229
+    },
+    {
+      "file": "fix2-rollback-run1.sql",
+      "batches": 10,
+      "statements": 945,
+      "est_writes": 1229
+    }
+  ],
+  "files": {
+    "fix2-apply-run1.sql": {
+      "sha256": "47749151a9cc8c313026092d571377366b9927f04d575b0ec8da3ac4950a7a54",
+      "bytes": 313752
+    },
+    "fix2-rollback-run1.sql": {
+      "sha256": "df0ad70f5a73237ce0f94402022d6c1a498c7022b653035badd7349b5a01f12b",
+      "bytes": 247668
+    },
+    "fix2-diff.tsv": {
+      "sha256": "0faf005a457350f0530db937b6d47227b14b52875e4668f95af2567bf0c8fe8e",
+      "bytes": 151667
+    }
+  },
+  "before_classes": {
+    "preliminary · (none)": 184,
+    "final · no id": 356,
+    "skipped_non_debt · (none)": 45,
+    "final · with id": 276,
+    "skipped_other · (none)": 52,
+    "parse_failed · (none)": 9,
+    "skipped_structured · (none)": 21
+  },
+  "after_classes": {
+    "preliminary · superseded": 146,
+    "final · with id": 550,
+    "skipped_non_debt · equity": 44,
+    "skipped_non_debt · draft_not_debt": 9,
+    "skipped_other · demand_note": 39,
+    "skipped_other · program_supplement": 3,
+    "skipped_other · exchange_offer": 6,
+    "final · no id": 88,
+    "skipped_other · merger_document": 5,
+    "skipped_other · remarketing": 2,
+    "skipped_non_debt · stock_plan": 1,
+    "skipped_other · resale": 1,
+    "skipped_structured · draft_structured": 28,
+    "skipped_structured · structured": 21
+  },
+  "final_rows": {
+    "before": 632,
+    "after": 638,
+    "with_id_before": 276,
+    "with_id_after": 550
+  }
+}

@@ -24,6 +24,9 @@
 //   F1  a 424B draft passes the other → structured → non-debt title gate before it is called
 //       preliminary; a structured / non-debt draft is skipped with reason draft_structured / draft_not_debt.
 //   F2  a draft reports its cover tranche-line count (draftLines); the runner does the deal-level match.
+//   FIX2 (1.3.1): F6 term-sheet identifiers (fwpTermSheet: labelled / columns / sections / single), pricing date and
+//       banks captured from the term sheet (offering, not written); F5 FWP reader: Series A/B titles kept apart and a
+//       public + trust allocation summed; F2b draftTranches (cover-line rate type and year) for the subset link.
 //   F3  rule 5 (iv): an MTN / term-note programme supplement with no priced terms → skipped_other, program_supplement.
 //   F4  maturity wordings "will mature as to principal on"; a year-only tranche named as "the <year> Notes";
 //       disagreeing maturity statements resolved only by the labelled "Maturity Date(s)" statement (noted).
@@ -31,7 +34,7 @@
 //   F8  every non-final row carries status_reason (spec v1 §5 codes); a partial final carries
 //       status_reason 'partial' + missing[]. Run log / dry-run record only — not a D1 column (BOND-CR1).
 
-export const PARSER_VERSION = 'bonds-1.3.0';   // 1.3.0: MA-NOV-BOND.FIX1 F1–F4, F7, F8 · 1.2.0: DIL14 R-2 floating-spread wordings (MA-OCT-THU29.ENG8)
+export const PARSER_VERSION = 'bonds-1.3.1';   // 1.3.1: MA-NOV-BOND.FIX2 F6, F5, F2b · 1.3.0: MA-NOV-BOND.FIX1 F1–F4, F7, F8 · 1.2.0: DIL14 R-2 floating-spread wordings (MA-OCT-THU29.ENG8)
 
 // ── Visible text (R1) ────────────────────────────────────────────────────
 
@@ -535,10 +538,12 @@ export function parseFwp(html) {
   const titles = [];
   for (const m of head.matchAll(FWP_TITLE)) {
     const title = m[1];
-    if (titles.some(t => t.title.toLowerCase() === title.toLowerCase())) continue;
     const lead = head.slice(Math.max(0, m.index - 40), m.index);
+    // F5 (FIX2): "2025 Series A … Notes due 2056" and "2025 Series B … Notes due 2056" are two tranches, not one.
+    const series = ((lead.match(/\bSeries\s+([A-Z0-9]{1,3})\s*$/) || [])[1]) || null;
+    if (titles.some(t => t.title.toLowerCase() === title.toLowerCase() && t.series === series)) continue;
     const cur = /(?:U\.S\.\s?\$|US\$|C\$|A\$|\$|€|£|¥)\s?\d[\d,]*\s*$/.test(lead) ? currencyOf(lead.match(/(?:U\.S\.\s?\$|US\$|C\$|A\$|\$|€|£|¥)\s?\d[\d,]*\s*$/)[0]) : null;
-    titles.push({ title, currency: cur, coupon: Number((title.match(/(\d{1,2}\.\d{1,4})\s?%/) || [])[1]) || null,
+    titles.push({ title, series, currency: cur, coupon: Number((title.match(/(\d{1,2}\.\d{1,4})\s?%/) || [])[1]) || null,
       year: Number((title.match(/(\d{4})$/) || [])[1]), rateType: rateTypeOf(title) });
   }
   if (!titles.length) return [];
@@ -550,6 +555,13 @@ export function parseFwp(html) {
     const ids = findIdentifiers(text.slice(0, 20000));
     const cus = [...new Set(ids.map(x => (x.kind === 'cusip' ? x.value : x.value.startsWith('US') ? x.value.slice(2, 11) : x.value)))];
     out[0].principal = prin ? parseAmount(prin.m[2]) : null;
+    // F5 (FIX2): "Aggregate Principal Amount Offered: $1,687,500,000 (to the public) $562,500,000 (to Verizon for
+    // redelivery to the … trust)" — one series split by allocation; the deal size is the sum of the parts.
+    if (prin) {
+      const seg = text.slice(prin.at, prin.at + 400);
+      const parts = [...seg.matchAll(/(?:U\.S\.\s?\$|US\$|\$)\s?(\d{1,3}(?:,\d{3})+)\s*\(to\s+[^)]{2,120}\)/g)];
+      if (parts.length >= 2 && /\(to\s+the\s+public\)/i.test(parts[0][0])) { out[0].principal = parts.reduce((a, x) => a + parseAmount(x[1]), 0); out[0].principalSplit = parts.length; }
+    }
     out[0].maturity = mat ? toIsoDate(mat.m[0]) : null;
     if (cus.length === 1) { out[0].cusip = ids.find(x => x.kind === 'cusip')?.value || null; out[0].isin = ids.find(x => x.kind === 'isin')?.value || null; }
     return out;
@@ -589,6 +601,160 @@ function fwpMatch(t, fwpSections) {
   return c.length === 1 ? c[0] : null;
 }
 
+// ── F6 (MA-NOV-BOND.FIX2): identifiers, pricing date and banks from same-deal term sheets ──
+// Four layouts seen on the cached corpus (FIX2 report §2):
+//   labelled  "CUSIP / ISIN: 2028 Notes: 45865V AA8 / US45865VAA89 2031 Notes: …", "CUSIP: Notes due 2033: …"
+//   columns   one value per tranche, in the order of the term sheet's title row ("CUSIP / ISIN / Common Code: a / b / c  d / e / f")
+//   sections  one block per tranche, headed by its title, each with its own "CUSIP/ISIN:" line
+//   single    one tranche per term sheet (MTN drawdowns)
+// Each identifier group is keyed by maturity year (+ coupon, rate type where printed) and must match exactly one
+// 424B tranche; an identifier that lands on two tranches, or a tranche that gets two identifiers, is dropped.
+const TS_TITLE = new RegExp(`\\b(?:Notes?|Debentures?)(?:,?\\s*Series(?:\\s+[A-Z0-9-]{1,5})?)?\\s+due\\s+(${DATE_RE}|\\d{4})\\b`, 'gi');
+const TS_LBL_DUE = new RegExp(`(?:(\\d{1,2}\\.\\d{1,4})\\s?%\\s+)?(?:(Fixed[- ]to[- ]Floating Rate|Floating Rate|Fixed Rate)\\s+)?(?:(?:Senior|Global|Subordinated)\\s+)?(?:Notes|Debentures)\\s+due\\s+(${DATE_RE}|\\d{4})\\s*:\\s*$`, 'i');
+const TS_LBL_YEAR = /(?:^|[\s:;,(])(\d{4})\s+(?:(Fixed[- ]to[- ]Floating Rate|Floating Rate|Fixed Rate)\s+)?(?:Senior\s+)?(?:Notes|Debentures)\s*:\s*$/i;
+const TS_LBL_RATE = /(?:^|[\s:;,(])(Floating Rate|Fixed Rate|Fixed[- ]to[- ]Floating Rate)\s+(?:Senior\s+)?Notes\s*:\s*$/i;
+const TS_SEP = /^[\s/,;|]*$/;
+const yearOf = s => Number((String(s).match(/(\d{4})\s*$/) || [])[1]) || null;
+
+function tsTitles(text) {
+  const out = [];
+  TS_TITLE.lastIndex = 0;
+  let m, prev = 0;
+  while ((m = TS_TITLE.exec(text))) {
+    let phrase = text.slice(Math.max(prev, m.index - 90), m.index);
+    const cut = Math.max(phrase.search(/[:;](?![^:;]*[:;])/), phrase.search(/\.\s(?!.*\.\s)/));   // last label colon or sentence end
+    if (cut >= 0) phrase = phrase.slice(cut + 1);
+    const cps = phrase.match(/(\d{1,2}\.\d{1,4})\s?%/g) || [];
+    out.push({ at: m.index, end: m.index + m[0].length, year: yearOf(m[1]), coupon: cps.length ? Number(cps.pop().replace(/[%\s]/g, '')) : null,
+               rate: rateTypeOf(phrase + ' ' + m[0]) });
+    prev = m.index + m[0].length;
+  }
+  return out;
+}
+
+export function fwpTermSheet(html) {
+  const text = htmlToText(html).slice(0, 60000);
+  // Identifier groups: a CUSIP and its ISIN printed together ("45865V AA8 / US45865VAA89") are one group.
+  const ids = findIdentifiers(text).filter(id => !(id.kind === 'cusip' && /^\d{9}$/.test(id.value) && /Common Code/i.test(text.slice(Math.max(0, id.at - 160), id.at))));
+  // Title row: the tranche titles at the top of the sheet, in order — first 4,000 characters and before the first
+  // identifier (a later "concurrently offering … Notes due …" sentence is another deal, not a column).
+  const head = [];
+  for (const t of tsTitles(text.slice(0, Math.min(4000, ids.length ? ids[0].at : 4000)))) if (!head.some(h => h.year === t.year && h.coupon === t.coupon && h.rate === t.rate)) head.push(t);
+  const groups = [];
+  let prevEnd = 0;
+  for (const id of ids) {
+    const end = id.at + (text.startsWith(id.value, id.at) ? id.value.length : id.value.length + 1);   // "45865V AA8" is printed with a space
+    const gap = text.slice(prevEnd, id.at).replace(/\b\d{9}\b/g, '');   // Common Codes between groups are separators
+    const g = groups[groups.length - 1];
+    if (g && TS_SEP.test(gap) && !g[id.kind] && g.n < 2) { g[id.kind] = id.value; g.end = end; g.n++; }
+    else groups.push({ cusip: id.kind === 'cusip' ? id.value : null, isin: id.kind === 'isin' ? id.value : null, at: id.at, end, n: 1,
+                       gap: text.slice(Math.max(prevEnd, id.at - 160), id.at), sepBefore: !!g && TS_SEP.test(gap) });
+    prevEnd = end;
+  }
+  const keyed = [];
+  const distinct = new Set(groups.map(g => g.cusip || (g.isin?.startsWith('US') ? g.isin.slice(2, 11) : g.isin))).size;
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i];
+    if (g.isin && g.cusip && g.isin.startsWith('US') && g.isin.slice(2, 11) !== g.cusip) continue;
+    const lbl = g.gap.trimEnd();
+    let m;
+    if ((m = lbl.match(TS_LBL_DUE))) keyed.push({ ...g, year: yearOf(m[3]), coupon: m[1] ? Number(m[1]) : null, rate: m[2] ? rateTypeOf(m[2]) : null, layout: 'labelled' });
+    else if ((m = lbl.match(TS_LBL_YEAR))) keyed.push({ ...g, year: Number(m[1]), coupon: null, rate: m[2] ? rateTypeOf(m[2]) : null, layout: 'labelled' });
+    else if ((m = lbl.match(TS_LBL_RATE))) keyed.push({ ...g, year: null, coupon: null, rate: rateTypeOf(m[1]), layout: 'labelled' });
+    else {
+      // An unlabelled run of k groups separated only by "/" or spaces: one column per title, in title-row order.
+      let j = i; while (j + 1 < groups.length && groups[j + 1].sepBefore) j++;
+      const run = groups.slice(i, j + 1);
+      if (run.length >= 2) {
+        if (run.length === head.length) run.forEach((r, k) => keyed.push({ ...r, year: head[k].year, coupon: head[k].coupon, rate: head[k].rate, layout: 'columns' }));
+        i = j; continue;
+      }
+      if (head.length === 1 && distinct === 1) { keyed.push({ ...g, year: head[0].year, coupon: head[0].coupon, rate: head[0].rate, layout: 'single' }); continue; }
+      // Sections: the nearest tranche title before this identifier heads its block. With a title row of several
+      // tranches, only a title printed after that row counts (the row's last title is not the first block's header).
+      const headEnd = head.length > 1 ? head[head.length - 1].end : 0;
+      const sec = tsTitles(text.slice(0, g.at)).filter(t => t.at >= headEnd).pop();
+      if (sec) keyed.push({ ...g, year: sec.year, coupon: sec.coupon, rate: sec.rate, layout: 'sections' });
+    }
+  }
+  // A labelled year-only key takes coupon / rate from the title row when one title has that year.
+  for (const k of keyed) if (k.year && k.coupon === null && k.rate === null) {
+    const h = head.filter(t => t.year === k.year);
+    if (h.length === 1) { k.coupon = h[0].coupon; k.rate = h[0].rate; }
+  }
+  // Guards (FIX2 dry run: a USD floater's sheet on the same shelf as a EUR floater due the same year): the sheet's currency,
+  // when its title block uses one currency only, and — for a one-tranche sheet — its labelled maturity date.
+  const curs = new Set([...text.slice(0, Math.min(4000, ids.length ? ids[0].at : 4000)).matchAll(/(U\.S\.\s?\$|US\$|C\$|A\$|€|£|¥|\$)\s?\d/g)].map(m => currencyOf(m[1])));
+  const currency = curs.size === 1 ? [...curs][0] : null;
+  const mat = termValue(text, '(?:Stated |Final )?Maturity(?: Date)?', new RegExp(DATE_RE, 'i'));
+  for (const k of keyed) { k.currency = currency; k.maturity = k.layout === 'single' && mat ? toIsoDate(mat.m[0]) : null; }
+  const priced = termValue(text, 'Trade Date|Pricing Date|Date of Pricing', new RegExp(DATE_RE, 'i'));
+  return { ids: keyed.map(({ cusip, isin, year, coupon, rate, layout, currency, maturity }) => ({ cusip, isin, year, coupon, rate, layout, currency, maturity })),
+           pricedOn: priced ? toIsoDate(priced.m[0]) : null, banks: fwpBanks(text) };
+}
+
+// Spec v2 §4 (captured for OFFER1, not written): printed bank roles on a term sheet, names as printed.
+const BANK_ROLE = /(Joint Book[- ]Running Managers?|Book[- ]Running Managers?|Joint Lead Managers?(?: and (?:Joint )?Bookrunners)?|Lead Managers?|Senior Co-Managers?|Junior Co-Managers?|Co-Managers?|Passive Bookrunners?|Underwriters?|Purchasing Agents?|Lead Agents?|Agents?)\s*:/gi;
+// A name ends at its legal-form suffix ("Goldman Sachs & Co. LLC", "BofA Securities, Inc.", "ICBC Standard Bank Plc").
+const BANK_NAME = /[A-Z][^:;]{1,80}?(?:,?\s(?:Inc\.|INC\.|LLC|L\.L\.C\.|L\.P\.|Plc|plc|PLC|Limited|LIMITED|Ltd\.|Corp\.|CORP\.|Corporation|Incorporated|N\.A\.|N\.V\.|S\.A\.|AG|GmbH|PBC))(?=[\s,;*]|$)/g;
+function fwpBanks(text) {
+  const out = [];
+  BANK_ROLE.lastIndex = 0;
+  const marks = [...text.matchAll(BANK_ROLE)];
+  for (let i = 0; i < marks.length; i++) {
+    const m = marks[i];
+    const start = m.index + m[0].length;
+    const stop = Math.min(start + 900, i + 1 < marks.length ? marks[i + 1].index : Infinity);
+    let seg = text.slice(start, stop);
+    const nx = seg.search(/\s[A-Z][A-Za-z'’/() -]{2,40}\*?:/);   // next "Label:" ends the block
+    if (nx >= 0) seg = seg.slice(0, nx);
+    const names = [...new Set((seg.match(BANK_NAME) || []).map(s => s.replace(/\s+/g, ' ').replace(/^[^(]*\)\s*(?=[A-Z])/, '').replace(/^(?:and|,)\s+/i, '').trim())
+      .filter(s => s.length > 3 && !/\b(?:Notes?|Debentures?)\b/.test(s)))].slice(0, 40);
+    if (names.length) out.push({ role_printed: m[1].replace(/\s+/g, ' '), names });
+  }
+  return out;
+}
+
+// Assign term-sheet identifiers to tranches still without one (unique both ways; check digits re-checked).
+function assignTermSheetIds(tranches, sheets, { only = new Set(tranches), taken: extra = [] } = {}) {
+  const want = new Map();   // tranche index → { cusip, isin, from, layout }
+  const bad = new Set();
+  const taken = new Set([...tranches.map(t => t.cusip), ...tranches.map(t => t.isin?.startsWith('US') ? t.isin.slice(2, 11) : null), ...extra].filter(Boolean));
+  for (const s of sheets) for (const k of s.ids) {
+    const cusip = k.cusip && cusipValid(k.cusip) ? k.cusip : k.isin && k.isin.startsWith('US') && isinValid(k.isin) ? k.isin.slice(2, 11) : null;
+    if (!cusip || taken.has(cusip)) continue;
+    const hits = tranches.map((t, i) => [t, i]).filter(([t]) => {
+      const yr = t.maturity ? Number(t.maturity.slice(0, 4)) : t.maturityYear;
+      if (k.year && yr !== k.year) return false;
+      if (!k.year && tranches.filter(u => u.rateType === k.rate).length !== 1) return false;
+      if (k.rate && k.rate !== t.rateType) return false;
+      if (k.coupon !== null && k.coupon !== undefined && t.coupon !== null && t.coupon !== undefined && k.coupon !== t.coupon) return false;
+      if (k.currency && k.currency !== (t.currency || 'USD')) return false;
+      if (k.maturity && t.maturity && k.maturity !== t.maturity) return false;
+      return true;
+    });
+    // "2028 Notes:" next to "2028 Floating Rate Notes:" on the same sheet names the other 2028 tranche.
+    let pick = hits;
+    if (hits.length > 1 && k.year && !k.rate) {
+      const claimed = new Set(s.ids.filter(o => o !== k && o.year === k.year && o.rate && o.layout === 'labelled').map(o => o.rate));
+      pick = hits.filter(([t]) => !claimed.has(t.rateType));
+    }
+    if (pick.length !== 1) continue;
+    const i = pick[0][1];
+    const prev = want.get(i);
+    if (prev && prev.cusip !== cusip) { bad.add(i); continue; }
+    want.set(i, { cusip, isin: prev?.isin || (k.isin && isinValid(k.isin) ? k.isin : null), from: s.fwp, layout: k.layout });
+  }
+  const byCusip = new Map();
+  for (const [i, v] of want) if (!bad.has(i)) byCusip.set(v.cusip, (byCusip.get(v.cusip) || []).concat(i));
+  for (const [i, v] of want) {
+    if (bad.has(i) || byCusip.get(v.cusip).length !== 1) continue;
+    const t = tranches[i];
+    if (t.cusip || t.isin || !only.has(t)) continue;
+    t.cusip = v.cusip; t.isin = v.isin; t.idFrom = v.from; t.idLayout = v.layout;
+  }
+}
+
 // ── Whole-document parse ─────────────────────────────────────────────────
 
 // filing: { accessionNumber, form, filingDate, cik, url }
@@ -600,7 +766,7 @@ export function parseFiling(filing, html, { fwps = [], ingestedAt = new Date().t
                  source_url: filing.url, parser_version: parserVersion, ingested_at: ingestedAt };
   // F8: every whole-filing row carries its status_reason (run log / dry-run record; not a D1 column until BOND-CR1).
   const audit = (status, rule, extra = {}) => ({ status, rule, reason: extra.reason || null, title: auditTitle(text) || extra.title || null, notes: extra.notes || [],
-    ...(extra.draftLines !== undefined ? { draftLines: extra.draftLines } : {}),
+    ...(extra.draftLines !== undefined ? { draftLines: extra.draftLines, draftTranches: extra.draftTranches } : {}),
     rows: [{ ...base, tranche_seq: 0, instrument_key: null, isin: null, cusip: null, filing_status: status, tranche_label: null, security_class: null,
              rate_type: null, coupon_rate: null, spread_bps: null, benchmark: null, principal_amount: null, currency: 'USD', maturity_date: null,
              seniority: null, parse_confidence: 0, status_reason: extra.reason || null }], fwpNeeded: false });
@@ -615,7 +781,7 @@ export function parseFiling(filing, html, { fwps = [], ingestedAt = new Date().t
     if (dc.status === 'skipped_non_debt') return audit(dc.status, `F1 ${pre} / ${dc.rule}`, { title: header.slice(0, 300), reason: 'draft_not_debt' });
     if (dc.status === 'skipped_other' && dc.rule.startsWith('7.3-1')) return audit(dc.status, `F1 ${pre} / ${dc.rule}`, { title: header.slice(0, 300), reason: dc.reason });
     // F2: the runner links the draft to its final; until then it has none.
-    return audit('preliminary', pre, { reason: 'draft_no_final', draftLines: draftTrancheLines(header) });
+    return audit('preliminary', pre, { reason: 'draft_no_final', draftLines: draftTrancheLines(header), draftTranches: draftTranches(header) });
   }
 
   const cls = classifyTitle(title, text);
@@ -662,12 +828,18 @@ export function parseFiling(filing, html, { fwps = [], ingestedAt = new Date().t
   // FWP enrichment and cross-check (§7.4, §14.1).
   const fwpSections = fwps.flatMap(f => parseFwp(f.html).map(s => ({ ...s, fwp: f.accessionNumber })));
   const notes = [];
+  const fwpHit = tranches.map(t => (fwpSections.length ? fwpMatch(t, fwpSections) : null));
+  // F6: term-sheet identifiers for tranches the 424B and the 1.2 FWP reader leave without one.
+  const sheets = fwps.map(f => ({ ...fwpTermSheet(f.html), fwp: f.accessionNumber }));
+  const open = tranches.filter((t, i) => !t.cusip && !t.isin && !(fwpHit[i] && (fwpHit[i].cusip || fwpHit[i].isin)));
+  if (sheets.length && open.length) assignTermSheetIds(tranches, sheets, { only: new Set(open), taken: fwpHit.map(f => f?.cusip).filter(Boolean) });
   const rows = tranches.map((t, i) => {
-    const f = fwpSections.length ? fwpMatch(t, fwpSections) : null;
+    const f = fwpHit[i];
     let conflict = null;
     if (f) {
       if (!t.cusip && !t.isin) { t.cusip = f.cusip && cusipValid(f.cusip) ? f.cusip : (f.isin?.startsWith('US') ? f.isin.slice(2, 11) : null); t.isin = f.isin; t.idFrom = f.fwp; }
       if (f.principal && t.principal && Math.abs(f.principal - t.principal) > 0.5) conflict = `principal ${t.principal} vs FWP ${f.principal}`;
+      else if (f.principalSplit) notes.push(`tranche ${i + 1}: term-sheet amount printed in ${f.principalSplit} allocations (to the public and other); their total agrees with the 424B`);
       if (f.maturity && t.maturity && f.maturity !== t.maturity) conflict = `maturity ${t.maturity} vs FWP ${f.maturity}`;
     }
     if (t.isin && !isinValid(t.isin)) t.isin = null;
@@ -695,12 +867,17 @@ export function parseFiling(filing, html, { fwps = [], ingestedAt = new Date().t
       filing_status: final ? 'final' : 'parse_failed', tranche_label: t.label || null, security_class: t.securityClass || 'notes',
       rate_type: t.rateType, coupon_rate: t.rateType === 'floating' ? null : t.coupon, spread_bps: t.spread ?? null, benchmark: t.benchmark ?? null,
       principal_amount: t.principal ?? null, currency: t.currency || 'USD', maturity_date: t.maturity || null, seniority: t.seniority ?? null,
-      parse_confidence: conf, path: t.path || '7.3-4', status_reason: final ? (missing.length ? 'partial' : null) : reason,
+      parse_confidence: conf, path: t.path || '7.3-4', ...(t.idLayout ? { id_source: `fwp ${t.idFrom} (${t.idLayout})` } : {}), status_reason: final ? (missing.length ? 'partial' : null) : reason,
       ...(missing.length ? { missing } : {}), ...(final ? {} : { fail_reason: why.join('; ') }) };   // path / fail_reason / status_reason / missing: run log only (not columns)
   });
   const fwpNeeded = rows.some(r => r.filing_status === 'final' && !r.cusip && !r.isin) && !fwps.length;
   const co = coverIssuers(header);
-  return { status: 'debt', rule: `${cls.rule} / ${shape}`, title: header.slice(0, 300), rows, notes, fwpNeeded, coIssuers: co.names, guaranteed: co.guaranteed };
+  // Spec v2 §3 #12 / §4 (captured, not written until CR2): pricing date and banks as the same-deal term sheet labels them.
+  const pricedSheet = sheets.find(s => s.pricedOn), bankSheet = sheets.find(s => s.banks.length);
+  const offering = sheets.length ? { priced_on: pricedSheet?.pricedOn || null, priced_on_source: pricedSheet ? `fwp ${pricedSheet.fwp}` : null,
+                                     banks: bankSheet?.banks || [], banks_source: bankSheet ? `fwp ${bankSheet.fwp}` : null } : null;
+  return { status: 'debt', rule: `${cls.rule} / ${shape}`, title: header.slice(0, 300), rows, notes, fwpNeeded, coIssuers: co.names, guaranteed: co.guaranteed,
+           ...(offering ? { offering } : {}) };
 }
 
 // F8 partial (spec v1 §1.3): a final row without a CUSIP/ISIN, or without its rate — the coupon (fixed,
@@ -717,6 +894,27 @@ function missingOf(t, isin, cusip) {
 // The runner compares it with the final's tranche count; drafts carry no tranche identity.
 const DRAFT_LINE = /\b(?:Notes?|Debentures?|Bonds?)(?:,?\s*Series(?:\s+[A-Z0-9-]{1,5})?)?\s+due\b/gi;
 export const draftTrancheLines = header => (String(header).match(DRAFT_LINE) || []).length;
+
+// F2b (FIX2): what each draft cover line says about its tranche — rate type, and the maturity year where the
+// draft prints one ("Floating Rate Notes due 2029"; "% Notes due 20" has none). A line that repeats an identified
+// line (same year or series, same words) is the cover's title sentence, not another tranche.
+export function draftTranches(header) {
+  const h = String(header), out = [], seen = new Set();
+  const re = new RegExp(DRAFT_LINE.source, 'gi');
+  let m, prev = 0;
+  while ((m = re.exec(h))) {
+    const lead = h.slice(Math.max(prev, m.index - 80), m.index);
+    const yr = h.slice(m.index + m[0].length, m.index + m[0].length + 30).match(new RegExp(`^\\s*((?:${MONTH_RE}\\s+\\d{1,2}\\s*,\\s*)?(\\d{4}))\\b`, 'i'));
+    const series = (lead.match(/\bSeries\s+([A-Z0-9]{1,6})\b/i) || [])[1] || null;
+    const rate = rateTypeOf(lead.slice(-60) + ' ' + m[0]);
+    const key = `${rate}|${yr ? yr[1].replace(/\s+/g, ' ').toLowerCase() : ''}|${series || ''}`;
+    prev = m.index + m[0].length;
+    if ((yr || series) && seen.has(key)) continue;
+    seen.add(key);
+    out.push({ rate, year: yr ? Number(yr[2]) : null, series });
+  }
+  return out;
+}
 
 // N-3: an audit title for whole-filing rows. EDGAR header tokens and the SEC
 // legend are dropped, and the cover's offering line is preferred. Report-only:

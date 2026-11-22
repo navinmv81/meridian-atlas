@@ -36,7 +36,8 @@ const rec = (name, over = {}) => {
 const CODES = new Set(['superseded', 'draft_no_final', 'draft_not_debt', 'draft_structured', 'structured', 'equity', 'stock_plan', 'exchange_offer',
   'merger_document', 'demand_note', 'remarketing', 'resale', 'program_supplement', 'no_maturity', 'no_principal', 'low_confidence', 'fwp_conflict', 'no_tranche']);
 
-test('FIX1: parser version is bonds-1.3.0', () => { assert.equal(PARSER_VERSION, 'bonds-1.3.0'); });
+// FIX2 (1.3.1): the version moved on; asserted in bonds-fix2.test.mjs.
+test('FIX1: parser version is bonds-1.3.x', () => { assert.match(PARSER_VERSION, /^bonds-1\.3\.\d$/); });
 
 // ── F1 title gate for drafts ─────────────────────────────────────────────
 
@@ -73,7 +74,7 @@ test('F1: a debt draft stays preliminary, reason draft_no_final, with its cover 
 test('F2: UnitedHealth draft (4 lines) → superseded by the final filed the next day (4 tranches)', () => {
   const d = rec('unh-424b5-prelim-2025-06-17'), f = rec('unh-424b5-final-2025-06-18');
   const links = linkDrafts([d, f]);
-  assert.deepEqual(links, [{ draft: d.accession, final: f.accession, gap_days: 1, draft_lines: 4 }]);
+  assert.deepEqual(links, [{ draft: d.accession, final: f.accession, gap_days: 1, draft_lines: 4, rule: 'count' }]);   // FIX2: links name their rule
   assert.equal(d.rows[0].status_reason, 'superseded');
   assert.equal(d.rows[0].superseded_by, f.accession);
   assert.ok(f.rows.every(r => r.superseded_by === undefined), 'the final is not touched');
