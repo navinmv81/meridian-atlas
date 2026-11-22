@@ -18,11 +18,14 @@
 //   • §6.1 checks run on every fact; a failing fact is not returned and the failure is listed in `checks`.
 //   • Field 1 (issuer) is the existing bond_issuer_link: no row here. Fields 5–8 (amount, currency, interest rate,
 //     maturity) repeat the bond_issuance values with their printed source location, so BOND-10 can link them.
-//   • Fields 14–28 are OFFER2. The bank fee and proceeds % are read here only to check the price (§6.1), not returned.
+//   • Fields 14–28 (MA-NOV-BOND.OFFER2): ranking, secured, early repayment, change-of-control buy-back, special mandatory
+//     redemption, survivor's option, use of proceeds (closed list of categories), bank fee, proceeds % and total, risks,
+//     selling restrictions, conflicts of interest, listing. Risks, selling restrictions and conflicts are a section link with
+//     a one-line heading only (§8). Fields 23–24 (banks, trustee) are the parties below.
 
 import { htmlToText, toIsoDate, findIdentifiers, cusipValid, isinValid, couponRe } from './bonds-parse.mjs';
 
-export const OFFERING_VERSION = 'bonds-offering-1.0.0';
+export const OFFERING_VERSION = 'bonds-offering-1.1.0';   // 1.1.0: OFFER2 fields 14–28 · 1.0.0: OFFER1 fields 1–13 + parties
 
 export const FACT_COLS = ['accession_number', 'tranche_seq', 'field', 'state', 'value_text', 'value_num', 'value_date', 'source_doc',
   'source_url', 'source_part', 'source_heading', 'source_anchor', 'source_page', 'char_offset', 'parser_version', 'ingested_at'];
@@ -32,12 +35,19 @@ export const PARTY_COLS = ['accession_number', 'party_seq', 'tranche_seq', 'part
 // Field closed list for OFFER1 (spec v2 §3 #2–13; #2 is the guarantor party). O = offering level, T = per tranche.
 export const FIELDS = Object.freeze({
   document_date: 'O', identifier: 'T', amount: 'T', currency: 'T', interest_rate: 'T', maturity: 'T',
-  issue_price_pct: 'T', interest_paid: 'T', day_count: 'T', priced_on: 'O', issue_date: 'O'
+  issue_price_pct: 'T', interest_paid: 'T', day_count: 'T', priced_on: 'O', issue_date: 'O',
+  // OFFER2 (#14–22, #25–28)
+  ranking: 'T', secured: 'T', early_repayment: 'T', change_of_control: 'O', special_mandatory_redemption: 'T', survivors_option: 'T',
+  use_of_proceeds: 'O', bank_fee_pct: 'T', proceeds_pct: 'T', proceeds_amount: 'T', proceeds_total: 'O',
+  risk_factors: 'O', selling_restrictions: 'O', conflicts_of_interest: 'O', listing: 'O'
 });
+// Use-of-proceeds categories (spec v2 §3 #20): a closed list, never the filing's wording.
+export const PROCEEDS_CATEGORIES = Object.freeze(['general corporate purposes', 'repay or refinance debt', 'fund an acquisition', 'working capital',
+  'capital spending', 'share buybacks', 'eligible green or social projects', 'other']);
 export const ROLES = Object.freeze(['bookrunner', 'co_manager', 'underwriter', 'agent', 'trustee', 'guarantor', 'other']);
 export const INTERMEDIARY = new Set(['bookrunner', 'co_manager', 'underwriter', 'agent']);
 export const SOURCE_PARTS = Object.freeze(['cover', 'cover table', 'summary', 'description of the notes', 'optional redemption',
-  'use of proceeds', 'underwriting', 'pricing terms', 'retail table', 'term sheet']);
+  'use of proceeds', 'underwriting', 'pricing terms', 'retail table', 'term sheet', 'risk factors']);
 export const STATES = Object.freeze(['disclosed', 'not_disclosed', 'not_applicable']);
 export const VALUE_TEXT_MAX = 300;
 
@@ -586,7 +596,7 @@ export function extractOffering({ filing, html, parsed, fwps = [], fwpsUnavailab
   const fwpPrice = single ? fwpDocs.map(f => termPct(f.text.slice(0, 20000), PRICE_LABEL)).find(Boolean) : null;
   for (const t of tr) {
     const p = prices.get(t.seq);
-    if (!p) continue;
+    if (!p || p.value == null) continue;
     if (p.value < 90 || p.value > 101) { fail('issue_price_pct', t.seq, 'range', `${p.value}`); continue; }
     if (fwpPrice && Math.abs(fwpPrice.value - p.value) > 0.0005) { fail('issue_price_pct', t.seq, 'fwp_conflict', `424B ${p.value} vs term sheet ${fwpPrice.value}`); continue; }
     put(t.seq, 'issue_price_pct', 'disclosed', { num: p.value }, src(p.at, { part: p.part, heading: p.heading }));
@@ -616,6 +626,10 @@ export function extractOffering({ filing, html, parsed, fwps = [], fwpsUnavailab
   // §4 Parties.
   const arabicPages = pages.filter(p => /^S-\d/.test(p.label));
   const supplementEnd = arabicPages.length ? arabicPages[arabicPages.length - 1].end : null;   // last printed S-page of the prospectus supplement
+
+  // Fields 14–28 (OFFER2).
+  part2({ text, family, tr, single, rows, coverEnd, supEnd: supplementEnd ?? text.length, anchors, docDate, prices, src, put, absent, fail, notes,
+    pageAt, priceKept: new Set(facts.filter(f => f.field === 'issue_price_pct').map(f => f.tranche_seq)) });
   const pr = readParties({ text, family, tr, bankBlock, fwpDocs, issuerHint: parsed?.coIssuers || [], supplementEnd });
   notes.push(...pr.notes);
   let parties = [];
@@ -729,6 +743,9 @@ const PRICE_HDR = /(?:Initial\s+)?(?:Public\s+Offering\s+Price|Price\s+to\s+(?:t
 const FEE_HDR = /Underwriting\s+Discounts?(?:\s+and\s+Commissions)?|Underwriters['’]?\s+Discounts?|Underwriting\s+Commissions?|Agents['’]?\s+(?:Discounts?|Commissions?)|Selling\s+Agents?['’]?\s+Commissions?|Discounts?\s+and\s+Commissions/i;
 const PROC_HDR = /Proceeds,?\s*(?:before\s+expenses,?\s*)?to\s+(?:us|the\s+Company|the\s+Issuer|[A-Z][\w&.’'-]*(?:\s+[A-Z][\w&.’'-]*){0,3})(?:\s*\(?before\s+expenses\)?)?|Proceeds\s+to\s+Issuer|Net\s+Proceeds/i;
 const PCT = /(?<![\d.])(\d{1,3}(?:\.\d{1,6})?)\s?%/g;
+const CUR = { '$': 'USD', 'US$': 'USD', 'C$': 'CAD', '€': 'EUR', '£': 'GBP' };
+const FEE_LABEL = "(?:Agent(?:s|['’]s|s['’])?\\s+(?:Discount or Commission|Discounts? and Commissions?|Commission|Discount)|Dealer(?:s|['’]s|s['’])?\\s+(?:Commission|Discount)|Underwriting (?:Discount|Commission)|Selling Concession)";
+const PROC_LABEL = '(?:Net Proceeds to (?:the )?(?:Issuer|Company)|Proceeds to (?:the )?(?:Issuer|Company)|All-in-price|All-in Price)';
 const PRICE_LABEL = '(?:Issue Price|Price to Public(?:\\s*\\(Issue Price\\))?|Initial (?:Public )?Offering Price|Public Offering Price|Offering Price|Price to Investors)';
 function termPct(text, label) {
   const m = new RegExp(`(?<![\\w-])(${label})\\s*:\\s*(\\d{1,3}(?:\\.\\d{1,6})?)\\s?%`, 'i').exec(text);
@@ -740,15 +757,31 @@ function issuePrices(text, family, tr, single, fail) {
   if (family === 'C') {
     for (const t of tr) {
       if (!t.row.cusip) continue;
-      const m = new RegExp(`\\b${t.row.cusip}\\s+(?:\\$\\s?[\\d,]+(?:\\.\\d+)?\\s+)?(\\d{1,3}(?:\\.\\d{1,6})?)\\s?%\\s+(\\d{1,2}(?:\\.\\d{1,6})?)\\s?%`).exec(text.slice(0, 30000));
-      if (m) out.set(t.seq, { value: Number(m[1]), at: m.index + m[0].indexOf(m[1] + (m[0].includes(m[1] + ' %') ? ' %' : '%')), part: 'retail table', heading: 'Selling Price' });
+      const m = new RegExp(`\\b${t.row.cusip}\\s+(?:\\$\\s?[\\d,]+(?:\\.\\d+)?\\s+)?(\\d{1,3}(?:\\.\\d{1,6})?)\\s?%\\s+(\\d{1,2}(?:\\.\\d{1,6})?)\\s?%(?:\\s+\\$\\s?([\\d,]+(?:\\.\\d+)?))?`).exec(text.slice(0, 30000));
+      if (m) {
+        const pAt = m.index + m[0].indexOf(m[1] + (m[0].includes(m[1] + ' %') ? ' %' : '%'));
+        const fAt = m.index + m[0].indexOf(m[2], pAt - m.index + m[1].length);
+        out.set(t.seq, { value: Number(m[1]), at: pAt, part: 'retail table', heading: 'Selling Price',
+          fee: { v: Number(m[2]), at: fAt, heading: 'Gross Concession' },
+          amount: m[3] ? { v: Number(m[3].replace(/,/g, '')), at: m.index + m[0].lastIndexOf(m[3]), cur: t.row.currency || 'USD', heading: 'Net Proceeds' } : null });
+      }
     }
     return out;
   }
   if (family === 'B') {
     if (!single) return out;
-    const p = termPct(text.slice(0, 25000), PRICE_LABEL);
-    if (p) out.set(tr[0].seq, { value: p.value, at: p.at, part: 'pricing terms', heading: p.label });
+    const head = text.slice(0, 25000);
+    const p = termPct(head, PRICE_LABEL);
+    const fee = termPct(head, FEE_LABEL);
+    let proc = termPct(head, PROC_LABEL);
+    if (!proc) {                                                     // Deere: "The above Agents have severally agreed to purchase … at a price of 99.739%"
+      const d = /agreed to purchase[^.]{0,160}?at a price of\s+(\d{1,3}(?:\.\d{1,6})?)\s?%/i.exec(head);
+      if (d) proc = { value: Number(d[1]), at: d.index + d[0].lastIndexOf(d[1]), label: 'Plan of Distribution' };
+    }
+    const am = new RegExp(`(?<![\\w-])(${PROC_LABEL})\\s*:\\s*(US\\$|C\\$|\\$|€|£)\\s?([\\d,]+(?:\\.\\d+)?)(?!\\s?%)`, 'i').exec(head);
+    const e = { fee: fee && { v: fee.value, at: fee.at, heading: fee.label }, proceeds: proc && { v: proc.value, at: proc.at, heading: proc.label },
+      total: am ? { v: Number(am[3].replace(/,/g, '')), at: am.index + am[0].lastIndexOf(am[3]), cur: CUR[am[2]] || null, heading: am[1] } : null };
+    out.set(tr[0].seq, p ? { value: p.value, at: p.at, part: 'pricing terms', heading: p.label, ...e } : { value: null, ...e });
     return out;
   }
   // A: the cover table.
@@ -784,6 +817,18 @@ function issuePrices(text, family, tr, single, fail) {
       prevEnd = pcts[i + k - 1].at + 4;
       if (/Total/i.test(region.slice(prevEnd, prevEnd + 30)) && !/%/.test(region.slice(prevEnd, prevEnd + 40))) break;
     }
+    // "Total $ 2,989,487,500 $ 14,000,000 $ 2,975,487,500": one amount per metric, in header order. One Total row for the deal, or one
+    // after each tranche's "Per … Note" row (Union Pacific, Amazon): then each is that tranche's total and there is no deal total.
+    const TOT = new RegExp(`\\b(Combined\\s+)?Totals?\\s+((?:(?:US\\$|C\\$|\\$|€|£)\\s?[\\d,]+(?:\\.\\d+)?\\s*){${k}})(?![\\d%])`, 'gi');
+    const tots = [...region.slice(lastHdr).matchAll(TOT)].map(tm => {
+      const amts = [...tm[2].matchAll(/(US\$|C\$|\$|€|£)\s?([\d,]+(?:\.\d+)?)/g)];
+      const j = metrics.findIndex(x => x[0] === 'proceeds');
+      if (j < 0 || amts.length !== k) return null;
+      return { v: Number(amts[j][2].replace(/,/g, '')), at: abs(lastHdr + tm.index + tm[0].indexOf(amts[j][0]) + amts[j][0].indexOf(amts[j][2])), cur: CUR[amts[j][1]] || null, heading: 'Cover page', combined: !!tm[1], rel: lastHdr + tm.index };
+    }).filter(Boolean);
+    if (tots.length > 1 && tots.length === rowsOut.length && !tots.some(t => t.combined)) rowsOut.forEach((r, i) => { r.total = tots[i]; });
+    else if (tots.length === 1 && rowsOut.length > 1) out.total = tots[0];
+    else if (tots.some(t => t.combined)) out.total = tots.find(t => t.combined);
   } else {
     // Metric-row layout: each metric label is followed by one % per tranche column.
     const desc = region.slice(0, P.at);
@@ -828,7 +873,11 @@ function issuePrices(text, family, tr, single, fail) {
     const { price, fee, proceeds } = r.vals;
     if (price && fee && proceeds && Math.abs(price.v - fee.v - proceeds.v) > 0.01) { fail('issue_price_pct', seq, 'price_fee_proceeds', `${price.v} − ${fee.v} ≠ ${proceeds.v}`); out.set(seq, null); continue; }
     if (out.has(seq)) { if (out.get(seq) && out.get(seq).value !== price.v) { fail('issue_price_pct', seq, 'one_value', `${out.get(seq).value} and ${price.v}`); out.set(seq, null); } continue; }
-    out.set(seq, { value: price.v, at: abs(price.at), part: 'cover table', heading: 'Cover page' });
+    // The amount printed right after a % in the same table cell row is that tranche's total for the metric ("99.704 % $ 498,520,000").
+    const amtAfter = x => { if (!x) return null; const m = /^\s?%?\s*(US\$|C\$|\$|€|£)\s?(\d{1,3}(?:,\d{3})+(?:\.\d+)?)/.exec(region.slice(x.at).replace(/^\d{1,3}(?:\.\d{1,6})?/, '')); return m ? { v: Number(m[2].replace(/,/g, '')), at: abs(x.at) + region.slice(x.at).indexOf(m[2]), cur: CUR[m[1]] || null } : null; };
+    out.set(seq, { value: price.v, at: abs(price.at), part: 'cover table', heading: 'Cover page',
+      fee: fee ? { v: fee.v, at: abs(fee.at), heading: 'Cover page' } : null, proceeds: proceeds ? { v: proceeds.v, at: abs(proceeds.at), heading: 'Cover page' } : null,
+      amount: (proceeds ? amtAfter(proceeds) : null) || r.total || null });
   }
   for (const [k, v] of out) if (!v) out.delete(k);
   return out;
@@ -970,6 +1019,428 @@ function dayCounts(text, family, tr) {
   return out;
 }
 const dcCode = s => (/30\s*\/\s*360|30\/360/i.test(s) ? '30/360' : /Actual\s*\/\s*360|ACT\s*\/\s*360/i.test(s) ? 'Actual/360' : /Actual\s*\/\s*365|ACT\s*\/\s*365/i.test(s) ? 'Actual/365' : /Actual\s*\/\s*Actual|ACT\s*\/\s*ACT/i.test(s) ? 'Actual/Actual' : null);
+
+// ── OFFER2: fields 14–22 and 25–28 (spec v2 §3.4–3.6) ───────────────────
+// Every reader returns a short value and the position it was read at; part2() turns them into rows with their source (§5)
+// and runs the §6.1 checks. On a prospectus supplement (A) only the supplement's own pages are read (up to its last printed
+// S-page): the accompanying base prospectus describes debt securities in general, not these notes.
+
+const DATE_G = new RegExp(DATE, 'g');
+const monthsBefore = (d, m) => (Date.parse(m) - Date.parse(d)) / (30.44 * 86400000);
+const sentenceAt = (text, at, max = 700) => {
+  const a = Math.max(0, text.lastIndexOf('. ', at) + 2, at - max);
+  let b = text.indexOf('. ', at); if (b < 0 || b - at > max) b = Math.min(text.length, at + max);
+  return { s: text.slice(a, b + 1), at: a };
+};
+// "the fixed rate notes", "the floating rate notes", "each series of notes" → tranche seqs (as interestPaid's classOf).
+function classTranches(cl, tr) {
+  if (/\beach series of (?:the )?notes\b|\ball (?:series of )?(?:the )?notes\b/i.test(cl)) return tr.map(t => t.seq);
+  if (/\bfixed rate notes\b/i.test(cl) && !/fixed[- ]to[- ]floating/i.test(cl)) return tr.filter(t => t.rate === 'fixed').map(t => t.seq);
+  if (/(?<!to[- ])\bfloating rate notes\b/i.test(cl) && !/\b(?:19|20)\d\d\s+floating/i.test(cl)) return tr.filter(t => t.rate === 'floating').map(t => t.seq);
+  return [];
+}
+const scopeOf = (seg, tr) => { const n = namedTranches(seg, tr); return n.size ? [...n] : classTranches(seg, tr); };
+
+// A printed section heading after the cover: the filing's own anchor (from its table of contents), else the heading printed in
+// capitals, else in title case. A cross-reference ("See “Use of Proceeds”") is not a heading.
+function findHeading(text, { anchors, from, to, caps, title, anchorRe }) {
+  // An anchor marks the top of a page, which can hold two sections ("Risk Factors" and "Use of Proceeds" on S-8): it is used only
+  // when its heading is printed within 1,500 characters after it, and the position is the printed heading.
+  for (const a of anchors.filter(x => x.at >= from && x.at < to && anchorRe && anchorRe.test(x.heading))) {
+    const k = text.slice(a.at, a.at + 1500).search(new RegExp(esc(a.heading).replace(/ /g, '\\s+'), 'i'));
+    if (k >= 0) return { at: a.at + k, heading: a.heading, anchor: a.name };
+  }
+  for (const re of [caps, title].filter(Boolean)) {
+    const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
+    g.lastIndex = from;
+    let m;
+    while ((m = g.exec(text)) && m.index < to) {
+      if (/[“"'‘]\s*$|\bsee\s*$|\bunder\s*$|\bin\s*$|—\s*$/i.test(text.slice(Math.max(0, m.index - 12), m.index))) continue;
+      if (/^\s*[”"’]/.test(text.slice(m.index + m[0].length, m.index + m[0].length + 3))) continue;
+      if (/^\s+(?:(?:S-|PS-|page)\s?\d|\d{1,3}\s|[ivx]{1,4}\s)/.test(text.slice(m.index + m[0].length, m.index + m[0].length + 10))) continue;   // a contents line
+      return { at: m.index, heading: m[0].replace(/\s+/g, ' ').trim().slice(0, 80), anchor: null };
+    }
+  }
+  return null;
+}
+const sectionText = (text, at, max = 3000) => {
+  const t = text.slice(at, at + max);
+  const k = t.slice(40).search(/\s(?:[A-Z][A-Z,'’&()-]+\s){2,}[A-Z]/);                 // the next heading in capitals
+  return k >= 0 ? t.slice(0, k + 40) : t;
+};
+
+function rankingSecurity({ text, family, tr, supEnd }) {
+  const rank = new Map(), sec = new Map();
+  const rk = q => (/junior\s+subordinated/i.test(q) ? 'Junior subordinated' : /(?<!un)subordinated/i.test(q) ? 'Subordinated' : /senior|unsubordinated/i.test(q) ? 'Senior' : null);
+  const sc = q => (/\bunsecured\b/i.test(q) ? 'unsecured' : /\bsecured\b/i.test(q) ? 'secured' : null);
+  if (family === 'C') {
+    for (const t of tr) {
+      if (!t.row.cusip) continue;
+      const i = text.indexOf(t.row.cusip); if (i < 0) continue;
+      const row = text.slice(i, i + 400).split(/\b[0-9]{3}[0-9A-Z]{5}[0-9]\b/)[1] ?? text.slice(i + 9, i + 400);
+      const m = /\b(Junior Subordinated|Subordinated|Senior)\s+(Unsecured|Secured)\s+Notes\b/.exec(text.slice(i, i + 400));
+      if (m) { const at = i + m.index; rank.set(t.seq, { v: rk(m[1]), at, heading: 'Product Ranking' }); sec.set(t.seq, { v: sc(m[2]), at: at + m[0].indexOf(m[2]), heading: 'Product Ranking' }); }
+      void row;
+    }
+    return { rank, sec };
+  }
+  // The title on the cover: "4.500% Fixed Rate Senior Notes Due …", "Junior Subordinated Debentures, Series 2025A".
+  const head = text.slice(0, Math.min(family === 'B' ? 2500 : 3500, supEnd));
+  const titles = [...head.matchAll(/\b(Junior Subordinated|Subordinated|Senior)\s+(?:Unsecured\s+)?(?:(?:Medium-Term|Fixed Rate|Floating Rate|Reset)\s+)*(?:Notes|Debentures|Securities)\b/g)];
+  const kinds = [...new Set(titles.map(m => rk(m[1])))];
+  if (kinds.length === 1) for (const t of tr) rank.set(t.seq, { v: kinds[0], at: titles[0].index, heading: 'Cover page', part: 'cover' });
+  else if (kinds.length > 1) for (const m of titles) for (const seq of namedTranches(head.slice(Math.max(0, m.index - 120), m.index + m[0].length + 60), tr)) if (!rank.has(seq)) rank.set(seq, { v: rk(m[1]), at: m.index, heading: 'Cover page', part: 'cover' });
+  if (family === 'B') return { rank, sec };
+  // "The notes will be our senior unsecured obligations …" — the words between "will be" and "obligations" only.
+  // Also "are direct, unsecured and unsubordinated obligations", "will be Verizon Communications Inc.’s general unsecured subordinated
+  // obligations", and "are unsecured and unsubordinated and rank equally …" (no noun).
+  const QUAL = /\b(?:(?:will|shall)\s+(?:be|constitute|rank as)|are|constitute)\s+(?:(?:[A-Z][\w.&’',-]*\s+){0,4}[A-Z][\w.&]*[’']s\s+)?((?:(?:our|its|the|direct|general|senior|subordinated|junior|unsecured|secured|unsubordinated|and|,)\s*)+)(?:(?:obligations|debt|indebtedness|securities)\b|(?<=\b(?:unsubordinated|subordinated|unsecured|secured)\s)(?=and\s+(?:will\s+)?rank))/gi;
+  for (const m of text.slice(0, supEnd).matchAll(QUAL)) {
+    const q = m[1];
+    if (!rk(q) && !sc(q)) continue;
+    const subj = text.slice(Math.max(0, m.index - 160), m.index);
+    const subjS = subj.slice(subj.lastIndexOf('. ') + 1);
+    if (/guarantee|guarantor|subsidiar|debt securities|preferred|common stock|units?\b/i.test(subjS) && !/\bnotes?\b|debentures/i.test(subjS)) continue;
+    let scope = scopeOf(subjS, tr);
+    if (!scope.length) { if (!/\b(?:notes|debentures|bonds|securities)\b/i.test(subjS)) continue; scope = tr.map(t => t.seq); }
+    for (const seq of scope) {
+      if (rk(q) && !rank.has(seq)) rank.set(seq, { v: rk(q), at: m.index + m[0].indexOf(q) });
+      if (sc(q) && !sec.has(seq)) sec.set(seq, { v: sc(q), at: m.index + m[0].indexOf(q) });
+    }
+  }
+  return { rank, sec };
+}
+
+function earlyRepayment({ text, family, tr, single, supEnd, coverEnd, docDate }) {
+  const out = new Map();
+  const iso = s => isoOf(s);
+  if (family === 'C') {
+    for (const t of tr) {
+      if (!t.row.cusip) continue;
+      const i = text.indexOf(t.row.cusip); if (i < 0) continue;
+      const nx = text.slice(i + 9, i + 1500).search(/\b[0-9]{3}[0-9A-Z]{5}[0-9]\b|Offering Dates?:/);
+      const row = text.slice(i, nx >= 0 ? i + 9 + nx : i + 1500);
+      const m = /Redemption Information:\s*(Non[- ]?Callable|None|Callable at (\d{1,3}(?:\.\d+)?)%\s+on\s+(\d{1,2}\/\d{1,2}\/\d{4}))/i.exec(row);
+      if (!m) continue;
+      const at = i + m.index + m[0].indexOf(m[1]);
+      if (!m[2]) out.set(t.seq, { value: { can: 'no' }, at, heading: 'Redemption Information' });
+      else out.set(t.seq, { value: { can: 'yes', from: toIsoDate(m[3]), price: Number(m[2]) === 100 ? 'par' : `${m[2]}%` }, at, heading: 'Redemption Information' });
+    }
+    return out;
+  }
+  const body = family === 'B' ? text.slice(0, 25000) : text.slice(0, supEnd);
+  const tax = /Redemption\s+(?:Upon|for|Due to|in the Event of|on the Occurrence of)\s+(?:a\s+|Certain\s+)?(?:Tax|Changes? in Tax)|Tax Redemption|redeem[^.]{0,160}(?:changes? in (?:U\.S\. )?tax|tax laws?|taxing jurisdiction|Additional Amounts)/i.test(body);
+  // Par-call dates: a date shortly before a tranche's maturity, printed next to "Par Call Date" (or "on or after <date> … 100%").
+  const par = new Map();
+  const anchorsPC = [...body.matchAll(/[Pp]ar [Cc]all [Dd]ate|on or after\s+(?:the\s+)?(?=(?:January|February|March|April|May|June|July|August|September|October|November|December))/g)];
+  for (const a of anchorsPC) {
+    const w0 = Math.max(0, a.index - 900), w = body.slice(w0, a.index + 1100);
+    for (const d of w.matchAll(DATE_G)) {
+      const dIso = iso(d[0]); if (!dIso || (docDate && dIso <= docDate.iso)) continue;
+      let cand = tr.filter(t => t.row.maturity_date && dIso < t.row.maturity_date && monthsBefore(dIso, t.row.maturity_date) <= 12.5);
+      if (/on or after/.test(a[0]) && !/100%/.test(body.slice(a.index, a.index + 500))) continue;
+      if (cand.length > 1) {
+        const near = body.slice(w0 + d.index - 140, w0 + d.index + d[0].length + 160);
+        const nm = scopeOf(near, tr);
+        cand = cand.filter(t => nm.includes(t.seq));
+      }
+      if (cand.length !== 1) continue;
+      const s0 = cand[0].seq;
+      // Fixed-to-floating notes print two par dates (the reset date and 30 days before maturity): the earlier is "from".
+      if (!par.has(s0) || dIso < par.get(s0).iso) par.set(s0, { iso: dIso, at: w0 + d.index });
+    }
+  }
+  if (family === 'B') {
+    const m = /(?<![\w-])(Redemption(?: Provisions)?|Optional Redemption|Redemption Terms)\s*:\s*/.exec(body);
+    if (!m || !single) return out;
+    const rest = body.slice(m.index + m[0].length, m.index + m[0].length + 700);
+    const stop = rest.search(/\s(?:[A-Z][A-Za-z'’/() -]{2,50}):\s/);
+    const v = stop >= 0 ? rest.slice(0, stop) : rest;
+    const at = m.index + m[0].length, t = tr[0];
+    if (/^(?:None|N\/A|Not\s+Applicable|Not\s+redeemable)\b/i.test(rest) || /^The\s+Notes\s+(?:are|will)\s+not\s+(?:be\s+)?(?:subject\s+to\s+(?:optional\s+)?redemption|redeemable)/i.test(v)) { out.set(t.seq, { value: { can: 'no' }, at, heading: m[1] }); return out; }
+    const mw = /greater of/i.test(v) || (/Optional Redemption/.test(v) && /greater of[\s\S]{0,600}?present values?/i.test(body.slice(at)));
+    const rd = /(?<![\w-])(?:Redemption Dates?|First Redemption Date|Redemption Commencement Date)\s*:\s*[^:]{0,200}?(?:commencing on|on or after|beginning on)?\s*(?:\(and including\)\s*)?(DATE_)/.source.replace('DATE_', DATE);
+    const r1 = new RegExp(rd).exec(body);
+    const from = (r1 && iso(r1[1])) || par.get(t.seq)?.iso || null;
+    const value = { can: 'yes', ...(from ? { from } : {}), price: mw ? (from ? 'make-whole, then par' : 'make-whole') : /100%/.test(v) || from ? 'par' : undefined, ...(tax ? { tax: true } : {}) };
+    out.set(t.seq, { value: JSON.parse(JSON.stringify(value)), at, heading: m[1] });
+    return out;
+  }
+  // A: the "Optional Redemption" section of the supplement.
+  const orH = findHeading(text, { anchors: [], from: coverEnd, to: supEnd, caps: /OPTIONAL REDEMPTION/, title: /Optional Redemption(?:\s+of\s+the\s+Notes)?(?=\s+[A-Z(])/ });
+  const no = new Set();
+  let noAll = false;
+  for (const m of body.matchAll(/[^.]*\b(?:will not be redeemable|are not redeemable|is not redeemable|not be subject to (?:optional )?redemption|may not redeem|will not have the (?:right|option) to redeem|not be redeemable (?:at our option )?(?:prior to|before) (?:their )?maturity|will not be subject to redemption)[^.]*\./gi)) {
+    if (/except|other than|unless|tax|change of control|special mandatory/i.test(m[0])) continue;
+    // Scope by the sentence's subject only ("Optional Redemption of Fixed Rate Notes The floating rate notes are not redeemable …").
+    // "We may not redeem the Floating Rate Notes …": the object after the verb.
+    const k = m[0].search(/\b(?:will not|are not|is not|not be|may not)\b/i);
+    let subj;
+    if (/^may not redeem/i.test(m[0].slice(k))) subj = m[0].slice(k + 14, k + 160).split(/\b(?:prior to|before|at any time)\b/i)[0];
+    else { subj = m[0].slice(Math.max(0, k - 160), k); const f0 = subj.search(/\b(?:The|Each|Our|No)\s/); if (f0 >= 0) subj = subj.slice(f0); }
+    const sc = scopeOf(subj, tr);
+    if (sc.length) sc.forEach(x => no.add(x)); else if (/\bthe (?:notes|debentures)\b/i.test(m[0])) noAll = true;
+  }
+  const may = /\b(?:we|the Issuer|the Company|[A-Z]{2,}[a-z]*)\s+may(?:,?\s+at (?:our|its) option,?)?\s+redeem|\bmay be redeemed\b|redeemable[^.]{0,60}at (?:our|its|the Issuer['’]s) option|will be redeemable[^.]{0,40}at our option/i.exec(body.slice(coverEnd > 0 ? 0 : 0));
+  // Make-whole: the "greater of … present values" sentence, scoped to the tranches it names (else all).
+  const mwScope = new Set();
+  // The scope is read from the words before "greater of" only; a floating-rate tranche gets it only when that part names it.
+  for (const g of body.matchAll(/\bgreater of\b(?=[^.]{0,700}?(?:present values?|Canada Yield Price|Make-Whole Amount|make-whole (?:amount|premium|redemption price)))/gi)) {
+    let head = body.slice(Math.max(body.lastIndexOf('. ', g.index) + 2, g.index - 1500), g.index);
+    for (let i = 0; i < 3; i++) head = head.replace(/\([^()]*\)/g, ' ');                                   // asides, nested ones too
+    const sc = [...new Set([...namedTranches(head, tr), ...classTranches(head.replace(/\beach series of (?=fixed|floating)/i, ''), tr)])];   // "each series of Fixed Rate Notes other than the 2028 Notes, or … the 2028 Notes"
+    (sc.length ? sc : tr.filter(t => t.rate !== 'floating').map(t => t.seq)).forEach(x => mwScope.add(x));
+  }
+  if (/make[- ]whole/i.test(body) && !mwScope.size) tr.filter(t => t.rate !== 'floating').forEach(t => mwScope.add(t.seq));
+  const at = orH ? orH.at : may ? may.index : null;
+  for (const t of tr) {
+    if (no.has(t.seq) || (noAll && !may)) { const m = at ?? body.search(/not be redeemable|not redeemable|may not redeem/i); out.set(t.seq, { value: { can: 'no' }, at: m >= 0 ? m : null, heading: orH?.heading || null }); continue; }
+    if (!may || at == null) continue;
+    const p = par.get(t.seq), mw = mwScope.has(t.seq);
+    const value = { can: 'yes', ...(p ? { from: p.iso } : {}), ...(p || mw ? { price: p ? (mw ? 'make-whole, then par' : 'par') : 'make-whole' } : {}), ...(tax ? { tax: true } : {}) };
+    out.set(t.seq, { value, at: p ? p.at : at, heading: orH?.heading || null });
+  }
+  return out;
+}
+
+const PLACES = [['EEA', /^(?:the\s+)?(?:European Economic Area|EEA)\b/], ['UK', /^(?:the\s+)?(?:United Kingdom|UK)\b/], ['Switzerland', /^Switzerland\b/], ['Canada', /^Canada\b/],
+  ['Hong Kong', /^Hong Kong\b/], ['Japan', /^Japan\b/], ['Singapore', /^Singapore\b/], ['Australia', /^Australia\b/], ['Taiwan', /^(?:the\s+)?(?:Republic of China \(?Taiwan|Taiwan)\b/],
+  ['South Korea', /^(?:the\s+)?(?:Republic of )?(?:South )?Korea\b/], ['UAE', /^(?:the\s+)?United Arab Emirates\b/], ['Dubai (DIFC)', /^(?:the\s+)?(?:Dubai International Financial Centre|DIFC)\b/],
+  ['Qatar', /^(?:the\s+)?(?:State of )?Qatar\b/], ['Saudi Arabia', /^(?:the\s+)?(?:Kingdom of )?Saudi Arabia\b/], ['Kuwait', /^Kuwait\b/], ['Bahrain', /^Bahrain\b/], ['Israel', /^Israel\b/],
+  ['China', /^(?:the\s+)?(?:People['’]s Republic of China|PRC|China)\b/], ['Chile', /^Chile\b/], ['Brazil', /^Brazil\b/], ['Mexico', /^Mexico\b/], ['Peru', /^Peru\b/], ['Colombia', /^Colombia\b/],
+  ['Uruguay', /^Uruguay\b/], ['Argentina', /^Argentina\b/], ['Norway', /^Norway\b/], ['France', /^France\b/], ['Italy', /^(?:the\s+)?(?:Republic of )?Italy\b/], ['Netherlands', /^(?:the\s+)?Netherlands\b/],
+  ['Belgium', /^Belgium\b/], ['Spain', /^Spain\b/], ['Germany', /^Germany\b/], ['Malaysia', /^Malaysia\b/], ['India', /^India\b/], ['New Zealand', /^New Zealand\b/], ['South Africa', /^South Africa\b/],
+  ['Indonesia', /^Indonesia\b/], ['Philippines', /^(?:the\s+)?Philippines\b/], ['Thailand', /^Thailand\b/], ['Macau', /^Mac(?:au|ao)\b/], ['Bermuda', /^Bermuda\b/], ['Cayman Islands', /^(?:the\s+)?Cayman Islands\b/]];
+const placeAt = s => (PLACES.find(([, re]) => re.test(s)) || [])[0] || null;
+
+function sellingRestrictions(text, from, to) {
+  const MARK = /Notice to (?:Prospective )?(?:Investors|Purchasers) in\s+|NOTICE TO (?:PROSPECTIVE )?(?:INVESTORS|PURCHASERS) IN\s+|Prohibition of [Ss]ales? to\s+|PROHIBITION OF SALES? TO\s+|Selling Restrictions\s+|SELLING RESTRICTIONS\s+/g;
+  MARK.lastIndex = from;
+  const places = [];
+  let first = null, m;
+  while ((m = MARK.exec(text)) && m.index < to) {
+    if (/[“"]\s*$/.test(text.slice(Math.max(0, m.index - 3), m.index))) continue;
+    const after = text.slice(m.index + m[0].length, m.index + m[0].length + 80);
+    const p = placeAt(after) || placeAt(after.replace(/^(?:EEA|UK|United Kingdom)\s+Retail Investors/i, x => x));
+    const pp = /^(?:Prohibition|PROHIBITION)/.test(m[0]) ? (/^(?:the\s+)?(?:EEA|European Economic Area)/i.test(after) ? 'EEA' : /^(?:the\s+)?(?:UK|United Kingdom)/i.test(after) ? 'UK' : null) : p;
+    if (!pp && !/Selling Restrictions|SELLING RESTRICTIONS/.test(m[0])) continue;
+    if (!first && /Selling Restrictions|SELLING RESTRICTIONS/.test(m[0])) first = { at: m.index, heading: m[0].trim() };
+    if (!first) first = { at: m.index, heading: (m[0] + (pp ? after.slice(0, (after.match(PLACES.find(([n]) => n === pp)?.[1] || /^$/) || [''])[0].length) : '')).replace(/\s+/g, ' ').trim().slice(0, 80) };
+    if (pp && !places.includes(pp)) places.push(pp);
+    // Headings printed under "Selling Restrictions": "Canada The notes may be sold only …".
+    if (/Selling Restrictions|SELLING RESTRICTIONS/.test(m[0])) {
+      const reg = text.slice(m.index, Math.min(to, m.index + 15000));
+      for (const h of reg.matchAll(/(?:^|[.”")]\s{1,3}|Restrictions\s+)((?:the\s+)?[A-Z][A-Za-z’' ()]{2,40}?)\s+(?=(?:The|This|Each|No|Neither|In|Any|An|Notes|We|Prospective|Purchasers|Investors|Offers|Under|Please|If)\b)/g)) {
+        const q = placeAt(h[1]); if (q && !places.includes(q)) places.push(q);
+      }
+    }
+  }
+  // A place printed as a bare heading in the underwriting section ("European Economic Area The notes are not intended to be offered …"),
+  // accepted only when the text after it restricts offers or sales.
+  const BARE = /(?:[.”")]\s{1,3}|TABLE OF CONTENTS\s+|S-\d{1,3}\s+)((?:the\s+)?[A-Z][A-Za-z’' ()]{1,45}?)\s+(?=(?:The|This|Each|No|Neither|In|Any|An|Notes|We|Prospective|Purchasers|Investors|Offers|Under|Please|If|Each)\b)/g;
+  const uw = text.slice(from, to).search(/\b(?:UNDERWRITING|Underwriting|PLAN OF DISTRIBUTION|Plan of Distribution)(?:\s*\((?:CONFLICTS?|Conflicts?) [^)]{0,20}\))?\s+(?=[A-Z])/);
+  if (uw >= 0) {
+    BARE.lastIndex = from + uw;
+    let b;
+    while ((b = BARE.exec(text)) && b.index < to) {
+      const q = placeAt(b[1]);
+      if (!q || q.length > 20 && !/\(/.test(q)) continue;
+      if (placeAt(b[1]) && b[1].replace(/^the\s+/, '').length > 40) continue;
+      const after = text.slice(b.index + b[0].length, b.index + b[0].length + 500);
+      if (!/retail investor|(?:not|only) (?:be )?(?:offered|sold)|offered,? sold|offer or sell|distribut|prospectus (?:supplement )?(?:has not|is not|will not)|securities laws?|exempt/i.test(after)) continue;
+      const at = b.index + b[0].indexOf(b[1]);
+      if (!first || at < first.at) first = { at, heading: b[1].replace(/\s+/g, ' ').trim().slice(0, 80) };
+      if (!places.includes(q)) places.push(q);
+    }
+  }
+  return first ? { ...first, places } : null;
+}
+
+function useOfProceeds(sect) {
+  const s = sect.replace(/\s+/g, ' ');
+  const c = [];
+  if (/general corporate purposes/i.test(s)) c.push('general corporate purposes');
+  if (/\b(?:repay|repayment|refinanc|redeem|redemption of|repurchase(?:s)? of (?:our |certain |outstanding )?(?:\S+ )?(?:notes|debt|debentures|senior|indebtedness)|retire|commercial paper|outstanding (?:indebtedness|borrowings)|discharge|tender offer)/i.test(s)) c.push('repay or refinance debt');
+  if (/\b(?:acquisition|merger|consideration for the|to fund (?:a portion of )?the (?:cash )?(?:purchase price|consideration))\b/i.test(s)) c.push('fund an acquisition');
+  if (/working capital/i.test(s)) c.push('working capital');
+  if (/capital expenditures?|capital spending|capital investments?/i.test(s)) c.push('capital spending');
+  if (/(?:repurchases?|buybacks?) of (?:our )?(?:common )?(?:stock|shares)|share repurchases?|stock repurchases?/i.test(s)) c.push('share buybacks');
+  if (/Eligible (?:Green|Social|Sustainab)|green (?:projects|bonds?|financing)|eligible projects|sustainability|social projects/i.test(s)) c.push('eligible green or social projects');
+  let acq = null;
+  if (c.includes('fund an acquisition')) {
+    const m = /\b(?:acquisition of|merger with|acquire)\s+((?:[A-Z][\w.&’'-]*)(?:\s+(?:[A-Z][\w.&’'-]*|&|of))*)/.exec(s) || /\b(?:the|pending|proposed)\s+((?:[A-Z][\w&’'-]+)(?:\s+[A-Z][\w&’'-]+){0,2})\s+(?:Acquisition|Merger|Transactions?)\b/.exec(s);
+    if (m && !/^(?:The|Our|Pending|Proposed|Such|Any|Each|Acquisition|Merger|Company|Issuer)$/.test(m[1]) && m[1].length <= 60) acq = m[1].replace(/[,.]$/, '');
+  }
+  return { c, acq };
+}
+
+function part2({ text, family, tr, single, rows, coverEnd, supEnd, anchors, docDate, prices, src, put, absent, fail, notes, priceKept }) {
+  const sup = family === 'A' ? supEnd : Math.min(text.length, 25000);
+  const tdef = { 'A': 'description of the notes', 'B': 'pricing terms', 'C': 'retail table' }[family];
+  const vt = v => JSON.stringify(v);
+
+  // #14 Ranking, #15 Secured (T).
+  const { rank, sec } = rankingSecurity({ text, family, tr, supEnd: sup });
+  for (const t of tr) {
+    const r = rank.get(t.seq), x = sec.get(t.seq);
+    if (r) put(t.seq, 'ranking', 'disclosed', { text: r.v }, src(r.at, { part: r.part || (family === 'A' ? null : tdef), heading: r.heading || null }));
+    else if (family === 'B') absent(t.seq, 'ranking', 'not_disclosed', 'pricing terms');
+    if (x) put(t.seq, 'secured', 'disclosed', { text: x.v }, src(x.at, { part: x.part || (family === 'A' ? null : tdef), heading: x.heading || null }));
+    else if (family === 'B') absent(t.seq, 'secured', 'not_disclosed', 'pricing terms');
+  }
+
+  // #16 Early repayment by the issuer (T).
+  const er = earlyRepayment({ text, family, tr, single, supEnd: sup, coverEnd, docDate });
+  for (const t of tr) {
+    const e = er.get(t.seq);
+    if (!e) continue;
+    if (e.value.from && t.row.maturity_date && e.value.from >= t.row.maturity_date) { fail('early_repayment', t.seq, 'par_call', `${e.value.from} not before maturity ${t.row.maturity_date}`); continue; }
+    if (e.value.from && docDate && e.value.from <= docDate.iso) { fail('early_repayment', t.seq, 'par_call', `${e.value.from} not after the document date`); continue; }
+    if (e.at == null) { fail('early_repayment', t.seq, 'source', 'no position'); continue; }
+    put(t.seq, 'early_repayment', 'disclosed', { text: vt(e.value), date: e.value.from || null }, src(e.at, { part: family === 'A' ? 'optional redemption' : tdef, heading: e.heading }));
+  }
+
+  // #17 Buy-back if control changes (O), #18 Special mandatory redemption (T). A only; show where found.
+  if (family === 'A') {
+    const body = text.slice(0, sup);
+    // Every mention in the supplement; the price is the first "101% of … principal" printed within 1,500 characters after one.
+    let pm = null;
+    for (const c of body.matchAll(/change of control/gi)) {
+      const w = body.slice(c.index, c.index + 1500);
+      const m = /(10[01](?:\.\d+)?)\s?%\s+of\s+(?:the|their|its|such)?\s*(?:aggregate\s+)?principal/i.exec(w);
+      if (m) { pm = { v: Number(m[1]), at: c.index + m.index }; break; }
+    }
+    if (pm) {
+      const excl = [...body.matchAll(/[^.]*\b(?:will not|shall not|do not|does not)\s+(?:be\s+)?(?:subject to|have|apply|entitled to)[^.]{0,80}change of control[^.]*\./gi)].filter(m => !/no protection|unless we state otherwise/i.test(m[0]));
+      if (!excl.length) put(0, 'change_of_control', 'disclosed', { num: pm.v }, src(pm.at, { heading: null }));
+      else notes.push('change of control: applies to only some tranches → not read');
+    }
+    const smr = /Special Mandatory Redemption/i.exec(body);
+    if (smr) {
+      const all = [...body.matchAll(/Special Mandatory Redemption/gi)];
+      let pm = null, by = null;
+      for (const a of all) {
+        const w = body.slice(a.index, a.index + 1600);
+        pm = pm || /(10[01](?:\.\d+)?)\s?%\s+of\s+(?:the|their)?\s*(?:aggregate\s+)?principal/i.exec(w) && { v: Number(/(10[01](?:\.\d+)?)\s?%\s+of/.exec(w)[1]), at: a.index + w.search(/10[01](?:\.\d+)?\s?%\s+of/) };
+        const bm = new RegExp(`(?:on or (?:prior to|before)|by|not consummated[^.]{0,60}?(?:on or (?:prior to|before)|by))\\s+(${DATE})`, 'i').exec(w);
+        if (!by && bm && iso2(bm[1])) by = iso2(bm[1]);
+      }
+      const ex = new Set();
+      let exUnmapped = false;
+      for (const m of body.matchAll(/[^.]*\b(?:will not be (?:subject to|entitled to)|not be subject to|will not have)[^.]{0,60}special mandatory redemption[^.]*\.?/gi)) {
+        const sc = scopeOf(m[0], tr); if (sc.length) sc.forEach(x => ex.add(x)); else exUnmapped = true;
+      }
+      for (const m of body.matchAll(/[^.]{0,300}\(\s*(?:collectively,?\s+)?the\s+[“"]non-SMR notes[”"]\s*\)/gi)) { const sc = scopeOf(m[0], tr); sc.forEach(x => ex.add(x)); if (!sc.length) exUnmapped = true; }
+      // A restatement that uses only the defined term ("the non-SMR notes will not …") is unmapped; it is ignored once a sentence names them.
+      if (pm && (!exUnmapped || ex.size)) {
+        for (const t of tr) if (!ex.has(t.seq)) put(t.seq, 'special_mandatory_redemption', 'disclosed', { num: pm.v, date: by }, src(pm.at, { heading: null }));
+      } else if (pm) notes.push('special mandatory redemption: the tranches it applies to could not be read → not read');
+    }
+  }
+
+  // #19 Repayment on the holder's death (T): retail tables only.
+  if (family === 'C') for (const t of tr) {
+    if (!t.row.cusip) continue;
+    const i = text.indexOf(t.row.cusip); if (i < 0) continue;
+    const m = /\b(Yes|No)\s+(?:Junior Subordinated|Subordinated|Senior)\s+(?:Unsecured|Secured)\s+Notes\b/.exec(text.slice(i, i + 400));
+    if (m) put(t.seq, 'survivors_option', 'disclosed', { text: m[1].toLowerCase() }, src(i + m.index, { part: 'retail table', heading: "Survivor's Option" }));
+  }
+
+  // #20 What the money is for (O): closed list of categories + the section link.
+  let upSect = null;
+  if (family !== 'C') {
+    const h = family === 'A' ? findHeading(text, { anchors, from: coverEnd, to: sup, anchorRe: /^use of proceeds$/i, caps: /USE OF PROCEEDS/, title: /Use of Proceeds(?=\s+(?:We|The|Our)\b|\s+[A-Z][\w,.’'-]*(?:\s+[\w,.’'-]+){0,4}\s+(?:intends?|expects?|will|estimates?|plans?)\b)/ })
+      : findHeading(text, { anchors: [], from: 0, to: sup, caps: /USE OF PROCEEDS(?: AND HEDGING)?/, title: /Use of Proceeds(?: and Hedging)?(?=\s+[A-Z])/ });
+    if (h) {
+      const st = sectionText(text, h.at + h.heading.length, 2600);
+      upSect = { ...h, text: st };
+      const u = useOfProceeds(st);
+      if (u.c.length) put(0, 'use_of_proceeds', 'disclosed', { text: vt(u.acq ? { c: u.c, acq: u.acq } : { c: u.c }) }, { ...src(h.at, { part: 'use of proceeds', heading: 'Use of Proceeds' }), source_anchor: h.anchor ?? src(h.at, { part: 'use of proceeds' }).source_anchor });
+      else if (/accompanying (?:base )?prospectus|prospectus supplement/i.test(st)) absent(0, 'use_of_proceeds', 'not_disclosed', 'use of proceeds');
+      else put(0, 'use_of_proceeds', 'disclosed', { text: vt({ c: ['other'] }) }, src(h.at, { part: 'use of proceeds', heading: 'Use of Proceeds' }));
+    } else if (family === 'B') absent(0, 'use_of_proceeds', 'not_disclosed', 'pricing terms');
+    else if (!/\buse of proceeds\b/i.test(text.slice(coverEnd, sup).replace(/Use of Proceeds\s+(?:S-|PS-)?\d{1,3}\b/gi, ''))) absent(0, 'use_of_proceeds', 'not_disclosed', 'use of proceeds');
+  } else absent(0, 'use_of_proceeds', 'not_disclosed', 'retail table');
+
+  // #21 Bank fee, #22 Proceeds to the issuer before expenses (T % and amount; O total).
+  let sum = 0, sumOk = tr.length > 0, cur = null;
+  for (const t of tr) {
+    const p = prices.get(t.seq);
+    const part = family === 'A' ? 'cover table' : tdef;
+    if (!p || (family === 'A' && !priceKept.has(t.seq))) { if (family === 'B' && single) { absent(t.seq, 'bank_fee_pct', 'not_disclosed', part); absent(t.seq, 'proceeds_pct', 'not_disclosed', part); } sumOk = false; continue; }
+    let fee = p.fee, pro = p.proceeds;
+    if (fee && !(fee.v > 0 && fee.v < 5)) { fail('bank_fee_pct', t.seq, 'range', `${fee.v}`); fee = null; }
+    if (pro && !(pro.v > 85 && pro.v <= 101)) { fail('proceeds_pct', t.seq, 'range', `${pro.v}`); pro = null; }
+    if (fee && pro && p.value != null && Math.abs(p.value - fee.v - pro.v) > 0.01) { fail('proceeds_pct', t.seq, 'price_fee_proceeds', `${p.value} − ${fee.v} ≠ ${pro.v}`); fee = null; pro = null; }
+    if (fee) put(t.seq, 'bank_fee_pct', 'disclosed', { num: fee.v }, src(fee.at, { part, heading: fee.heading }));
+    else if (family !== 'A' && !p.fee) absent(t.seq, 'bank_fee_pct', 'not_disclosed', part);
+    if (pro) put(t.seq, 'proceeds_pct', 'disclosed', { num: pro.v }, src(pro.at, { part, heading: pro.heading }));
+    else if (family !== 'A' && !p.proceeds && family !== 'C') absent(t.seq, 'proceeds_pct', 'not_disclosed', part);
+    const pct = pro ? pro.v : (fee && p.value != null ? p.value - fee.v : null);
+    if (pct == null || !(t.row.principal_amount > 0)) sumOk = false; else { sum += t.row.principal_amount * pct / 100; cur = cur ?? t.row.currency; if (cur !== t.row.currency) sumOk = false; }
+    const a = p.amount;
+    if (a && !single) {
+      if (pct != null && t.row.principal_amount > 0 && Math.abs(a.v - t.row.principal_amount * pct / 100) > 0.005 * a.v) fail('proceeds_amount', t.seq, 'proceeds_total', `${a.v} vs ${t.row.principal_amount} × ${pct}%`);
+      else if (a.cur && a.cur !== t.row.currency) fail('proceeds_amount', t.seq, 'currency', `${a.cur} vs ${t.row.currency}`);
+      else put(t.seq, 'proceeds_amount', 'disclosed', { num: a.v, text: `${t.row.currency} · before expenses` }, src(a.at, { part, heading: a.heading || p.heading }));
+    }
+  }
+  // Offering total: the cover table's Total row (A), the label (B), the single tranche's amount, else "net proceeds … approximately".
+  let tot = prices.total || (single && tr.length ? (prices.get(tr[0].seq)?.total || prices.get(tr[0].seq)?.amount) : null);
+  if (tot && family === 'A' && single && !priceKept.has(tr[0].seq)) tot = null;
+  let basis = 'before expenses';
+  if (!tot && upSect) {
+    const m = /net proceeds[^.]{0,220}?approximately\s+(US\$|C\$|\$|€|£)\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s*(million|billion)?/i.exec(upSect.text);
+    if (m) {
+      const n = Number(m[2].replace(/,/g, '')) * (m[3] === 'billion' ? 1e9 : m[3] === 'million' ? 1e6 : 1);
+      const sent = upSect.text.slice(m.index, m.index + m[0].length + 200);
+      basis = /after deducting|net of/i.test(sent) ? 'approximately, after expenses' : 'approximately';
+      tot = { v: n, at: upSect.at + upSect.heading.length + m.index + m[0].indexOf(m[2]), cur: CUR[m[1]] || null, heading: 'Use of Proceeds', part: 'use of proceeds' };
+    }
+  }
+  if (tot) {
+    const curT = tot.cur || (tr[0]?.row.currency ?? null);
+    const lo = basis === 'before expenses' ? 0.995 : 0.95, hi = 1.005;
+    if (sumOk && sum > 0 && (tot.v < sum * lo || tot.v > sum * hi)) fail('proceeds_total', 0, 'proceeds_total', `${tot.v} vs Σ principal × proceeds % ${Math.round(sum)}`);
+    else if (cur && curT && curT !== cur) fail('proceeds_total', 0, 'currency', `${curT} vs ${cur}`);
+    else put(0, 'proceeds_total', 'disclosed', { num: tot.v, text: `${curT || cur || 'USD'} · ${basis}` }, src(tot.at, { part: tot.part || (family === 'A' ? 'cover table' : tdef), heading: tot.heading || null }));
+  } else if (family === 'B' && single && !prices.get(tr[0]?.seq)?.proceeds) absent(0, 'proceeds_total', 'not_disclosed', 'pricing terms');
+
+  // #25 Risks (O): the section's link and heading only.
+  if (family === 'A') {
+    const h = findHeading(text, { anchors, from: coverEnd, to: sup, anchorRe: /^risk factors$/i, caps: /RISK FACTORS/, title: /Risk Factors(?=\s+(?:An|Investing|Your|You|Before|In addition|The|Our|We)\b)/ });
+    if (h) put(0, 'risk_factors', 'disclosed', {}, { ...src(h.at, { part: 'risk factors', heading: 'Risk Factors' }), source_anchor: h.anchor ?? src(h.at, { part: 'risk factors' }).source_anchor });
+    else absent(0, 'risk_factors', 'not_disclosed', 'risk factors');
+  } else if (family === 'B') {
+    const h = findHeading(text, { anchors: [], from: 0, to: sup, caps: /RISK FACTORS/ });
+    if (h) put(0, 'risk_factors', 'disclosed', {}, src(h.at, { part: 'risk factors', heading: 'Risk Factors' }));
+    else absent(0, 'risk_factors', 'not_disclosed', 'pricing terms');
+  } else absent(0, 'risk_factors', 'not_disclosed', 'retail table');
+
+  // #26 Where the notes may not be sold (O): section link + the places named in its headings.
+  if (family === 'A') {
+    const r = sellingRestrictions(text, coverEnd, sup);
+    if (r) put(0, 'selling_restrictions', 'disclosed', { text: vt(r.places) }, src(r.at, { part: 'underwriting', heading: r.heading }));
+    else absent(0, 'selling_restrictions', 'not_disclosed', 'underwriting');
+  } else absent(0, 'selling_restrictions', 'not_disclosed', tdef);
+
+  // #27 Conflicts of interest (O): the heading and its link; show where found.
+  if (family === 'A') {
+    const h = findHeading(text, { anchors: [], from: coverEnd, to: sup, caps: /\(?CONFLICTS? OF INTERESTS?\)?/, title: /\(?Conflicts? of Interests?\)?(?=\s+[A-Z(])/ });
+    if (h) put(0, 'conflicts_of_interest', 'disclosed', { text: h.heading.replace(/[()]/g, '').trim().replace(/^CONFLICTS?/, w => w[0] + w.slice(1).toLowerCase()).replace(/ OF INTERESTS?$/, ' of Interest') }, src(h.at, { part: 'underwriting', heading: h.heading.replace(/[()]/g, '').trim() }));
+  }
+
+  // #28 Listing (O): exchange name or "Not listed"; show where found.
+  {
+    const body = text.slice(0, sup);
+    const yes = /(?:intends?|expects?) to apply (?:to list|for (?:the )?listing of)[^.]{0,120}?on (?:the )?(New York Stock Exchange|NYSE|Nasdaq Bond Exchange|Nasdaq Global Market|NASDAQ Global Market|The Nasdaq Stock Market|Nasdaq|NASDAQ|London Stock Exchange|Euronext Dublin|Irish Stock Exchange|Luxembourg Stock Exchange)/i.exec(body);
+    const not = /\b(?:will not be listed|(?:do|does) not (?:currently )?intend to (?:apply (?:to list|for (?:the )?listing of)|list)|have not applied and do not intend to apply|(?:do|does) not intend to apply for (?:the )?listing|We will not list|will not apply to list)\b/i.exec(body);
+    const EX = { NYSE: 'New York Stock Exchange', NASDAQ: 'Nasdaq', 'NASDAQ Global Market': 'Nasdaq Global Market', 'The Nasdaq Stock Market': 'Nasdaq' };
+    const pick = yes && (!not || yes.index < not.index) ? { v: EX[yes[1]] || yes[1], at: yes.index + yes[0].lastIndexOf(yes[1]) } : not ? { v: 'Not listed', at: not.index } : null;
+    if (pick) put(0, 'listing', 'disclosed', { text: pick.v }, src(pick.at, { part: family === 'A' ? null : tdef, heading: null }));
+  }
+}
+const iso2 = s => isoOf(s);
 
 // ── Parties (spec v2 §4) ─────────────────────────────────────────────────
 
