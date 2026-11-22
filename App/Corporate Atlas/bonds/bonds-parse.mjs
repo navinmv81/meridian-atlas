@@ -20,8 +20,18 @@
 //          skipped_other; stock-plan supplements → skipped_non_debt.
 //   N-3    the audit title prefers the cover's offering line and drops EDGAR header tokens.
 //   L8-12  co-registrant issuers are resolved by the runner (coverIssuers() below names them).
+// MA-NOV-BOND.FIX1 (spec MA-NOV-BOND v1 §4, parser 1.3.0):
+//   F1  a 424B draft passes the other → structured → non-debt title gate before it is called
+//       preliminary; a structured / non-debt draft is skipped with reason draft_structured / draft_not_debt.
+//   F2  a draft reports its cover tranche-line count (draftLines); the runner does the deal-level match.
+//   F3  rule 5 (iv): an MTN / term-note programme supplement with no priced terms → skipped_other, program_supplement.
+//   F4  maturity wordings "will mature as to principal on"; a year-only tranche named as "the <year> Notes";
+//       disagreeing maturity statements resolved only by the labelled "Maturity Date(s)" statement (noted).
+//   F7  a cover that says the notes are being remarketed → skipped_other, remarketing (R-4 made reproducible).
+//   F8  every non-final row carries status_reason (spec v1 §5 codes); a partial final carries
+//       status_reason 'partial' + missing[]. Run log / dry-run record only — not a D1 column (BOND-CR1).
 
-export const PARSER_VERSION = 'bonds-1.2.0';   // 1.2.0: DIL14 R-2 floating-spread wordings (MA-OCT-THU29.ENG8)
+export const PARSER_VERSION = 'bonds-1.3.0';   // 1.3.0: MA-NOV-BOND.FIX1 F1–F4, F7, F8 · 1.2.0: DIL14 R-2 floating-spread wordings (MA-OCT-THU29.ENG8)
 
 // ── Visible text (R1) ────────────────────────────────────────────────────
 
@@ -118,13 +128,22 @@ const DEMAND_NOTE = /\bVariable\s+Denomination\s+Floating\s+Rate\s+Demand\s+Note
 // prints "MERGER" as an image (0001193125-25-226560, pre-signed as a merger document).
 const MERGER_DOC = /MERGER\s+PROPOSED|TRANSACTION\s+PROPOSED|NOTICE\s+OF\s+ACTION\s+BY\s+WRITTEN\s+CONSENT|information\s+statement\s*\/\s*prospectus|joint\s+proxy\s+statement\s*\/\s*prospectus/i;
 const STOCK_PLAN = /direct\s+stock\s+purchase|dividend\s+reinvestment/i;
+// F3 rule 5 (iv): the programme's own prospectus supplement ("we plan to offer and sell notes with various
+// terms", "Medium-Term Notes … With Maturities of 9 Months or More", "Term Notes due from Nine Months to 30
+// Years"). Read from the first 3,000 characters; it skips a filing only when it priced no tranche.
+const PROGRAM = /plan\s+to\s+offer\s+and\s+sell\s+notes\s+with\s+various\s+terms|(?:With\s+Maturities\s+of|Due|due\s+from)\s+(?:9|Nine)\s+Months\s+(?:or\s+More|to\s+\d{1,2}\s+Years)\s+from\s+(?:the\s+)?Date\s+of\s+Issue/i;
+// F7: the cover says the notes offered are existing notes being remarketed (NextEra Series M, Jul 2025).
+const REMARKETED = /\bThis\s+is\s+a\s+remarketing\s+of\b|\b(?:is|are)\s+being\s+remarketed\b/i;
+const otherReason = w => (/remarket/i.test(w) ? 'remarketing' : /exchange/i.test(w) ? 'exchange_offer' : 'resale');
 
 // Returns { status, rule, reason? } where status ∈ skipped_other | skipped_structured |
 // skipped_non_debt | debt | parse_failed (no title found).
 export function classifyTitle(title, text) {
-  if (OTHER.test(title)) return { status: 'skipped_other', rule: '7.3-1' };
-  if (structured(title)) return { status: 'skipped_structured', rule: '7.3-2' };
-  if (NON_DEBT.test(title)) return { status: 'skipped_non_debt', rule: '7.3-3' };
+  const o = title.match(OTHER);
+  if (o) return { status: 'skipped_other', rule: '7.3-1', reason: otherReason(o[1]) };
+  if (REMARKETED.test(text.slice(0, 3000))) return { status: 'skipped_other', rule: '7.3-1 F7', reason: 'remarketing' };   // F7
+  if (structured(title)) return { status: 'skipped_structured', rule: '7.3-2', reason: 'structured' };
+  if (NON_DEBT.test(title)) return { status: 'skipped_non_debt', rule: '7.3-3', reason: 'equity' };
   if (DEBT.test(title)) return { status: 'debt', rule: '7.3-4' };
   if (DEBT_SERIES.test(title)) return { status: 'debt', rule: 'B-3a' };
   const pricing = PRICING_HDR.test(text.slice(0, 2500));
@@ -135,7 +154,8 @@ export function classifyTitle(title, text) {
   if (DEMAND_NOTE.test(t6)) return { status: 'skipped_other', rule: '7.3-5i', reason: 'demand_note' };
   if (MERGER_DOC.test(t6)) return { status: 'skipped_other', rule: '7.3-5ii', reason: 'merger_document' };
   if (STOCK_PLAN.test(t6)) return { status: 'skipped_non_debt', rule: '7.3-5iii', reason: 'stock_plan' };
-  return { status: 'parse_failed', rule: '7.3 no title' };
+  if (PROGRAM.test(text.slice(0, 3000))) return { status: 'skipped_other', rule: '7.3-5iv', reason: 'program_supplement' };   // F3
+  return { status: 'parse_failed', rule: '7.3 no title', reason: 'no_tranche' };
 }
 
 // ── Field helpers ────────────────────────────────────────────────────────
@@ -402,7 +422,8 @@ function findSpread(body, t, single) {
 // as a maturity ("will mature on …", "Maturity Date: …"). One distinct date →
 // taken; several → the one whose lead-in names this tranche (its coupon, "the
 // <year> notes", or "Floating Rate"); otherwise unresolved → parse_failed.
-const MATURES = new RegExp(`(?:will mature on|mature on|matures on|maturing on|maturity date (?:of|is|will be)|Maturity Dates?\\s*:?|Stated Maturity(?: Date)?\\s*:?)\\s*(?:the\\s+)?(${DATE_RE})`, 'gi');
+// F4 (1.3.0): + "will mature as to principal on" (Duke junior subordinated, Aug 2024).
+const MATURES = new RegExp(`(?:(?:will\\s+)?matur(?:e|es|ing)(?:\\s+as\\s+to\\s+principal)?\\s+on|maturity date (?:of|is|will be)|Maturity Dates?\\s*:?|Stated Maturity(?: Date)?\\s*:?)\\s*(?:the\\s+)?(${DATE_RE})`, 'gi');
 
 function findMaturity(body, t) {
   const cands = new Map();
@@ -412,14 +433,23 @@ function findMaturity(body, t) {
     const iso = toIsoDate(m[1]);
     if (!iso || Number(iso.slice(0, 4)) !== t.maturityYear) continue;
     if (!cands.has(iso)) cands.set(iso, []);
-    cands.get(iso).push(body.slice(Math.max(0, m.index - 160), m.index + m[0].length));
+    const lead = body.slice(Math.max(0, m.index - 160), m.index);
+    cands.get(iso).push({ ctx: lead + m[0], lead, labelled: /^(?:Stated\s+)?Maturity/i.test(m[0]) || /Maturity Dates?\b[^.]{0,80}$/i.test(lead) });
   }
-  if (cands.size === 1) return [...cands.keys()][0];
+  if (cands.size === 1) return { iso: [...cands.keys()][0] };
   if (cands.size > 1) {
-    const names = ctx => (t.rateType === 'floating' ? /Floating Rate/i.test(ctx.slice(-200)) && !/Fixed Rate Notes/i.test(ctx.slice(-120))
-                                                    : namesCoupon(ctx, t.coupon));
+    const names = ({ ctx }) => (t.rateType === 'floating' ? /Floating Rate/i.test(ctx.slice(-200)) && !/Fixed Rate Notes/i.test(ctx.slice(-120))
+                                                          : namesCoupon(ctx, t.coupon));
     const hits = [...cands.entries()].filter(([, occ]) => occ.some(names));
-    if (hits.length === 1) return hits[0][0];
+    if (hits.length === 1) return { iso: hits[0][0] };
+    // F4 (1.3.0), only where the 1.2.0 rule found no single date: the lead-in may name the tranche as
+    // "the <year> Notes" (GM, May 2025). If those statements still disagree, only a labelled
+    // "Maturity Date(s)" statement decides, and the disagreement is noted for the source check.
+    const yr = new RegExp(`\\b${t.maturityYear}\\s+(?:Notes|Debentures|Bonds)\\b[^.]{0,20}$`, 'i');
+    const named = [...cands.entries()].filter(([, occ]) => occ.some(o => names(o) || yr.test(o.lead)));
+    if (named.length === 1) return { iso: named[0][0] };
+    const lab = named.filter(([, occ]) => occ.some(o => o.labelled && (names(o) || yr.test(o.lead))));
+    if (named.length > 1 && lab.length === 1) return { iso: lab[0][0], note: `maturity statements disagree (${named.map(([d]) => d).join(' / ')}); labelled "Maturity Date" statement taken (${lab[0][0]})` };
   }
   return null;
 }
@@ -568,16 +598,26 @@ export function parseFiling(filing, html, { fwps = [], ingestedAt = new Date().t
   const text = htmlToText(html);
   const base = { accession_number: filing.accessionNumber, cik: filing.cik, form_type: filing.form, filing_date: filing.filingDate,
                  source_url: filing.url, parser_version: parserVersion, ingested_at: ingestedAt };
+  // F8: every whole-filing row carries its status_reason (run log / dry-run record; not a D1 column until BOND-CR1).
   const audit = (status, rule, extra = {}) => ({ status, rule, reason: extra.reason || null, title: auditTitle(text) || extra.title || null, notes: extra.notes || [],
+    ...(extra.draftLines !== undefined ? { draftLines: extra.draftLines } : {}),
     rows: [{ ...base, tranche_seq: 0, instrument_key: null, isin: null, cusip: null, filing_status: status, tranche_label: null, security_class: null,
              rate_type: null, coupon_rate: null, spread_bps: null, benchmark: null, principal_amount: null, currency: 'USD', maturity_date: null,
-             seniority: null, parse_confidence: 0 }], fwpNeeded: false });
+             seniority: null, parse_confidence: 0, status_reason: extra.reason || null }], fwpNeeded: false });
 
   if (filing.form === 'FWP') return { status: 'informational', rule: 'R2', rows: [], notes: [], fwpNeeded: false };
-  const pre = preliminaryRule(filing.form, text);
-  if (pre) return audit('preliminary', pre);
-
   const { header, title } = extractTitle(text);
+  const pre = preliminaryRule(filing.form, text);
+  if (pre) {
+    // F1: the title gate (other → structured → non-debt) runs on a draft before it is called preliminary.
+    const dc = classifyTitle(title, text);
+    if (dc.status === 'skipped_structured') return audit(dc.status, `F1 ${pre} / ${dc.rule}`, { title: header.slice(0, 300), reason: 'draft_structured' });
+    if (dc.status === 'skipped_non_debt') return audit(dc.status, `F1 ${pre} / ${dc.rule}`, { title: header.slice(0, 300), reason: 'draft_not_debt' });
+    if (dc.status === 'skipped_other' && dc.rule.startsWith('7.3-1')) return audit(dc.status, `F1 ${pre} / ${dc.rule}`, { title: header.slice(0, 300), reason: dc.reason });
+    // F2: the runner links the draft to its final; until then it has none.
+    return audit('preliminary', pre, { reason: 'draft_no_final', draftLines: draftTrancheLines(header) });
+  }
+
   const cls = classifyTitle(title, text);
   if (cls.status !== 'debt') return audit(cls.status, cls.rule, { title: header.slice(0, 300), reason: cls.reason });
 
@@ -595,7 +635,9 @@ export function parseFiling(filing, html, { fwps = [], ingestedAt = new Date().t
       currency: currencyOf(lab), termsCurrency: ts.principalCur ? currencyOf(ts.principalCur) : null, source: 'terms', path: cls.rule === 'B-3a' ? 'B-3a' : '7.3-4' }];
     shape = 'terms';
   }
-  if (!tranches.length) return audit('parse_failed', 'no tranche found', { title: header.slice(0, 300) });
+  const program = PROGRAM.test(text.slice(0, 3000));
+  if (!tranches.length) return program ? audit('skipped_other', '7.3-5iv', { title: header.slice(0, 300), reason: 'program_supplement' })   // F3
+                                       : audit('parse_failed', 'no tranche found', { title: header.slice(0, 300), reason: 'no_tranche' });
 
   const single = tranches.length === 1;
   for (const t of tranches) {
@@ -604,7 +646,7 @@ export function parseFiling(filing, html, { fwps = [], ingestedAt = new Date().t
       if (!t.maturity && ts.maturity && Number(ts.maturity.slice(0, 4)) === t.maturityYear) t.maturity = ts.maturity;
       if (t.coupon === null && ts.coupon !== null && t.rateType !== 'floating') t.coupon = ts.coupon;
     }
-    if (!t.maturity && t.maturityYear) t.maturity = findMaturity(body, t);
+    if (!t.maturity && t.maturityYear) { const fm = findMaturity(body, t); if (fm) { t.maturity = fm.iso; t.maturityNote = fm.note || null; } }
     if (t.principal === null) { const p = findPrincipal(body, t); if (p) { t.principal = p.amount; t.bodyCurrency = currencyOf(p.cur); } }
     if (t.coupon === null && t.rateType !== 'floating') t.coupon = findCoupon(body, t, single);
     if (t.rateType !== 'fixed') {
@@ -613,6 +655,8 @@ export function parseFiling(filing, html, { fwps = [], ingestedAt = new Date().t
       else if (ts.benchmark && single) t.benchmark = ts.benchmark;
     }
   }
+  // F3: a programme supplement prices nothing — no tranche has both an amount and a full maturity.
+  if (program && !tranches.some(t => t.principal > 0 && t.maturity)) return audit('skipped_other', '7.3-5iv', { title: header.slice(0, 300), reason: 'program_supplement' });
   assignIdentifiers(body, tranches.filter(t => !t.cusip));
 
   // FWP enrichment and cross-check (§7.4, §14.1).
@@ -642,17 +686,37 @@ export function parseFiling(filing, html, { fwps = [], ingestedAt = new Date().t
     const final = why.length === 0;
     if (t.termsCurrency && t.termsCurrency !== t.currency) notes.push(`tranche ${i + 1}: title currency ${t.currency}, term-sheet currency ${t.termsCurrency} (title kept, B-4 condition 2)`);
     if (t.bodyCurrency && t.bodyCurrency !== t.currency) notes.push(`tranche ${i + 1}: title currency ${t.currency}, offering-sentence currency ${t.bodyCurrency} (title kept, B-4 condition 2)`);
+    if (t.maturityNote) notes.push(`tranche ${i + 1}: ${t.maturityNote}`);
     const isin = t.isin || null, cusip = t.cusip || null;
+    // F8: the reason a tranche is not final (one code, first that applies), or what a partial final lacks.
+    const reason = final ? null : conflict ? 'fwp_conflict' : !t.maturity ? 'no_maturity' : !(t.principal > 0) ? 'no_principal' : 'low_confidence';
+    const missing = final ? missingOf(t, isin, cusip) : [];
     return { ...base, tranche_seq: i + 1, instrument_key: final ? instrumentKey(isin, cusip) : null, isin, cusip,
       filing_status: final ? 'final' : 'parse_failed', tranche_label: t.label || null, security_class: t.securityClass || 'notes',
       rate_type: t.rateType, coupon_rate: t.rateType === 'floating' ? null : t.coupon, spread_bps: t.spread ?? null, benchmark: t.benchmark ?? null,
       principal_amount: t.principal ?? null, currency: t.currency || 'USD', maturity_date: t.maturity || null, seniority: t.seniority ?? null,
-      parse_confidence: conf, path: t.path || '7.3-4', ...(final ? {} : { fail_reason: why.join('; ') }) };   // path / fail_reason: run log only (not columns)
+      parse_confidence: conf, path: t.path || '7.3-4', status_reason: final ? (missing.length ? 'partial' : null) : reason,
+      ...(missing.length ? { missing } : {}), ...(final ? {} : { fail_reason: why.join('; ') }) };   // path / fail_reason / status_reason / missing: run log only (not columns)
   });
   const fwpNeeded = rows.some(r => r.filing_status === 'final' && !r.cusip && !r.isin) && !fwps.length;
   const co = coverIssuers(header);
   return { status: 'debt', rule: `${cls.rule} / ${shape}`, title: header.slice(0, 300), rows, notes, fwpNeeded, coIssuers: co.names, guaranteed: co.guaranteed };
 }
+
+// F8 partial (spec v1 §1.3): a final row without a CUSIP/ISIN, or without its rate — the coupon (fixed,
+// fixed-to-floating) or the spread and benchmark (floating, fixed-to-floating).
+function missingOf(t, isin, cusip) {
+  const out = [];
+  if (!isin && !cusip) out.push('cusip');
+  if (t.rateType !== 'floating' && (t.coupon === null || t.coupon === undefined)) out.push('coupon');
+  if (t.rateType !== 'fixed' && (t.spread == null || !t.benchmark)) out.push('spread');
+  return out;
+}
+
+// F2: the number of tranche lines on a draft's cover ("$ % Notes due , 20", "Floating Rate Notes due 20__").
+// The runner compares it with the final's tranche count; drafts carry no tranche identity.
+const DRAFT_LINE = /\b(?:Notes?|Debentures?|Bonds?)(?:,?\s*Series(?:\s+[A-Z0-9-]{1,5})?)?\s+due\b/gi;
+export const draftTrancheLines = header => (String(header).match(DRAFT_LINE) || []).length;
 
 // N-3: an audit title for whole-filing rows. EDGAR header tokens and the SEC
 // legend are dropped, and the cover's offering line is preferred. Report-only:

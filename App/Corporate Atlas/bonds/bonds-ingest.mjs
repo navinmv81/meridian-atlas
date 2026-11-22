@@ -14,6 +14,10 @@
 // batch) → headroom (d1-today, ML-1012-1 values from config) → declared budget.
 // Writes are batched INSERT OR IGNORE through the pinned wrangler 4.96.0, one
 // filing's rows always in one batch, ≤ 100 statements per batch (§7.5).
+//
+// MA-NOV-BOND.FIX1 (parser 1.3.0): F2 deal-level draft → final link (linkDrafts) and F8 reason
+// codes (status_reason, superseded_by) are carried on the parsed rows, the run log and the dry-run
+// record only. They are NOT in COLS and are not written to D1 until BOND-CR1 adds the columns.
 
 import { randomUUID } from 'node:crypto';
 import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -69,6 +73,36 @@ function parseArgs(argv) {
 }
 
 const flag = (P, name) => existsSync(P[name]);
+
+// ── F2: deal-level draft → final link (spec MA-NOV-BOND v1 §4 F2) ───────────
+// A draft (preliminary) is replaced by a final 424B when that final is from the same issuer family
+// (the polled issuer and its co-registrant subsidiaries), is on the same shelf file number, is filed
+// 0–14 days after the draft, and has at least as many tranche rows as the draft has cover tranche
+// lines. The nearest such final is taken. No tranche-level link: drafts carry no tranche identity.
+// filings: [{ accession, cik, row_cik?, file_number, filing_date, status, draft_lines?, rows }]
+// parentOf: co-registrant CIK → parent CIK (L8-12 / bond_issuer_link family). Mutates the draft rows.
+export function linkDrafts(filings, { parentOf = new Map(), days = 14 } = {}) {
+  const fam = c => (c ? parentOf.get(c) || c : null);
+  const familyOf = f => fam(f.cik) || fam(f.row_cik);
+  const finals = filings.filter(f => f.status === 'debt' && f.rows.some(r => r.tranche_seq > 0));
+  const links = [];
+  for (const d of filings) {
+    if (d.status !== 'preliminary') continue;
+    const t0 = Date.parse(d.filing_date + 'T00:00:00Z');
+    const lines = Number.isInteger(d.draft_lines) ? d.draft_lines : 0;
+    const hit = finals.filter(f => f.file_number && f.file_number === d.file_number && familyOf(f) === familyOf(d)
+        && f.rows.filter(r => r.tranche_seq > 0).length >= lines)
+      .map(f => ({ f, gap: (Date.parse(f.filing_date + 'T00:00:00Z') - t0) / 86400000 }))
+      .filter(x => x.gap >= 0 && x.gap <= days)
+      .sort((a, b) => a.gap - b.gap || (a.f.accession < b.f.accession ? -1 : 1))[0];
+    for (const r of d.rows) {
+      r.status_reason = hit ? 'superseded' : 'draft_no_final';
+      r.superseded_by = hit ? hit.f.accession : null;
+    }
+    links.push({ draft: d.accession, final: hit ? hit.f.accession : null, gap_days: hit ? hit.gap : null, draft_lines: lines });
+  }
+  return links;
+}
 
 // ── Run ──────────────────────────────────────────────────────────────────
 
@@ -180,11 +214,13 @@ export async function run(args, deps = {}) {
         }
         const paths = {};
         for (const row of res.rows) if (row.filing_status === 'final') paths[row.path] = (paths[row.path] || 0) + 1;
+        const reasons = {};                                                  // F8: status_reason per row (drafts are linked after discovery)
+        for (const row of res.rows) if (row.status_reason) reasons[row.status_reason] = (reasons[row.status_reason] || 0) + 1;
         runLog('filing', { accession: f.accessionNumber, cik: iss.cik, row_cik: coCik || iss.cik, status: res.status, rule: res.rule, reason: res.reason || null,
-          rows: res.rows.length, final_paths: paths, held });                // B-3 condition 4: the path of every final row
+          rows: res.rows.length, final_paths: paths, status_reasons: reasons, held });   // B-3 condition 4: the path of every final row
         filingsOut.push({ accession: f.accessionNumber, cik: iss.cik, issuer: iss.name, form: f.form, filing_date: f.filingDate, file_number: f.fileNumber,
           url: f.url, status: res.status, rule: res.rule, reason: res.reason || null, title: res.title, notes: res.notes, fwps: fwpUsed,
-          co_issuers: res.coIssuers || [], row_cik: coCik, held, rows: res.rows });
+          co_issuers: res.coIssuers || [], row_cik: coCik, held, draft_lines: res.draftLines ?? null, rows: res.rows });
       }
     }
   } catch (e) {
@@ -193,6 +229,12 @@ export async function run(args, deps = {}) {
     else throw e;
   }
   metrics.sec_requests = sec.count;
+
+  // F2: drafts → finals found in this run (same issuer family). A final already in D1 from an earlier
+  // run is not seen here; the offline whole-corpus re-parse (BOND.FIX2) links against the full set.
+  const parentOf = new Map([...coRegs.values()].filter(e => e.cik).map(e => [e.cik, e.parent_cik]));
+  const draftLinks = linkDrafts(filingsOut, { parentOf });
+  if (draftLinks.length) runLog('draft_links', { superseded: draftLinks.filter(x => x.final).length, draft_no_final: draftLinks.filter(x => !x.final).length, links: draftLinks });
 
   const heldFilings = filingsOut.filter(f => f.held);
   const filingRows = filingsOut.filter(f => f.rows.length && !f.held).map(f => ({ accession: f.accession, rows: f.rows }));

@@ -25,8 +25,9 @@ const finals = r => r.rows.filter(x => x.filing_status === 'final');
 
 test('fixtures: every manifest SHA-256 matches', () => { for (const m of manifest) fx(m.name); });
 
-test('AC1: ICE, Duke and UnitedHealth preliminary 424B5s → preliminary, one audit row, 0 tranches', () => {
-  for (const n of ['ice-424b5-prelim-2026-08-11', 'duke-424b5-prelim-2026-08-10', 'unh-424b5-prelim-2025-06-17']) {
+// FIX1 (1.3.0): the Duke draft is for Equity Units, so F1 now skips it (spec v1 §4 F1); it is asserted in the F1 test.
+test('AC1: ICE and UnitedHealth preliminary 424B5s → preliminary, one audit row, 0 tranches', () => {
+  for (const n of ['ice-424b5-prelim-2026-08-11', 'unh-424b5-prelim-2025-06-17']) {
     const r = parse(n);
     assert.equal(r.status, 'preliminary', n);
     assert.equal(r.rows.length, 1, n);
@@ -287,4 +288,4 @@ test('R-2 Home Depot: the tranche\'s own "Compounded SOFR plus 0.330%" past the 
   const x = tr(parse('homedepot-424b2-frn-2024-06-18'), 1);
   assert.equal(x.rate_type, 'floating'); assert.equal(x.spread_bps, 33); assert.equal(x.benchmark, 'SOFR');
 });
-test('R-2: parser version is bonds-1.2.0', () => { assert.equal(parse('toyota-424b2-mtn-frn-2026-03-11').rows[0].parser_version, 'bonds-1.2.0'); });
+test('FIX1: parser version is bonds-1.3.0 (was R-2 1.2.0)', () => { assert.equal(parse('toyota-424b2-mtn-frn-2026-03-11').rows[0].parser_version, 'bonds-1.3.0'); });
