@@ -793,6 +793,45 @@
       "html_sha256": "3fef78e84bc4befca0b828c7d38451a19426cade3f8bf0f0fbd5bee1723323db",
       "expect": "debt, 1 tranche (F2b final)",
       "fetched": "cache (state/cache, MA-NOV-BOND.FIX2, 22 Nov; 0 SEC requests)"
+    },
+    {
+      "name": "att-424b2-multi-eur-banks-2025-03-26",
+      "file": "att-424b2-multi-eur-banks-2025-03-26.htm.gz",
+      "cik": "0000732717",
+      "accession": "0001193125-25-064173",
+      "form": "424B2",
+      "filing_date": "2025-03-26",
+      "file_number": "333-285413",
+      "url": "https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm",
+      "html_sha256": "44e1604f1dcc93d64679f6dd12d73608264dcf9e203d615aaff51ce1fe9dc77a",
+      "expect": "debt, 3 tranches; OFFER1: European bank names on the cover (Société Générale, Intesa, Crédit Agricole …)",
+      "fetched": "cache (state/cache, MA-NOV-BOND.OFFER1, 22 Nov; 0 SEC requests)"
+    },
+    {
+      "name": "pfizer-424b2-nl-guaranteed-eur-2025-05-15",
+      "file": "pfizer-424b2-nl-guaranteed-eur-2025-05-15.htm.gz",
+      "cik": "0000078003",
+      "accession": "0001193125-25-120844",
+      "form": "424B5",
+      "filing_date": "2025-05-15",
+      "file_number": "333-277323",
+      "url": "https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm",
+      "html_sha256": "2aea55c40852b06d8b0c50f4e65639999fd4626879a316c66097cc0207adf559",
+      "expect": "debt, 4 EUR tranches; OFFER1: issuer Pfizer Netherlands, guaranteed by Pfizer Inc.",
+      "fetched": "cache (state/cache, MA-NOV-BOND.OFFER1, 22 Nov; 0 SEC requests)"
+    },
+    {
+      "name": "cvs-fwp-allcaps-banks-2024-12-04",
+      "file": "cvs-fwp-allcaps-banks-2024-12-04.htm.gz",
+      "cik": "0000064803",
+      "accession": "0001193125-24-270171",
+      "form": "FWP",
+      "filing_date": "2024-12-04",
+      "file_number": "333-272200",
+      "url": "https://www.sec.gov/Archives/edgar/data/64803/000119312524270171/d918708dfwp.htm",
+      "html_sha256": "9f9b4d4db9a00ffd24748b08367b194aea9771bbdbe7ec811ebf12610a0a551f",
+      "expect": "FWP; OFFER1: bank list printed in capitals (\"BARCLAYS CAPITAL INC. … GOLDMAN SACHS & CO. LLC\")",
+      "fetched": "cache (state/cache, MA-NOV-BOND.OFFER1, 22 Nov; 0 SEC requests)"
     }
   ]
 }
