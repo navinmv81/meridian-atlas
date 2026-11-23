@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
+import { applyWithheld } from '../bonds-offering.mjs';
 
 const arg = Object.fromEntries(process.argv.slice(2).map(s => s.match(/^--([a-z0-9-]+)=(.*)$/)).filter(Boolean).map(m => [m[1], m[2]]));
 for (const k of ['run', 'out', 'generated']) if (!arg[k]) throw new Error(`--${k}= is required`);
@@ -54,7 +55,7 @@ function shown(f) {
     case 'interest_paid': { const v = JSON.parse(t); return [v.f, v.on && v.on.join(', '), v.first && `first ${v.first}`, v.p].filter(Boolean).join(' · '); }
     case 'early_repayment': { const v = JSON.parse(t); return v.can === 'no' ? 'No — cannot be repaid early' : ['Yes', v.from && `from ${v.from}`, v.price, v.tax && 'tax redemption'].filter(Boolean).join(' · '); }
     case 'use_of_proceeds': { const v = JSON.parse(t); return v.c.join('; ') + (v.acq ? ` (acquisition: ${v.acq})` : ''); }
-    case 'selling_restrictions': return JSON.parse(t).join(', ') || '(section, no places named)';
+    case 'selling_restrictions': return t == null ? '(section link and heading only — place list withheld, FIX3)' : JSON.parse(t).join(', ') || '(section, no places named)';
     case 'amount': return money(n);
     case 'issue_price_pct': case 'bank_fee_pct': case 'proceeds_pct': return `${n}%`;
     case 'proceeds_amount': case 'proceeds_total': return `${money(n, (t || '').split(' · ')[0])} (${(t || '').split(' · ')[1] || ''})`;
@@ -74,7 +75,8 @@ const esc = s => String(s ?? '').replace(/\|/g, '/').replace(/\n/g, ' ');
 
 const runText = readFileSync(arg.run, 'utf8');
 const run = JSON.parse(runText);
-const byAcc = new Map(run.filings.map(f => [f.accession, f]));
+// FIX3: the sheet lists what the page would show, so the withheld fields (spec v2 §6.3 gate) are taken out as offer-build.mjs does.
+const byAcc = new Map(run.filings.map(f => [f.accession, f.status === 'debt' ? { ...f, facts: applyWithheld(f.facts) } : f]));
 const order = f => (f.field.startsWith('parties.') ? 100 : Object.keys(LABEL).indexOf(f.field));
 const L = [];
 let nFacts = 0, nParties = 0;

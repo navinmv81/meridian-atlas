@@ -1,67 +1,57 @@
 {
-  "generated": "2026-11-22T16:30:00Z",
-  "offering_version": "bonds-offering-1.1.0",
+  "generated": "2026-11-23T08:00:00Z",
+  "offering_version": "bonds-offering-1.2.0",
   "reliability_version": "bonds-1.3.1",
   "run_cap_writes": 8000,
   "input": {
     "file": "offer-run.json",
-    "sha256": "52b5f2922b9e3648ae816ac61c1039a066d572c330eb34ed444d7fdf6872909b",
+    "sha256": "c7641efb2a4a6701c0fb51adc245e219bbd1f7ee8ec2aa28e1d08fa14a8789ff",
     "parser_version": "bonds-1.3.1",
-    "ingested_at": "2026-11-22T16:30:00Z"
+    "ingested_at": "2026-11-23T08:00:00Z"
+  },
+  "withheld": {
+    "use_of_proceeds": "row",
+    "proceeds_total": "row",
+    "selling_restrictions": "value_text"
   },
   "filings": 322,
-  "fact_rows": 12090,
-  "party_rows": 3926,
+  "fact_rows": 11576,
+  "party_rows": 3994,
   "runs": [
     {
       "run": 1,
       "file": "offer-apply-run1.sql",
-      "sha256": "9b0273c70da64ffc95d9960be8365cf428c79debf110bde699e3b2146888098a",
+      "sha256": "fad02a7374fc71fb559f0736e42aadcb59b5922d4ccb612410d406ab8b338f71",
       "rollback": "offer-rollback-run1.sql",
-      "rollback_sha256": "96f14f7cb362c3a35e740c20d5d118e9f1b4c5319b2046197a694eb018fa079e",
-      "filings": 189,
+      "rollback_sha256": "041ea233b5e395d53ef919a8ba4b22267ee67a65fed57687f4563aa308b04b10",
+      "filings": 195,
       "batches": 5,
-      "statements": 423,
-      "fact_rows": 5959,
-      "party_rows": 1948,
-      "est_writes": 7907,
+      "statements": 432,
+      "fact_rows": 5902,
+      "party_rows": 2087,
+      "est_writes": 7989,
       "first": "0000092122-24-000031",
-      "last": "0001104659-26-027125"
+      "last": "0001104659-26-058796"
     },
     {
       "run": 2,
       "file": "offer-apply-run2.sql",
-      "sha256": "d2fbbf1e35e2f450e4b865fc0f9076528bc079551e2f0bb0e109b2f0aa0bb463",
+      "sha256": "8e189ea5a1abeddf1bce94b6d80af1c7aecd1d3255bebd3a5a78146d37503294",
       "rollback": "offer-rollback-run2.sql",
-      "rollback_sha256": "3258a02f8296ec8eb22806fef2063b787bab316dae0eacdb11c5316e138459cb",
-      "filings": 131,
+      "rollback_sha256": "c3979989b7f33c213654c6e1734303436f02eb8d5c3a3bae494b05093fa0149a",
+      "filings": 127,
       "batches": 4,
-      "statements": 333,
-      "fact_rows": 6023,
-      "party_rows": 1953,
-      "est_writes": 7976,
-      "first": "0001104659-26-027669",
-      "last": "0001193125-26-346869"
-    },
-    {
-      "run": 3,
-      "file": "offer-apply-run3.sql",
-      "sha256": "59f799f4aeb77679d1c7342384d97de4850e890af5f0ba66576e0b1c853be92f",
-      "rollback": "offer-rollback-run3.sql",
-      "rollback_sha256": "d8cbf41377696ccfc5dcc1e66c6a008e3c1e1569d4a1c2ba6d185f991f9c1be6",
-      "filings": 2,
-      "batches": 1,
-      "statements": 5,
-      "fact_rows": 108,
-      "party_rows": 25,
-      "est_writes": 133,
-      "first": "0001193125-26-349174",
+      "statements": 317,
+      "fact_rows": 5674,
+      "party_rows": 1907,
+      "est_writes": 7581,
+      "first": "0001104659-26-058799",
       "last": "0001193125-26-387878"
     }
   ],
   "diff": {
     "file": "offer-diff.tsv",
-    "lines": 16016,
-    "sha256": "e95c4c3fab858329754347b5bf1d3fa7a41e5b0ef3dcaf691b2cafc9a8deb3a4"
+    "lines": 15570,
+    "sha256": "aca602223a5702df7037adba40bd1a3b3835e23ad2cc096db65d29e10c7717a6"
   }
 }

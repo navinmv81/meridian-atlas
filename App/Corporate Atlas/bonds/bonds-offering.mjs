@@ -25,7 +25,7 @@
 
 import { htmlToText, toIsoDate, findIdentifiers, cusipValid, isinValid, couponRe } from './bonds-parse.mjs';
 
-export const OFFERING_VERSION = 'bonds-offering-1.1.0';   // 1.1.0: OFFER2 fields 14–28 · 1.0.0: OFFER1 fields 1–13 + parties
+export const OFFERING_VERSION = 'bonds-offering-1.2.0';   // 1.2.0: FIX3 tranche scoping, party qualifiers, withheld fields · 1.1.0: OFFER2 fields 14–28 · 1.0.0: OFFER1 fields 1–13 + parties
 
 export const FACT_COLS = ['accession_number', 'tranche_seq', 'field', 'state', 'value_text', 'value_num', 'value_date', 'source_doc',
   'source_url', 'source_part', 'source_heading', 'source_anchor', 'source_page', 'char_offset', 'parser_version', 'ingested_at'];
@@ -44,6 +44,18 @@ export const FIELDS = Object.freeze({
 // Use-of-proceeds categories (spec v2 §3 #20): a closed list, never the filing's wording.
 export const PROCEEDS_CATEGORIES = Object.freeze(['general corporate purposes', 'repay or refinance debt', 'fund an acquisition', 'working capital',
   'capital spending', 'share buybacks', 'eligible green or social projects', 'other']);
+// FIX3 — withheld for November by the spec v2 §6.3 gate (BOND.REVIEW: under 95% on the 20-filing check). The extractor still reads
+// them; applyWithheld() takes them out of what is written, and the UI shows "Not read yet" for them. `selling_restrictions` keeps
+// its row (section link + heading, cut order step 4) without the list of places.
+export const WITHHELD_FIELDS = Object.freeze({
+  use_of_proceeds: 'row',                  // no row written
+  proceeds_total: 'row',                   // no row written
+  selling_restrictions: 'value_text'       // row kept (link + heading); the place list is not written
+});
+export function applyWithheld(facts) {
+  return facts.filter(f => WITHHELD_FIELDS[f.field] !== 'row')
+    .map(f => (WITHHELD_FIELDS[f.field] === 'value_text' ? { ...f, value_text: null } : f));
+}
 export const ROLES = Object.freeze(['bookrunner', 'co_manager', 'underwriter', 'agent', 'trustee', 'guarantor', 'other']);
 export const INTERMEDIARY = new Set(['bookrunner', 'co_manager', 'underwriter', 'agent']);
 export const SOURCE_PARTS = Object.freeze(['cover', 'cover table', 'summary', 'description of the notes', 'optional redemption',
@@ -295,6 +307,10 @@ const LEGAL_WORDS = "Abp|L\\.L\\.C\\.|LLC|Inc\\.|INC\\.|Incorporated|L\\.P\\.|LP
 const EXTEND = new RegExp(`^((?:,?\\s+(?:\\(?[A-Z][\\w.&'’()-]*\\)?|&|of|de|y)){0,5}?)(,?\\s*(?:&\\s*Co\\.?,?\\s*)?(?:${LEGAL_WORDS}))(?![\\w])(?:,\\s*(?:London|New York|Paris|Milan|Madrid|Singapore|Hong Kong) Branch)?`);
 const lexAt = (s, i) => { for (const b of BANK_RE) { b.re.lastIndex = i; const m = b.re.exec(s); if (m) return { key: b.key, end: i + m[0].length }; } return null; };
 const CONNECT = /^(?:and|of|de|du|la|y|&|the)$/;
+// FIX3 (F9): names split by the HTML decode ("<B>P</B><B><I></I></B><B>NC Capital Markets LLC</B>" → "P NC Capital Markets LLC").
+// The lexicon still finds them; the stored name is the printed one.
+const DECODE_FIX = [[/^P NC(?= Capital Markets\b)/, 'PNC']];
+const decodeFix = n => DECODE_FIX.reduce((a, [re, to]) => a.replace(re, to), n);
 const nameLike = n => !/^(?:Total|Totals|Name|Names|Underwriters?|Agents?|Principal Amount|Inc\.?|a division of)$/i.test(n) && n.length <= 80 && n.split(/\s+/).length <= 9 && n.split(/\s+/).every(w => /^[A-Z0-9&(“"]/.test(w) || CONNECT.test(w) || /^(?:LLC|Inc\.|plc|L\.P\.)/.test(w));
 
 // Split one list segment into names. Returns [{ name, at, qualifier, key, known }]; `at` is relative to the segment.
@@ -345,7 +361,7 @@ export function splitBankList(seg, stats = { dropped: [] }) {
         if (!blocked) end += ext[0].length;
         else { const lm = s.slice(end).match(LEGAL); if (lm) end += lm[0].length; }
       } else { const lm = s.slice(end).match(LEGAL); if (lm) end += lm[0].length; }
-      out.push({ name: seg.slice(i, end).replace(/\s+/g, ' ').trim(), at: i, qualifier: null, key: hit.key, known: true });
+      out.push({ name: decodeFix(seg.slice(i, end).replace(/\s+/g, ' ').trim()), at: i, qualifier: null, key: hit.key, known: true });
       i = end; continue;
     }
     const w = s.slice(i).match(/^\S+/)[0];
@@ -620,7 +636,7 @@ export function extractOffering({ filing, html, parsed, fwps = [], fwpsUnavailab
     const d = dc.get(t.seq);
     if (d) put(t.seq, 'day_count', 'disclosed', { text: d.value }, src(d.at, { heading: d.heading }));
     else if (family === 'C') absent(t.seq, 'day_count', 'not_disclosed', 'retail table');
-    else if (family === 'B' && !dc.size) absent(t.seq, 'day_count', 'not_disclosed', 'pricing terms');   // no "Day Count" term printed
+    else if (family === 'B' && !dc.size && t.rate !== 'fixed_to_floating') absent(t.seq, 'day_count', 'not_disclosed', 'pricing terms');   // no "Day Count" term printed (FIX3: a fixed-to-floating note is not read, so no claim either)
   }
 
   // §4 Parties.
@@ -916,10 +932,14 @@ function interestPaid(text, family, tr, single) {
   const body = text.slice(0, family === 'B' ? 25000 : 60000);
   // Sentences that say when interest is paid: "interest" + "pay/payable/paid" + a day and month or a frequency word.
   for (const m of body.matchAll(/[^.]*?\b(?:interest\b[^.]*?\b(?:pay|payable|paid)|pays?\s+interest)\b[^.]*?(?:\.(?=\s+[A-Z(“"])|$)/gi)) {
-    const s = m[0];
+    let s = m[0], at = m.index;
+    // FIX3 (F1b): on a cover the sentence can run on from the title list ("… 5.650% SENIOR NOTES DUE 2066 Interest on the Floating
+    // Rate Notes is payable …"); the titles are not part of it, so the sentence starts at its own "Interest on/is/will".
+    const k = s.search(/\bInterest (?:on|is|will)\b/);
+    if (k > 0 && /\b(?:DUE|[Dd]ue)\s+(?:(?:19|20)\d\d|[A-Z][a-z]+\s+\d{1,2},\s*(?:19|20)\d\d)\b|[$€£]\s?\d/.test(s.slice(0, k))) { s = s.slice(k); at += k; }
     if (!dayMonths(s).length && !FREQ(s)) continue;
     if (/redemption (?:date|price)|redeemed|change of control|make-whole|Treasury Rate|accrued and unpaid interest (?:to|on)|defer|deferral|Extension Period|record date|regular record/i.test(s) && !/payable (?:semi|quarter|month|annual|on)|pay interest (?:semi|quarter|month|annual|on)/i.test(s)) continue;
-    cands.push({ s, at: m.index, heading: null, after: body.slice(m.index + s.length, m.index + s.length + 700) });
+    cands.push({ s, at, heading: null, after: body.slice(at + s.length, at + s.length + 700) });
   }
   const classOf = cl => {                                          // "the fixed rate notes", "the floating rate notes", "each series of notes"
     if (/\beach series of (?:the )?notes\b|\ball (?:series of )?(?:the )?notes\b/i.test(cl)) return tr.map(t => t.seq);
@@ -992,31 +1012,66 @@ function dayCounts(text, family, tr) {
   if (family === 'C') return out;
   const body = text.slice(0, family === 'B' ? 25000 : 120000);
   const found = [];
-  const add = (v, at, heading) => found.push({ value: v, at, heading });
+  // FIX3 (F1a): each convention keeps the tranches its own sentence names ("Interest on the Fixed Rate Notes will be paid on the
+  // basis of …", "The 2028 floating rate notes will bear interest … computed on the basis of …"); [] = the sentence names none.
+  const scopeAt = at => {
+    if (family === 'B') return [];
+    let s = sentenceStart(body, at, 600);
+    // "This payment convention is referred to as ACTUAL/ACTUAL (ICMA)": the tranche is named in the sentence before (Amazon EUR).
+    if (/^This (?:payment |day count )?convention\b/i.test(body.slice(s, at)) && s > 2) s = sentenceStart(body, s - 2, 900);
+    return scopeOf(body.slice(s, at).replace(/\bFloating Rates Notes\b/gi, 'Floating Rate Notes'), tr);
+  };
+  // A convention said of a fixed-to-floating security's periods ("during the Fixed Rate Period … 30/360 … and during the Floating Rate
+  // Period … Actual/360", American Express's base prospectus) is not the convention of a plain fixed or floating tranche: not used.
+  const add = (v, at, heading) => {
+    if (family !== 'B' && /\b(?:Fixed|Floating) Rate Period\b|Fixed[- ]to[- ]Floating/i.test(body.slice(sentenceStart(body, at, 600), at))) return;
+    found.push({ value: v, at, heading, scope: scopeAt(at) });
+  };
   for (const m of body.matchAll(/(?<![\w-])(Day Count(?: Convention| Fraction| Basis)?)\s*:\s*([^:]{0,60})/g)) {
     const ticked = m[2].match(/\[\s?[Xx]\s?\]\s*([^\[]{2,20})/);            // "[ ] 30/360 [X] Actual/360 [ ] Actual/Actual"
     const v = /\[\s?\]/.test(m[2]) ? (ticked ? dcCode(ticked[1]) : null) : dcCode(m[2]);
     if (v) add(v, m.index + m[0].length - m[2].length, m[1]);
   }
-  for (const m of body.matchAll(/360-day year,?\s*(?:consisting|composed|comprised|made up)?\s*of (?:twelve 30-day months|12 months of 30 days)|\b30\/360\b|actual number of days[^.]{0,160}?(?:divided by|\/|year of|over a|over)\s*(?:a\s+)?(360|365)(?:-day)?|360-day year and the actual number of days|\bActual\s*\/\s*(360|365|Actual)\b|\(ICMA\)/gi)) {
+  // FIX3 (F1a): also "the actual number of days in an interest period and a 360-day year" and "a 360-day year for the actual
+  // number of days elapsed" (Actual/360), which the floating-rate sections of AbbVie, Oracle, Amazon and UNH print.
+  for (const m of body.matchAll(/360-day year,?\s*(?:consisting|composed|comprised|made up)?\s*of (?:twelve 30-day months|12 months of 30 days)|\b30\/360\b|actual number of days[^.]{0,160}?(?:divided by|\/|year of|over a|over)\s*(?:a\s+)?(360|365)(?:-day)?|actual number of days in (?:an?|the|each|such|any) (?:interest |accrual |calculation |observation )?(?:period|Observation Period)[^.]{0,60}?and a 360-day year|360-day year (?:and|for) the actual number of days|\bActual\s*\/\s*(360|365|Actual)\b|\(ICMA\)/gi)) {
     if (/assum|discount|present value|Treasury|redemption price/i.test(body.slice(Math.max(0, m.index - 200), m.index))) continue;
+    // FIX3: the make-whole's yield definition ("… paying interest on an annual basis (ACTUAL/ACTUAL (ICMA)) of the Comparable
+    // Government Bond") is not the notes' convention.
+    if (/Comparable Government Bond|yield to maturity|Reference Bond|Bund Rate|Gilt/i.test(body.slice(Math.max(0, m.index - 400), m.index + 120))) continue;
     if (/\[\s?\]\s*$/.test(body.slice(Math.max(0, m.index - 6), m.index))) continue;     // an unticked box "[ ] 30/360"
     const v = /30-day|30 days|30\/360/i.test(m[0]) ? '30/360' : /ICMA|Actual\s*\/\s*Actual/i.test(m[0]) ? 'Actual/Actual' : /365/.test(m[0]) ? 'Actual/365' : 'Actual/360';
     add(v, m.index, null);
   }
   if (!found.length) return out;
-  const vals = [...new Set(found.map(f => f.value))];
-  if (vals.length === 1) { for (const t of tr) out.set(t.seq, found[0]); return out; }
-  // Different conventions in one filing: fixed tranches take 30/360 (or the one said of fixed-rate notes), floating ones
-  // the Actual convention said of floating-rate notes. Otherwise not read.
   const near = (f, re) => re.test(body.slice(Math.max(0, f.at - 400), f.at + 200));
+  const mixed = tr.some(t => t.rate === 'floating') && tr.some(t => t.rate !== 'floating');
   for (const t of tr) {
-    if (t.rate === 'fixed_to_floating') continue;                // two conventions (fixed then floating period): not read
-    const want = t.rate === 'floating' ? found.filter(f => f.value !== '30/360' && near(f, /floating/i)) : found.filter(f => near(f, /fixed/i) || f.value === '30/360');
+    // Fixed-to-floating notes: two conventions (fixed, then floating period) → not read (OFFER1 D6; FIX3 F9 for the AmEx and
+    // Toyota rows that showed one convention with no period).
+    if (t.rate === 'fixed_to_floating') continue;
+    // 1. Conventions whose sentence names this tranche (or its class). 2. Else the unscoped ones: in a filing with both fixed
+    // and floating tranches, fixed tranches take 30/360 (or the one said near "fixed"), floating ones an Actual convention said
+    // near "floating" — never an unscoped 30/360. Otherwise not read.
+    // When a pool still holds two conventions (Canadian notes: 30/360 for full periods, "Actual/Actual Canadian Compound Method" for
+    // a short one), the same rate rule decides, as before FIX3.
+    const byRate = list => (t.rate === 'floating' ? list.filter(f => f.value !== '30/360' && near(f, /floating/i)) : list.filter(f => near(f, /fixed/i) || f.value === '30/360'));
+    const scoped = found.filter(f => f.scope.includes(t.seq));
+    const free = found.filter(f => !f.scope.length);
+    let want = scoped.length ? scoped : !mixed ? free : byRate(free);
+    if (new Set(want.map(f => f.value)).size > 1) want = byRate(want);
     const wv = [...new Set(want.map(f => f.value))];
     if (wv.length === 1) out.set(t.seq, want[0]);
   }
   return out;
+}
+// The start of the sentence that contains `at`: after the last ". " or ".” " before it (at most `max` characters back). A "; " does
+// not end it: Pfizer lists its tranches' make-whole clauses in one sentence joined by "; and".
+function sentenceStart(text, at, max = 1500) {
+  const w = text.slice(Math.max(0, at - max), at);
+  let k = -1;
+  for (const m of w.matchAll(/\.[”"’)]?\s+(?=[A-Z(“"•])/g)) k = m.index + m[0].length;
+  return Math.max(0, at - max) + (k >= 0 ? k : 0);
 }
 const dcCode = s => (/30\s*\/\s*360|30\/360/i.test(s) ? '30/360' : /Actual\s*\/\s*360|ACT\s*\/\s*360/i.test(s) ? 'Actual/360' : /Actual\s*\/\s*365|ACT\s*\/\s*365/i.test(s) ? 'Actual/365' : /Actual\s*\/\s*Actual|ACT\s*\/\s*ACT/i.test(s) ? 'Actual/Actual' : null);
 
@@ -1170,8 +1225,11 @@ function earlyRepayment({ text, family, tr, single, supEnd, coverEnd, docDate })
   const orH = findHeading(text, { anchors: [], from: coverEnd, to: supEnd, caps: /OPTIONAL REDEMPTION/, title: /Optional Redemption(?:\s+of\s+the\s+Notes)?(?=\s+[A-Z(])/ });
   const no = new Set();
   let noAll = false;
-  for (const m of body.matchAll(/[^.]*\b(?:will not be redeemable|are not redeemable|is not redeemable|not be subject to (?:optional )?redemption|may not redeem|will not have the (?:right|option) to redeem|not be redeemable (?:at our option )?(?:prior to|before) (?:their )?maturity|will not be subject to redemption)[^.]*\./gi)) {
-    if (/except|other than|unless|tax|change of control|special mandatory/i.test(m[0])) continue;
+  for (const m of body.matchAll(/[^.]*\b(?:will not be redeemable|are not redeemable|is not redeemable|not be subject to (?:optional )?redemption|may not redeem|(?:may|will|shall) not be redeemed (?:at our option )?(?:prior to|before) (?:their |its )?(?:stated )?maturity|will not have the (?:right|option) to redeem|not be redeemable (?:at our option )?(?:prior to|before) (?:their )?maturity|will not be subject to redemption)[^.]*\./gi)) {
+    // FIX3 (F1c): an aside that excepts only a special mandatory redemption ("may not be redeemed prior to maturity (other than pursuant
+    // to a Special Mandatory Redemption …)") does not make the sentence conditional: that redemption is its own field (18).
+    const s0 = m[0].replace(/\((?:other than|except)[^()]*special mandatory redemption[^()]*\)/gi, ' ');
+    if (/except|other than|unless|tax|change of control|special mandatory/i.test(s0)) continue;
     // Scope by the sentence's subject only ("Optional Redemption of Fixed Rate Notes The floating rate notes are not redeemable …").
     // "We may not redeem the Floating Rate Notes …": the object after the verb.
     const k = m[0].search(/\b(?:will not|are not|is not|not be|may not)\b/i);
@@ -1186,7 +1244,9 @@ function earlyRepayment({ text, family, tr, single, supEnd, coverEnd, docDate })
   const mwScope = new Set();
   // The scope is read from the words before "greater of" only; a floating-rate tranche gets it only when that part names it.
   for (const g of body.matchAll(/\bgreater of\b(?=[^.]{0,700}?(?:present values?|Canada Yield Price|Make-Whole Amount|make-whole (?:amount|premium|redemption price)))/gi)) {
-    let head = body.slice(Math.max(body.lastIndexOf('. ', g.index) + 2, g.index - 1500), g.index);
+    // FIX3 (F1c): the sentence starts after ". " or ".” " (Amazon: "… Redemption for Tax Reasons.” Each series of fixed rate notes
+    // may be redeemed …" had run on into the floating notes' sentence and given them the make-whole).
+    let head = body.slice(sentenceStart(body, g.index, 1500), g.index);
     for (let i = 0; i < 3; i++) head = head.replace(/\([^()]*\)/g, ' ');                                   // asides, nested ones too
     const sc = [...new Set([...namedTranches(head, tr), ...classTranches(head.replace(/\beach series of (?=fixed|floating)/i, ''), tr)])];   // "each series of Fixed Rate Notes other than the 2028 Notes, or … the 2028 Notes"
     (sc.length ? sc : tr.filter(t => t.rate !== 'floating').map(t => t.seq)).forEach(x => mwScope.add(x));
@@ -1364,16 +1424,21 @@ function part2({ text, family, tr, single, rows, coverEnd, supEnd, anchors, docD
 
   // #21 Bank fee, #22 Proceeds to the issuer before expenses (T % and amount; O total).
   let sum = 0, sumOk = tr.length > 0, cur = null;
+  // FIX3 (F8): a pricing supplement that prints a fee we do not read — one commission per agent ("RBC's Discount or Commission:
+  // 0.030% … TFSS USA's Discount or Commission: 0.150%") or "Up to x%" — states a fee, so it gets no row ("Not read yet"), never
+  // "Not stated in the filing".
+  const feePrinted = family === 'B' && new RegExp(`(?:${FEE_LABEL}|(?<![\\w-])[A-Z][\\w.&’' ]{0,40}?['’]s\\s+(?:Discount or Commission|Discounts? and Commissions?|Commission|Discount))\\s*:\\s*(?:Up to\\s+)?\\d`).test(text.slice(0, 25000));
+  const feeAbsent = (seq, part) => { if (!feePrinted) absent(seq, 'bank_fee_pct', 'not_disclosed', part); };
   for (const t of tr) {
     const p = prices.get(t.seq);
     const part = family === 'A' ? 'cover table' : tdef;
-    if (!p || (family === 'A' && !priceKept.has(t.seq))) { if (family === 'B' && single) { absent(t.seq, 'bank_fee_pct', 'not_disclosed', part); absent(t.seq, 'proceeds_pct', 'not_disclosed', part); } sumOk = false; continue; }
+    if (!p || (family === 'A' && !priceKept.has(t.seq))) { if (family === 'B' && single) { feeAbsent(t.seq, part); absent(t.seq, 'proceeds_pct', 'not_disclosed', part); } sumOk = false; continue; }
     let fee = p.fee, pro = p.proceeds;
     if (fee && !(fee.v > 0 && fee.v < 5)) { fail('bank_fee_pct', t.seq, 'range', `${fee.v}`); fee = null; }
     if (pro && !(pro.v > 85 && pro.v <= 101)) { fail('proceeds_pct', t.seq, 'range', `${pro.v}`); pro = null; }
     if (fee && pro && p.value != null && Math.abs(p.value - fee.v - pro.v) > 0.01) { fail('proceeds_pct', t.seq, 'price_fee_proceeds', `${p.value} − ${fee.v} ≠ ${pro.v}`); fee = null; pro = null; }
     if (fee) put(t.seq, 'bank_fee_pct', 'disclosed', { num: fee.v }, src(fee.at, { part, heading: fee.heading }));
-    else if (family !== 'A' && !p.fee) absent(t.seq, 'bank_fee_pct', 'not_disclosed', part);
+    else if (family !== 'A' && !p.fee) { if (family === 'B') feeAbsent(t.seq, part); else absent(t.seq, 'bank_fee_pct', 'not_disclosed', part); }
     if (pro) put(t.seq, 'proceeds_pct', 'disclosed', { num: pro.v }, src(pro.at, { part, heading: pro.heading }));
     else if (family !== 'A' && !p.proceeds && family !== 'C') absent(t.seq, 'proceeds_pct', 'not_disclosed', part);
     const pct = pro ? pro.v : (fee && p.value != null ? p.value - fee.v : null);
@@ -1465,22 +1530,31 @@ function readParties({ text, family, tr, bankBlock, fwpDocs, issuerHint, supplem
     const dupe = parties.find(x => x.name === p.name && x.role === p.role && x.tranche_seq === p.tranche_seq);
     if (!dupe) parties.push(p);
   };
+  // FIX3 (F2): a qualifier names tranches item by item ("Floating Rate Notes, 2028 Notes, 2031 Notes … and 2056 Notes"), each read
+  // as namedTranches() reads it: "2028 Notes" next to "Floating Rate Notes due 2028" is the fixed 2028 tranche (the issuer's defined
+  // term). Every item must map, or the qualifier is not read: the bank then gets no row (a note), never a tranche-0 row, which would
+  // show it on tranches the qualifier excludes.
   const qualifierTranches = q => {
     if (!q || /^all\b/i.test(q)) return [0];
-    const years = [...q.matchAll(/\b(20\d\d|19\d\d)\b/g)].map(m => Number(m[1]));
-    const fl = /floating/i.test(q);
+    // A qualifier that names no tranche ("*in alphabetical order") does not narrow the role.
+    if (!/\b(?:(?:19|20)\d\d|notes?|debentures?|bonds?|securities|series|fixed|floating)\b|\d%/i.test(q)) return [0];
+    const items = q.replace(/^(?:for|in respect of|with respect to)\s+/i, '').split(/\s*[,;]\s*(?:and\s+)?|\s+and\s+|\s*&\s*/).map(x => x.trim()).filter(Boolean);
     const seqs = new Set();
-    let ok = true;
-    for (const y of years) { const ys = tr.filter(t => t.year === y && (!fl || years.length > 1 || t.rate === 'floating')); if (ys.length === 1) seqs.add(ys[0].seq); else ok = false; }
-    if (fl) { const fs = tr.filter(t => t.rate === 'floating'); if (fs.length === 1) seqs.add(fs[0].seq); else if (!years.length) ok = false; }
-    return ok && seqs.size ? [...seqs] : null;
+    for (const it of items) {
+      const one = /\b(?:Notes?|Debentures?|Bonds?|Securities)\b/i.test(it) ? it : `${it} Notes`;    // "2028 and 2031 Notes": the noun is printed once
+      const sc = scopeOf(/^the\b/i.test(one) ? one : `the ${one}`, tr);
+      if (!sc.length) return null;
+      sc.forEach(x => seqs.add(x));
+    }
+    return seqs.size ? [...seqs] : null;
   };
   const pushNames = (names, role, printed, part, segAt, doc, f) => {
     for (const n of names) {
       if (!n.known) unknown++;
       const seqs = qualifierTranches(n.qualifier);
       const rp = n.qualifier ? `${printed} (${n.qualifier})`.slice(0, 120) : printed;
-      for (const s of seqs || [0]) add({ name: n.name.slice(0, 160), role, role_printed: rp, tranche_seq: s, part, at: segAt + n.at, doc, url: f?.url, acc: f?.accessionNumber, key: n.key });
+      if (!seqs) { notes.push(`bank qualifier not read: ${n.name.slice(0, 60)} (${String(n.qualifier).slice(0, 80)}) → no row`); continue; }
+      for (const s of seqs) add({ name: n.name.slice(0, 160), role, role_printed: rp, tranche_seq: s, part, at: segAt + n.at, doc, url: f?.url, acc: f?.accessionNumber, key: n.key });
     }
   };
   let sawBankHeads = new Set(), sawLabels = new Set();
@@ -1602,6 +1676,15 @@ function readParties({ text, family, tr, bankBlock, fwpDocs, issuerHint, supplem
     if (issuers.includes(norm(p.name))) { clash = `${p.name} (the issuer) read as ${p.role}`; break; }
   }
   for (const p of parties) if (p.tranche_seq && !tr.some(t => t.seq === p.tranche_seq)) { clash = `tranche ${p.tranche_seq} does not exist`; break; }
+  // FIX3 (F2): one bank, two selling roles on one tranche (tranche 0 covers every tranche) is a misread qualifier → clash.
+  if (!clash) {
+    const sel = parties.filter(p => INTERMEDIARY.has(p.role));
+    const id = p => p.key || norm(p.name);
+    for (const a of sel) {
+      const b = sel.find(x => x !== a && id(x) === id(a) && x.role !== a.role && (x.tranche_seq === a.tranche_seq || !x.tranche_seq || !a.tranche_seq));
+      if (b) { clash = `${a.name} is both ${a.role} and ${b.role} on tranche ${a.tranche_seq || b.tranche_seq || 0}`; break; }
+    }
+  }
   if (dropStats.dropped.length) notes.push(`bank lists: ${dropStats.dropped.length} text run(s) not read as names`);
   return { parties, states, notes, unknown, clash, dropped: dropStats.dropped };
 }

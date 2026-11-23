@@ -1,6 +1,8 @@
 // MA-NOV-BOND.OFFER2 — offline offering dry run over the whole cached corpus. Reads state/ only; writes only --out. 0 SEC requests, 0 D1.
 //
-//   node offer-dryrun.mjs --out=<file.json> --ingested-at=<ISO time>
+//   node offer-dryrun.mjs --out=<file.json> --ingested-at=<ISO time> [--generated=<ISO time>]
+//   (FIX3: --generated fixes the output's `generated` stamp, so the run file and the SQL headers that carry its hash rebuild
+//   byte-identically — BOND.REVIEW F10. Without it the current time is used, as before.)
 //
 // Corpus (spec v2 §2): the final filings (status `debt`) of the 15 Oct snapshot (state/dryrun-2026-10-15.json), each from state/cache,
 // re-parsed with the parser at HEAD (bonds-1.3.1, the reliability release that BOND.APPLY1 writes) and paired with its same-deal term
@@ -29,7 +31,7 @@ const disc = JSON.parse(readFileSync(discFile, 'utf8'));
 const meta = new Map(), fwpList = [];
 for (const i of disc) { for (const f of i.filings) meta.set(f.accessionNumber, f); for (const f of i.fwpList || []) fwpList.push(f); }
 const AT = arg['ingested-at'];
-const out = { generated: new Date().toISOString(), ingested_at: AT, parser_version: PARSER_VERSION, offering_version: OFFERING_VERSION,
+const out = { generated: arg.generated || new Date().toISOString(), ingested_at: AT, parser_version: PARSER_VERSION, offering_version: OFFERING_VERSION,
   inputs: { snapshot: { file: 'state/dryrun-2026-10-15.json', sha256: sha(readFileSync(snapFile)) }, discovery: { file: 'state/discovery-dev.json', sha256: sha(readFileSync(discFile)) } },
   filings: [] };
 for (const s of snap.filings.filter(f => f.status === 'debt')) {

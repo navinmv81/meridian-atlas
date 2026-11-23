@@ -832,6 +832,58 @@
       "html_sha256": "9f9b4d4db9a00ffd24748b08367b194aea9771bbdbe7ec811ebf12610a0a551f",
       "expect": "FWP; OFFER1: bank list printed in capitals (\"BARCLAYS CAPITAL INC. … GOLDMAN SACHS & CO. LLC\")",
       "fetched": "cache (state/cache, MA-NOV-BOND.OFFER1, 22 Nov; 0 SEC requests)"
+    },
+    {
+      "name": "abbvie-424b5-tranche-banks-2026-02-26",
+      "file": "abbvie-424b5-tranche-banks-2026-02-26.htm.gz",
+      "cik": "0001551152",
+      "accession": "0001104659-26-020619",
+      "form": "424B5",
+      "filing_date": "2026-02-26",
+      "file_number": "333-284980",
+      "url": "https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm",
+      "html_sha256": "71363e2395ee92738eab1162f0962a8cf79ae9da32e710a9822e8ec42bc7f8b2",
+      "expect": "FIX3 (F1, F2): 7 tranches; co-manager qualifiers naming some tranches (\"Floating Rate Notes, 2028 Notes, …\"); 30/360 said of the Fixed Rate Notes only; floating notes \"may not be redeemed prior to maturity\"; cover title list runs into the floating notes' interest sentence",
+      "fetched": "cache (state/cache, MA-NOV-BOND.FIX3, 23 Nov; 0 SEC requests)"
+    },
+    {
+      "name": "amazon-424b5-eur-frn-2026-03-13",
+      "file": "amazon-424b5-eur-frn-2026-03-13.htm.gz",
+      "cik": "0001018724",
+      "accession": "0001104659-26-027669",
+      "form": "424B5",
+      "filing_date": "2026-03-13",
+      "file_number": "333-293246",
+      "url": "https://www.sec.gov/Archives/edgar/data/1018724/000110465926027669/tm266670-6_424b5.htm",
+      "html_sha256": "b395ba2bf3c9d4eac5a5254f24dfc1ddbfa5b72f8e2a706410b364e44c5380d3",
+      "expect": "FIX3 (F1c): EUR; the floating notes are not redeemable except for tax reasons; the make-whole is said of the fixed rate notes only",
+      "fetched": "cache (state/cache, MA-NOV-BOND.FIX3, 23 Nov; 0 SEC requests)"
+    },
+    {
+      "name": "toyota-424b2-mtn-frn-two-agents-2024-02-21",
+      "file": "toyota-424b2-mtn-frn-two-agents-2024-02-21.htm.gz",
+      "cik": "0000834071",
+      "accession": "0000950103-24-002543",
+      "form": "424B2",
+      "filing_date": "2024-02-21",
+      "file_number": "333-276616",
+      "url": "https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm",
+      "html_sha256": "bd1bf4eb7391a304d591e967ba58da523062395fc0161d70cdffaac745570659",
+      "expect": "FIX3 (F8): floating MTN with one commission per agent (RBC 0.030%, TFSS USA 0.150%) → no bank-fee row",
+      "fetched": "cache (state/cache, MA-NOV-BOND.FIX3, 23 Nov; 0 SEC requests)"
+    },
+    {
+      "name": "amex-424b2-eur-ftf-2026-06-11",
+      "file": "amex-424b2-eur-ftf-2026-06-11.htm.gz",
+      "cik": "0000004962",
+      "accession": "0001104659-26-073020",
+      "form": "424B2",
+      "filing_date": "2026-06-11",
+      "file_number": "333-276975",
+      "url": "https://www.sec.gov/Archives/edgar/data/4962/000110465926073020/tm2617154-2_424b2.htm",
+      "html_sha256": "b7f91c008e7ae5373886982d903f9d8d4e35d30a77f3b73d2eda364cdf7a1250",
+      "expect": "FIX3 (F9): EUR fixed-to-floating; ACTUAL/ACTUAL (ICMA) during the fixed rate period only → day count not read",
+      "fetched": "cache (state/cache, MA-NOV-BOND.FIX3, 23 Nov; 0 SEC requests)"
     }
   ]
 }

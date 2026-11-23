@@ -1,10 +1,10 @@
 # MA-NOV-BOND — offering facts: 20-filing manual check sheet (spec v2 §6.2)
 
 ```text
-GENERATED:  2026-11-22T16:30:00Z by apply/offer-checksheet.mjs from offer-run.json (52b5f2922b9e3648…)
-OFFERING:   bonds-offering-1.1.0 · parser bonds-1.3.1
+GENERATED:  2026-11-23T08:00:00Z by apply/offer-checksheet.mjs from offer-run.json (c7641efb2a4a6701…)
+OFFERING:   bonds-offering-1.2.0 · parser bonds-1.3.1
 FOR:        U8 BOND.VERIFY — the Data-Identity Lead fills "Source value", "OK" and "Note"
-SAMPLE:     20 filings · 14 issuers · 14 multi-tranche · 1012 fact rows + 228 party rows to check
+SAMPLE:     20 filings · 14 issuers · 14 multi-tranche · 978 fact rows + 254 party rows to check
 ```
 
 **How to check.** Open the filing link (it jumps to the section where the filing has an anchor). Find the value at the section and page given. Write what the filing prints in *Source value*, then *OK* = Y or N. "Not stated in the filing" is a claim too: mark N if the filing does state it. "@n" is the character position in the decoded text, for the verifier’s tool only.
@@ -95,29 +95,27 @@ Filing: https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d88351
 | 46 | Early repayment by the issuer | t3 | Yes · from 2035-03-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm#stoc883518_7) · optional redemption — Optional Redemption, page S-9 · @29926 |  |  |  |
 | 47 | Early repayment by the issuer | t4 | Yes · from 2054-12-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm#stoc883518_7) · optional redemption — Optional Redemption, page S-9 · @30030 |  |  |  |
 | 48 | Buy-back if control changes | all | Yes, at 101% of principal | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm#stoc883518_7) · description of the notes — Description of The Notes, page S-11 · @36433 |  |  |  |
-| 49 | What the money is for | all | general corporate purposes; repay or refinance debt; working capital | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm#stoc883518_6) · use of proceeds — Use of Proceeds, page S-6 · @17997 |  |  |  |
-| 50 | Bank fee | t1 | 0.25% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2543 |  |  |  |
-| 51 | Bank fee | t2 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2620 |  |  |  |
-| 52 | Bank fee | t3 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2697 |  |  |  |
-| 53 | Bank fee | t4 | 0.75% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2774 |  |  |  |
-| 54 | Proceeds to the issuer before expenses (%) | t1 | 99.704% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2563 |  |  |  |
-| 55 | Proceeds to the issuer before expenses (%) | t2 | 99.457% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2640 |  |  |  |
-| 56 | Proceeds to the issuer before expenses (%) | t3 | 99.421% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2717 |  |  |  |
-| 57 | Proceeds to the issuer before expenses (%) | t4 | 98.244% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2794 |  |  |  |
-| 58 | Proceeds to the issuer (amount, this tranche) | t1 | USD 498,520,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2574 |  |  |  |
-| 59 | Proceeds to the issuer (amount, this tranche) | t2 | USD 745,927,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2651 |  |  |  |
-| 60 | Proceeds to the issuer (amount, this tranche) | t3 | USD 994,210,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2728 |  |  |  |
-| 61 | Proceeds to the issuer (amount, this tranche) | t4 | USD 736,830,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2805 |  |  |  |
-| 62 | Proceeds to the issuer (whole deal) | all | USD 2,975,487,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2863 |  |  |  |
-| 63 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm#stoc883518_5) · risk factors — Risk Factors, page S-5 · @17275 |  |  |  |
-| 64 | Where the notes may not be sold | all | EEA, UK, Switzerland, Hong Kong, Japan, Singapore, Taiwan | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm#stoc883518_9) · underwriting — European Economic Area, page S-23 · @77565 |  |  |  |
-| 65 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover — Cover page, page cover · @1843 |  |  |  |
-| 66 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm#stoc883518_7) · description of the notes — Description of The Notes, page S-7 · @19321 |  |  |  |
-| 67 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover |  |  |  |
-| 68 | Banks / roles: bookrunner | all | 4 named | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover — Cover page, page cover · @3250 |  |  |  |
-| 69 | Banks / roles: co_manager | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover |  |  |  |
-| 70 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover |  |  |  |
-| 71 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover |  |  |  |
+| 49 | Bank fee | t1 | 0.25% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2543 |  |  |  |
+| 50 | Bank fee | t2 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2620 |  |  |  |
+| 51 | Bank fee | t3 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2697 |  |  |  |
+| 52 | Bank fee | t4 | 0.75% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2774 |  |  |  |
+| 53 | Proceeds to the issuer before expenses (%) | t1 | 99.704% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2563 |  |  |  |
+| 54 | Proceeds to the issuer before expenses (%) | t2 | 99.457% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2640 |  |  |  |
+| 55 | Proceeds to the issuer before expenses (%) | t3 | 99.421% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2717 |  |  |  |
+| 56 | Proceeds to the issuer before expenses (%) | t4 | 98.244% | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2794 |  |  |  |
+| 57 | Proceeds to the issuer (amount, this tranche) | t1 | USD 498,520,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2574 |  |  |  |
+| 58 | Proceeds to the issuer (amount, this tranche) | t2 | USD 745,927,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2651 |  |  |  |
+| 59 | Proceeds to the issuer (amount, this tranche) | t3 | USD 994,210,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2728 |  |  |  |
+| 60 | Proceeds to the issuer (amount, this tranche) | t4 | USD 736,830,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover table — Cover page, page cover · @2805 |  |  |  |
+| 61 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm#stoc883518_5) · risk factors — Risk Factors, page S-5 · @17275 |  |  |  |
+| 62 | Where the notes may not be sold | all | (section link and heading only — place list withheld, FIX3) | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm#stoc883518_9) · underwriting — European Economic Area, page S-23 · @77565 |  |  |  |
+| 63 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover — Cover page, page cover · @1843 |  |  |  |
+| 64 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm#stoc883518_7) · description of the notes — Description of The Notes, page S-7 · @19321 |  |  |  |
+| 65 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover |  |  |  |
+| 66 | Banks / roles: bookrunner | all | 4 named | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover — Cover page, page cover · @3250 |  |  |  |
+| 67 | Banks / roles: co_manager | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover |  |  |  |
+| 68 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover |  |  |  |
+| 69 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/731766/000119312525142782/d883518d424b5.htm) · cover |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -189,29 +187,27 @@ Filing: https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d9495
 | 47 | Early repayment by the issuer | t4 | Yes · from 2036-06-01 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm#supptx949580_8) · optional redemption — Optional Redemption, page S-17 · @81717 |  |  |  |
 | 48 | Mandatory early repayment if a deal fails | t3 | Yes, at 101%, if the deal fails by 2027-07-29 | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover — Cover page, page cover · @3881 |  |  |  |
 | 49 | Mandatory early repayment if a deal fails | t4 | Yes, at 101%, if the deal fails by 2027-07-29 | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover — Cover page, page cover · @3881 |  |  |  |
-| 50 | What the money is for | all | general corporate purposes; repay or refinance debt; fund an acquisition (acquisition: MarketAxess) | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm#supptx949580_6) · use of proceeds — Use of Proceeds, page S-11 · @59191 |  |  |  |
-| 51 | Bank fee | t1 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6065 |  |  |  |
-| 52 | Bank fee | t2 | 0.6% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6085 |  |  |  |
-| 53 | Bank fee | t3 | 0.625% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6105 |  |  |  |
-| 54 | Bank fee | t4 | 0.65% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6125 |  |  |  |
-| 55 | Proceeds to the issuer before expenses (%) | t1 | 99.385% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6182 |  |  |  |
-| 56 | Proceeds to the issuer before expenses (%) | t2 | 98.888% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6207 |  |  |  |
-| 57 | Proceeds to the issuer before expenses (%) | t3 | 98.745% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6232 |  |  |  |
-| 58 | Proceeds to the issuer before expenses (%) | t4 | 98.478% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6255 |  |  |  |
-| 59 | Proceeds to the issuer (amount, this tranche) | t1 | USD 1,242,312,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6193 |  |  |  |
-| 60 | Proceeds to the issuer (amount, this tranche) | t2 | USD 1,087,768,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6218 |  |  |  |
-| 61 | Proceeds to the issuer (amount, this tranche) | t3 | USD 641,842,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6243 |  |  |  |
-| 62 | Proceeds to the issuer (amount, this tranche) | t4 | USD 738,585,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6266 |  |  |  |
-| 63 | Proceeds to the issuer (whole deal) | all | USD 3,710,000,000 (approximately, after expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm#supptx949580_6) · use of proceeds — Use of Proceeds, page S-11 · @59352 |  |  |  |
-| 64 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm#supptx949580_5) · risk factors — Risk Factors, page S-7 · @42883 |  |  |  |
-| 65 | Where the notes may not be sold | all | EEA, UK, Switzerland, Canada, Taiwan, South Korea, Japan, Hong Kong, Singapore | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm#supptx949580_10) · underwriting — Selling Restrictions, page S-37 · @161135 |  |  |  |
-| 66 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover — Cover page, page cover · @5133 |  |  |  |
-| 67 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm#supptx949580_8) · description of the notes — DESCRIPTION OF NOTES, page S-14 · @68395 |  |  |  |
-| 68 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover |  |  |  |
-| 69 | Banks / roles: bookrunner | all | 8 named | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover — Cover page, page cover · @6816 |  |  |  |
-| 70 | Banks / roles: co_manager | all | 6 named | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover — Cover page, page cover · @7051 |  |  |  |
-| 71 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover |  |  |  |
-| 72 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover |  |  |  |
+| 50 | Bank fee | t1 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6065 |  |  |  |
+| 51 | Bank fee | t2 | 0.6% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6085 |  |  |  |
+| 52 | Bank fee | t3 | 0.625% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6105 |  |  |  |
+| 53 | Bank fee | t4 | 0.65% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6125 |  |  |  |
+| 54 | Proceeds to the issuer before expenses (%) | t1 | 99.385% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6182 |  |  |  |
+| 55 | Proceeds to the issuer before expenses (%) | t2 | 98.888% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6207 |  |  |  |
+| 56 | Proceeds to the issuer before expenses (%) | t3 | 98.745% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6232 |  |  |  |
+| 57 | Proceeds to the issuer before expenses (%) | t4 | 98.478% | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6255 |  |  |  |
+| 58 | Proceeds to the issuer (amount, this tranche) | t1 | USD 1,242,312,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6193 |  |  |  |
+| 59 | Proceeds to the issuer (amount, this tranche) | t2 | USD 1,087,768,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6218 |  |  |  |
+| 60 | Proceeds to the issuer (amount, this tranche) | t3 | USD 641,842,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6243 |  |  |  |
+| 61 | Proceeds to the issuer (amount, this tranche) | t4 | USD 738,585,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover table — Cover page, page cover · @6266 |  |  |  |
+| 62 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm#supptx949580_5) · risk factors — Risk Factors, page S-7 · @42883 |  |  |  |
+| 63 | Where the notes may not be sold | all | (section link and heading only — place list withheld, FIX3) | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm#supptx949580_10) · underwriting — Selling Restrictions, page S-37 · @161135 |  |  |  |
+| 64 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover — Cover page, page cover · @5133 |  |  |  |
+| 65 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm#supptx949580_8) · description of the notes — DESCRIPTION OF NOTES, page S-14 · @68395 |  |  |  |
+| 66 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover |  |  |  |
+| 67 | Banks / roles: bookrunner | all | 8 named | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover — Cover page, page cover · @6816 |  |  |  |
+| 68 | Banks / roles: co_manager | all | 6 named | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover — Cover page, page cover · @7051 |  |  |  |
+| 69 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover |  |  |  |
+| 70 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1571949/000119312526349174/d949580d424b5.htm) · cover |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -290,65 +286,62 @@ Filing: https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266
 | 41 | Price to investors | t5 | 99.911% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3735 |  |  |  |
 | 42 | Price to investors | t6 | 99.736% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3775 |  |  |  |
 | 43 | Price to investors | t7 | 99.714% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3815 |  |  |  |
-| 44 | Interest paid | t1 | 03-03, 06-03, 09-03, 12-03 · first 2026-06-03 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @525 |  |  |  |
+| 44 | Interest paid | t1 | 03-03, 06-03, 09-03, 12-03 · first 2026-06-03 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @552 |  |  |  |
 | 45 | Interest paid | t2 | 03-03, 09-03 · first 2026-09-03 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @684 |  |  |  |
-| 46 | Interest paid | t7 | 03-03, 06-03, 09-03, 12-03 · first 2026-06-03 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @525 |  |  |  |
-| 47 | How interest is counted | t1 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
-| 48 | How interest is counted | t2 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
-| 49 | How interest is counted | t3 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
-| 50 | How interest is counted | t4 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
-| 51 | How interest is counted | t5 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
-| 52 | How interest is counted | t6 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
-| 53 | How interest is counted | t7 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
-| 54 | Priced on | all | 2026-02-24 | [term sheet](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020557/tm266774d5_fwp.htm) · term sheet — Trade Date · @1322 |  |  |  |
-| 55 | Issue date | all | on or about | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @4527 |  |  |  |
-| 56 | Ranking | t1 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 57 | Ranking | t2 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 58 | Ranking | t3 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 59 | Ranking | t4 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 60 | Ranking | t5 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 61 | Ranking | t6 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 62 | Ranking | t7 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 63 | Secured or unsecured | t1 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 64 | Secured or unsecured | t2 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 65 | Secured or unsecured | t3 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 66 | Secured or unsecured | t4 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 67 | Secured or unsecured | t5 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 68 | Secured or unsecured | t6 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 69 | Secured or unsecured | t7 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
-| 70 | Early repayment by the issuer | t1 | Yes | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sSUM) · optional redemption — Optional Redemption, page S-3 · @15098 |  |  |  |
-| 71 | Early repayment by the issuer | t2 | Yes · make-whole | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sSUM) · optional redemption — Optional Redemption, page S-3 · @15098 |  |  |  |
-| 72 | Early repayment by the issuer | t3 | Yes · from 2031-02-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · optional redemption — Optional Redemption, page S-21 · @78625 |  |  |  |
-| 73 | Early repayment by the issuer | t4 | Yes · from 2033-01-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · optional redemption — Optional Redemption, page S-21 · @78752 |  |  |  |
-| 74 | Early repayment by the issuer | t5 | Yes · from 2035-12-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · optional redemption — Optional Redemption, page S-21 · @78879 |  |  |  |
-| 75 | Early repayment by the issuer | t6 | Yes · from 2055-09-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · optional redemption — Optional Redemption, page S-21 · @79009 |  |  |  |
-| 76 | Early repayment by the issuer | t7 | Yes · from 2065-09-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · optional redemption — Optional Redemption, page S-22 · @79165 |  |  |  |
-| 77 | What the money is for | all | general corporate purposes; repay or refinance debt | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sUOP) · use of proceeds — Use of Proceeds, page S-12 · @46098 |  |  |  |
-| 78 | Bank fee | t1 | 0.15% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3584 |  |  |  |
-| 79 | Bank fee | t2 | 0.15% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3624 |  |  |  |
-| 80 | Bank fee | t3 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3664 |  |  |  |
-| 81 | Bank fee | t4 | 0.375% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3704 |  |  |  |
-| 82 | Bank fee | t5 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3744 |  |  |  |
-| 83 | Bank fee | t6 | 0.75% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3784 |  |  |  |
-| 84 | Bank fee | t7 | 0.75% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3824 |  |  |  |
-| 85 | Proceeds to the issuer before expenses (%) | t1 | 99.85% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3592 |  |  |  |
-| 86 | Proceeds to the issuer before expenses (%) | t2 | 99.816% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3632 |  |  |  |
-| 87 | Proceeds to the issuer before expenses (%) | t3 | 99.622% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3672 |  |  |  |
-| 88 | Proceeds to the issuer before expenses (%) | t4 | 99.486% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3712 |  |  |  |
-| 89 | Proceeds to the issuer before expenses (%) | t5 | 99.461% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3752 |  |  |  |
-| 90 | Proceeds to the issuer before expenses (%) | t6 | 98.986% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3792 |  |  |  |
-| 91 | Proceeds to the issuer before expenses (%) | t7 | 98.964% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3832 |  |  |  |
-| 92 | Proceeds to the issuer (whole deal) | all | USD 7,959,025,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3879 |  |  |  |
-| 93 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sRIFA) · risk factors — Risk Factors, page S-6 · @20008 |  |  |  |
-| 94 | Where the notes may not be sold | all | Canada, Dubai (DIFC), EEA, Australia, UK, Hong Kong, Japan, Singapore, South Korea, Taiwan, UAE | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sUCOI) · underwriting — Selling Restrictions, page S-43 · @171201 |  |  |  |
-| 95 | Bank conflicts of interest | all | Conflicts of Interest | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sUCOI) · underwriting — CONFLICTS OF INTEREST, page S-41 · @158757 |  |  |  |
-| 96 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2453 |  |  |  |
-| 97 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sSUM) · description of the notes — SUMMARY, page S-4 · @17906 |  |  |  |
-| 98 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover |  |  |  |
-| 99 | Banks / roles: bookrunner | all | 18 named | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @4570 |  |  |  |
-| 100 | Banks / roles: co_manager | all | 27 named | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @5071 |  |  |  |
-| 101 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover |  |  |  |
-| 102 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover |  |  |  |
+| 46 | How interest is counted | t1 | Actual/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @56009 |  |  |  |
+| 47 | How interest is counted | t2 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
+| 48 | How interest is counted | t3 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
+| 49 | How interest is counted | t4 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
+| 50 | How interest is counted | t5 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
+| 51 | How interest is counted | t6 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
+| 52 | How interest is counted | t7 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · description of the notes — DESCRIPTION OF NOTES, page S-16 · @55891 |  |  |  |
+| 53 | Priced on | all | 2026-02-24 | [term sheet](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020557/tm266774d5_fwp.htm) · term sheet — Trade Date · @1322 |  |  |  |
+| 54 | Issue date | all | on or about | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @4527 |  |  |  |
+| 55 | Ranking | t1 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 56 | Ranking | t2 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 57 | Ranking | t3 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 58 | Ranking | t4 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 59 | Ranking | t5 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 60 | Ranking | t6 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 61 | Ranking | t7 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 62 | Secured or unsecured | t1 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 63 | Secured or unsecured | t2 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 64 | Secured or unsecured | t3 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 65 | Secured or unsecured | t4 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 66 | Secured or unsecured | t5 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 67 | Secured or unsecured | t6 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 68 | Secured or unsecured | t7 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2112 |  |  |  |
+| 69 | Early repayment by the issuer | t1 | No — cannot be repaid early | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sSUM) · optional redemption — Optional Redemption, page S-3 · @15098 |  |  |  |
+| 70 | Early repayment by the issuer | t2 | Yes · make-whole | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sSUM) · optional redemption — Optional Redemption, page S-3 · @15098 |  |  |  |
+| 71 | Early repayment by the issuer | t3 | Yes · from 2031-02-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · optional redemption — Optional Redemption, page S-21 · @78625 |  |  |  |
+| 72 | Early repayment by the issuer | t4 | Yes · from 2033-01-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · optional redemption — Optional Redemption, page S-21 · @78752 |  |  |  |
+| 73 | Early repayment by the issuer | t5 | Yes · from 2035-12-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · optional redemption — Optional Redemption, page S-21 · @78879 |  |  |  |
+| 74 | Early repayment by the issuer | t6 | Yes · from 2055-09-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · optional redemption — Optional Redemption, page S-21 · @79009 |  |  |  |
+| 75 | Early repayment by the issuer | t7 | Yes · from 2065-09-15 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sDON) · optional redemption — Optional Redemption, page S-22 · @79165 |  |  |  |
+| 76 | Bank fee | t1 | 0.15% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3584 |  |  |  |
+| 77 | Bank fee | t2 | 0.15% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3624 |  |  |  |
+| 78 | Bank fee | t3 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3664 |  |  |  |
+| 79 | Bank fee | t4 | 0.375% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3704 |  |  |  |
+| 80 | Bank fee | t5 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3744 |  |  |  |
+| 81 | Bank fee | t6 | 0.75% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3784 |  |  |  |
+| 82 | Bank fee | t7 | 0.75% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3824 |  |  |  |
+| 83 | Proceeds to the issuer before expenses (%) | t1 | 99.85% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3592 |  |  |  |
+| 84 | Proceeds to the issuer before expenses (%) | t2 | 99.816% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3632 |  |  |  |
+| 85 | Proceeds to the issuer before expenses (%) | t3 | 99.622% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3672 |  |  |  |
+| 86 | Proceeds to the issuer before expenses (%) | t4 | 99.486% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3712 |  |  |  |
+| 87 | Proceeds to the issuer before expenses (%) | t5 | 99.461% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3752 |  |  |  |
+| 88 | Proceeds to the issuer before expenses (%) | t6 | 98.986% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3792 |  |  |  |
+| 89 | Proceeds to the issuer before expenses (%) | t7 | 98.964% | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover table — Cover page, page cover · @3832 |  |  |  |
+| 90 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sRIFA) · risk factors — Risk Factors, page S-6 · @20008 |  |  |  |
+| 91 | Where the notes may not be sold | all | (section link and heading only — place list withheld, FIX3) | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sUCOI) · underwriting — Selling Restrictions, page S-43 · @171201 |  |  |  |
+| 92 | Bank conflicts of interest | all | Conflicts of Interest | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sUCOI) · underwriting — CONFLICTS OF INTEREST, page S-41 · @158757 |  |  |  |
+| 93 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @2453 |  |  |  |
+| 94 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm#sSUM) · description of the notes — SUMMARY, page S-4 · @17906 |  |  |  |
+| 95 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover |  |  |  |
+| 96 | Banks / roles: bookrunner | all | 20 named | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @4570 |  |  |  |
+| 97 | Banks / roles: co_manager | all | 51 named | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover — Cover page, page cover · @5071 |  |  |  |
+| 98 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover |  |  |  |
+| 99 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -361,43 +354,69 @@ Filing: https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266
 | P7 | BNP PARIBAS | bookrunner | Joint Book-Running Managers (2056 Notes and 2066 Notes) | t6 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
 | P8 | BNP PARIBAS | bookrunner | Joint Book-Running Managers (2056 Notes and 2066 Notes) | t7 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
 | P9 | Citigroup | bookrunner | Joint Book-Running Managers (Floating Rate Notes and 2028 Notes) | t1 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P10 | Deutsche Bank Securities | bookrunner | Joint Book-Running Managers (2031 Notes and 2033 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P11 | Deutsche Bank Securities | bookrunner | Joint Book-Running Managers (2031 Notes and 2033 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P12 | Goldman Sachs & CO. LLC | bookrunner | Joint Book-Running Managers (Floating Rate Notes and 2028 Notes) | t1 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P13 | HSBC | bookrunner | Joint Book-Running Managers (2031 Notes and 2033 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P14 | HSBC | bookrunner | Joint Book-Running Managers (2031 Notes and 2033 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P15 | Mizuho | bookrunner | Joint Book-Running Managers (2033 Notes and 2036 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P16 | Mizuho | bookrunner | Joint Book-Running Managers (2033 Notes and 2036 Notes) | t5 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P17 | SOCIETE GENERALE | bookrunner | Joint Book-Running Managers (2056 Notes and 2066 Notes) | t6 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P18 | SOCIETE GENERALE | bookrunner | Joint Book-Running Managers (2056 Notes and 2066 Notes) | t7 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P19 | Barclays | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2056 Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P20 | BNP PARIBAS | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P21 | Citigroup | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P22 | Citigroup | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P23 | Citigroup | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t5 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P24 | Citigroup | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t6 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P25 | Citigroup | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t7 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P26 | Deutsche Bank Securities | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P27 | Goldman Sachs & CO. LLC | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P28 | Goldman Sachs & CO. LLC | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P29 | Goldman Sachs & CO. LLC | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t5 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P30 | Goldman Sachs & CO. LLC | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t6 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P31 | Goldman Sachs & CO. LLC | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t7 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P32 | HSBC | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P33 | Mizuho | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2056 Notes and 2066 Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P34 | SOCIETE GENERALE | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P35 | Lloyds Securities | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P36 | MUFG | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P37 | Santander | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P38 | TD Securities | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P39 | US Bancorp | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P40 | Siebert Williams Shank | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P41 | Blaylock Van, LLC | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P42 | Drexel Hamilton | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P43 | Mischler Financial Group, Inc. | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P44 | Roberts & Ryan | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P45 | Ramirez & Co., Inc. | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
-| P46 | U.S. Bank Trust Company, National Association | trustee | Trustee | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · description of the notes, page S-4 |  |  |  |
+| P10 | Citigroup | bookrunner | Joint Book-Running Managers (Floating Rate Notes and 2028 Notes) | t2 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P11 | Deutsche Bank Securities | bookrunner | Joint Book-Running Managers (2031 Notes and 2033 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P12 | Deutsche Bank Securities | bookrunner | Joint Book-Running Managers (2031 Notes and 2033 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P13 | Goldman Sachs & CO. LLC | bookrunner | Joint Book-Running Managers (Floating Rate Notes and 2028 Notes) | t1 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P14 | Goldman Sachs & CO. LLC | bookrunner | Joint Book-Running Managers (Floating Rate Notes and 2028 Notes) | t2 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P15 | HSBC | bookrunner | Joint Book-Running Managers (2031 Notes and 2033 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P16 | HSBC | bookrunner | Joint Book-Running Managers (2031 Notes and 2033 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P17 | Mizuho | bookrunner | Joint Book-Running Managers (2033 Notes and 2036 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P18 | Mizuho | bookrunner | Joint Book-Running Managers (2033 Notes and 2036 Notes) | t5 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P19 | SOCIETE GENERALE | bookrunner | Joint Book-Running Managers (2056 Notes and 2066 Notes) | t6 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P20 | SOCIETE GENERALE | bookrunner | Joint Book-Running Managers (2056 Notes and 2066 Notes) | t7 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P21 | Barclays | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2056 Notes) | t1 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P22 | Barclays | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2056 Notes) | t2 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P23 | Barclays | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2056 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P24 | Barclays | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2056 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P25 | Barclays | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2056 Notes) | t6 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P26 | BNP PARIBAS | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | t1 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P27 | BNP PARIBAS | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | t2 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P28 | BNP PARIBAS | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P29 | BNP PARIBAS | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P30 | BNP PARIBAS | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | t5 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P31 | Citigroup | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P32 | Citigroup | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P33 | Citigroup | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t5 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P34 | Citigroup | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t6 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P35 | Citigroup | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t7 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P36 | Deutsche Bank Securities | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t1 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P37 | Deutsche Bank Securities | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t2 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P38 | Deutsche Bank Securities | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t5 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P39 | Deutsche Bank Securities | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t6 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P40 | Deutsche Bank Securities | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t7 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P41 | Goldman Sachs & CO. LLC | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P42 | Goldman Sachs & CO. LLC | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P43 | Goldman Sachs & CO. LLC | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t5 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P44 | Goldman Sachs & CO. LLC | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t6 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P45 | Goldman Sachs & CO. LLC | co_manager | Co-Managers (2031 Notes, 2033 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t7 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P46 | HSBC | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t1 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P47 | HSBC | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t2 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P48 | HSBC | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t5 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P49 | HSBC | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t6 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P50 | HSBC | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2036 Notes, 2056 Notes and 2066 Notes) | t7 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P51 | Mizuho | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2056 Notes and 2066 Notes) | t1 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P52 | Mizuho | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2056 Notes and 2066 Notes) | t2 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P53 | Mizuho | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2056 Notes and 2066 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P54 | Mizuho | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2056 Notes and 2066 Notes) | t6 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P55 | Mizuho | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2056 Notes and 2066 Notes) | t7 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P56 | SOCIETE GENERALE | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | t1 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P57 | SOCIETE GENERALE | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | t2 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P58 | SOCIETE GENERALE | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | t3 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P59 | SOCIETE GENERALE | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | t4 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P60 | SOCIETE GENERALE | co_manager | Co-Managers (Floating Rate Notes, 2028 Notes, 2031 Notes, 2033 Notes and 2036 Notes) | t5 | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P61 | Lloyds Securities | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P62 | MUFG | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P63 | Santander | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P64 | TD Securities | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P65 | US Bancorp | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P66 | Siebert Williams Shank | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P67 | Blaylock Van, LLC | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P68 | Drexel Hamilton | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P69 | Mischler Financial Group, Inc. | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P70 | Roberts & Ryan | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P71 | Ramirez & Co., Inc. | co_manager | Co-Managers (All Notes) | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · cover, page cover |  |  |  |
+| P72 | U.S. Bank Trust Company, National Association | trustee | Trustee | all | [filing](https://www.sec.gov/Archives/edgar/data/1551152/000110465926020619/tm266774-2_424b5.htm) · description of the notes, page S-4 |  |  |  |
 
 Notes from the extractor: bank lists: 1 text run(s) not read as names
 
@@ -437,22 +456,20 @@ Filing: https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm233
 | 23 | Secured or unsecured | t2 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover — Cover page, page cover · @1383 |  |  |  |
 | 24 | Early repayment by the issuer | t1 | Yes · make-whole | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sPSS) · optional redemption — Optional Redemption, page S-4 · @20979 |  |  |  |
 | 25 | Early repayment by the issuer | t2 | Yes · from 2028-12-05 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sPSS) · optional redemption — Optional Redemption, page S-5 · @21806 |  |  |  |
-| 26 | What the money is for | all | general corporate purposes; repay or refinance debt; working capital | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sUOP) · use of proceeds — Use of Proceeds, page S-11 · @35029 |  |  |  |
-| 27 | Bank fee | t1 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover table — Cover page, page cover · @2283 |  |  |  |
-| 28 | Bank fee | t2 | 0.6% | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover table — Cover page, page cover · @2380 |  |  |  |
-| 29 | Proceeds to the issuer before expenses (%) | t1 | 99.639% | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover table — Cover page, page cover · @2291 |  |  |  |
-| 30 | Proceeds to the issuer before expenses (%) | t2 | 99.281% | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover table — Cover page, page cover · @2388 |  |  |  |
-| 31 | Proceeds to the issuer (whole deal) | all | USD 1,095,000,000 (approximately, after expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sUOP) · use of proceeds — Use of Proceeds, page S-11 · @35261 |  |  |  |
-| 32 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sRIFA) · risk factors — Risk Factors, page S-7 · @26038 |  |  |  |
-| 33 | Where the notes may not be sold | all | EEA, UK, Canada, Hong Kong, Singapore, Japan, South Korea, Taiwan, Switzerland, UAE | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sATPS) · underwriting — Notice to Prospective Investors in the European Economic Area, page S-2 · @6704 |  |  |  |
-| 34 | Bank conflicts of interest | all | Conflicts of Interest | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sUCOI) · underwriting — CONFLICTS OF INTEREST, page S-23 · @76015 |  |  |  |
-| 35 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover — Cover page, page cover · @1728 |  |  |  |
-| 36 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sDOTN) · description of the notes — Description of the Notes, page S-12 · @37050 |  |  |  |
-| 37 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover |  |  |  |
-| 38 | Banks / roles: bookrunner | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover — Cover page, page cover · @3331 |  |  |  |
-| 39 | Banks / roles: co_manager | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover — Cover page, page cover · @3416 |  |  |  |
-| 40 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover |  |  |  |
-| 41 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover |  |  |  |
+| 26 | Bank fee | t1 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover table — Cover page, page cover · @2283 |  |  |  |
+| 27 | Bank fee | t2 | 0.6% | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover table — Cover page, page cover · @2380 |  |  |  |
+| 28 | Proceeds to the issuer before expenses (%) | t1 | 99.639% | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover table — Cover page, page cover · @2291 |  |  |  |
+| 29 | Proceeds to the issuer before expenses (%) | t2 | 99.281% | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover table — Cover page, page cover · @2388 |  |  |  |
+| 30 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sRIFA) · risk factors — Risk Factors, page S-7 · @26038 |  |  |  |
+| 31 | Where the notes may not be sold | all | (section link and heading only — place list withheld, FIX3) | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sATPS) · underwriting — Notice to Prospective Investors in the European Economic Area, page S-2 · @6704 |  |  |  |
+| 32 | Bank conflicts of interest | all | Conflicts of Interest | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sUCOI) · underwriting — CONFLICTS OF INTEREST, page S-23 · @76015 |  |  |  |
+| 33 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover — Cover page, page cover · @1728 |  |  |  |
+| 34 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm#sDOTN) · description of the notes — Description of the Notes, page S-12 · @37050 |  |  |  |
+| 35 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover |  |  |  |
+| 36 | Banks / roles: bookrunner | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover — Cover page, page cover · @3331 |  |  |  |
+| 37 | Banks / roles: co_manager | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover — Cover page, page cover · @3416 |  |  |  |
+| 38 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover |  |  |  |
+| 39 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1326160/000110465924000673/tm2333823-3_424b5.htm) · cover |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -518,26 +535,24 @@ Filing: https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d88785
 | 34 | Early repayment by the issuer | t1 | Yes · from 2030-05-01 · make-whole, then par · tax redemption | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm#supptx887859_1) · optional redemption — Optional Redemption, page S-2 · @15351 |  |  |  |
 | 35 | Early repayment by the issuer | t2 | Yes · from 2033-03-01 · make-whole, then par · tax redemption | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm#supptx887859_1) · optional redemption — Optional Redemption, page S-2 · @15381 |  |  |  |
 | 36 | Early repayment by the issuer | t3 | Yes · from 2037-03-01 · make-whole, then par · tax redemption | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm#supptx887859_1) · optional redemption — Optional Redemption, page S-2 · @15413 |  |  |  |
-| 37 | What the money is for | all | general corporate purposes; repay or refinance debt | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm#supptx887859_2) · use of proceeds — Use of Proceeds, page S-4 · @16396 |  |  |  |
-| 38 | Bank fee | t1 | 0.225% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2276 |  |  |  |
-| 39 | Bank fee | t2 | 0.3% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2296 |  |  |  |
-| 40 | Bank fee | t3 | 0.375% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2316 |  |  |  |
-| 41 | Proceeds to the issuer before expenses (%) | t1 | 99.66% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2374 |  |  |  |
-| 42 | Proceeds to the issuer before expenses (%) | t2 | 99.535% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2397 |  |  |  |
-| 43 | Proceeds to the issuer before expenses (%) | t3 | 99.513% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2420 |  |  |  |
-| 44 | Proceeds to the issuer (amount, this tranche) | t1 | EUR 996,600,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2385 |  |  |  |
-| 45 | Proceeds to the issuer (amount, this tranche) | t2 | EUR 995,350,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2408 |  |  |  |
-| 46 | Proceeds to the issuer (amount, this tranche) | t3 | EUR 746,347,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2431 |  |  |  |
-| 47 | Proceeds to the issuer (whole deal) | all | EUR 2,738,297,500 (approximately, after expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm#supptx887859_2) · use of proceeds — Use of Proceeds, page S-4 · @16484 |  |  |  |
-| 48 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · risk factors |  |  |  |
-| 49 | Where the notes may not be sold | all | EEA, UK | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · underwriting — Prohibition of sales to EEA, page S-ii · @6983 |  |  |  |
-| 50 | Listing | all | New York Stock Exchange | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover — Cover page, page cover · @1381 |  |  |  |
-| 51 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm#supptx887859_5) · description of the notes — DESCRIPTION OF THE NOTES, page S-6 · @21945 |  |  |  |
-| 52 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover |  |  |  |
-| 53 | Banks / roles: bookrunner | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover — Cover page, page cover · @2938 |  |  |  |
-| 54 | Banks / roles: co_manager | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover |  |  |  |
-| 55 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover |  |  |  |
-| 56 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover |  |  |  |
+| 37 | Bank fee | t1 | 0.225% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2276 |  |  |  |
+| 38 | Bank fee | t2 | 0.3% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2296 |  |  |  |
+| 39 | Bank fee | t3 | 0.375% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2316 |  |  |  |
+| 40 | Proceeds to the issuer before expenses (%) | t1 | 99.66% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2374 |  |  |  |
+| 41 | Proceeds to the issuer before expenses (%) | t2 | 99.535% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2397 |  |  |  |
+| 42 | Proceeds to the issuer before expenses (%) | t3 | 99.513% | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2420 |  |  |  |
+| 43 | Proceeds to the issuer (amount, this tranche) | t1 | EUR 996,600,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2385 |  |  |  |
+| 44 | Proceeds to the issuer (amount, this tranche) | t2 | EUR 995,350,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2408 |  |  |  |
+| 45 | Proceeds to the issuer (amount, this tranche) | t3 | EUR 746,347,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover table — Cover page, page cover · @2431 |  |  |  |
+| 46 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · risk factors |  |  |  |
+| 47 | Where the notes may not be sold | all | (section link and heading only — place list withheld, FIX3) | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · underwriting — Prohibition of sales to EEA, page S-ii · @6983 |  |  |  |
+| 48 | Listing | all | New York Stock Exchange | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover — Cover page, page cover · @1381 |  |  |  |
+| 49 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm#supptx887859_5) · description of the notes — DESCRIPTION OF THE NOTES, page S-6 · @21945 |  |  |  |
+| 50 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover |  |  |  |
+| 51 | Banks / roles: bookrunner | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover — Cover page, page cover · @2938 |  |  |  |
+| 52 | Banks / roles: co_manager | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover |  |  |  |
+| 53 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover |  |  |  |
+| 54 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732717/000119312525064173/d887859d424b2.htm) · cover |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -604,29 +619,27 @@ Filing: https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320
 | 41 | Early repayment by the issuer | t2 | Yes · from 2032-02-19 · make-whole, then par · tax redemption | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm#supptx910320_8) · optional redemption — DESCRIPTION OF NOTES, page S-17 · @83315 |  |  |  |
 | 42 | Early repayment by the issuer | t3 | Yes · from 2037-02-19 · make-whole, then par · tax redemption | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm#supptx910320_8) · optional redemption — DESCRIPTION OF NOTES, page S-17 · @83530 |  |  |  |
 | 43 | Early repayment by the issuer | t4 | Yes · from 2044-11-19 · make-whole, then par · tax redemption | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm#supptx910320_8) · optional redemption — DESCRIPTION OF NOTES, page S-17 · @83749 |  |  |  |
-| 44 | What the money is for | all | general corporate purposes; repay or refinance debt; working capital; capital spending; share buybacks | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm#supptx910320_7) · use of proceeds — Use of Proceeds, page S-12 · @64119 |  |  |  |
-| 45 | Bank fee | t1 | 0.3% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2703 |  |  |  |
-| 46 | Bank fee | t2 | 0.4% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2800 |  |  |  |
-| 47 | Bank fee | t3 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2897 |  |  |  |
-| 48 | Bank fee | t4 | 0.625% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2994 |  |  |  |
-| 49 | Proceeds to the issuer before expenses (%) | t1 | 99.603% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2711 |  |  |  |
-| 50 | Proceeds to the issuer before expenses (%) | t2 | 98.863% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2808 |  |  |  |
-| 51 | Proceeds to the issuer before expenses (%) | t3 | 99.408% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2905 |  |  |  |
-| 52 | Proceeds to the issuer before expenses (%) | t4 | 98.845% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @3002 |  |  |  |
-| 53 | Proceeds to the issuer (amount, this tranche) | t1 | EUR 747,022,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2765 |  |  |  |
-| 54 | Proceeds to the issuer (amount, this tranche) | t2 | EUR 988,630,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2862 |  |  |  |
-| 55 | Proceeds to the issuer (amount, this tranche) | t3 | EUR 745,560,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2959 |  |  |  |
-| 56 | Proceeds to the issuer (amount, this tranche) | t4 | EUR 790,760,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @3056 |  |  |  |
-| 57 | Proceeds to the issuer (whole deal) | all | EUR 3,270,000,000 (approximately, after expenses) | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm#supptx910320_7) · use of proceeds — Use of Proceeds, page S-12 · @64227 |  |  |  |
-| 58 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm#supptx910320_5) · risk factors — Risk Factors, page S-7 · @44342 |  |  |  |
-| 59 | Where the notes may not be sold | all | EEA, UK, France, Switzerland, Hong Kong, Japan, Singapore, Canada, Taiwan, South Korea, UAE, Dubai (DIFC) | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · underwriting — Prohibition of Sales to EEA, page S-ii · @10562 |  |  |  |
-| 60 | Listing | all | New York Stock Exchange | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover — Cover page, page cover · @3246 |  |  |  |
-| 61 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm#supptx910320_8) · description of the notes — DESCRIPTION OF NOTES, page S-13 · @65008 |  |  |  |
-| 62 | Banks / roles: guarantor | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover — Cover page, page cover · @479 |  |  |  |
-| 63 | Banks / roles: bookrunner | all | 8 named | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover — Cover page, page cover · @4312 |  |  |  |
-| 64 | Banks / roles: co_manager | all | 4 named | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover — Cover page, page cover · @4430 |  |  |  |
-| 65 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover |  |  |  |
-| 66 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover |  |  |  |
+| 44 | Bank fee | t1 | 0.3% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2703 |  |  |  |
+| 45 | Bank fee | t2 | 0.4% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2800 |  |  |  |
+| 46 | Bank fee | t3 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2897 |  |  |  |
+| 47 | Bank fee | t4 | 0.625% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2994 |  |  |  |
+| 48 | Proceeds to the issuer before expenses (%) | t1 | 99.603% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2711 |  |  |  |
+| 49 | Proceeds to the issuer before expenses (%) | t2 | 98.863% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2808 |  |  |  |
+| 50 | Proceeds to the issuer before expenses (%) | t3 | 99.408% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2905 |  |  |  |
+| 51 | Proceeds to the issuer before expenses (%) | t4 | 98.845% | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @3002 |  |  |  |
+| 52 | Proceeds to the issuer (amount, this tranche) | t1 | EUR 747,022,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2765 |  |  |  |
+| 53 | Proceeds to the issuer (amount, this tranche) | t2 | EUR 988,630,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2862 |  |  |  |
+| 54 | Proceeds to the issuer (amount, this tranche) | t3 | EUR 745,560,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @2959 |  |  |  |
+| 55 | Proceeds to the issuer (amount, this tranche) | t4 | EUR 790,760,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover table — Cover page, page cover · @3056 |  |  |  |
+| 56 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm#supptx910320_5) · risk factors — Risk Factors, page S-7 · @44342 |  |  |  |
+| 57 | Where the notes may not be sold | all | (section link and heading only — place list withheld, FIX3) | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · underwriting — Prohibition of Sales to EEA, page S-ii · @10562 |  |  |  |
+| 58 | Listing | all | New York Stock Exchange | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover — Cover page, page cover · @3246 |  |  |  |
+| 59 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm#supptx910320_8) · description of the notes — DESCRIPTION OF NOTES, page S-13 · @65008 |  |  |  |
+| 60 | Banks / roles: guarantor | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover — Cover page, page cover · @479 |  |  |  |
+| 61 | Banks / roles: bookrunner | all | 8 named | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover — Cover page, page cover · @4312 |  |  |  |
+| 62 | Banks / roles: co_manager | all | 4 named | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover — Cover page, page cover · @4430 |  |  |  |
+| 63 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover |  |  |  |
+| 64 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/78003/000119312525120844/d910320d424b5.htm) · cover |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -688,8 +701,8 @@ Filing: https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp2047
 | 28 | Interest paid | t3 | 01-05, 07-05 | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover — Cover page, page cover · @1644 |  |  |  |
 | 29 | Interest paid | t4 | 01-05, 07-05 | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover — Cover page, page cover · @1757 |  |  |  |
 | 30 | How interest is counted | t2 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · description of the notes — Day Count Convention, page PS-2 · @9128 |  |  |  |
-| 31 | How interest is counted | t3 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · description of the notes — Day Count Convention, page PS-2 · @9128 |  |  |  |
-| 32 | How interest is counted | t4 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · description of the notes — Day Count Convention, page PS-2 · @9128 |  |  |  |
+| 31 | How interest is counted | t3 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · description of the notes — Day Count Convention, page PS-3 · @9681 |  |  |  |
+| 32 | How interest is counted | t4 | 30/360 | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · description of the notes — Day Count Convention, page PS-3 · @10228 |  |  |  |
 | 33 | Priced on | all | 2024-01-02 | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · description of the notes — Trade Date, page PS-2 · @7370 |  |  |  |
 | 34 | Issue date | all | 2024-01-05 | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · description of the notes — Original Issue Date, page PS-2 · @7407 |  |  |  |
 | 35 | Secured or unsecured | t1 | unsecured | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover — Cover page, page cover · @1266 |  |  |  |
@@ -700,26 +713,25 @@ Filing: https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp2047
 | 40 | Early repayment by the issuer | t2 | No — cannot be repaid early | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · optional redemption — Optional Redemption, page PS-3 · @10345 |  |  |  |
 | 41 | Early repayment by the issuer | t3 | Yes · make-whole | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · optional redemption — Optional Redemption, page PS-3 · @10345 |  |  |  |
 | 42 | Early repayment by the issuer | t4 | Yes · make-whole | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · optional redemption — Optional Redemption, page PS-3 · @10345 |  |  |  |
-| 43 | What the money is for | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · use of proceeds |  |  |  |
-| 44 | Bank fee | t1 | 0.15% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @2950 |  |  |  |
-| 45 | Bank fee | t2 | 0.15% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @2966 |  |  |  |
-| 46 | Bank fee | t3 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @2984 |  |  |  |
-| 47 | Bank fee | t4 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3002 |  |  |  |
-| 48 | Proceeds to the issuer before expenses (%) | t1 | 99.85% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3064 |  |  |  |
-| 49 | Proceeds to the issuer before expenses (%) | t2 | 99.773% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3085 |  |  |  |
-| 50 | Proceeds to the issuer before expenses (%) | t3 | 99.513% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3106 |  |  |  |
-| 51 | Proceeds to the issuer before expenses (%) | t4 | 99.44% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3127 |  |  |  |
-| 52 | Proceeds to the issuer (amount, this tranche) | t1 | USD 499,250,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3073 |  |  |  |
-| 53 | Proceeds to the issuer (amount, this tranche) | t2 | USD 897,957,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3094 |  |  |  |
-| 54 | Proceeds to the issuer (amount, this tranche) | t3 | USD 796,104,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3115 |  |  |  |
-| 55 | Proceeds to the issuer (amount, this tranche) | t4 | USD 795,520,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3136 |  |  |  |
-| 56 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · risk factors |  |  |  |
-| 57 | Where the notes may not be sold | all | Japan | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · underwriting — Selling Restrictions, page PS-7 · @27096 |  |  |  |
-| 58 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover |  |  |  |
-| 59 | Banks / roles: bookrunner | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover — Cover page, page cover · @3821 |  |  |  |
-| 60 | Banks / roles: co_manager | all | 10 named | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover — Cover page, page cover · @3886 |  |  |  |
-| 61 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover |  |  |  |
-| 62 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover |  |  |  |
+| 43 | Bank fee | t1 | 0.15% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @2950 |  |  |  |
+| 44 | Bank fee | t2 | 0.15% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @2966 |  |  |  |
+| 45 | Bank fee | t3 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @2984 |  |  |  |
+| 46 | Bank fee | t4 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3002 |  |  |  |
+| 47 | Proceeds to the issuer before expenses (%) | t1 | 99.85% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3064 |  |  |  |
+| 48 | Proceeds to the issuer before expenses (%) | t2 | 99.773% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3085 |  |  |  |
+| 49 | Proceeds to the issuer before expenses (%) | t3 | 99.513% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3106 |  |  |  |
+| 50 | Proceeds to the issuer before expenses (%) | t4 | 99.44% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3127 |  |  |  |
+| 51 | Proceeds to the issuer (amount, this tranche) | t1 | USD 499,250,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3073 |  |  |  |
+| 52 | Proceeds to the issuer (amount, this tranche) | t2 | USD 897,957,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3094 |  |  |  |
+| 53 | Proceeds to the issuer (amount, this tranche) | t3 | USD 796,104,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3115 |  |  |  |
+| 54 | Proceeds to the issuer (amount, this tranche) | t4 | USD 795,520,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover table — Cover page, page cover · @3136 |  |  |  |
+| 55 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · risk factors |  |  |  |
+| 56 | Where the notes may not be sold | all | (section link and heading only — place list withheld, FIX3) | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · underwriting — Selling Restrictions, page PS-7 · @27096 |  |  |  |
+| 57 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover |  |  |  |
+| 58 | Banks / roles: bookrunner | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover — Cover page, page cover · @3821 |  |  |  |
+| 59 | Banks / roles: co_manager | all | 10 named | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover — Cover page, page cover · @3886 |  |  |  |
+| 60 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover |  |  |  |
+| 61 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000197/dp204799_424b2-mtn1287.htm) · cover |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -819,17 +831,15 @@ Filing: https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d3788
 | 61 | Early repayment by the issuer | t4 | Yes · from 2045-03-26 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm#suprom37885_7) · optional redemption — Optional Redemption, page S-11 · @43573 |  |  |  |
 | 62 | Early repayment by the issuer | t5 | Yes · from 2055-03-26 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm#suprom37885_7) · optional redemption — Optional Redemption, page S-11 · @43679 |  |  |  |
 | 63 | Early repayment by the issuer | t6 | Yes · from 2065-03-26 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm#suprom37885_7) · optional redemption — Optional Redemption, page S-11 · @43788 |  |  |  |
-| 64 | What the money is for | all | general corporate purposes; repay or refinance debt; capital spending; share buybacks | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm#suprom37885_5) · use of proceeds — Use of Proceeds, page S-8 · @32327 |  |  |  |
-| 65 | Proceeds to the issuer (whole deal) | all | USD 17,900,000,000 (approximately, after expenses) | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm#suprom37885_5) · use of proceeds — Use of Proceeds, page S-8 · @32419 |  |  |  |
-| 66 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm#suprom37885_4) · risk factors — Risk Factors, page S-5 · @23213 |  |  |  |
-| 67 | Where the notes may not be sold | all | EEA, UK, Hong Kong, Japan, Singapore, Switzerland | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm#suprom37885_9) · underwriting — Notice to Prospective Investors in the European Economic Area, page S-23 · @83966 |  |  |  |
-| 68 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover — Cover page, page cover · @3888 |  |  |  |
-| 69 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm#suprom37885_7) · description of the notes — Description of the Notes, page S-10 · @37783 |  |  |  |
-| 70 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover |  |  |  |
-| 71 | Banks / roles: bookrunner | all | 9 named | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover — Cover page, page cover · @4375 |  |  |  |
-| 72 | Banks / roles: co_manager | all | 7 named | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover — Cover page, page cover · @4527 |  |  |  |
-| 73 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover |  |  |  |
-| 74 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover |  |  |  |
+| 64 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm#suprom37885_4) · risk factors — Risk Factors, page S-5 · @23213 |  |  |  |
+| 65 | Where the notes may not be sold | all | (section link and heading only — place list withheld, FIX3) | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm#suprom37885_9) · underwriting — Notice to Prospective Investors in the European Economic Area, page S-23 · @83966 |  |  |  |
+| 66 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover — Cover page, page cover · @3888 |  |  |  |
+| 67 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm#suprom37885_7) · description of the notes — Description of the Notes, page S-10 · @37783 |  |  |  |
+| 68 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover |  |  |  |
+| 69 | Banks / roles: bookrunner | all | 9 named | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover — Cover page, page cover · @4375 |  |  |  |
+| 70 | Banks / roles: co_manager | all | 7 named | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover — Cover page, page cover · @4527 |  |  |  |
+| 71 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover |  |  |  |
+| 72 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -840,7 +850,7 @@ Filing: https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d3788
 | P5 | HSBC | bookrunner | Joint Book-Running Managers | all | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover, page cover |  |  |  |
 | P6 | J.P. Morgan | bookrunner | Joint Book-Running Managers | all | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover, page cover |  |  |  |
 | P7 | BNP PARIBAS | bookrunner | Joint Book-Running Managers | all | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover, page cover |  |  |  |
-| P8 | P NC Capital Markets LLC | bookrunner | Joint Book-Running Managers | all | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover, page cover |  |  |  |
+| P8 | PNC Capital Markets LLC | bookrunner | Joint Book-Running Managers | all | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover, page cover |  |  |  |
 | P9 | SMBC Nikko | bookrunner | Joint Book-Running Managers | all | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover, page cover |  |  |  |
 | P10 | NatWest | co_manager | Co-Managers | all | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover, page cover |  |  |  |
 | P11 | Santander | co_manager | Co-Managers | all | [filing](https://www.sec.gov/Archives/edgar/data/1341439/000119312525217490/d37885d424b2.htm) · cover, page cover |  |  |  |
@@ -926,32 +936,30 @@ Filing: https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d
 | 57 | Mandatory early repayment if a deal fails | t3 | Yes, at 101%, if the deal fails by 2027-08-19 | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm#supptx54563_4) · summary — THE OFFERING, page S-4 · @23404 |  |  |  |
 | 58 | Mandatory early repayment if a deal fails | t4 | Yes, at 101%, if the deal fails by 2027-08-19 | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm#supptx54563_4) · summary — THE OFFERING, page S-4 · @23404 |  |  |  |
 | 59 | Mandatory early repayment if a deal fails | t5 | Yes, at 101%, if the deal fails by 2027-08-19 | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm#supptx54563_4) · summary — THE OFFERING, page S-4 · @23404 |  |  |  |
-| 60 | What the money is for | all | repay or refinance debt; fund an acquisition (acquisition: FBM) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm#supptx54563_6) · use of proceeds — Use of Proceeds, page S-10 · @42323 |  |  |  |
-| 61 | Bank fee | t1 | 0.225% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3509 |  |  |  |
-| 62 | Bank fee | t2 | 0.25% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3595 |  |  |  |
-| 63 | Bank fee | t3 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3681 |  |  |  |
-| 64 | Bank fee | t4 | 0.4% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3771 |  |  |  |
-| 65 | Bank fee | t5 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3861 |  |  |  |
-| 66 | Proceeds to the issuer before expenses (%) | t1 | 99.75% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3517 |  |  |  |
-| 67 | Proceeds to the issuer before expenses (%) | t2 | 99.643% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3603 |  |  |  |
-| 68 | Proceeds to the issuer before expenses (%) | t3 | 99.478% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3689 |  |  |  |
-| 69 | Proceeds to the issuer before expenses (%) | t4 | 99.383% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3779 |  |  |  |
-| 70 | Proceeds to the issuer before expenses (%) | t5 | 99.311% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3869 |  |  |  |
-| 71 | Proceeds to the issuer (amount, this tranche) | t1 | USD 648,375,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3560 |  |  |  |
-| 72 | Proceeds to the issuer (amount, this tranche) | t2 | USD 747,322,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3646 |  |  |  |
-| 73 | Proceeds to the issuer (amount, this tranche) | t3 | USD 1,094,258,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3734 |  |  |  |
-| 74 | Proceeds to the issuer (amount, this tranche) | t4 | USD 1,291,979,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3824 |  |  |  |
-| 75 | Proceeds to the issuer (amount, this tranche) | t5 | USD 1,191,732,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3914 |  |  |  |
-| 76 | Proceeds to the issuer (whole deal) | all | USD 4,970,000,000 (approximately, after expenses) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm#supptx54563_6) · use of proceeds — Use of Proceeds, page S-10 · @42415 |  |  |  |
-| 77 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm#supptx54563_5) · risk factors — Risk Factors, page S-7 · @28956 |  |  |  |
-| 78 | Where the notes may not be sold | all | UK, Hong Kong, Singapore, Japan, Switzerland, South Korea, Taiwan, EEA, UAE | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm#supptx54563_10) · underwriting — Selling Restrictions, page S-30 · @114633 |  |  |  |
-| 79 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover — Cover page, page cover · @2872 |  |  |  |
-| 80 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm#supptx54563_4) · description of the notes — THE OFFERING, page S-7 · @28871 |  |  |  |
-| 81 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover |  |  |  |
-| 82 | Banks / roles: bookrunner | all | 7 named | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover — Cover page, page cover · @4792 |  |  |  |
-| 83 | Banks / roles: co_manager | all | 4 named | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover — Cover page, page cover · @4916 |  |  |  |
-| 84 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover |  |  |  |
-| 85 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover |  |  |  |
+| 60 | Bank fee | t1 | 0.225% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3509 |  |  |  |
+| 61 | Bank fee | t2 | 0.25% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3595 |  |  |  |
+| 62 | Bank fee | t3 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3681 |  |  |  |
+| 63 | Bank fee | t4 | 0.4% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3771 |  |  |  |
+| 64 | Bank fee | t5 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3861 |  |  |  |
+| 65 | Proceeds to the issuer before expenses (%) | t1 | 99.75% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3517 |  |  |  |
+| 66 | Proceeds to the issuer before expenses (%) | t2 | 99.643% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3603 |  |  |  |
+| 67 | Proceeds to the issuer before expenses (%) | t3 | 99.478% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3689 |  |  |  |
+| 68 | Proceeds to the issuer before expenses (%) | t4 | 99.383% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3779 |  |  |  |
+| 69 | Proceeds to the issuer before expenses (%) | t5 | 99.311% | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3869 |  |  |  |
+| 70 | Proceeds to the issuer (amount, this tranche) | t1 | USD 648,375,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3560 |  |  |  |
+| 71 | Proceeds to the issuer (amount, this tranche) | t2 | USD 747,322,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3646 |  |  |  |
+| 72 | Proceeds to the issuer (amount, this tranche) | t3 | USD 1,094,258,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3734 |  |  |  |
+| 73 | Proceeds to the issuer (amount, this tranche) | t4 | USD 1,291,979,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3824 |  |  |  |
+| 74 | Proceeds to the issuer (amount, this tranche) | t5 | USD 1,191,732,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover table — Cover page, page cover · @3914 |  |  |  |
+| 75 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm#supptx54563_5) · risk factors — Risk Factors, page S-7 · @28956 |  |  |  |
+| 76 | Where the notes may not be sold | all | (section link and heading only — place list withheld, FIX3) | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm#supptx54563_10) · underwriting — Selling Restrictions, page S-30 · @114633 |  |  |  |
+| 77 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover — Cover page, page cover · @2872 |  |  |  |
+| 78 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm#supptx54563_4) · description of the notes — THE OFFERING, page S-7 · @28871 |  |  |  |
+| 79 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover |  |  |  |
+| 80 | Banks / roles: bookrunner | all | 7 named | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover — Cover page, page cover · @4792 |  |  |  |
+| 81 | Banks / roles: co_manager | all | 4 named | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover — Cover page, page cover · @4916 |  |  |  |
+| 82 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover |  |  |  |
+| 83 | Banks / roles: agent | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/60667/000119312525216381/d54563d424b2.htm) · cover |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -1041,29 +1049,27 @@ Filing: https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150
 | 57 | Early repayment by the issuer | t4 | Yes · from 2043-12-01 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_4) · optional redemption — Optional Redemption, page S-3 · @28383 |  |  |  |
 | 58 | Early repayment by the issuer | t5 | Yes · from 2053-12-01 · make-whole, then par | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_4) · optional redemption — Optional Redemption, page S-3 · @28495 |  |  |  |
 | 59 | Buy-back if control changes | all | Yes, at 101% of principal | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover — Cover page, page cover · @1833 |  |  |  |
-| 60 | What the money is for | all | general corporate purposes; repay or refinance debt; working capital; capital spending | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_6) · use of proceeds — Use of Proceeds, page S-5 · @33629 |  |  |  |
-| 61 | Bank fee | t1 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3152 |  |  |  |
-| 62 | Bank fee | t2 | 0.4% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3228 |  |  |  |
-| 63 | Bank fee | t3 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3306 |  |  |  |
-| 64 | Bank fee | t4 | 0.75% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3384 |  |  |  |
-| 65 | Bank fee | t5 | 0.875% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3460 |  |  |  |
-| 66 | Proceeds to the issuer before expenses (%) | t1 | 99.553% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3172 |  |  |  |
-| 67 | Proceeds to the issuer before expenses (%) | t2 | 99.526% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3248 |  |  |  |
-| 68 | Proceeds to the issuer before expenses (%) | t3 | 99.476% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3326 |  |  |  |
-| 69 | Proceeds to the issuer before expenses (%) | t4 | 98.645% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3404 |  |  |  |
-| 70 | Proceeds to the issuer before expenses (%) | t5 | 98.475% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3480 |  |  |  |
-| 71 | Proceeds to the issuer (amount, this tranche) | t1 | USD 995,530,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3182 |  |  |  |
-| 72 | Proceeds to the issuer (amount, this tranche) | t2 | USD 995,260,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3258 |  |  |  |
-| 73 | Proceeds to the issuer (amount, this tranche) | t3 | USD 1,243,450,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3336 |  |  |  |
-| 74 | Proceeds to the issuer (amount, this tranche) | t4 | USD 739,837,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3414 |  |  |  |
-| 75 | Proceeds to the issuer (amount, this tranche) | t5 | USD 984,750,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3490 |  |  |  |
-| 76 | Proceeds to the issuer (whole deal) | all | USD 4,950,251,518 (approximately, after expenses) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_6) · use of proceeds — Use of Proceeds, page S-5 · @33727 |  |  |  |
-| 77 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_5) · risk factors — Risk Factors, page S-4 · @30960 |  |  |  |
-| 78 | Where the notes may not be sold | all | EEA, UK, Canada, Hong Kong, Singapore, Japan | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_1) · underwriting — Notice to Prospective Investors in the European Economic Area, page S-ii · @6868 |  |  |  |
-| 79 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_5) · description of the notes — Risk Factors, page S-4 · @33488 |  |  |  |
-| 80 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_8) · description of the notes — DESCRIPTION OF THE NOTES, page S-8 · @38833 |  |  |  |
-| 81 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover |  |  |  |
-| 82 | Banks / roles: underwriter | all | 22 named | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_9) · underwriting — Underwriting, page S-16 · @71355 |  |  |  |
+| 60 | Bank fee | t1 | 0.35% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3152 |  |  |  |
+| 61 | Bank fee | t2 | 0.4% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3228 |  |  |  |
+| 62 | Bank fee | t3 | 0.45% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3306 |  |  |  |
+| 63 | Bank fee | t4 | 0.75% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3384 |  |  |  |
+| 64 | Bank fee | t5 | 0.875% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3460 |  |  |  |
+| 65 | Proceeds to the issuer before expenses (%) | t1 | 99.553% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3172 |  |  |  |
+| 66 | Proceeds to the issuer before expenses (%) | t2 | 99.526% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3248 |  |  |  |
+| 67 | Proceeds to the issuer before expenses (%) | t3 | 99.476% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3326 |  |  |  |
+| 68 | Proceeds to the issuer before expenses (%) | t4 | 98.645% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3404 |  |  |  |
+| 69 | Proceeds to the issuer before expenses (%) | t5 | 98.475% | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3480 |  |  |  |
+| 70 | Proceeds to the issuer (amount, this tranche) | t1 | USD 995,530,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3182 |  |  |  |
+| 71 | Proceeds to the issuer (amount, this tranche) | t2 | USD 995,260,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3258 |  |  |  |
+| 72 | Proceeds to the issuer (amount, this tranche) | t3 | USD 1,243,450,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3336 |  |  |  |
+| 73 | Proceeds to the issuer (amount, this tranche) | t4 | USD 739,837,500 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3414 |  |  |  |
+| 74 | Proceeds to the issuer (amount, this tranche) | t5 | USD 984,750,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover table — Cover page, page cover · @3490 |  |  |  |
+| 75 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_5) · risk factors — Risk Factors, page S-4 · @30960 |  |  |  |
+| 76 | Where the notes may not be sold | all | (section link and heading only — place list withheld, FIX3) | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_1) · underwriting — Notice to Prospective Investors in the European Economic Area, page S-ii · @6868 |  |  |  |
+| 77 | Listing | all | Not listed | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_5) · description of the notes — Risk Factors, page S-4 · @33488 |  |  |  |
+| 78 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_8) · description of the notes — DESCRIPTION OF THE NOTES, page S-8 · @38833 |  |  |  |
+| 79 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm) · cover |  |  |  |
+| 80 | Banks / roles: underwriter | all | 22 named | [filing](https://www.sec.gov/Archives/edgar/data/64803/000119312524134264/d826150d424b2.htm#supprom826150_9) · underwriting — Underwriting, page S-16 · @71355 |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -1117,16 +1123,15 @@ Filing: https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp2051
 | 12 | Ranking | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
 | 13 | Secured or unsecured | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
 | 14 | Early repayment by the issuer | t1 | Yes · from 2026-01-22 · par | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms — Redemption · @1690 |  |  |  |
-| 15 | What the money is for | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
-| 16 | Bank fee | t1 | 0.3% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms — Agent's Discount or Commission · @1260 |  |  |  |
-| 17 | Proceeds to the issuer before expenses (%) | t1 | 99.7% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms — Net Proceeds to Issuer · @1201 |  |  |  |
-| 18 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · risk factors — Risk Factors · @2757 |  |  |  |
-| 19 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
-| 20 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
-| 21 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
-| 22 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
-| 23 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
-| 24 | Banks / roles: agent | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms · @1552 |  |  |  |
+| 15 | Bank fee | t1 | 0.3% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms — Agent's Discount or Commission · @1260 |  |  |  |
+| 16 | Proceeds to the issuer before expenses (%) | t1 | 99.7% | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms — Net Proceeds to Issuer · @1201 |  |  |  |
+| 17 | Risks | all | Section link | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · risk factors — Risk Factors · @2757 |  |  |  |
+| 18 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
+| 19 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
+| 20 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
+| 21 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
+| 22 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms |  |  |  |
+| 23 | Banks / roles: agent | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324000537/dp205159_424b2-mtn1291.htm) · pricing terms · @1552 |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -1158,18 +1163,15 @@ Filing: https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp2071
 | 12 | Ranking | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
 | 13 | Secured or unsecured | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
 | 14 | Early repayment by the issuer | t1 | No — cannot be repaid early | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms — Redemption · @3385 |  |  |  |
-| 15 | What the money is for | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
-| 16 | Bank fee | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
-| 17 | Proceeds to the issuer before expenses (%) | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
-| 18 | Proceeds to the issuer (whole deal) | all | USD 1,748,425,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms — Net Proceeds to Issuer · @1267 |  |  |  |
-| 19 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
-| 20 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
-| 21 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
-| 22 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
-| 23 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
-| 24 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
-| 25 | Banks / roles: agent | all | 2 named | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms · @1289 |  |  |  |
-| 26 | Banks / roles: other | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms · @1571 |  |  |  |
+| 15 | Proceeds to the issuer before expenses (%) | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
+| 16 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
+| 17 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
+| 18 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
+| 19 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
+| 20 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
+| 21 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms |  |  |  |
+| 22 | Banks / roles: agent | all | 2 named | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms · @1289 |  |  |  |
+| 23 | Banks / roles: other | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/834071/000095010324002543/dp207139_424b2-mtn1296.htm) · pricing terms · @1571 |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -1203,15 +1205,13 @@ Filing: https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425
 | 12 | Ranking | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms |  |  |  |
 | 13 | Secured or unsecured | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms |  |  |  |
 | 14 | Early repayment by the issuer | t1 | Yes · make-whole | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms — Redemption · @3519 |  |  |  |
-| 15 | What the money is for | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms |  |  |  |
-| 16 | Bank fee | t1 | 0.125% | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms — Dealers' Commission · @2061 |  |  |  |
-| 17 | Proceeds to the issuer before expenses (%) | t1 | 100.525% | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms — All-in-price · @2217 |  |  |  |
-| 18 | Proceeds to the issuer (whole deal) | all | USD 201,050,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms — Net Proceeds to Issuer · @2274 |  |  |  |
-| 19 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms |  |  |  |
-| 20 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms |  |  |  |
-| 21 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms |  |  |  |
-| 22 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms |  |  |  |
-| 23 | Banks / roles: other | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms · @3934 |  |  |  |
+| 15 | Bank fee | t1 | 0.125% | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms — Dealers' Commission · @2061 |  |  |  |
+| 16 | Proceeds to the issuer before expenses (%) | t1 | 100.525% | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms — All-in-price · @2217 |  |  |  |
+| 17 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms |  |  |  |
+| 18 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms |  |  |  |
+| 19 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms |  |  |  |
+| 20 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms |  |  |  |
+| 21 | Banks / roles: other | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924105055/tm2425358d1_424b3.htm) · pricing terms · @3934 |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -1241,17 +1241,15 @@ Filing: https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333
 | 12 | Ranking | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
 | 13 | Secured or unsecured | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
 | 14 | Early repayment by the issuer | t1 | Yes · make-whole | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms — Redemption · @2681 |  |  |  |
-| 15 | What the money is for | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
-| 16 | Bank fee | t1 | 0.225% | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms — Dealers' Commission · @1385 |  |  |  |
-| 17 | Proceeds to the issuer before expenses (%) | t1 | 99.667% | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms — All-in-price · @1426 |  |  |  |
-| 18 | Proceeds to the issuer (whole deal) | all | USD 498,335,000 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms — Net Proceeds to Issuer · @1459 |  |  |  |
-| 19 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
-| 20 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
-| 21 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
-| 22 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
-| 23 | Banks / roles: bookrunner | all | 3 named | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms · @3042 |  |  |  |
-| 24 | Banks / roles: co_manager | all | 21 named | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms · @3159 |  |  |  |
-| 25 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
+| 15 | Bank fee | t1 | 0.225% | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms — Dealers' Commission · @1385 |  |  |  |
+| 16 | Proceeds to the issuer before expenses (%) | t1 | 99.667% | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms — All-in-price · @1426 |  |  |  |
+| 17 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
+| 18 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
+| 19 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
+| 20 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
+| 21 | Banks / roles: bookrunner | all | 3 named | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms · @3042 |  |  |  |
+| 22 | Banks / roles: co_manager | all | 21 named | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms · @3159 |  |  |  |
+| 23 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/764764/000110465924000426/tm2333853d1_424b3.htm) · pricing terms |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -1304,14 +1302,13 @@ Filing: https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm24156
 | 12 | Ranking | t1 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · cover — Cover page · @367 |  |  |  |
 | 13 | Secured or unsecured | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
 | 14 | Early repayment by the issuer | t1 | No — cannot be repaid early | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms — Redemption Provisions · @1116 |  |  |  |
-| 15 | What the money is for | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
-| 16 | Bank fee | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
-| 17 | Proceeds to the issuer before expenses (%) | t1 | 99.739% | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms — Plan of Distribution · @1716 |  |  |  |
-| 18 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
-| 19 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
-| 20 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
-| 21 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
-| 22 | Banks / roles: underwriter | all | 10 named | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms · @1174 |  |  |  |
+| 15 | Bank fee | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
+| 16 | Proceeds to the issuer before expenses (%) | t1 | 99.739% | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms — Plan of Distribution · @1716 |  |  |  |
+| 17 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
+| 18 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
+| 19 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
+| 20 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms |  |  |  |
+| 21 | Banks / roles: underwriter | all | 10 named | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924000827/tm241566d3_424b2.htm) · pricing terms · @1174 |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -1350,14 +1347,13 @@ Filing: https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm24364
 | 12 | Ranking | t1 | Senior | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · cover — Cover page · @364 |  |  |  |
 | 13 | Secured or unsecured | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
 | 14 | Early repayment by the issuer | t1 | No — cannot be repaid early | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms — Redemption Provisions · @2413 |  |  |  |
-| 15 | What the money is for | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
-| 16 | Bank fee | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
-| 17 | Proceeds to the issuer before expenses (%) | t1 | 99.925% | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms — Plan of Distribution · @2643 |  |  |  |
-| 18 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
-| 19 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
-| 20 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
-| 21 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
-| 22 | Banks / roles: underwriter | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms · @2471 |  |  |  |
+| 15 | Bank fee | t1 | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
+| 16 | Proceeds to the issuer before expenses (%) | t1 | 99.925% | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms — Plan of Distribution · @2643 |  |  |  |
+| 17 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
+| 18 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
+| 19 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
+| 20 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms |  |  |  |
+| 21 | Banks / roles: underwriter | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/27673/000110465924005136/tm243640d2_424b2.htm) · pricing terms · @2471 |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -1400,19 +1396,18 @@ Filing: https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d79143
 | 24 | Early repayment by the issuer | t2 | Yes · from 2025-03-15 · par | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table — Redemption Information · @821 |  |  |  |
 | 25 | Repayment on the holder’s death | t1 | yes | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table — Survivor's Option · @533 |  |  |  |
 | 26 | Repayment on the holder’s death | t2 | yes | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table — Survivor's Option · @770 |  |  |  |
-| 27 | What the money is for | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
-| 28 | Bank fee | t1 | 1.45% | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table — Gross Concession · @461 |  |  |  |
-| 29 | Bank fee | t2 | 3.15% | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table — Gross Concession · @698 |  |  |  |
-| 30 | Proceeds to the issuer (amount, this tranche) | t1 | USD 285,795 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table — Net Proceeds · @469 |  |  |  |
-| 31 | Proceeds to the issuer (amount, this tranche) | t2 | USD 123,968 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table — Net Proceeds · @706 |  |  |  |
-| 32 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
-| 33 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
-| 34 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
-| 35 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
-| 36 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
-| 37 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
-| 38 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
-| 39 | Banks / roles: agent | all | 6 named | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table · @1469 |  |  |  |
+| 27 | Bank fee | t1 | 1.45% | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table — Gross Concession · @461 |  |  |  |
+| 28 | Bank fee | t2 | 3.15% | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table — Gross Concession · @698 |  |  |  |
+| 29 | Proceeds to the issuer (amount, this tranche) | t1 | USD 285,795 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table — Net Proceeds · @469 |  |  |  |
+| 30 | Proceeds to the issuer (amount, this tranche) | t2 | USD 123,968 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table — Net Proceeds · @706 |  |  |  |
+| 31 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
+| 32 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
+| 33 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
+| 34 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
+| 35 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
+| 36 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
+| 37 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table |  |  |  |
+| 38 | Banks / roles: agent | all | 6 named | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524057532/d791431d424b2.htm) · retail table · @1469 |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -1461,19 +1456,18 @@ Filing: https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d83435
 | 25 | Early repayment by the issuer | t2 | Yes · from 2026-08-15 · par | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table — Redemption Information · @827 |  |  |  |
 | 26 | Repayment on the holder’s death | t1 | yes | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table — Survivor's Option · @539 |  |  |  |
 | 27 | Repayment on the holder’s death | t2 | yes | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table — Survivor's Option · @776 |  |  |  |
-| 28 | What the money is for | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
-| 29 | Bank fee | t1 | 1.25% | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table — Gross Concession · @465 |  |  |  |
-| 30 | Bank fee | t2 | 2% | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table — Gross Concession · @704 |  |  |  |
-| 31 | Proceeds to the issuer (amount, this tranche) | t1 | USD 1,306,462.5 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table — Net Proceeds · @473 |  |  |  |
-| 32 | Proceeds to the issuer (amount, this tranche) | t2 | USD 674,240 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table — Net Proceeds · @712 |  |  |  |
-| 33 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
-| 34 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
-| 35 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
-| 36 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
-| 37 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
-| 38 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
-| 39 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
-| 40 | Banks / roles: agent | all | 6 named | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table · @1479 |  |  |  |
+| 28 | Bank fee | t1 | 1.25% | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table — Gross Concession · @465 |  |  |  |
+| 29 | Bank fee | t2 | 2% | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table — Gross Concession · @704 |  |  |  |
+| 30 | Proceeds to the issuer (amount, this tranche) | t1 | USD 1,306,462.5 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table — Net Proceeds · @473 |  |  |  |
+| 31 | Proceeds to the issuer (amount, this tranche) | t2 | USD 674,240 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table — Net Proceeds · @712 |  |  |  |
+| 32 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
+| 33 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
+| 34 | Banks / roles: trustee | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
+| 35 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
+| 36 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
+| 37 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
+| 38 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table |  |  |  |
+| 39 | Banks / roles: agent | all | 6 named | [filing](https://www.sec.gov/Archives/edgar/data/732712/000119312524207015/d834353d424b2.htm) · retail table · @1479 |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -1522,19 +1516,18 @@ Filing: https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalp
 | 25 | Early repayment by the issuer | t2 | Yes · from 2026-02-20 · par | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table — Redemption Information · @1308 |  |  |  |
 | 26 | Repayment on the holder’s death | t1 | yes | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table — Survivor's Option · @583 |  |  |  |
 | 27 | Repayment on the holder’s death | t2 | yes | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table — Survivor's Option · @1257 |  |  |  |
-| 28 | What the money is for | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
-| 29 | Bank fee | t1 | 0.95% | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table — Gross Concession · @496 |  |  |  |
-| 30 | Bank fee | t2 | 1.55% | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table — Gross Concession · @1170 |  |  |  |
-| 31 | Proceeds to the issuer (amount, this tranche) | t1 | USD 6,342,171.5 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table — Net Proceeds · @504 |  |  |  |
-| 32 | Proceeds to the issuer (amount, this tranche) | t2 | USD 4,741,352 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table — Net Proceeds · @1178 |  |  |  |
-| 33 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
-| 34 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
-| 35 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table · @2473 |  |  |  |
-| 36 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
-| 37 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
-| 38 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
-| 39 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
-| 40 | Banks / roles: agent | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table · @2372 |  |  |  |
+| 28 | Bank fee | t1 | 0.95% | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table — Gross Concession · @496 |  |  |  |
+| 29 | Bank fee | t2 | 1.55% | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table — Gross Concession · @1170 |  |  |  |
+| 30 | Proceeds to the issuer (amount, this tranche) | t1 | USD 6,342,171.5 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table — Net Proceeds · @504 |  |  |  |
+| 31 | Proceeds to the issuer (amount, this tranche) | t2 | USD 4,741,352 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table — Net Proceeds · @1178 |  |  |  |
+| 32 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
+| 33 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
+| 34 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table · @2473 |  |  |  |
+| 35 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
+| 36 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
+| 37 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
+| 38 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table |  |  |  |
+| 39 | Banks / roles: agent | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000011/finalpricingsupplement-021.htm) · retail table · @2372 |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|
@@ -1583,19 +1576,18 @@ Filing: https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalp
 | 25 | Early repayment by the issuer | t2 | Yes · from 2026-03-20 · par | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table — Redemption Information · @1304 |  |  |  |
 | 26 | Repayment on the holder’s death | t1 | yes | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table — Survivor's Option · @579 |  |  |  |
 | 27 | Repayment on the holder’s death | t2 | yes | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table — Survivor's Option · @1253 |  |  |  |
-| 28 | What the money is for | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
-| 29 | Bank fee | t1 | 0.55% | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table — Gross Concession · @492 |  |  |  |
-| 30 | Bank fee | t2 | 1.35% | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table — Gross Concession · @1166 |  |  |  |
-| 31 | Proceeds to the issuer (amount, this tranche) | t1 | USD 9,437,805 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table — Net Proceeds · @500 |  |  |  |
-| 32 | Proceeds to the issuer (amount, this tranche) | t2 | USD 3,513,913 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table — Net Proceeds · @1174 |  |  |  |
-| 33 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
-| 34 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
-| 35 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table · @2457 |  |  |  |
-| 36 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
-| 37 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
-| 38 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
-| 39 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
-| 40 | Banks / roles: agent | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table · @2356 |  |  |  |
+| 28 | Bank fee | t1 | 0.55% | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table — Gross Concession · @492 |  |  |  |
+| 29 | Bank fee | t2 | 1.35% | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table — Gross Concession · @1166 |  |  |  |
+| 30 | Proceeds to the issuer (amount, this tranche) | t1 | USD 9,437,805 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table — Net Proceeds · @500 |  |  |  |
+| 31 | Proceeds to the issuer (amount, this tranche) | t2 | USD 3,513,913 (before expenses) | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table — Net Proceeds · @1174 |  |  |  |
+| 32 | Risks | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
+| 33 | Where the notes may not be sold | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
+| 34 | Banks / roles: trustee | all | 1 named | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table · @2457 |  |  |  |
+| 35 | Banks / roles: guarantor | all | Not stated in the filing | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
+| 36 | Banks / roles: bookrunner | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
+| 37 | Banks / roles: co_manager | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
+| 38 | Banks / roles: underwriter | all | Not applicable | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table |  |  |  |
+| 39 | Banks / roles: agent | all | 5 named | [filing](https://www.sec.gov/Archives/edgar/data/804269/000080426925000028/finalpricingsupplement-032.htm) · retail table · @2356 |  |  |  |
 
 | # | Party | Role | Printed role | Tranche | Where it was read | Source value | OK | Note |
 |---|---|---|---|---|---|---|---|---|

@@ -47,7 +47,7 @@ test('OFFER2: the field list, version and source parts', () => {
   assert.equal(FIELDS.proceeds_amount, 'T');
   assert.equal(FIELDS.proceeds_total, 'O');
   assert.ok(SOURCE_PARTS.includes('risk factors'));
-  assert.equal(OFFERING_VERSION, 'bonds-offering-1.1.0');
+  assert.equal(OFFERING_VERSION, 'bonds-offering-1.2.0');   // FIX3 bumped it (offering rows changed)
 });
 
 // ── A: make-whole + par call, change of control, money and fees (UNH, 4 tranches) ──
