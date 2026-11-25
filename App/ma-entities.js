@@ -2042,7 +2042,14 @@ function _fiStyleOnce() {
 .fi-row:hover{background:var(--bg2)}.fi-head{cursor:default;font-size:9px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}.fi-head:hover{background:none}
 @media (max-width:640px){.fi-row{grid-template-columns:1fr 1fr}.fi-head{display:none}.fi-row>.fi-opt{display:none}}
 .fi-ladder{display:flex;align-items:flex-end;gap:6px;overflow-x:auto;padding:4px 0 2px;max-width:100%}
-.fi-bar{flex:0 0 auto;min-width:44px;text-align:center;font-size:9px;color:var(--muted)}`;
+.fi-bar{flex:0 0 auto;min-width:44px;text-align:center;font-size:9px;color:var(--muted)}
+.fi-docs{font-size:10px;color:var(--muted);margin:10px 0 2px}.fi-doc-list{margin:2px 0 6px}.fi-doc{font-size:11px;color:var(--text2);padding:5px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
+.fi-part{font-size:9px;color:var(--muted)}.fi-od{font-size:9px;color:var(--blue)}
+.fi-panel{margin:16px 0 0}.fi-h{margin:0 0 2px;font-size:13px;font-weight:700;color:var(--text)}
+.fi-grp{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin:12px 0 2px}
+.fi-kv{display:grid;grid-template-columns:minmax(120px,32%) minmax(0,1fr);gap:2px 14px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2);line-height:1.5}
+.fi-k{color:var(--dim)}.fi-v{min-width:0;overflow-wrap:anywhere}.fi-src{display:block;font-size:9px;color:var(--muted)}.fi-src a,.fi-v a{color:var(--blue)}
+@media (max-width:640px){.fi-kv{grid-template-columns:minmax(0,1fr);gap:0}}`;
   document.head.appendChild(st);
 }
 
@@ -2094,6 +2101,367 @@ function _fiTitle(b) {
 }
 function _fiBondId(b) { return `${b.accession_number}/${Number(b.tranche_seq)}`; }
 
+// ── MA-NOV-BOND.UI: document counts (spec MA-NOV-BOND v1 §5) + "Offering details" / "Who's involved" (v2 §10) ──
+// Reads only: F1/F1b ?documents=1, F5 /api/fi/ciks/{cik}/documents, F2 `offering`. Withheld fields come from the
+// F2 body (`offering.withheld`, the one list in bonds-offering.mjs): a 'row' field shows "Not read yet"; a
+// 'value_text' field shows its section link and heading only. Drafts are documents, never bonds.
+const _FI_NOT_STATED = 'Not stated in the filing';
+const _FI_NOT_APPLICABLE = 'Not applicable';
+const _FI_NOT_READ = 'Not read yet';
+const _FI_STATE_TEXT = { not_disclosed: _FI_NOT_STATED, not_applicable: _FI_NOT_APPLICABLE };
+const _FI_OFFERING_FOOTER = "Facts copied from the SEC filing, with a link to where each one appears. We don't summarise or interpret the filing.";
+const _FI_NOT_COVERED = {
+  draft_not_debt: 'Draft for shares or units — not covered',
+  draft_structured: 'Draft for notes linked to an index or stock — not covered',
+  structured: 'Notes linked to an index, stock or basket — not covered',
+  equity: 'Shares, units or preferred stock — not covered',
+  stock_plan: 'Share purchase plan — not covered',
+  exchange_offer: 'Exchange offer for existing bonds — not covered',
+  merger_document: 'Merger or consent document — not covered',
+  demand_note: 'Demand notes (not bonds) — not covered',
+  remarketing: 'Resale of existing notes — not covered',
+  resale: 'Resale by holders — not covered',
+  program_supplement: 'Notes programme document — no specific notes offered — not covered'
+};
+const _FI_COULDNT_READ = {
+  no_maturity: 'maturity date not stated in a form we read', no_principal: 'amount not found',
+  fwp_conflict: "details didn't agree with the term sheet", no_tranche: 'no bond terms found'
+};
+const _FI_MISSING_LABEL = { cusip_isin: 'CUSIP/ISIN', coupon: 'coupon', spread: 'spread' };
+const _FI_FREQ = { 'semi-annual': 'Twice a year', quarterly: 'Four times a year', annual: 'Once a year', monthly: 'Every month' };
+const _FI_PARTY_LABEL = {
+  bookrunner: 'Lead banks (bookrunners)', co_manager: 'Other managing banks', underwriter: 'Underwriters', agent: 'Selling agents',
+  trustee: 'Trustee', guarantor: 'Guaranteed by', other: 'Other'
+};
+const _fiPlural = (n, one, many) => `${Number(n)} ${Number(n) === 1 ? one : many}`;
+
+// Only SEC.gov document links are ever rendered as links.
+function _fiSecUrl(u) {
+  return typeof u === 'string' && /^https:\/\/www\.sec\.gov\/[^\s"'<>]*$/.test(u) ? u : null;
+}
+function _fiSrcHref(src) {
+  const u = _fiSecUrl(src && src.url);
+  if (!u) return null;
+  return src.anchor ? `${u.split('#')[0]}#${encodeURIComponent(String(src.anchor))}` : u;
+}
+function _fiHeadingText(h) {
+  const s = String(h || '').replace(/\s+/g, ' ').trim();
+  return s && s === s.toUpperCase() && /[A-Z]/.test(s) ? s.charAt(0) + s.slice(1).toLowerCase() : s;
+}
+// "Prospectus supplement — Underwriting, page S-21" · "Pricing supplement — 'Redemption'" (spec v2 §5, §10).
+function _fiSrcText(src, doc) {
+  const name = src.doc === 'fwp' ? 'Term sheet' : doc ? doc.charAt(0).toUpperCase() + doc.slice(1) : 'Filing';
+  const label = /^(?:pricing terms|retail table|term sheet)$/.test(src.part || '') && src.heading;
+  let where = label ? `'${String(src.heading).replace(/\s+/g, ' ').trim()}'`
+    : _fiHeadingText(src.heading) || (src.part === 'cover' ? 'Cover page' : String(src.part || '').replace(/^./, c => c.toUpperCase()));
+  const page = src.page ? String(src.page) : '';
+  if (page && page !== 'cover') where += `${where ? ', ' : ''}page ${page}`;
+  else if (page === 'cover' && !/cover/i.test(where)) where += `${where ? ', ' : ''}cover page`;
+  return where ? `${name} — ${where}` : name;
+}
+function _fiSrcHtml(src, doc) {
+  if (!src) return '';
+  const href = _fiSrcHref(src);
+  const text = _esc(_fiSrcText(src, doc));
+  return `<span class="fi-src">Source: ${href ? `<a href="${_esc(href)}" target="_blank" rel="noopener noreferrer">${text} ↗</a>` : text}</span>`;
+}
+
+// v1 §5 reason codes → plain words. A superseded draft links the final it was replaced by.
+function _fiReasonHtml(d) {
+  const r = d.status_reason;
+  if (r === 'superseded') {
+    const f = d.superseded_by || {};
+    const href = _fiSecUrl(f.source_url);
+    const tail = f.filing_date ? `the final terms filed ${_esc(_navFmtDate(f.filing_date))}` : 'the final terms';
+    return `Draft offering document — replaced by ${href ? `<a href="${_esc(href)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue)">${tail}</a>` : tail}`;
+  }
+  if (r === 'draft_no_final') return 'Draft offering document — no final terms found';
+  if (_FI_NOT_COVERED[r]) return _esc(_FI_NOT_COVERED[r]);
+  if (_FI_COULDNT_READ[r]) return `We couldn't read this filing's terms: ${_esc(_FI_COULDNT_READ[r])}`;
+  if (d.filing_status === 'preliminary') return 'Draft offering document';
+  if (d.filing_status === 'parse_failed' || r === 'low_confidence') return "We couldn't read this filing's terms";
+  return 'Not covered';
+}
+
+// Issuer / filer footer: "From 45 SEC filings: 31 bonds shown · 4 draft documents · 1 filing we couldn't read · 9 not covered — show list".
+function _fiDocsCountsHtml(c) {
+  const drafts = Number(c.drafts_replaced || 0) + Number(c.drafts_open || 0);
+  const parts = [_fiPlural(c.shown || 0, 'bond shown', 'bonds shown')];
+  if (drafts) parts.push(_fiPlural(drafts, 'draft document', 'draft documents'));
+  if (c.could_not_read) parts.push(_fiPlural(c.could_not_read, "filing we couldn't read", "filings we couldn't read"));
+  if (c.not_covered) parts.push(`${Number(c.not_covered)} not covered`);
+  return { text: `From ${_fiPlural(c.filings || 0, 'SEC filing', 'SEC filings')}: ${parts.join(' · ')}`, listed: drafts + Number(c.could_not_read || 0) + Number(c.not_covered || 0) };
+}
+function _fiDocsInner(st) {
+  const docs = st.docs;
+  if (!docs || !docs.counts) return '';
+  const { text, listed } = _fiDocsCountsHtml(docs.counts);
+  const btn = listed ? ` — <button class="fi-docs-toggle" aria-expanded="${docs.open ? 'true' : 'false'}" onclick="_fiDocsToggle(this)" style="background:none;border:none;color:var(--blue);font-size:10px;cursor:pointer;padding:0">${docs.open ? 'hide list' : 'show list'}</button>` : '';
+  let list = '';
+  if (docs.open) {
+    const multi = st.ciks.length > 1;
+    list = (st.ciks.length ? st.ciks : [{ cik: st.cik }]).map(c => {
+      const l = docs.lists[c.cik];
+      if (!l) return '';
+      const head = multi ? `<div class="fi-grp">Filed by ${_esc(st.cikName[c.cik] || c.cik)}</div>` : '';
+      if (l.error) return head + `<div class="fi-doc">${_esc(_FI_OUTAGE)}</div>`;
+      const rows = l.rows.map(d => {
+        const href = _fiSecUrl(d.source_url);
+        return `<div class="fi-doc"><span style="color:var(--dim)">${_esc(_navFmtDate(d.filing_date))} · ${_esc(d.form_type || '')}</span> <span>${_fiReasonHtml(d)}</span>${href ? ` <a href="${_esc(href)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue)">View filing on SEC.gov ↗</a>` : ''}</div>`;
+      }).join('');
+      const more = l.cursor ? `<button data-cik="${_esc(c.cik)}" onclick="_fiDocsMore(this)" style="margin-top:6px;background:none;border:1px solid var(--border);color:var(--blue);font-size:10px;padding:3px 8px;border-radius:var(--r);cursor:pointer">Show 25 more ↓</button>` : '';
+      return head + (rows || (l.loading ? '' : `<div class="fi-doc" style="color:var(--dim)">None.</div>`)) + more;
+    }).join('');
+    if (docs.loading) list += `<div class="fi-doc" style="color:var(--dim)">Loading…</div>`;
+  }
+  return `<div class="fi-docs">${_esc(text)}${btn}</div>${list ? `<div class="fi-doc-list">${list}</div>` : ''}`;
+}
+function _fiDocsOwner(el) {
+  const section = el && el.closest ? el.closest('[id^=issuer-bonds-section-]') : null;
+  if (section && section._fi) return section._fi;
+  const layer = (typeof _navStack !== 'undefined' ? _navStack : []).find(l => l && l.el && l.el.contains && l.el.contains(el));
+  return layer && layer._fi ? layer._fi : null;
+}
+function _fiDocsRedraw(el, st) {
+  const wrap = el && el.closest ? el.closest('.fi-docs-wrap') : null;
+  if (wrap) wrap.innerHTML = _fiDocsInner(st);
+}
+async function _fiDocsFetch(st, cik) {
+  const l = st.docs.lists[cik] || (st.docs.lists[cik] = { rows: [], cursor: null, loading: false, error: false });
+  l.loading = true;
+  const r = await data_entitiesGet(`/api/fi/ciks/${encodeURIComponent(cik)}/documents${l.cursor ? `?cursor=${encodeURIComponent(l.cursor)}` : ''}`);
+  l.loading = false;
+  if (!r || !r.ok || !r.data) { l.error = true; return; }
+  l.error = false;
+  (r.data.documents || []).forEach(d => l.rows.push(d));
+  l.cursor = r.data.next_cursor || null;
+}
+async function _fiDocsToggle(btn) {
+  const st = _fiDocsOwner(btn);
+  if (!st || !st.docs) return;
+  const wrap = btn.closest ? btn.closest('.fi-docs-wrap') : null;
+  st.docs.open = !st.docs.open;
+  if (st.docs.open && !st.docs.loaded) {
+    st.docs.loading = true; _fiDocsRedraw(btn, st);
+    const ciks = st.ciks.length ? st.ciks.map(c => c.cik) : [st.cik];
+    for (const c of ciks) await _fiDocsFetch(st, c);
+    st.docs.loading = false; st.docs.loaded = true;
+  }
+  if (wrap) { wrap.innerHTML = _fiDocsInner(st); const t = wrap.querySelector && wrap.querySelector('.fi-docs-toggle'); if (t && t.focus) t.focus(); }
+}
+async function _fiDocsMore(btn) {
+  const st = _fiDocsOwner(btn);
+  if (!st || !st.docs) return;
+  const wrap = btn.closest ? btn.closest('.fi-docs-wrap') : null;
+  btn.disabled = true; btn.textContent = 'Loading…';
+  await _fiDocsFetch(st, btn.dataset.cik);
+  if (wrap) wrap.innerHTML = _fiDocsInner(st);
+}
+function _fiDocsBlockHtml(st) {
+  return st.docs && st.docs.counts ? `<div class="fi-docs-wrap">${_fiDocsInner(st)}</div>` : '';
+}
+
+// ── Offering details (spec v2 §10). Required fields show a state when there is no value; "Show where found"
+// fields (guarantor, CUSIP/ISIN, priced on, buy-back, mandatory repayment, survivor's option, conflicts, listing)
+// are left out when absent.
+const _fiPct = n => `${Number(n).toFixed(3)}%`;
+function _fiShortMoney(n, ccy) {
+  if (n == null || !isFinite(Number(n))) return null;
+  const v = Number(n);
+  const body = v >= 1e9 ? `${+(v / 1e9).toFixed(2)}bn` : v >= 1e6 ? `${+(v / 1e6).toFixed(1)}m` : Math.round(v).toLocaleString('en-US');
+  const sym = _FI_CCY[ccy];
+  return sym ? `${sym}${body}` : `${ccy || ''} ${body}`.trim();
+}
+function _fiJson(s) { try { const v = JSON.parse(s); return v && typeof v === 'object' ? v : null; } catch { return null; } }
+function _fiMonthDay(md) {
+  const m = /^(\d{2})-(\d{2})$/.exec(String(md));
+  if (!m) return null;
+  const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return names[Number(m[1]) - 1] ? `${Number(m[2])} ${names[Number(m[1]) - 1]}` : null;
+}
+function _fiAnd(list) { return list.length < 2 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`; }
+
+const _FI_FMT = {
+  document_date: f => _navFmtDate(f.value_date),
+  priced_on: f => _navFmtDate(f.value_date),
+  issue_date: f => f.value_date ? `${f.value_text === 'on or about' ? 'on or about ' : ''}${_navFmtDate(f.value_date)}` : null,
+  maturity: f => _navFmtDate(f.value_date),
+  identifier: f => f.value_text,
+  issue_price_pct: f => f.value_num == null ? null : _fiPct(f.value_num),
+  bank_fee_pct: f => f.value_num == null ? null : _fiPct(f.value_num),
+  proceeds_pct: f => f.value_num == null ? null : _fiPct(f.value_num),
+  day_count: f => f.value_text,
+  listing: f => f.value_text,
+  survivors_option: f => /^yes$/i.test(f.value_text || '') ? 'Yes' : /^no$/i.test(f.value_text || '') ? 'No' : null,
+  change_of_control: f => f.value_num == null ? 'Yes' : `Yes, at ${+Number(f.value_num).toFixed(3)}% of principal`,
+  special_mandatory_redemption: f => `Yes${f.value_num != null ? `, at ${+Number(f.value_num).toFixed(3)}% of principal` : ''}${f.value_date ? ` (date in the filing: ${_navFmtDate(f.value_date)})` : ''}`,
+  interest_paid: f => {
+    const j = _fiJson(f.value_text);
+    if (!j) return null;
+    const days = Array.isArray(j.on) ? j.on.map(_fiMonthDay).filter(Boolean) : [];
+    let s = _FI_FREQ[j.f] || (j.f ? String(j.f) : '');
+    if (days.length) s += `${s ? ', ' : ''}${_fiAnd(days)}`;
+    if (j.first) s += `${s ? '; ' : ''}first on ${_navFmtDate(j.first)}`;
+    return s || null;
+  },
+  early_repayment: f => {
+    const j = _fiJson(f.value_text);
+    if (!j) return null;
+    if (j.can === 'no') return "No — the filing says the notes can't be repaid early";
+    if (j.can !== 'yes') return null;
+    const from = j.from ? ` from ${_navFmtDate(j.from)}` : '';
+    const mw = 'the greater of par and a make-whole amount';
+    let s = 'Yes';
+    if (j.price === 'make-whole, then par') s += `${from ? `,${from}` : ''} at par; before that at ${mw}`;
+    else if (j.price === 'make-whole') s += `${from ? `,${from}` : ''} at ${mw}`;
+    else if (j.price === 'par') s += `${from ? `,${from}` : ''} at par`;
+    else if (/^\d+(?:\.\d+)?%$/.test(j.price || '')) s += `${from ? `,${from}` : ''} at ${j.price} of principal`;
+    else s += from ? `,${from}` : '';
+    if (j.tax) s += '; also for tax reasons';
+    return s;
+  }
+};
+
+function _fiKvHtml(label, valueHtml, srcHtml) {
+  return `<div class="fi-kv"><div class="fi-k">${_esc(label)}</div><div class="fi-v">${valueHtml}${srcHtml || ''}</div></div>`;
+}
+// One fact row. opts.where = "Show where found" (left out unless disclosed). Values are escaped here.
+function _fiFactRow(o, field, label, opts = {}) {
+  const w = (o.withheld || {})[field];
+  if (w === 'row') return opts.where ? '' : _fiKvHtml(label, _esc(_FI_NOT_READ));
+  const f = o.F[field];
+  if (!f) return opts.where ? '' : _fiKvHtml(label, _esc(_FI_NOT_READ));
+  if (f.state !== 'disclosed') return opts.where ? '' : _fiKvHtml(label, _esc(_FI_STATE_TEXT[f.state] || _FI_NOT_READ));
+  const v = (opts.fmt || _FI_FMT[field] || (x => x.value_text))(f);
+  if (v == null || v === '') return opts.where ? '' : _fiKvHtml(label, _esc(_FI_NOT_READ));
+  return _fiKvHtml(label, `<span${opts.mono ? ' style="font-family:var(--mono);font-size:10px"' : ''}>${_esc(v)}</span>`, _fiSrcHtml(f.source, o.document));
+}
+// "To read in the filing": the value is a section link with its one-line heading and page (spec v2 §8).
+function _fiSectionRow(o, field, label, opts = {}) {
+  const f = o.F[field];
+  if (!f) return opts.where ? '' : _fiKvHtml(label, _esc(_FI_NOT_READ));
+  if (f.state !== 'disclosed') return opts.where ? '' : _fiKvHtml(label, _esc(_FI_STATE_TEXT[f.state] || _FI_NOT_READ));
+  const s = f.source || {};
+  let text = _fiHeadingText(s.heading) || label;
+  if (s.page && s.page !== 'cover') text += `, page ${s.page}`;
+  const href = _fiSrcHref(s);
+  const v = href ? `<a href="${_esc(href)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue)">${_esc(text)} ↗</a>` : _esc(text);
+  const docName = s.doc === 'fwp' ? 'Term sheet' : o.document ? o.document.charAt(0).toUpperCase() + o.document.slice(1) : 'Filing';
+  return _fiKvHtml(label, v, `<span class="fi-src">Source: ${_esc(docName)}</span>`);
+}
+
+function _fiOfferingModel(d) {
+  const o = d.offering || {}, b = d.bond || {};
+  const F = {};
+  (o.facts || []).forEach(f => { if (f && f.field) F[f.field] = f; });
+  // Spec v2 §3.2 fields 5–8 are the existing bond_issuance columns: with no offering row, the column value is
+  // shown, sourced to the filing itself (no section).
+  const filing = { doc: '424b', url: b.source_url, part: null, heading: null, anchor: null, page: null };
+  const col = (field, extra) => { if (!F[field]) F[field] = { field, state: 'disclosed', value_text: null, value_num: null, value_date: null, source: filing, ...extra }; };
+  if (b.principal_amount != null) col('amount', { value_num: b.principal_amount });
+  if (b.currency) col('currency', { value_text: b.currency });
+  if (b.maturity_date) col('maturity', { value_date: b.maturity_date });
+  if (b.rate_type === 'fixed' && b.coupon_rate != null) col('interest_rate', { value_num: b.coupon_rate });
+  else if (b.rate_type !== 'fixed' && b.spread_bps != null && b.benchmark) col('interest_rate', { value_text: `${b.benchmark} + ≈${Number(b.spread_bps)} bp`, value_num: b.spread_bps });
+  return { F, parties: o.parties || [], states: o.states || {}, withheld: o.withheld || {}, document: o.document || null };
+}
+
+function _fiOfferingHtml(d, issuerName) {
+  const o = _fiOfferingModel(d), b = d.bond || {};
+  const cover = { doc: '424b', url: b.source_url, part: 'cover', heading: 'Cover page', anchor: null, page: null };
+  const grp = t => `<div class="fi-grp">${_esc(t)}</div>`;
+  const guarantors = o.parties.filter(p => p.role === 'guarantor');
+  const deal = [
+    _fiKvHtml('Issuer', _esc(issuerName || '—'), _fiSrcHtml(cover, o.document)),
+    guarantors.length ? _fiKvHtml('Guaranteed by', guarantors.map(p => _esc(p.name)).join('<br>'), _fiSrcHtml(guarantors[0].source, o.document)) : '',
+    _fiFactRow(o, 'document_date', 'Date of this document'),
+    _fiFactRow(o, 'priced_on', 'Priced on', { where: true }),
+    _fiFactRow(o, 'issue_date', 'Issue date')
+  ];
+  const ccy = (o.F.currency && o.F.currency.value_text) || b.currency;
+  const rk = o.F.ranking, sc = o.F.secured;
+  const rkVal = [rk && rk.state === 'disclosed' ? rk.value_text : null, sc && sc.state === 'disclosed' ? sc.value_text : null].filter(Boolean);
+  let rankRow;
+  if (rkVal.length) rankRow = _fiKvHtml('Ranking', _esc(rkVal.join(', ')), _fiSrcHtml((rk && rk.state === 'disclosed' ? rk : sc).source, o.document));
+  else if ((rk && rk.state !== 'disclosed') || (sc && sc.state !== 'disclosed')) rankRow = _fiKvHtml('Ranking', _esc(_FI_STATE_TEXT[(rk || sc).state] || _FI_NOT_READ));
+  else rankRow = _fiKvHtml('Ranking', _esc(_FI_NOT_READ));
+  const idRow = _fiFactRow(o, 'identifier', 'CUSIP / ISIN', { where: true, mono: true })
+    || ((b.cusip || b.isin) ? _fiKvHtml('CUSIP / ISIN', `<span style="font-family:var(--mono);font-size:10px">${_esc([b.cusip ? `CUSIP ${b.cusip}` : '', b.isin ? `ISIN ${b.isin}` : ''].filter(Boolean).join('; '))}</span>`, _fiSrcHtml(cover, o.document)) : '');
+  const bond = [
+    _fiFactRow(o, 'amount', 'Amount', { fmt: f => _fiShortMoney(f.value_num, ccy) }),
+    _fiFactRow(o, 'interest_rate', 'Interest', { fmt: f => f.value_text ? f.value_text : f.value_num == null ? null : `${Number(f.value_num).toFixed(3)}% a year` }),
+    _fiFactRow(o, 'interest_paid', 'Interest paid'),
+    _fiFactRow(o, 'day_count', 'How interest is counted'),
+    _fiFactRow(o, 'issue_price_pct', 'Price to investors'),
+    _fiFactRow(o, 'maturity', 'Matures'),
+    rankRow, idRow,
+    _fiFactRow(o, 'early_repayment', 'Early repayment'),
+    _fiFactRow(o, 'change_of_control', 'Buy-back if control changes', { where: true }),
+    _fiFactRow(o, 'special_mandatory_redemption', 'Mandatory early repayment if a deal fails', { where: true }),
+    _fiFactRow(o, 'survivors_option', "Repayment on the holder's death", { where: true })
+  ];
+  const pa = o.F.proceeds_amount;
+  const money = [
+    _fiFactRow(o, 'use_of_proceeds', 'What the money is for'),
+    _fiFactRow(o, 'bank_fee_pct', 'Bank fee'),
+    (o.F.proceeds_pct && o.F.proceeds_pct.state === 'disclosed') || !(pa && pa.state === 'disclosed')
+      ? _fiFactRow(o, 'proceeds_pct', 'Proceeds to the issuer before expenses')
+      : _fiFactRow(o, 'proceeds_amount', 'Proceeds to the issuer before expenses', { fmt: f => _fiShortMoney(f.value_num, String(f.value_text || '').split(' ')[0] || ccy) })
+  ];
+  const read = [
+    _fiSectionRow(o, 'risk_factors', 'Risks'),
+    _fiSectionRow(o, 'selling_restrictions', 'Where the notes may not be sold'),
+    _fiSectionRow(o, 'conflicts_of_interest', 'Conflicts of interest', { where: true }),
+    _fiFactRow(o, 'listing', 'Listing', { where: true })
+  ];
+  return `<section class="fi-panel" aria-label="Offering details">
+    <h3 class="fi-h">Offering details</h3>
+    ${grp('The deal')}${deal.join('')}
+    ${grp('This bond')}${bond.join('')}
+    ${grp('Money and fees')}${money.join('')}
+    ${grp('To read in the filing')}${read.join('')}
+  </section>`;
+}
+
+// ── Who's involved (spec v2 §4.4, §10): two blocks; each name with its printed role, and the notes it is for.
+function _fiPartyRoleText(p, year) {
+  let printed = String(p.role_printed || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+  if ((p.role === 'trustee' || p.role === 'guarantor') && printed.toLowerCase() === _FI_PARTY_LABEL[p.role].toLowerCase()) printed = '';
+  const forNotes = p.tranche_specific && year ? `for the ${year} notes` : '';
+  return [printed, forNotes].filter(Boolean).join(' · ');
+}
+function _fiPartyGroupRow(o, role, year) {
+  const list = o.parties.filter(p => p.role === role);
+  const label = _FI_PARTY_LABEL[role];
+  if (!list.length) {
+    const st = o.states[role];
+    return _fiKvHtml(label, _esc(st && _FI_STATE_TEXT[st] ? _FI_STATE_TEXT[st] : _FI_NOT_READ));
+  }
+  const names = list.map(p => {
+    const rt = _fiPartyRoleText(p, year);
+    return `<div>${_esc(p.name)}${rt ? ` <span style="font-size:9px;color:var(--muted)">${_esc(rt)}</span>` : ''}</div>`;
+  }).join('');
+  const seen = new Set(), srcs = [];
+  for (const p of list) { const k = _fiSrcText(p.source || {}, o.document); if (!seen.has(k)) { seen.add(k); srcs.push(_fiSrcHtml(p.source, o.document)); } }
+  return _fiKvHtml(label, names, srcs.join(''));
+}
+function _fiWhoHtml(d, issuerName) {
+  const o = _fiOfferingModel(d), b = d.bond || {};
+  const year = String(b.maturity_date || '').slice(0, 4);
+  const cover = { doc: '424b', url: b.source_url, part: 'cover', heading: 'Cover page', anchor: null, page: null };
+  const guar = o.parties.some(p => p.role === 'guarantor') ? _fiPartyGroupRow(o, 'guarantor', year) : '';
+  const other = o.parties.some(p => p.role === 'other') ? _fiPartyGroupRow(o, 'other', year) : '';
+  return `<section class="fi-panel" aria-label="Who's involved">
+    <h3 class="fi-h">Who's involved</h3>
+    <div class="fi-grp">Who issued and protects the bonds</div>
+    ${_fiKvHtml('Issuer', _esc(issuerName || '—'), _fiSrcHtml(cover, o.document))}${guar}${_fiPartyGroupRow(o, 'trustee', year)}
+    <div class="fi-grp">Banks that sold the bonds</div>
+    ${['bookrunner', 'co_manager', 'underwriter', 'agent'].map(r => _fiPartyGroupRow(o, r, year)).join('')}
+    ${other ? `<div class="fi-grp">Other</div>${other}` : ''}
+  </section>
+  <div role="note" style="font-size:10px;color:var(--muted);margin:10px 0 0">${_esc(_FI_OFFERING_FOOTER)}</div>`;
+}
+
 // M9-4: F1's freshness.latest_filing_date covers one response only, so it is never shown as the
 // issuer's latest filing. The page shows the latest filing among the rows on screen, labelled so.
 function _fiShownLatest(rows) {
@@ -2108,7 +2476,8 @@ function _fiTableHtml(st) {
   const multi = st.ciks.length > 1;
   const head = `<div class="fi-row fi-head"><div>Maturity</div><div>Coupon / spread</div><div class="fi-opt">Type</div><div>Principal</div><div class="fi-opt">Seniority</div><div class="fi-opt">Tranche</div><div class="fi-opt">Filed</div><div>Confidence</div></div>`;
   const rows = st.rows.map(b => `<div class="fi-row" role="link" tabindex="0" data-bond="${_esc(_fiBondId(b))}" data-page="${Number(b._page)}" onclick="_fiOpenBondRow(this)" onkeydown="if(event.key==='Enter')_fiOpenBondRow(this)">
-      <div><strong>${_esc(_navFmtDate(b.maturity_date))}</strong></div>
+      <div><strong>${_esc(_navFmtDate(b.maturity_date))}</strong>${b.missing && b.missing.length ? `<div class="fi-part">Some details not found in the filing</div>` : ''}
+        <div><a class="fi-od" href="${_esc(_navHash('bond', _fiBondId(b), null))}" onclick="event.preventDefault();event.stopPropagation();_fiOpenBondRow(this.closest('.fi-row'))" onkeydown="event.stopPropagation()">Offering details</a></div></div>
       <div>${_esc(_fiCoupon(b))}</div>
       <div class="fi-opt">${_esc(_fiRateLabel(b))}</div>
       <div>${_esc(_fiMoney(b.principal_amount, b.currency))}</div>
@@ -2152,7 +2521,7 @@ async function _fiBondsLoadPage(section, first) {
   if (first) { st.rows = []; st.cursor = null; st.pages = 0; }
   const btn = section.querySelector('.fi-more');
   if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
-  const q = `?limit=25&include_matured=${st.matured ? 1 : 0}${st.cursor ? `&cursor=${encodeURIComponent(st.cursor)}` : ''}`;
+  const q = `?limit=25&include_matured=${st.matured ? 1 : 0}${st.cursor ? `&cursor=${encodeURIComponent(st.cursor)}` : ''}${first ? '&documents=1' : ''}`;
   const [r, l] = await Promise.all([
     data_entitiesGet(`/api/fi/issuers/${st.entityId}/bonds${q}`),
     first && st.years === null ? data_entitiesGet(`/api/fi/issuers/${st.entityId}/ladder`) : Promise.resolve(null)
@@ -2167,6 +2536,7 @@ async function _fiBondsLoadPage(section, first) {
   st.ciks = d.ciks || [];
   st.ciks.forEach(c => { st.cikName[c.cik] = c.issuer_name; });
   st.freshness = d.freshness || st.freshness;
+  if (first) st.docs = d.documents ? { counts: d.documents, open: false, loaded: false, loading: false, lists: {} } : null;
   (d.bonds || []).forEach(b => st.rows.push({ ...b, _page: st.pages + 1 }));
   st.cursor = d.next_cursor || null;
   st.pages++;
@@ -2200,7 +2570,7 @@ function _fiBondsRender(section) {
       : '';
     body = `<div style="text-align:right">${toggle}</div><div style="border-top:1px solid var(--border)">${_fiTableHtml(st)}</div>${more}`;
   }
-  section.innerHTML = title + fresh + _fiDisclosureHtml() + (st.matured ? '' : _fiLadderHtml(st.years)) + body;
+  section.innerHTML = title + fresh + _fiDisclosureHtml() + (st.matured ? '' : _fiLadderHtml(st.years)) + body + _fiDocsBlockHtml(st);
 }
 
 function _fiOpenBondRow(rowEl) {
@@ -2258,6 +2628,9 @@ async function _navRenderBond(layer, opts) {
     issuer = `<div style="font-size:12px;color:var(--text2)">Issuer not linked to Corporate Atlas yet · ${_esc(filer.issuer_name || '')} (CIK ${_esc(filer.cik || b.cik)})</div>
       <a href="#/fi/cik/${_esc(filer.cik || b.cik)}" onclick="event.preventDefault();_navOpen('fi_cik', ${_esc(JSON.stringify(filer.cik || b.cik))}, { history: 'push' })" style="color:var(--blue);font-size:11px">All bonds from this filer →</a>`;
   }
+  const missing = (b.missing || []).map(m => _FI_MISSING_LABEL[m]).filter(Boolean);
+  const missingHtml = missing.length ? `<div style="font-size:11px;color:var(--text2);margin:6px 0">Not found in the filing: ${_esc(missing.join(', '))}</div>` : '';
+  const issuerName = (c && c.name) || filer.issuer_name || '';
   const others = b.other_filings > 0 ? `<div style="font-size:11px;color:var(--text2);margin:6px 0">Also filed in ${Number(b.other_filings)} other filing${b.other_filings === 1 ? '' : 's'}.</div>` : '';
   const viewInstr = b.instrument_key
     ? `<a href="${_esc(_navHash('instrument', b.instrument_key, null))}" onclick="event.preventDefault();_navOpen('instrument', ${_esc(JSON.stringify(b.instrument_key))}, { history: 'push', from: ${_esc(JSON.stringify(`bond:${layer.id}`))} })" style="color:var(--blue);font-size:11px">View instrument</a>`
@@ -2267,11 +2640,14 @@ async function _navRenderBond(layer, opts) {
       <h2 style="margin:0 0 4px;font-size:16px;font-weight:700;color:var(--text)">${_esc(layer.title)}</h2>
       ${_fiDisclosureHtml()}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 20px;font-size:11px;color:var(--text2);line-height:1.8;margin:8px 0">${terms}</div>
+      ${missingHtml}
       ${others}
       <div style="margin:8px 0"><a href="${_esc(b.source_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-size:11px">View filing on SEC.gov ↗</a>${viewInstr ? ' · ' + viewInstr : ''}</div>
       ${quality}
       <div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin:16px 0 4px">Filer · CIK ${_esc(filer.cik || b.cik)}</div>
       ${issuer}
+      ${_fiOfferingHtml(d, issuerName)}
+      ${_fiWhoHtml(d, issuerName)}
     </div>`);
 }
 
@@ -2342,7 +2718,7 @@ async function _navRenderFiCik(layer, opts) {
 
 async function _fiCikLoadPage(layer, opts, first) {
   const el = layer.el, st = layer._fi;
-  const q = `?limit=25${!first && st.cursor ? `&cursor=${encodeURIComponent(st.cursor)}` : ''}`;
+  const q = `?limit=25${!first && st.cursor ? `&cursor=${encodeURIComponent(st.cursor)}` : ''}${first ? '&documents=1' : ''}`;
   if (first) { st.rows = []; st.cursor = null; st.pages = 0; }
   const r = await data_entitiesGet(`/api/fi/ciks/${encodeURIComponent(st.cik)}/bonds${q}`);
   if (!el.isConnected) return;
@@ -2355,6 +2731,8 @@ async function _fiCikLoadPage(layer, opts, first) {
   st.ciks = d.ciks || [];
   const link = st.ciks[0] || {};
   layer.title = link.issuer_name || layer.title;
+  st.ciks.forEach(c => { st.cikName[c.cik] = c.issuer_name; });
+  if (first) st.docs = d.documents ? { counts: d.documents, open: false, loaded: false, loading: false, lists: {} } : null;
   (d.bonds || []).forEach(b => st.rows.push({ ...b, _page: st.pages + 1 }));
   st.cursor = d.next_cursor || null;
   st.pages++;
@@ -2367,7 +2745,8 @@ async function _fiCikLoadPage(layer, opts, first) {
     <div style="font-size:12px;color:var(--text2)">Issuer not linked to Corporate Atlas yet.</div>
     ${_fiFreshnessHtml(f, st.rows)}
     ${_fiDisclosureHtml()}
-    ${table}`);
+    ${table}
+    ${_fiDocsBlockHtml(st)}`);
 }
 
 function _fiCikMore(depth) {

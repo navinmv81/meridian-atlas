@@ -1202,6 +1202,7 @@ async function handleExpLookthrough(env, rawSymbol, url, ctx) {
 // F2  GET /api/fi/bonds/:accession_number/:tranche_seq
 // F3  GET /api/fi/coverage
 // F4  GET /api/fi/issuers/:entity_id/ladder
+// F5  GET /api/fi/ciks/:cik/documents?cursor=   (MA-NOV-BOND.UI)
 // Every request reads fi_serving_gate first. Closed (or missing) → bodies with no CIK,
 // issuer name, count or bond row; F1/F1b keep only has_bond_link (§4.2). Reads only,
 // 0 writes. Responses go through fi_json() so json() and the R1–R4 headers stay as 007 shipped.
@@ -1216,6 +1217,120 @@ const FI_BOND_COLS = `accession_number, tranche_seq, cik, instrument_key, isin, 
        rate_type, coupon_rate, spread_bps, benchmark, principal_amount, currency, maturity_date,
        seniority, form_type, filing_date, source_url, parse_confidence`;
 const FI_RATE_LABEL = { fixed: 'Fixed coupon', floating: 'Floating', fixed_to_floating: 'Fixed-to-floating' };
+
+// --- MA-NOV-BOND.UI: bond visibility (spec MA-NOV-BOND v1 §5) + offering (spec v2 §10) -----------------
+// F1/F1b first page gain `documents` (counts by class, one GROUP BY over the issuer's CIKs); F2 gains
+// status_reason / superseded_by / status_note, `missing` and `offering` (one PK-range read per CR2 table);
+// F5 GET /api/fi/ciks/:cik/documents?cursor= lists non-final documents, 25 per page. Reads only.
+// WITHHELD_FIELDS is the one list (BOND.FIX3): a 'row' field is never served, a 'value_text' field keeps its
+// row (section link + heading) without the value. The body names the list so the screen needs no copy of it.
+import { WITHHELD_FIELDS } from '../bonds/bonds-offering.mjs';
+const FI_DOC_PAGE = 25;
+const FI_PARTY_ROLES = ['bookrunner', 'co_manager', 'underwriter', 'agent', 'trustee', 'guarantor', 'other'];
+
+// Partial = final terms read, with an identifier or the rate missing (v1 §1.3). Derived, no column.
+function fiMissing(r) {
+  const out = [];
+  if (!r.cusip && !r.isin) out.push('cusip_isin');
+  if (r.rate_type === 'fixed' && r.coupon_rate == null) out.push('coupon');
+  if ((r.rate_type === 'floating' || r.rate_type === 'fixed_to_floating') && r.spread_bps == null) out.push('spread');
+  return out;
+}
+
+// v1 §5 classes from one GROUP BY (accession, status, reason): rows → filings and served tranches.
+function fiDocCounts(rows) {
+  const c = { filings: 0, shown: 0, drafts_replaced: 0, drafts_open: 0, could_not_read: 0, not_covered: 0, unknown_reason: 0 };
+  const acc = new Set();
+  for (const r of rows) {
+    acc.add(r.accession_number);
+    const s = r.filing_status;
+    if (s === 'final') c.shown += Number(r.served || 0);
+    else if (s === 'preliminary') r.status_reason === 'superseded' ? c.drafts_replaced++ : c.drafts_open++;
+    else if (s === 'parse_failed') c.could_not_read++;
+    else if (String(s).startsWith('skipped_')) c.not_covered++;
+    if (s !== 'final' && !r.status_reason) c.unknown_reason++;
+  }
+  c.filings = acc.size;
+  return c;
+}
+
+// CR1's columns may be absent (before CR1, or after its rollback: "no reader depends on them"). A query that names
+// them is then retried once with NULLs in their place, so every FI route keeps working on the 008 schema.
+const fiNoColumn = e => /no such column/i.test(String(e && e.message || e));
+// Each caller passes the query and its 008-schema form (the CR1 columns as NULL); the second runs only when the
+// first fails with "no such column".
+async function fiAllCr1(env, sql, legacySql, params, mode = 'all') {
+  const run = q => { const st = env.DB.prepare(q).bind(...params); return mode === 'first' ? st.first() : st.all(); };
+  try { return await run(sql); } catch (e) {
+    if (!fiNoColumn(e)) throw e;
+    return run(legacySql);
+  }
+}
+
+// F1/F1b: `documents` only when asked (?documents=1) and on a first page, so 009's F1 read budget (≤ 4 statements,
+// every bond_issuance statement on the 'final' partial index) is unchanged for every other caller.
+const fiWantsDocuments = url => url.searchParams.get('documents') === '1' && !url.searchParams.get('cursor');
+
+async function fiDocuments(env, ciks) {
+  try {
+    const inList = ciks.map(() => '?').join(', ');
+    const served = `SUM(CASE WHEN parse_confidence >= ${FI_MIN_CONFIDENCE} THEN 1 ELSE 0 END) AS served`;
+    const r = await fiAllCr1(env,
+      `SELECT accession_number, filing_status, status_reason, ${served} FROM bond_issuance WHERE cik IN (${inList})
+       GROUP BY accession_number, filing_status, status_reason`,
+      `SELECT accession_number, filing_status, NULL AS status_reason, ${served} FROM bond_issuance WHERE cik IN (${inList})
+       GROUP BY accession_number, filing_status`, ciks);
+    return fiDocCounts(r.results ?? []);
+  } catch (e) {
+    if (navIsMissingTable(e)) return null;
+    throw e;
+  }
+}
+
+// spec v2 §10 offering. Facts: this tranche and the whole offering (tranche 0); a tranche value wins over the
+// offering value of the same field. Parties: the filing's parties for all tranches (0) or this one.
+// Missing CR2 tables → no rows → the screen shows "Not read yet" (spec v2 §7 rollback rule).
+async function fiOffering(env, accession, seq) {
+  let facts = [], parties = [], available = true;
+  try {
+    const res = await env.DB.batch([
+      env.DB.prepare(`SELECT tranche_seq, field, state, value_text, value_num, value_date, source_doc, source_url, source_part,
+          source_heading, source_anchor, source_page FROM bond_offering_fact WHERE accession_number = ? AND tranche_seq IN (0, ?)`).bind(accession, seq),
+      env.DB.prepare(`SELECT party_seq, tranche_seq, party_name, role, role_printed, source_doc, source_url, source_part, source_page
+          FROM bond_offering_party WHERE accession_number = ? AND tranche_seq IN (0, ?) ORDER BY party_seq`).bind(accession, seq),
+    ]);
+    facts = res[0].results ?? [];
+    parties = res[1].results ?? [];
+  } catch (e) {
+    if (!navIsMissingTable(e)) throw e;
+    available = false;
+  }
+  const states = {};
+  const byField = new Map();
+  for (const f of facts) {
+    if (f.field.startsWith('parties.')) { const role = f.field.slice(8); if (FI_PARTY_ROLES.includes(role)) states[role] = f.state; continue; }
+    const w = WITHHELD_FIELDS[f.field];
+    if (w === 'row') continue;
+    const prev = byField.get(f.field);
+    if (prev && Number(prev.tranche_seq) > 0) continue;
+    byField.set(f.field, w === 'value_text' ? { ...f, value_text: null } : f);
+  }
+  const src = r => ({ doc: r.source_doc, url: r.source_url, part: r.source_part, heading: r.source_heading ?? null, anchor: r.source_anchor ?? null, page: r.source_page ?? null });
+  const outFacts = [...byField.values()].map(f => ({
+    field: f.field, level: Number(f.tranche_seq) > 0 ? 'tranche' : 'offering', state: f.state,
+    value_text: f.value_text ?? null, value_num: f.value_num ?? null, value_date: f.value_date ?? null, source: src(f),
+  })).sort((a, b) => a.field.localeCompare(b.field));
+  const outParties = parties.filter(p => FI_PARTY_ROLES.includes(p.role)).map(p => ({
+    name: p.party_name, role: p.role, role_printed: p.role_printed ?? null, tranche_specific: Number(p.tranche_seq) > 0,
+    source: { doc: p.source_doc, url: p.source_url, part: p.source_part, heading: null, anchor: null, page: p.source_page ?? null },
+  }));
+  // Which document this is (for the source wording): spec v2 §4.3 not_applicable is set by document family.
+  const pages = facts.map(f => String(f.source_page || ''));
+  const document = states.agent === 'not_applicable' ? 'prospectus supplement'
+    : states.bookrunner === 'not_applicable' ? 'pricing supplement'
+    : pages.some(p => /^PS-/.test(p)) ? 'pricing supplement' : pages.some(p => /^S-/.test(p)) ? 'prospectus supplement' : null;
+  return { available, document, facts: outFacts, parties: outParties, states, withheld: { ...WITHHELD_FIELDS } };
+}
 
 function fi_json(data, status = 200, cacheControl = 'no-store', extra = {}) {
   return new Response(JSON.stringify(data), { status, headers: { ...CORS, 'Cache-Control': cacheControl, ...extra } });
@@ -1248,6 +1363,7 @@ function fiBondRow(r) {
     ...r,
     check_source: Number(r.parse_confidence) < FI_CHECK_SOURCE_BELOW,
     rate_label: FI_RATE_LABEL[r.rate_type] ?? null,
+    missing: fiMissing(r),
   };
 }
 
@@ -1369,9 +1485,11 @@ async function handleFiIssuerBonds(env, entityId, url) {
     if (!navIsMissingTable(e)) throw e;
     return fiUnavailable({ has_bond_link: true, ciks: [], bonds: [] });
   }
+  const documents = fiWantsDocuments(url) ? await fiDocuments(env, links.map(l => l.cik)) : undefined;
   return fi_json({
     ...head, has_bond_link: true, ciks: links.map(fiLinkOut), bonds: page.bonds, next_cursor: page.next_cursor, limit: p.limit,
     freshness: { last_polled_at: fiMaxPolled(links), latest_filing_date: page.latest_filing_date },
+    ...(documents !== undefined ? { documents } : {}),
   }, 200, FI_BROWSER_CC);
 }
 
@@ -1399,9 +1517,11 @@ async function handleFiCikBonds(env, cik, url) {
     if (!navIsMissingTable(e)) throw e;
     return fiUnavailable({ has_bond_link: true, ciks: [], bonds: [] });
   }
+  const documents = fiWantsDocuments(url) ? await fiDocuments(env, [link.cik]) : undefined;
   return fi_json({
     ...head, has_bond_link: true, ciks: [fiLinkOut(link)], bonds: page.bonds, next_cursor: page.next_cursor, limit: p.limit,
     freshness: { last_polled_at: link.last_polled_at ?? null, latest_filing_date: page.latest_filing_date },
+    ...(documents !== undefined ? { documents } : {}),
   }, 200, FI_BROWSER_CC);
 }
 
@@ -1414,9 +1534,11 @@ async function handleFiBond(env, accession, rawSeq) {
   if (!gate.open) return fi_json({ data_type: FI_DATA_TYPE, gate: 'closed', bond: null, issuer: null });
   let row;
   try {
-    row = await env.DB.prepare(
-      `SELECT ${FI_BOND_COLS}, filing_status, parser_version, ingested_at FROM bond_issuance WHERE accession_number = ? AND tranche_seq = ?`
-    ).bind(accession, seq).first();
+    const base = `SELECT ${FI_BOND_COLS}, filing_status, parser_version, ingested_at`;
+    row = await fiAllCr1(env,
+      `${base}, status_reason, superseded_by, status_note FROM bond_issuance WHERE accession_number = ? AND tranche_seq = ?`,
+      `${base}, NULL AS status_reason, NULL AS superseded_by, NULL AS status_note FROM bond_issuance WHERE accession_number = ? AND tranche_seq = ?`,
+      [accession, seq], 'first');
   } catch (e) {
     if (!navIsMissingTable(e)) throw e;
     return fiUnavailable({ bond: null, issuer: null });
@@ -1448,10 +1570,12 @@ async function handleFiBond(env, accession, rawSeq) {
   }
   if (multiCik) { state = 'ambiguous'; reason = 'source_conflict'; }
 
-  const { filing_status, parser_version, ingested_at, ...terms } = row;
+  const { filing_status, parser_version, ingested_at, status_reason, superseded_by, status_note, ...terms } = row;
+  const offering = await fiOffering(env, accession, seq);
   return fi_json({
     data_type: FI_DATA_TYPE, gate: 'open',
-    bond: { ...fiBondRow(terms), parser_version, ingested_at, other_filings },
+    bond: { ...fiBondRow(terms), parser_version, ingested_at, other_filings, status_reason: status_reason ?? null, superseded_by: superseded_by ?? null, status_note: status_note ?? null },
+    offering,
     filer: { cik: row.cik, issuer_name: link?.issuer_name ?? null },
     issuer: {
       instrument_key: row.instrument_key ?? null,
@@ -1461,6 +1585,68 @@ async function handleFiBond(env, accession, rawSeq) {
       state, reason, candidates,
       as_of: candidates[0]?.as_of ?? null,
     },
+  }, 200, FI_BROWSER_CC);
+}
+
+// F5 (MA-NOV-BOND.UI, spec v1 §5): non-final documents of one CIK, newest first, FI_DOC_PAGE per page.
+// One row per filing (accession + status + reason); a draft replaced by a final names that final's date and URL
+// (one PK-prefix read for the ≤ 25 finals named). Same gate and link rules as F1b. Drafts are never bonds.
+function fiDocCursor(s) {
+  if (s.length > 200 || !/^[A-Za-z0-9_-]+$/.test(s)) return null;
+  let t;
+  try { t = JSON.parse(atob(s.replace(/-/g, '+').replace(/_/g, '/'))); } catch { return null; }
+  if (!Array.isArray(t) || t.length !== 2 || typeof t[0] !== 'string' || typeof t[1] !== 'string') return null;
+  return t;
+}
+async function handleFiCikDocuments(env, cik, url) {
+  if (!/^\d{10}$/.test(cik)) return fiErr('Invalid cik', 400);
+  const raw = url.searchParams.get('cursor') ?? '';
+  const cur = raw === '' ? null : fiDocCursor(raw);
+  if (raw !== '' && !cur) return fiErr('Invalid cursor', 400);
+  const gate = await fiGate(env);
+  if (!gate.open) return fi_json({ data_type: FI_DATA_TYPE, gate: 'closed', documents: [] });
+  let link, rows;
+  try {
+    link = await env.DB.prepare(`SELECT cik, issuer_name FROM bond_issuer_link WHERE cik = ?`).bind(cik).first();
+    if (!link) return fi_json({ data_type: FI_DATA_TYPE, gate: 'open', has_bond_link: false, documents: [], next_cursor: null }, 200, FI_BROWSER_CC);
+    const where = `WHERE cik = ? AND filing_status <> 'final'${cur ? ' AND (filing_date < ? OR (filing_date = ? AND accession_number < ?))' : ''}`;
+    const head = `SELECT accession_number, MIN(filing_date) AS filing_date, MIN(form_type) AS form_type, filing_status,`;
+    const tail = `MIN(source_url) AS source_url, COUNT(*) AS rows_in_filing FROM bond_issuance ${where}`;
+    const order = `ORDER BY filing_date DESC, accession_number DESC LIMIT ?`;
+    const r = await fiAllCr1(env,
+      `${head} status_reason, MIN(superseded_by) AS superseded_by, MIN(status_note) AS status_note, ${tail}
+       GROUP BY accession_number, filing_status, status_reason ${order}`,
+      `${head} NULL AS status_reason, NULL AS superseded_by, NULL AS status_note, ${tail}
+       GROUP BY accession_number, filing_status ${order}`,
+      [...(cur ? [cik, cur[0], cur[0], cur[1]] : [cik]), FI_DOC_PAGE + 1]);
+    rows = r.results ?? [];
+  } catch (e) {
+    if (!navIsMissingTable(e)) throw e;
+    return fiUnavailable({ documents: [] });
+  }
+  const more = rows.length > FI_DOC_PAGE;
+  const page = rows.slice(0, FI_DOC_PAGE);
+  const finals = [...new Set(page.map(d => d.superseded_by).filter(a => typeof a === 'string' && /^\d{10}-\d{2}-\d{6}$/.test(a)))];
+  const fin = new Map();
+  if (finals.length) {
+    const f = await env.DB.prepare(
+      `SELECT accession_number, MIN(filing_date) AS filing_date, MIN(source_url) AS source_url, MIN(tranche_seq) AS first_seq
+       FROM bond_issuance WHERE accession_number IN (${finals.map(() => '?').join(', ')}) AND filing_status = 'final' GROUP BY accession_number`
+    ).bind(...finals).all();
+    for (const x of f.results ?? []) fin.set(x.accession_number, x);
+  }
+  const last = page[page.length - 1];
+  return fi_json({
+    data_type: FI_DATA_TYPE, gate: 'open', has_bond_link: true, cik: link.cik, issuer_name: link.issuer_name,
+    documents: page.map(d => {
+      const f = d.superseded_by ? fin.get(d.superseded_by) : null;
+      return {
+        accession_number: d.accession_number, filing_date: d.filing_date, form_type: d.form_type, filing_status: d.filing_status,
+        status_reason: d.status_reason ?? null, status_note: d.status_note ?? null, source_url: d.source_url,
+        superseded_by: d.superseded_by ? { accession_number: d.superseded_by, filing_date: f?.filing_date ?? null, source_url: f?.source_url ?? null, first_seq: f ? Number(f.first_seq) : null } : null,
+      };
+    }),
+    next_cursor: more && last ? fiEncodeCursor([last.filing_date, last.accession_number]) : null,
   }, 200, FI_BROWSER_CC);
 }
 
@@ -1631,13 +1817,13 @@ export default {
       const expMatch = path.match(/^\/api\/exposure\/etf\/([^/]+)$/);
       if (expMatch && request.method === 'GET') return await handleExpLookthrough(env, expMatch[1], url, ctx);
 
-      // MA-OCT-009 Fixed Income (F1, F1b, F2, F3, F4). GET only.
+      // MA-OCT-009 Fixed Income (F1, F1b, F2, F3, F4; F5 MA-NOV-BOND.UI). GET only.
       if (path.startsWith('/api/fi/') && request.method === 'GET') {
         if (path === '/api/fi/coverage') return await handleFiCoverage(env, url, ctx);
         const fiIssuer = path.match(/^\/api\/fi\/issuers\/([^/]+)\/(bonds|ladder)$/);
         if (fiIssuer) return fiIssuer[2] === 'bonds' ? await handleFiIssuerBonds(env, fiIssuer[1], url) : await handleFiLadder(env, fiIssuer[1], url, ctx);
-        const fiCik = path.match(/^\/api\/fi\/ciks\/([^/]+)\/bonds$/);
-        if (fiCik) return await handleFiCikBonds(env, fiCik[1], url);
+        const fiCik = path.match(/^\/api\/fi\/ciks\/([^/]+)\/(bonds|documents)$/);
+        if (fiCik) return fiCik[2] === 'bonds' ? await handleFiCikBonds(env, fiCik[1], url) : await handleFiCikDocuments(env, fiCik[1], url);
         const fiBond = path.match(/^\/api\/fi\/bonds\/([^/]+)\/([^/]+)$/);
         if (fiBond) return await handleFiBond(env, fiBond[1], fiBond[2]);
       }
