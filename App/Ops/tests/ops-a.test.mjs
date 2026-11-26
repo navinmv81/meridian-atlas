@@ -30,8 +30,8 @@ const html = read(APP, 'index.html');
 const ops = (/<([a-z]+)[^>]*\bid="opsBtn"[^>]*>/.exec(html) || [])[0] || '';
 check('[OPS.A] terminal: the OPS element is a link to the console, new tab, rel=noopener', /^<a\b/.test(ops) && ops.includes(`href="${CONSOLE}"`)
   && /target="_blank"/.test(ops) && /rel="noopener"/.test(ops), ops);
-check('[OPS.A] terminal: no openOps() call and no ma-ops.js script anywhere in index.html', !/openOps\s*\(/.test(html) && !/src="ma-ops\.js"/.test(html), null);
-const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
+check('[OPS.A] terminal: no openOps() call and no ma-ops.js script anywhere in index.html', !/openOps\s*\(/.test(html) && !/src="ma-ops\.js(\?[^"]*)?"/.test(html), null);
+const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1].split("?")[0]);
 const others = scripts.filter(s => /^ma-.*\.js$/.test(s) && existsSync(new URL(s, APP))).map(s => [s, read(APP, s)]);
 check(`[OPS.A] terminal: none of its ${others.length} loaded scripts builds an Ops panel or calls openOps`, others.length >= 9
   && others.every(([, src]) => !/ops-panel|openOps\s*\(/.test(src)), others.filter(([, src]) => /ops-panel|openOps\s*\(/.test(src)).map(([f]) => f));
@@ -318,8 +318,13 @@ check('[OPS.A] the console shell is unchanged in role: it loads exactly ma-data.
   const gen = read(ROOT, 'generate-docs.mjs');
   check('[§1.9] generate-docs.mjs copies named files only; the harness never reaches docs/', !/preview|tests\//.test(gen) && !existsSync(new URL('docs/console-preview.html', ROOT)), null);
 }
-// docs/ is the Pages mirror, refreshed only at the release (REL.GO). Reported, not checked: between builds it differs by design.
-info('docs/ mirror (refreshed at REL.GO)', ['index.html', 'ma-ops.js', 'ma-data.js'].map(f => [f, existsSync(new URL(`docs/${f}`, ROOT)) && read(ROOT, `docs/${f}`) === read(APP, f) ? 'same' : 'differs']));
+// docs/ is the Pages mirror (MA-NOV-REL.GO M-2): a hard check — all 11 front-end files byte-identical to App/, plus docs/.nojekyll.
+{
+  const MIRROR = ['index.html', 'ma-etf.js', 'ma-entities.js', 'ma-13f.js', 'ma-research.js', 'ma-ops.js', 'ma-modal.js', 'ma-dcf.js', 'ma-market.js', 'ma-data.js', 'ma-search.js'];
+  const differs = MIRROR.filter(f => !existsSync(new URL(`docs/${f}`, ROOT)) || !readFileSync(new URL(`docs/${f}`, ROOT)).equals(readFileSync(new URL(f, APP))));
+  check('[REL.GO M-2] docs/ mirror: the 11 front-end files are byte-identical to App/ and docs/.nojekyll exists',
+    differs.length === 0 && existsSync(new URL('docs/.nojekyll', ROOT)), differs.length ? differs : null);
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 console.log(fail ? 'FAILED' : 'ALL PASSED');
