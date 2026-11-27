@@ -29,12 +29,13 @@
 //
 // Usage:
 //   node generate-docs.mjs             — write the real docs/ folder
-//   node generate-docs.mjs --dry-run   — write to .docs-dry-run/ instead,
+//   node generate-docs.mjs --dry-run   — write to a fresh dir under os.tmpdir() instead,
 //                                         for diffing before ever touching
 //                                         the real docs/ folder (MA-SEP-013
 //                                         Step 3)
 
-import { existsSync, mkdirSync, copyFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, copyFileSync } from 'fs';
+import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -61,7 +62,7 @@ const FRONTEND_FILES = [
 ];
 
 const dryRun = process.argv.includes('--dry-run');
-const targetDir = dryRun ? join(REPO_ROOT, '.docs-dry-run') : DOCS_DIR;
+const targetDir = dryRun ? mkdtempSync(join(tmpdir(), 'ma-docs-dry-run-')) : DOCS_DIR; // MA-NOV-PATCH.REL: dry-run lives outside the repo
 
 if (!existsSync(APP_DIR)) {
   console.error(`[generate-docs] App/ not found at ${APP_DIR} — aborting, nothing written.`);

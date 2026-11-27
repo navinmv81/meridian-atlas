@@ -2988,6 +2988,7 @@ function exp_compute(inputs, lookthroughs, opts) {
       Object.assign(row, { reason: oc.reason || null, message: oc.message });
       if (oc.reason === 'too_large') Object.assign(row, { limit: oc.limit, holdings_count: oc.holdings_count, report_month: oc.report_month,
         max_holdings: oc.max_holdings, body_bytes: oc.body_bytes, max_body_bytes: oc.max_body_bytes });
+      if (oc.reason === 'no_holdings' && oc.detail) row.detail = oc.detail; // PATCH.REL: route reason (e.g. no_series_id) for the wording
       if (oc.status === 'unsupported' || oc.status === 'invalid') lines.unsupported += a;
       else lines.not_loaded += a;       // not_loaded and pending: own line, never spread
       outInputs.push(row);
@@ -3736,6 +3737,7 @@ const _EXP_RECON_NOTE = "We don't guess. Anything we can't match to a company is
 // One plain sentence per unsupported input, by route outcome (422 too large / 404 no holdings / unknown, month, invalid).
 function exp_unsupportedSentence(r) {
   if (r && r.reason === 'too_large') return 'This fund is too large to look through here.';
+  if (r && r.reason === 'no_holdings' && r.detail === 'no_series_id') return "This fund doesn't file a holdings report we can read (it isn't a 1940-Act fund — for example a commodity or crypto trust), so its holdings can't be shown.";
   if (r && r.reason === 'no_holdings') return "We don't have this fund's holdings.";
   return "We don't recognise this fund.";
 }

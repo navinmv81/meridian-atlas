@@ -406,7 +406,10 @@ check('exp_viewState(null) → empty', exp_viewState(null) === 'empty');
   check('W3R3 residual line with tooltip', t1.includes('Fund cash, derivatives and other items') && h1.includes(`title="${'What the funds report outside their listed holdings, such as cash, derivatives and borrowings. It can be slightly negative.'}"`), h1);
   // per-input "Not analysed" lines with the right sentence
   check('W3R3 422 rows → too large sentence', t1.includes('Not analysed: VXUS (20.00%) This fund is too large to look through here.'), t1);
-  check('W3R3 404 no_holdings → no holdings sentence', t1.includes("Not analysed: SPY (10.00%) We don't have this fund's holdings."), t1);
+  check('W3R3 404 no_holdings (no_series_id) → not-a-1940-Act sentence (PATCH.REL)', t1.includes("Not analysed: SPY (10.00%) This fund doesn't file a holdings report we can read (it isn't a 1940-Act fund — for example a commodity or crypto trust), so its holdings can't be shown."), t1);
+  check('PATCH.REL no_holdings without a reason / other reason → generic sentence',
+    ctx.exp_unsupportedSentence(plain(exp_compute([E('A')], M({ A: er(404, { error: 'no_holdings' }) }))).gaps.unsupported[0]) === "We don't have this fund's holdings."
+    && ctx.exp_unsupportedSentence(plain(exp_compute([E('A')], M({ A: er(404, { error: 'no_holdings', reason: 'no_nport' }) }))).gaps.unsupported[0]) === "We don't have this fund's holdings.");
   check('W3R3 404 unknown symbol → don\'t recognise', t1.includes("Not analysed: ZZZ (5.00%) We don't recognise this fund."), t1);
   check('W3R3 422 size / month not stored / invalid sentences', ctx.exp_unsupportedSentence(plain(exp_compute([E('A')], M({ A: SZ }))).gaps.unsupported[0]) === 'This fund is too large to look through here.'
     && ctx.exp_unsupportedSentence(plain(exp_compute([E('A')], M({ A: MN }))).gaps.unsupported[0]) === "We don't recognise this fund."

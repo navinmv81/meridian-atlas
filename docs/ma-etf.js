@@ -1204,7 +1204,7 @@ async function onEtfSelectChange(ticker) {
 
   const NO_NPORT = new Set([
     "GLD","SLV","IAU","SGOL","PHYS","PSLV","USO","UNG","DBO","PDBC",
-    "IBIT","FBTC","BITB","EZBC","ETHA","FETH","SPY","QQQ","DIA","GDX","GDXJ","OIH","MSOS"
+    "IBIT","FBTC","BITB","EZBC","ETHA","FETH","GDX","GDXJ","OIH","MSOS"
   ]);
 
   if (NO_NPORT.has(ticker)) {
