@@ -1,0 +1,55 @@
+{
+  "packet": "MA-NOV-EXP.C1",
+  "title": "Deploy exposure route to meridian-entities-api (C-1)",
+  "state": "BLOCKED",
+  "phase": "DEPLOY",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Operations Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.C1_Control_v1.md",
+    "sha256": "e8f73015df8056e0d3b3de310af427de27b634cfe705f80b5760a28e133ded25"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.C1_Task_v1.md",
+    "sha256": "ec1ca021a5d5fc60c9db6677e3c6dbc32a81ada9d55b05a5662f409d97df7cb6"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-EXP.C1_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "Main Lane verification (version ids, checks)",
+  "next_gate": "superseded by MA-NOV-EXP.C1R2",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-12T21:21:19Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-12T21:08Z",
+    "words": "MA-NOV-EXP.C1 (reply to the C1 deploy approval card; taken as approve = production deploy approval for C-1)",
+    "control_sha256": "e8f73015df8056e0d3b3de310af427de27b634cfe705f80b5760a28e133ded25",
+    "task_sha256": "ec1ca021a5d5fc60c9db6677e3c6dbc32a81ada9d55b05a5662f409d97df7cb6",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261112T211229Z-c3d3",
+    "mode": "interactive",
+    "session_id": "de15dfa1-ecd3-4b69-ad78-1736b6a1065e",
+    "started": "2026-11-12T21:12:29Z",
+    "ended_by_session": "de15dfa1-ecd3-4b69-ad78-1736b6a1065e",
+    "ended": "2026-11-12T21:21:19Z",
+    "outcome": "BLOCKED",
+    "blocked_reason": "scope violation: claude/November_Decisions_Log.md"
+  },
+  "heartbeat": null,
+  "main_lane_note": "Read as ROLLED BACK, not a scope breach: production is on 4e7ee20b (previous). The scope flag came from a Main Lane log edit at 21:13Z during the run (NML-1112-6). Closes via the CPU fix packet (FR6).",
+  "superseded_by": "MA-NOV-EXP.C1R2"
+}

@@ -1,0 +1,65 @@
+{
+  "packet": "MA-NOV-EXP.BF1",
+  "title": "gate3 v2 back-fill: SQL, dry run, first write day (≤50k row-writes, Thu 19 Nov)",
+  "state": "CLOSED",
+  "phase": "PROD-PROCESSING",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BF1_Control_v1.md",
+    "sha256": "128c45347159869b89c9e577b52022da508f3144f3a95a7622433b370e2d6a48"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BF1_Task_v1.md",
+    "sha256": "8256b4c75097183a7850254d51bc43a86b0ffaf08ac96238b0fd3f5b28982343"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/gate3v2/",
+      "claude/packets/MA-NOV-EXP.BF1_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane verification",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-19T21:52:34Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-19T21:43Z",
+    "words": "its 21:43 and approve MA-NOV-EXP.BF1 (= production write approval for Thu 19 Nov UTC, ≤50,000 row-writes)",
+    "control_sha256": "128c45347159869b89c9e577b52022da508f3144f3a95a7622433b370e2d6a48",
+    "task_sha256": "8256b4c75097183a7850254d51bc43a86b0ffaf08ac96238b0fd3f5b28982343",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261119T214753Z-2a33",
+    "mode": "interactive",
+    "session_id": "b80b8fa2-cbdf-445f-a050-0cd276140027",
+    "started": "2026-11-19T21:47:53Z",
+    "ended_by_session": "b80b8fa2-cbdf-445f-a050-0cd276140027",
+    "ended": "2026-11-19T21:52:34Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.BF1_Report.md",
+    "report_sha256": "1f209939a4439fd730b86fe8731d27d6c3ee8b669cbadfbf231dbdaf17c31263"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-19T23:04:54Z",
+    "commit": "4cdd22e = origin (gate3v2 SQL)",
+    "writes": "0 rows written (stop gate: 2026-04 ≈ 148k row-writes > 50k)",
+    "dry_run": "2026-04 36,951 exposure rows / 70 holders; 2026-07 4,581 / 24; 05, 06, 08 not run",
+    "breach": "read-only reads 362.7k vs the 300k Control cap (underestimated 2026-04 read ratio); harmless vs 5M/day; disclosed by the run"
+  },
+  "closed_at": "2026-11-20T07:11:51Z",
+  "outcome": "SQL committed 4cdd22e; 0 rows written (April ≈148k row-writes > 50k); read-cap breach 362.7k vs 300k disclosed; continued as a scheduled job (MA-NOV-EXP.BFS)"
+}

@@ -1,0 +1,73 @@
+{
+  "packet": "MA-NOV-BOND.CR",
+  "title": "Change request CR1 + CR2, migrations (not run), apply rehearsal",
+  "state": "CLOSED",
+  "phase": "CR",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.CR_Control_v1.md",
+    "sha256": "7d9c5d4e01901b185a4d0ae31aba294f777fd6356a08159dd82513b96965d55f"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.CR_Task_v1.md",
+    "sha256": "ce6552c45601291745bf73889d167a59045a130300e72802147cdd074622f2c0"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/specs/MA-NOV-BOND_CR.md",
+      "App/Corporate Atlas/migrations/ma-nov-bond-cr1.sql",
+      "App/Corporate Atlas/migrations/ma-nov-bond-cr2.sql",
+      "App/Corporate Atlas/migrations/ma-nov-bond-cr1-rollback.sql",
+      "App/Corporate Atlas/migrations/ma-nov-bond-cr2-rollback.sql",
+      "claude/packets/MA-NOV-BOND.CR_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; Founder CR approval",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-22T14:37:38Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-22T12:30Z",
+    "words": "Approve MA-NOV-BOND.CR (change request; nothing run against D1)",
+    "control_sha256": "7d9c5d4e01901b185a4d0ae31aba294f777fd6356a08159dd82513b96965d55f",
+    "task_sha256": "ce6552c45601291745bf73889d167a59045a130300e72802147cdd074622f2c0",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261122T143042Z-485e",
+    "mode": "interactive",
+    "session_id": "7188caf1-0f9b-4b78-88fb-5ab673ddc8e9",
+    "started": "2026-11-22T14:30:42Z",
+    "ended_by_session": "7188caf1-0f9b-4b78-88fb-5ab673ddc8e9",
+    "ended": "2026-11-22T14:37:38Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BOND.CR_Report.md",
+    "report_sha256": "f2ee94343d72b8dc5d5de4dab82b019401058c93dfb0a70ea1118926c1f92a42"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-22T14:39:36Z",
+    "commit": "8e576f5 = origin; 6 files",
+    "rehearsal": "local copy of today’s 943 rows: CR1 OK; apply 945/945 statements changed exactly 1 row; rollback 945/945; CR1 rollback byte-for-byte identical; CR2 checks behave",
+    "decisions": "D-CR1 status_note included; D-CR3 issuer index deferred to U9 measurement (943-row scans, under 50k)",
+    "note": "new before-hash reference for U6 (results-only canonical)"
+  },
+  "closed_at": "2026-11-22T14:44:36Z",
+  "outcome": "CR1 + CR2 approved by the Founder (NML-1122-8); migrations run only at the write approvals (CR1 Thu 26, CR2 Sat 28)",
+  "approved_cr": {
+    "file": "claude/specs/MA-NOV-BOND_CR.md",
+    "sha256": "3885c9999da6f9736fa7e5db6273b7e2ec2aa92c62da1a2a3f7d9a1a80b12b5b"
+  }
+}

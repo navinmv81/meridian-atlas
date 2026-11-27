@@ -1,0 +1,64 @@
+{
+  "packet": "MA-NOV-EXP.W1R5",
+  "title": "newest_stored_month on R-EXP1 (stale warning) + deploy",
+  "state": "CLOSED",
+  "phase": "BUILD+DEPLOY",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1R5_Control_v1.md",
+    "sha256": "32714f6aea6a7ee67c4276611401554049dd4049ba3766d2493038c18d35a38f"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1R5_Task_v1.md",
+    "sha256": "58a1c19ef325a6066d3c7dc062e6848241cbb1bd1273f5e4ea041c1019cecd1f"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/src/entities-api.js",
+      "App/ma-entities.js",
+      "App/Corporate Atlas/tests/",
+      "claude/packets/MA-NOV-EXP.W1R5_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; deploy checks + rollback triggers",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-19T06:43:01Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-19T06:31Z",
+    "words": "approve MA-NOV-EXP.W1R5 (= code change + production deploy)",
+    "control_sha256": "32714f6aea6a7ee67c4276611401554049dd4049ba3766d2493038c18d35a38f",
+    "task_sha256": "58a1c19ef325a6066d3c7dc062e6848241cbb1bd1273f5e4ea041c1019cecd1f",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261119T063152Z-48e9",
+    "mode": "interactive",
+    "session_id": "394fa759-9525-42a2-a497-c2458bc46f63",
+    "started": "2026-11-19T06:31:52Z",
+    "ended_by_session": "394fa759-9525-42a2-a497-c2458bc46f63",
+    "ended": "2026-11-19T06:43:01Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.W1R5_Report.md",
+    "report_sha256": "ba0cd9c4765a779065b10a39a1b9733902ec333749d3520baf2218c8a6b5cecd"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-19T19:54:03Z",
+    "commit": "79822d5 = origin; 5 files"
+  },
+  "closed_at": "2026-11-19T19:54:03Z",
+  "outcome": "DEPLOYED a9ffeaae (79822d5); previous bb8ad0aa. newest_stored_month = 2026-08 on every response; IYLD (2026-01) flagged stale (T6). All checks passed: EEM cold 4 ms; max rows 38,994; refusals OK; hits identical; regression OK. Note: the field costs +728 rows per uncached request (no index leads with report_month), not a few rows; within budget, scales with series count."
+}

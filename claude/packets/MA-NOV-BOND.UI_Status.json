@@ -1,0 +1,76 @@
+{
+  "packet": "MA-NOV-BOND.UI",
+  "title": "Bond visibility + Offering details / Who's involved (API + screen, local only)",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 12,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v2",
+    "file": "MA-NOV-BOND.UI_Control_v2.md",
+    "sha256": "784031763e19585374605ce5de864200515b30cea8d1154d7681a6020cdcd08e"
+  },
+  "task": {
+    "version": "v2",
+    "file": "MA-NOV-BOND.UI_Task_v2.md",
+    "sha256": "0c5f9d04125e9a400218a5218851ce491522ebed3a9ba6d44ad044ca0959f28f"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/src/entities-api.js",
+      "App/ma-entities.js",
+      "App/Corporate Atlas/tests/",
+      "claude/packets/MA-NOV-BOND.UI_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; go-live packet",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-25T22:01:23Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-25T21:12Z",
+    "words": "approve MA-NOV-BOND.APPLY and MA-NOV-BOND.UI v2",
+    "control_sha256": "784031763e19585374605ce5de864200515b30cea8d1154d7681a6020cdcd08e",
+    "task_sha256": "0c5f9d04125e9a400218a5218851ce491522ebed3a9ba6d44ad044ca0959f28f",
+    "recorded_by": "Main Lane"
+  },
+  "superseded_approval": {
+    "by": "Founder",
+    "at": "2026-11-22T19:38Z",
+    "words": "approve MA-NOV-BOND.REVIEW and MA-NOV-BOND.UI",
+    "control_sha256": "ca97f25b5193896a2185cc85bd6bad0603c577cf3be436a0dfa6419b1b242d1b",
+    "task_sha256": "714134ecafe254561fe6db45327963e885d24fe635b7f9d65d27abdabf5fe772",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261125T213631Z-425a",
+    "mode": "interactive",
+    "session_id": "26f0de06-e5b7-4c03-a187-acb725692ac1",
+    "started": "2026-11-25T21:36:31Z",
+    "ended_by_session": "26f0de06-e5b7-4c03-a187-acb725692ac1",
+    "ended": "2026-11-25T21:59:48Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BOND.UI_Report.md",
+    "report_sha256": "c0456a5f5ac2d01cce33c6e5eec68888dd74f93c34c8b78ab3894b9cdd1825c6"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-25T22:01:23Z",
+    "commit": "01dd3dc = origin",
+    "report_sha256": "c0456a5f5ac2d01cce33c6e5eec68888dd74f93c34c8b78ab3894b9cdd1825c6",
+    "tests": "bond-ui 120/120, fi-009-worker 133/133, fi-010-frontend 71/71 (re-run)",
+    "result": "F1 documents (opt-in), F2 status + offering, F5 documents list; screen Offering details / Who's involved per spec v2 §10; WITHHELD_FIELDS imported; local preview 4 scenarios at 1280/375; 3 remote reads, 0 writes; nothing deployed",
+    "open": "idx_bi_cik_status CR (D-CR3); F3 + #/fi directory counts not built (deviation 2) → December"
+  },
+  "closed_at": "2026-11-25T22:01:23Z",
+  "outcome": "Bond screen built and verified locally (01dd3dc); ships in the single go-live"
+}

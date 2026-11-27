@@ -1,0 +1,64 @@
+{
+  "packet": "MA-NOV-EXP.BFS.FIX",
+  "title": "Back-fill review fixes M1 (per-run limits) + M2 (overrun stop)",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.FIX_Control_v1.md",
+    "sha256": "ee662dcdfe65d5a0c109e22f73b38d88c9fbc0ac3a7b5a73b1706cdbf3da8e32"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.FIX_Task_v1.md",
+    "sha256": "df8cf76c6cd2df9aefe4167b1206cd69f729fe956b10db8b7760d131b1a474ea"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/src/exp-backfill.js",
+      "App/Corporate Atlas/tests/",
+      "claude/packets/MA-NOV-EXP.BFS.FIX_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane verification vs BFS.REVIEW M1/M2",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-20T18:35:09Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-20T18:25Z",
+    "words": "Approval: MA-NOV-EXP.BFS.FIX",
+    "control_sha256": "ee662dcdfe65d5a0c109e22f73b38d88c9fbc0ac3a7b5a73b1706cdbf3da8e32",
+    "task_sha256": "df8cf76c6cd2df9aefe4167b1206cd69f729fe956b10db8b7760d131b1a474ea",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261120T183102Z-d4d6",
+    "mode": "interactive",
+    "session_id": "ff33f06c-dfbc-4389-b319-4ee6bf7d5b41",
+    "started": "2026-11-20T18:31:02Z",
+    "ended_by_session": "ff33f06c-dfbc-4389-b319-4ee6bf7d5b41",
+    "ended": "2026-11-20T18:35:09Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.BFS.FIX_Report.md",
+    "report_sha256": "30e820ed66bf819718e71152c27641f3aeb9df714c12fa61d786801562538ccb"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-20T21:15:24Z",
+    "commit": "76d8283 = origin; 3 files",
+    "tests": "exp-backfill 20/20, wiring 7/7 (re-run)"
+  },
+  "closed_at": "2026-11-20T21:15:24Z",
+  "outcome": "76d8283: per-run limits (3 batches, 12 D1 calls, 150k reads) and overrun stop; reviewer cases now partial/run_limit (11 calls vs 542) and failed/EXPBF_BUDGET_OVERRUN; suites green. Read limit raised to 300k in BFS.GO."
+}

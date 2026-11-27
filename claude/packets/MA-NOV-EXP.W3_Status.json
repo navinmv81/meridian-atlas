@@ -1,0 +1,74 @@
+{
+  "packet": "MA-NOV-EXP.W3",
+  "title": "Exposure-to-company screen (#/exposure)",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W3_Control_v1.md",
+    "sha256": "0fe110bdb82862cb7c3aea6d2183b35eb623734bd720453c8b02d16f0d5d9897"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W3_Task_v1.md",
+    "sha256": "239c13682338e5736004eb679d9e906aff75905974c1020ff8434a57941c70bd"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/ma-entities.js",
+      "App/index.html",
+      "App/Corporate Atlas/tests/",
+      "claude/packets/MA-NOV-EXP.W3_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Independent review of W2 + W3; Founder UAT (W7); release C-2",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-18T19:31:08Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-18T19:09Z",
+    "words": "approve MA-NOV-EXP.W3",
+    "control_sha256": "0fe110bdb82862cb7c3aea6d2183b35eb623734bd720453c8b02d16f0d5d9897",
+    "task_sha256": "239c13682338e5736004eb679d9e906aff75905974c1020ff8434a57941c70bd",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261118T190949Z-7a92",
+    "mode": "interactive",
+    "session_id": "b36cf0be-c0b4-4f46-a631-3f43f7e7e50d",
+    "started": "2026-11-18T19:09:49Z",
+    "ended_by_session": "b36cf0be-c0b4-4f46-a631-3f43f7e7e50d",
+    "ended": "2026-11-18T19:31:08Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.W3_Report.md",
+    "report_sha256": "2cb5aca3271e2b19f41f50df4834bea37cd6bedbddc9d76bb84b0e0ead04c8b4"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-18T19:35:57Z",
+    "commit": "797839b = origin; 3 files",
+    "index_html": "+1 line (Exposure entry link), nothing removed",
+    "ma_entities": "additions only (no removed lines)",
+    "tests": "exp-ui 123/123 per report; Main Lane re-run of exp-ui + exp-compute: pass, 0 fail",
+    "preview": "13 scenarios OK per report, 11 of 25 look-throughs; screenshots kept in the worker scratchpad (not in repo)",
+    "gaps": [
+      "5.1 router rejects #/exposure; ma-entities.js claims it first; fix at release",
+      "5.2 single-ETF stale warning (T6) not shown",
+      "5.3 picker badge month only after load",
+      "5.4 ETF holdings link closes the layer; Forward restores"
+    ]
+  },
+  "closed_at": "2026-11-18T20:06:27Z",
+  "outcome": "Closed on UI.REVIEW PASS_WITH_NOTES; commit 797839b; fixes in W3R2"
+}

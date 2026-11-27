@@ -1,0 +1,56 @@
+{
+  "packet": "MA-NOV-UI.REVIEW",
+  "title": "Combined review: Ops cleanup, Homepage, Exposure polish",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ARCH / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Architect",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-UI.REVIEW_Control_v1.md",
+    "sha256": "65b5ad293005a0334709e63817964bc242460d76bafb6d2a677e08005ec0b6e5"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-UI.REVIEW_Task_v1.md",
+    "sha256": "d537e90aa85512368b0ba72c56f84356213371086db70ee53897f234b340933d"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-UI.REVIEW_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "— (this is the review)",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-21T16:37:11Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-21T16:29Z",
+    "words": "approve MA-NOV-UI.REVIEW",
+    "control_sha256": "65b5ad293005a0334709e63817964bc242460d76bafb6d2a677e08005ec0b6e5",
+    "task_sha256": "d537e90aa85512368b0ba72c56f84356213371086db70ee53897f234b340933d",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261121T163026Z-822c",
+    "mode": "interactive",
+    "session_id": "19c9a63d-00f1-4f45-a94d-5fd84a44a04e",
+    "started": "2026-11-21T16:30:26Z",
+    "ended_by_session": "19c9a63d-00f1-4f45-a94d-5fd84a44a04e",
+    "ended": "2026-11-21T16:37:11Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-UI.REVIEW_Report.md",
+    "report_sha256": "bec0ce5d313f01417144a4d556f4d93a8c6413f7b7ce09aafd725cd57cfabc6f"
+  },
+  "heartbeat": null,
+  "closed_at": "2026-11-21T18:09:37Z",
+  "outcome": "PASS_WITH_NOTES: 0 B, 2 M (release conditions: script version stamps; restore docs-mirror hard check), 6 N; all suites green; all 19 deviations accepted; UAT yes; release yes with REL.CR must-carry list"
+}

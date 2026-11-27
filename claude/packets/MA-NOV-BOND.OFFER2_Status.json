@@ -1,0 +1,69 @@
+{
+  "packet": "MA-NOV-BOND.OFFER2",
+  "title": "Offering facts part 2, full dry run, offering apply SQL (not run), check sheet",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 8,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.OFFER2_Control_v1.md",
+    "sha256": "5a4e6b2aa06aa9aebb52d36ff190a6ca226b426060fe350b5049b8041b1d5d87"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.OFFER2_Task_v1.md",
+    "sha256": "0c0d3fabfba082926a9928c3f9d5dcd0ea13f87bae7974cab84b77b4fd3a9203"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/bonds/bonds-offering.mjs",
+      "App/Corporate Atlas/bonds/bonds-lib.mjs",
+      "App/Corporate Atlas/bonds/tests/",
+      "App/Corporate Atlas/bonds/fixtures/",
+      "App/Corporate Atlas/bonds/apply/",
+      "claude/packets/MA-NOV-BOND.OFFER2_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; BOND.REVIEW",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-23T20:19:54Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-22T15:30Z",
+    "words": "MA-NOV-BOND.OFFER2 (reply to the OFFER2 card; taken as approve)",
+    "control_sha256": "5a4e6b2aa06aa9aebb52d36ff190a6ca226b426060fe350b5049b8041b1d5d87",
+    "task_sha256": "0c0d3fabfba082926a9928c3f9d5dcd0ea13f87bae7974cab84b77b4fd3a9203",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261122T153116Z-c7d9",
+    "mode": "interactive",
+    "session_id": "a0af0a4d-56b2-422c-83a4-80e166454101",
+    "started": "2026-11-22T15:31:16Z",
+    "ended_by_session": "a0af0a4d-56b2-422c-83a4-80e166454101",
+    "ended": "2026-11-22T16:07:40Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BOND.OFFER2_Report.md",
+    "report_sha256": "b9693db02063cb33cbba8d9f21130c343e93996644dd9ab42b82a420e0db2002"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-22T19:37:36Z",
+    "commit": "01c5379 = origin",
+    "tests": "7 bond suites 0 fail (re-run); 125/125 per report",
+    "result": "12,090 fact + 3,926 party rows; apply = 3 guarded runs (7,907 · 7,976 · 133), rehearsed locally with clean rollback; 28-field availability table; ⚑ trustee 36%, use of proceeds 43%, selling restrictions 47%, conflicts 18%, change of control 2.8% (spec counts included base-prospectus mentions)"
+  },
+  "closure_by": "MA-NOV-BOND.FIX3",
+  "closed_at": "2026-11-23T20:19:54Z",
+  "outcome": "Closed via MA-NOV-BOND.FIX3 (review findings fixed and re-checked; SQL superseded by 1.2.0 two-run build)"
+}

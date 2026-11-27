@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR9",
+  "kind": "founder-request",
+  "title": "Re-plan: no sessions Sat 14 – Tue 17 afternoon",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-13T17:35:25Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "With ~9 working sessions left (Tue 17 eve – Mon 30), remaining approved scope is ~17 packet-days. Proposal: finish EXP (W2, W3, back-fill, UAT) and OPS + HOME with the November release and demo; move BOND-01–05 and holdings C1 to December (BOND-06–12 and VXUS were already December). Approve the re-plan, or keep BOND-01 (status definitions + visible exception counts) as a stretch?",
+  "options": [
+    "Approve re-plan",
+    "Re-plan + BOND-01 stretch"
+  ],
+  "reply": "Reply \"approve re-plan\" or \"re-plan + BOND-01\"",
+  "due": "2026-11-17",
+  "status": "answered",
+  "answer": "re-plan + BOND-01",
+  "answered_at": "2026-11-13T17:35:00Z"
+}

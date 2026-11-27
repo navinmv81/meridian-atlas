@@ -1,0 +1,68 @@
+{
+  "packet": "MA-NOV-EXP.SPEC",
+  "title": "Exposure-to-company specification",
+  "state": "CLOSED",
+  "phase": "SPEC",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Entities Product Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.SPEC_Control_v1.md",
+    "sha256": "fb6847e044f94a3efb413e336facf8cfcdb9d2f2e7324e29100522174a644689"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.SPEC_Task_v1.md",
+    "sha256": "51e29a5437b4f3be8fedc1e0bb6e68d9148a33da1b1851c9936f322ec5447a75"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/specs/MA-NOV-EXP_Spec.md",
+      "claude/packets/MA-NOV-EXP.SPEC_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "Main Lane; Founder spec approval",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-11T20:10:06Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-11T07:19Z",
+    "words": "approve MA-NOV-EXP.SPEC",
+    "control_sha256": "fb6847e044f94a3efb413e336facf8cfcdb9d2f2e7324e29100522174a644689",
+    "task_sha256": "51e29a5437b4f3be8fedc1e0bb6e68d9148a33da1b1851c9936f322ec5447a75",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261111T195830Z-bc14",
+    "mode": "interactive",
+    "session_id": "d790fa96-9de4-4b2c-a319-01296458ff65",
+    "started": "2026-11-11T19:58:30Z",
+    "ended_by_session": "d790fa96-9de4-4b2c-a319-01296458ff65",
+    "ended": "2026-11-11T20:10:06Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.SPEC_Report.md",
+    "report_sha256": "910d0d5cf8a9be5600379b6cce894ef77c86fb9440773fbdbb27e877b81afe0c"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-11T20:19:34Z",
+    "head": "f215681 unchanged",
+    "writes": "spec + report only",
+    "queries": "8 SELECT/EXPLAIN, 113,661 rows read (≤150k); one 10000, retried OK",
+    "review": "2 amendments: (A1) three-point check point 2 — BND ≈60k reads per call exceeds the 50k single-execution limit; D7 ceiling must be set by estimated reads ≤50k (≈15,000 holdings), not 25,000 holdings. (A2) D5 recurring refresh inside meridian-holdings would make an ETF Worker write entity tables (domain rule); December design must use an Entities Worker or explicit Founder exception. Note N1: November release branch/Pages source needs a release CR (Pages is October-2026 /docs)."
+  },
+  "closed_at": "2026-11-11T20:47:41Z",
+  "outcome": "Spec v1 approved with amendments A1 (≤50k reads per call, ~15k holdings; BND too large in Nov) and A2 (Dec refresh not in ETF Worker); D1–D9 as recommended",
+  "approved_spec": {
+    "file": "claude/specs/MA-NOV-EXP_Spec.md",
+    "sha256": "785df4d54f96c580c7b72829be9cd0ed11990b5583213fb4045fe66b48e2fc3e"
+  }
+}

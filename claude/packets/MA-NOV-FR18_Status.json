@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR18",
+  "kind": "founder-request",
+  "title": "Approve bond change request (CR1 + CR2)",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-22T14:44:36Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Approve claude/specs/MA-NOV-BOND_CR.md: CR1 (status_reason, superseded_by, status_note) and CR2 (offering-fact and party tables), migrations to be run at the write approvals (Thu 26 and Sat 28); D-CR1 status_note yes; D-CR3 issuer index measured at the UI step.",
+  "options": [
+    "Approve as recommended",
+    "Approve with changes"
+  ],
+  "reply": "Reply \"approve bond CR\"",
+  "due": "2026-11-22",
+  "status": "answered",
+  "answer": "approve bond CR (D-CR1 status_note yes; D-CR3 index measured at UI)",
+  "answered_at": "2026-11-22T14:44:00Z"
+}

@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR16",
+  "kind": "founder-request",
+  "title": "Approve bond spec (decisions 1\u20139, targets T1\u2013T5, cut line)",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-21T20:01:47Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Approve claude/specs/MA-NOV-BOND_Spec.md with decisions 1\u20139 as recommended: MUST U0\u2013U7 (BOND-01\u201305), stretch offering parties (BOND-06/08/09/11), December BOND-07/10/12.",
+  "options": [
+    "Approve as recommended",
+    "Approve with changes"
+  ],
+  "reply": "Reply \"approve bond spec as recommended\" or list changes",
+  "due": "2026-11-22",
+  "status": "answered",
+  "answer": "Not approved \u2014 Founder challenges the November non-goals; wants BOND-07 and BOND-10 (and the rest of offering information) done in November",
+  "answered_at": "2026-11-21T20:01:00Z"
+}

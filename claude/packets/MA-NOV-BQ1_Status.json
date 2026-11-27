@@ -1,0 +1,56 @@
+{
+  "packet": "MA-NOV-BQ1",
+  "title": "November baseline queries (read-only)",
+  "state": "CLOSED",
+  "phase": "ASSESS",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BQ1_Control_v1.md",
+    "sha256": "58174b0cd3596d9fb36cc69ab23b517532c8e4623a142ced1ceae8a2b4eea3eb"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BQ1_Task_v1.md",
+    "sha256": "3cc1c03ade0230b060924e47774d9c40962c686ff5696c432ed704aa1639b729"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-BQ1_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "Main Lane",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-10T20:59:39Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-10T20:57Z",
+    "words": "approve MA-NOV-BQ1",
+    "control_sha256": "58174b0cd3596d9fb36cc69ab23b517532c8e4623a142ced1ceae8a2b4eea3eb",
+    "task_sha256": "3cc1c03ade0230b060924e47774d9c40962c686ff5696c432ed704aa1639b729",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261110T205809Z-ae1b",
+    "mode": "interactive",
+    "session_id": "7fc75304-b048-4f6e-9d65-690cb0ef0ac4",
+    "started": "2026-11-10T20:58:09Z",
+    "ended_by_session": "7fc75304-b048-4f6e-9d65-690cb0ef0ac4",
+    "ended": "2026-11-10T20:59:39Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BQ1_Report.md",
+    "report_sha256": "1db966d2dcc5e5b638180faa016e01f31251368f497261a61d007193f5deb7eb"
+  },
+  "heartbeat": null,
+  "closed_at": "2026-11-11T06:32:17Z",
+  "outcome": "Blocked by Cloudflare auth 10000 on query 1; 0 rows read; superseded by MA-NOV-BQ2"
+}

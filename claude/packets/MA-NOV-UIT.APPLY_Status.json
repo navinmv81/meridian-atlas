@@ -1,0 +1,63 @@
+{
+  "packet": "MA-NOV-UIT.APPLY",
+  "title": "Write the one-off UIT holdings (SPY, QQQ, DIA, MDY) to D1",
+  "state": "CLOSED",
+  "phase": "APPLY",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ETF / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "ETF Product Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-UIT.APPLY_Control_v1.md",
+    "sha256": "ebae5b0af663eb2a4abda9e5d9e963fcb5d1da3100836f3e957a4448d99a3e6b"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-UIT.APPLY_Task_v1.md",
+    "sha256": "7b641343cbec412f31a7b3eae27e067cfec18b32ecb26ff76ad386e35246eefd"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-UIT.APPLY_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; PATCH.REL live check",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-27T17:08:06Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-27T15:36Z",
+    "words": "approve MA-NOV-UIT.APPLY, its 15:36 now 27th Nov",
+    "control_sha256": "ebae5b0af663eb2a4abda9e5d9e963fcb5d1da3100836f3e957a4448d99a3e6b",
+    "task_sha256": "7b641343cbec412f31a7b3eae27e067cfec18b32ecb26ff76ad386e35246eefd",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261127T155551Z-6a38",
+    "mode": "interactive",
+    "session_id": "96d89d2b-3001-4b5a-86d5-37b85882b3d7",
+    "started": "2026-11-27T15:55:51Z",
+    "ended_by_session": "96d89d2b-3001-4b5a-86d5-37b85882b3d7",
+    "ended": "2026-11-27T15:59:58Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-UIT.APPLY_Report.md",
+    "report_sha256": "f66dd7c4bd1ffa3f448af7c636d7c826656a72e21303eba6fe5dc8780b339fbf"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-27T17:08:06Z",
+    "commit": "f538f6e = origin",
+    "report_sha256": "f66dd7c4bd1ffa3f448af7c636d7c826656a72e21303eba6fe5dc8780b339fbf",
+    "result": "DONE: 14/14 batches, Σ 2,086 changes, 11,450 rows written (day ≈43.6k); 4 verify rows = REVIEW §8.3; seq 2,030,400; IVV unchanged; no rollback"
+  },
+  "closed_at": "2026-11-27T17:08:06Z",
+  "outcome": "SPY/QQQ/DIA/MDY holdings live in D1; rollback REVIEW §8.5"
+}

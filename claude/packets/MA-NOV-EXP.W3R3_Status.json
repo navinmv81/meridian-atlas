@@ -1,0 +1,64 @@
+{
+  "packet": "MA-NOV-EXP.W3R3",
+  "title": "Plain-language portfolio panel (UAT condition)",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W3R3_Control_v1.md",
+    "sha256": "e18675b9780d28183e177d8e478bee591c6f0ee200c36e85385e22b380f1364d"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W3R3_Task_v1.md",
+    "sha256": "0e8f0f77e6a7698c90a565eac0e44f015af7db252b83911cb5c51b2d56feae46"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/ma-entities.js",
+      "App/Corporate Atlas/tests/",
+      "claude/packets/MA-NOV-EXP.W3R3_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; Founder re-check of the panel",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-19T20:30:54Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-19T20:19Z",
+    "words": "approve MA-NOV-EXP.W3R3 (= approval of the panel wording in the Task)",
+    "control_sha256": "e18675b9780d28183e177d8e478bee591c6f0ee200c36e85385e22b380f1364d",
+    "task_sha256": "0e8f0f77e6a7698c90a565eac0e44f015af7db252b83911cb5c51b2d56feae46",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261119T202333Z-b0e0",
+    "mode": "interactive",
+    "session_id": "effcfb05-4168-4940-ad42-4c2833afe3ad",
+    "started": "2026-11-19T20:23:33Z",
+    "ended_by_session": "effcfb05-4168-4940-ad42-4c2833afe3ad",
+    "ended": "2026-11-19T20:30:54Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.W3R3_Report.md",
+    "report_sha256": "fb9c5b9d4f0b9655c47301618050fc16b57fae9c7dd1461485662768aab0eb53"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-19T20:32:44Z",
+    "commit": "d859f29 = origin; 2 files",
+    "tests": "exp-ui + exp-compute re-run pass"
+  },
+  "closed_at": "2026-11-19T20:32:44Z",
+  "outcome": "d859f29: panel rewritten as approved (grouped lines, zero lines hidden, per-fund Not analysed lines, plain sum line, footnote, confidence advice + Hide them). Calculations unchanged; tests pass. Left: Gaps panel still says \"Unsupported inputs\" / \"Load errors\"."
+}

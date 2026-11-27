@@ -4,7 +4,7 @@
   "kind": "outcome",
   "state": "DRAFT",
   "phase": "SPEC",
-  "rev": 1,
+  "rev": 6,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "— (not admitted)",
   "write_owner": "NONE",
@@ -34,6 +34,8 @@
   "blocker": null,
   "review_needed": false,
   "usage_class": "—",
-  "updated": "2026-11-08T08:44:52Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-21T20:04:09Z",
+  "updated_by": "Main Lane",
+  "scope_decision": "21 Nov (NML-1121-12): BOND-01–12 all in November; scope §6 exclusions stay out (new issuers/doc types, prices/yields/valuation/credit analytics, structured/market-linked notes); BOND-07 facts only, no narrative.",
+  "baseline": "BQ2 11 Nov: 943 rows = final 632, preliminary 184, skipped 118, parse_failed 9 (final 76.6% of final+prelim+failed). All 184 preliminary rows lack CUSIP/coupon/maturity/amount/label, so no tranche matching; 161 have a final for the same CIK (153 within 14 d), 23 have none."
 }

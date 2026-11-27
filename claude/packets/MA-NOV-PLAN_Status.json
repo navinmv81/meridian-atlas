@@ -1,0 +1,117 @@
+{
+  "packet": "MA-NOV-PLAN",
+  "kind": "plan",
+  "title": "November path",
+  "state": "DRAFT",
+  "owner": "Program Orchestrator (November Main Lane)",
+  "rev": 18,
+  "updated": "2026-11-23T06:24:22Z",
+  "updated_by": "Main Lane",
+  "milestones": [
+    {
+      "when": "Tue 10 Nov",
+      "title": "P1.FIX4: guards, Claude.md v1.2, Tower redesign",
+      "detail": "Committed f215681 and pushed",
+      "status": "done"
+    },
+    {
+      "when": "Tue 10 Nov evening",
+      "title": "MA-NOV-SA1 scope assessment (read-only)",
+      "detail": "Report written; D1 unreachable (7403), October figures used",
+      "status": "done"
+    },
+    {
+      "when": "Wed 11 Nov",
+      "title": "Founder scope approval + wrangler check",
+      "detail": "Scope approved as recommended; wrangler sign-in OK",
+      "status": "done"
+    },
+    {
+      "when": "Wed 11 - Fri 13 Nov",
+      "title": "EXP spec approved (OPS+HOME spec next)",
+      "detail": "A1, A2; D1\u2013D9 as recommended",
+      "status": "done"
+    },
+    {
+      "when": "Fri 13 Nov",
+      "title": "EXP route live (C-1)",
+      "detail": "bb8ad0aa; cold 7 ms; VXUS, BND, AGG, MBB refused",
+      "status": "done"
+    },
+    {
+      "when": "Fri 13 Nov (tonight, optional)",
+      "title": "EXP.W2 exposure calculation",
+      "detail": "c7886b7; 152 tests; review with W3",
+      "status": "done"
+    },
+    {
+      "when": "Sat 21 Nov",
+      "title": "Ops + Homepage + polish built, reviewed, UAT pass",
+      "detail": "4ad4ca3, 210c957, 63fcf54",
+      "status": "done"
+    },
+    {
+      "when": "Sun 22 Nov",
+      "title": "Back-fill ON; bond FIX1, FIX2, CR, OFFER1 done",
+      "detail": "6aa5c39, f64652c, 8e576f5, 5ae101f",
+      "status": "done"
+    },
+    {
+      "when": "Sun 22 Nov",
+      "title": "Bond OFFER2 + independent bond review (offering blocked \u2192 FIX3)",
+      "detail": "01c5379; review 98.5% correct",
+      "status": "done"
+    },
+    {
+      "when": "Mon 23 Nov",
+      "title": "BOND.FIX3 (offering fixes, rehearsal, re-check)",
+      "detail": "within remaining weekly usage",
+      "status": "now"
+    },
+    {
+      "when": "Wed 25 Nov (after the 09:00 reset)",
+      "title": "Bond writes (reliability + offering runs with headroom checks) and the bond screen build",
+      "detail": "one write approval",
+      "status": "next"
+    },
+    {
+      "when": "Thu 26 Nov",
+      "title": "ONE go-live: entities-api deploy + Pages \u2192 November-2026 /docs (exposure, Ops, homepage, bonds)",
+      "detail": "release approval; post-release checks",
+      "status": "planned"
+    },
+    {
+      "when": "Fri 27 \u2013 Mon 30 Nov",
+      "title": "Final demonstration; buffer",
+      "detail": "",
+      "status": "planned"
+    },
+    {
+      "when": "December",
+      "title": "December: VXUS (precomputed table), holdings C1, BOND items cut by the cut order",
+      "detail": "Approved re-plan NML-1113-9",
+      "status": "planned"
+    }
+  ],
+  "handoffs": [
+    {
+      "step": "Start a packet",
+      "today": "Approve here, then paste the fixed line into Claude Code",
+      "how": "One line, no packet copying",
+      "target": "Same"
+    },
+    {
+      "step": "Push",
+      "today": "Claude Code pushes; the Founder pushes only if sign-in fails",
+      "how": "Renew the GitHub token when it expires",
+      "target": "Same"
+    },
+    {
+      "step": "Close a packet",
+      "today": "Main Lane verifies, the Founder approves here",
+      "how": "Status JSON, Tower regenerates",
+      "target": "Same"
+    }
+  ],
+  "availability": "Weekly usage 85% on Mon 23 Nov; regular reset Wed 25 09:00. Full-reset credit kept for later (expires 10 Dec 22:00 GMT) \u2014 Founder: using it Mon would only cover ~1.5 days before Wednesday's reset (NML-1123-1)."
+}

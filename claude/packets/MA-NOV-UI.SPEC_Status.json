@@ -1,0 +1,67 @@
+{
+  "packet": "MA-NOV-UI.SPEC",
+  "title": "Ops cleanup + Homepage spec, with the November release plan",
+  "state": "CLOSED",
+  "phase": "SPEC",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-UX / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "UX Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-UI.SPEC_Control_v1.md",
+    "sha256": "f41faa34aa7745d7422f9cac0d904077855efe53727fef749538f90846588088"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-UI.SPEC_Task_v1.md",
+    "sha256": "b5d62794a281cfe510bf6a350ca15a6fd69edb98ebd4d9f8bd7b73fe8174ce05"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/specs/MA-NOV-UI_Spec.md",
+      "claude/packets/MA-NOV-UI.SPEC_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "Main Lane; Founder spec approval",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-21T08:48:49Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-21T08:37Z",
+    "words": "approve MA-NOV-UI.SPEC",
+    "control_sha256": "f41faa34aa7745d7422f9cac0d904077855efe53727fef749538f90846588088",
+    "task_sha256": "b5d62794a281cfe510bf6a350ca15a6fd69edb98ebd4d9f8bd7b73fe8174ce05",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261121T083832Z-a215",
+    "mode": "interactive",
+    "session_id": "88ddda87-6dd5-4b6d-8ee8-3148d670f987",
+    "started": "2026-11-21T08:38:32Z",
+    "ended_by_session": "88ddda87-6dd5-4b6d-8ee8-3148d670f987",
+    "ended": "2026-11-21T08:48:49Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-UI.SPEC_Report.md",
+    "report_sha256": "027bf803c69f3eb4e73decd640544cb803ded9aba35a48e8e22cb437e6ce134c"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-21T09:10:50Z",
+    "head": "bc1d079 unchanged",
+    "writes": "spec + report only"
+  },
+  "closed_at": "2026-11-21T09:26:46Z",
+  "outcome": "Spec approved: UD-1–UD-7, UD-9 as recommended; UD-8 replaced by home layout A (Founder feedback: terminals open on markets and news)",
+  "approved_spec": {
+    "file": "claude/specs/MA-NOV-UI_Spec.md",
+    "sha256": "4b9896de89f238a8299bae579052dd0f46b98a6e1d612a56a9a957780a164abd",
+    "amendment": "Home layout A: no #home-entry above the banner; a compact Research card at the top of the right-hand column (one-line proposition, Analyse my portfolio + example, company search); on phones directly after the market banner; header Exposure tile stays."
+  }
+}

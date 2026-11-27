@@ -1,0 +1,17 @@
+{
+  "packet": "MA-NOV-FR3",
+  "kind": "founder-request",
+  "title": "Check wrangler D1 sign-in",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-10T20:17:14Z",
+  "updated_by": "Main Lane",
+  "request_type": "note",
+  "question": "SA1 got Cloudflare error 7403 on its only D1 query. In Terminal run: npx wrangler whoami, then npx wrangler d1 execute meridian-etf --remote --command \"SELECT 1\". If either fails, run npx wrangler login. Needed before the baseline queries, and the local jobs (FIRDS Sun 15 Nov) use the same sign-in.",
+  "reply": "Reply \"wrangler ok\" or paste the error (no tokens)",
+  "due": "2026-11-11",
+  "status": "answered",
+  "answer": "wrangler ok — SELECT 1 on meridian-etf --remote succeeded from repo root (no -c); SA1 7403 attributed to -c wrangler-entities-enrich.toml",
+  "answered_at": "2026-11-10T20:16:00Z"
+}

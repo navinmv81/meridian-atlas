@@ -1,0 +1,67 @@
+{
+  "packet": "MA-NOV-UI.HOME.BUILD",
+  "title": "Homepage: Research card (layout A), company search, phone width, delayed labels",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-UX / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-UI.HOME.BUILD_Control_v1.md",
+    "sha256": "9e3ea2c10b1cc5347f3fb33ee6a4a3af7c70aadb5ae23da3cc89752b31b980ff"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-UI.HOME.BUILD_Task_v1.md",
+    "sha256": "55f87ca38e3f2424198e3b40e819e26c55ed21d18267f7e9eca23eb1857e8616"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/index.html",
+      "App/ma-search.js",
+      "App/Corporate Atlas/tests/home-entry.test.mjs",
+      "claude/packets/MA-NOV-UI.HOME.BUILD_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Combined review OPS + HOME + POLISH; Founder UAT",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-21T12:40:02Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-21T12:26Z",
+    "words": "approve MA-NOV-UI.HOME.BUILD (= approval of the Research card wording)",
+    "control_sha256": "9e3ea2c10b1cc5347f3fb33ee6a4a3af7c70aadb5ae23da3cc89752b31b980ff",
+    "task_sha256": "55f87ca38e3f2424198e3b40e819e26c55ed21d18267f7e9eca23eb1857e8616",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261121T123106Z-7a84",
+    "mode": "interactive",
+    "session_id": "1d051429-7d2e-4c40-812c-6c49f6b618fd",
+    "started": "2026-11-21T12:31:06Z",
+    "ended_by_session": "1d051429-7d2e-4c40-812c-6c49f6b618fd",
+    "ended": "2026-11-21T12:40:02Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-UI.HOME.BUILD_Report.md",
+    "report_sha256": "969c2962f7c91ff1ae97a8f6f6b034ae191ae3a0cb6c7082711f35a4abc42caa"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-21T14:39:48Z",
+    "commit": "210c957 = origin; 3 files",
+    "tests": "home-entry re-run pass",
+    "preview": "card top-right at 1280; Analyse → #/exposure; example 100.00% (TSMC 15.00 direct + 3.29 via ETFs, 1,503 companies, Older-data chips as expected); company search → #2191 first; phone: card after banner, no sideways scroll; DELAYED pill",
+    "flag": "pre-existing: header ticker search only 40 px wide at 1280 → fixed in UI.POLISH"
+  },
+  "closed_at": "2026-11-21T18:09:37Z",
+  "outcome": "Closed on UI.REVIEW PASS_WITH_NOTES; 210c957"
+}

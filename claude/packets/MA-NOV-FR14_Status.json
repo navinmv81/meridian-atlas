@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR14",
+  "kind": "founder-request",
+  "title": "Approve Ops + Homepage spec (UD-1–UD-9)",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-21T09:26:46Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Approve claude/specs/MA-NOV-UI_Spec.md with UD-1–UD-9 as recommended (UD-1 = the exact homepage and polish wording)?",
+  "options": [
+    "Approve as recommended",
+    "Approve with changes"
+  ],
+  "reply": "Reply \"approve UI spec as recommended\" or list changes",
+  "due": "2026-11-21",
+  "status": "answered",
+  "answer": "approve UI spec with home layout A (UD-1–UD-7, UD-9 as recommended; UD-8 replaced: markets and news stay first, Research card at the top of the right-hand column, after the market banner on phones)",
+  "answered_at": "2026-11-21T09:26:00Z"
+}

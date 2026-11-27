@@ -1,0 +1,61 @@
+{
+  "packet": "MA-NOV-BQ2",
+  "title": "November baseline queries (read-only) — re-run",
+  "state": "CLOSED",
+  "phase": "ASSESS",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BQ2_Control_v1.md",
+    "sha256": "246e0b1d4a3efb4b003e2a8b529824b52a192d60ea94f5bc6b149b99f2401630"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BQ2_Task_v1.md",
+    "sha256": "c0cdd3f58e19386260264fe52aaa2a40ef8089b634c8ddf22fce1e4dafee4c02"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-BQ2_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "Main Lane",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-11T06:36:39Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-11T06:32Z",
+    "words": "MA-NOV-BQ2 (reply to the BQ2 Start Approval card; taken as approve)",
+    "control_sha256": "246e0b1d4a3efb4b003e2a8b529824b52a192d60ea94f5bc6b149b99f2401630",
+    "task_sha256": "c0cdd3f58e19386260264fe52aaa2a40ef8089b634c8ddf22fce1e4dafee4c02",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261111T063341Z-a857",
+    "mode": "interactive",
+    "session_id": "c953b78a-b843-40ae-bf62-da1978762808",
+    "started": "2026-11-11T06:33:41Z",
+    "ended_by_session": "c953b78a-b843-40ae-bf62-da1978762808",
+    "ended": "2026-11-11T06:36:39Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BQ2_Report.md",
+    "report_sha256": "9b133cdea2715d19520d2988ddcc65241c80309c19aae21820a3ef91bdc15102"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-11T06:40:22Z",
+    "head": "f215681 unchanged",
+    "writes": "report only"
+  },
+  "closed_at": "2026-11-11T06:40:22Z",
+  "outcome": "Baseline measured: 9 SELECTs, 126,925 rows read; SA1 bond + mapping figures confirmed; exposure stale (2026-03 vs holdings 2026-08)"
+}

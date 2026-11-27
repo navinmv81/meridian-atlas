@@ -1,0 +1,64 @@
+{
+  "packet": "MA-NOV-EXP.W1R4",
+  "title": "Canonical versioned cache key + deploy and measure (C1R3)",
+  "state": "CLOSED",
+  "phase": "BUILD+DEPLOY",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1R4_Control_v1.md",
+    "sha256": "513ca8ad2074d9c6646a73835365beffaaa1f88abbdadea2ce89d6baa58ec71a"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1R4_Task_v1.md",
+    "sha256": "9dc57d1104709a28423c9360a5b90fabbd4b003aedee88d5b5e8596b82fb73ea"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/src/entities-api.js",
+      "App/Corporate Atlas/tests/",
+      "claude/packets/MA-NOV-EXP.W1R4_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane verification; deploy checks + rollback triggers",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-13T17:03:21Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-13T16:43Z",
+    "words": "MA-NOV-EXP.W1R4 (reply to the W1R4 card; taken as approve = code change + production deploy)",
+    "control_sha256": "513ca8ad2074d9c6646a73835365beffaaa1f88abbdadea2ce89d6baa58ec71a",
+    "task_sha256": "9dc57d1104709a28423c9360a5b90fabbd4b003aedee88d5b5e8596b82fb73ea",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261113T165132Z-3c65",
+    "mode": "interactive",
+    "session_id": "6f2a030f-f04d-4aeb-aa64-2413605287ce",
+    "started": "2026-11-13T16:51:32Z",
+    "ended_by_session": "6f2a030f-f04d-4aeb-aa64-2413605287ce",
+    "ended": "2026-11-13T17:03:21Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.W1R4_Report.md",
+    "report_sha256": "a26673d4383dca8c44d78bf9153a3528d0e482081fc5ad327dc2f79e7412aac0"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-13T17:24:41Z",
+    "commit": "54b1446 = origin; 2 files",
+    "tests": "exp-route 31/31 (re-run)"
+  },
+  "closed_at": "2026-11-13T17:24:41Z",
+  "outcome": "DEPLOYED bb8ad0aa (54b1446); previous 866c6cb2. All checks passed with true misses: EEM cold 7 ms / 5,775 rows, SPAB 6 ms / 32,766, BNDX 1 ms / 25,168, VXUS 422 size 4 ms / 38,266; hits byte-identical; refusals 14 rows; regression OK. C-1 complete."
+}

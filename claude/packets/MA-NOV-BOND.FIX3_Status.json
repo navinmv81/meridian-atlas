@@ -1,0 +1,68 @@
+{
+  "packet": "MA-NOV-BOND.FIX3",
+  "title": "Offering review fixes, withheld fields, SQL rebuild + rehearsal + re-check",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.FIX3_Control_v1.md",
+    "sha256": "69d17091e410393b5ea3dc6331d2d29abd5599a1b46d8d47b24031bddf3e9f2d"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.FIX3_Task_v1.md",
+    "sha256": "fad4425ad1ac8d5d04b910883817d745338ac7d699660b27eca62f91ed575703"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/bonds/bonds-offering.mjs",
+      "App/Corporate Atlas/bonds/bonds-lib.mjs",
+      "App/Corporate Atlas/bonds/tests/",
+      "App/Corporate Atlas/bonds/fixtures/",
+      "App/Corporate Atlas/bonds/apply/",
+      "claude/packets/MA-NOV-BOND.FIX3_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane vs BOND.REVIEW",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-23T20:19:54Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-23T06:48Z",
+    "words": "approve MA-NOV-BOND.FIX3",
+    "control_sha256": "69d17091e410393b5ea3dc6331d2d29abd5599a1b46d8d47b24031bddf3e9f2d",
+    "task_sha256": "fad4425ad1ac8d5d04b910883817d745338ac7d699660b27eca62f91ed575703",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261123T064904Z-68fe",
+    "mode": "interactive",
+    "session_id": "665429b6-33ab-43fd-a08e-ed212ab478fb",
+    "started": "2026-11-23T06:49:04Z",
+    "ended_by_session": "665429b6-33ab-43fd-a08e-ed212ab478fb",
+    "ended": "2026-11-23T07:10:20Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BOND.FIX3_Report.md",
+    "report_sha256": "25ec89145722dec32bb86e7867c0cbe942dafa6ea7479ec857b2417f6a810ff1"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-23T20:19:54Z",
+    "commit": "5025050 = origin",
+    "tests": "138 pass, 0 fail (re-run)",
+    "result": "bonds-offering-1.2.0; F1/F2/F8/F9 fixed; 3 fields withheld (WITHHELD_FIELDS); F7 hash method d70c311a (D1 unchanged); re-check 1,232/1,232 = 100%, 0 blocking; offering SQL now 2 runs 7,989 + 7,581 = 15,570; rehearsal and rollback clean; 2 read-only SELECTs, 0 written"
+  },
+  "closed_at": "2026-11-23T20:19:54Z",
+  "outcome": "Closed: offering gate met (0 blocking, all shown fields 100%); writes Wed 25 after reset; 5025050"
+}

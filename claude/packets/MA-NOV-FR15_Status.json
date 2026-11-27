@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR15",
+  "kind": "founder-request",
+  "title": "UAT: Ops console, homepage, exposure polish",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-21T19:40:04Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Acceptance test of the three builds on local previews (Ops harness; homepage; exposure screen). Also: N-5 leave the operator-only Ops line \"… of … complete\" (recommended); N-6 accept \"newest holdings we store here\" on the fallback chip.",
+  "options": [
+    "UAT pass",
+    "UAT with findings"
+  ],
+  "reply": "Reply \"UAT pass\" (or list findings)",
+  "due": "2026-11-22",
+  "status": "answered",
+  "answer": "UAT pass (N-5 leave; N-6 accept)",
+  "answered_at": "2026-11-21T19:39:00Z"
+}

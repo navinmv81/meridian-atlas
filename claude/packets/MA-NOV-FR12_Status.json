@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR12",
+  "kind": "founder-request",
+  "title": "Approve scheduled back-fill design + change request",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-20T17:22:20Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Approve claude/specs/MA-NOV-EXP_Spec_Addendum_BF.md and MA-NOV-EXP_BF_Change_Request.md with decisions 1–7 as recommended: (1) job in entities-enrich 06:00; (2) on/off via the existing Ops pause row; (3) cap 40k for two run days then 50k if confirmed; (4) fail closed without analytics; (5) skip Sun/Mon, run Wed in Nov; (6) ship OFF, switch on after deploy checks; (7) no re-compute of written months.",
+  "options": [
+    "Approve as recommended",
+    "Approve with changes"
+  ],
+  "reply": "Reply \"approve BF design as recommended\" or list changes",
+  "due": "2026-11-20",
+  "status": "answered",
+  "answer": "approve BF design as recommended; add the switch-on as a checklist item for when deploy checks pass",
+  "answered_at": "2026-11-20T17:21:00Z"
+}

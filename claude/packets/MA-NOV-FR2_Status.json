@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR2",
+  "kind": "founder-request",
+  "title": "November scope approval (SA1)",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-10T20:17:14Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Approve the SA1 minimum complete scope: OPS, EXP and HOME all in; BOND-01-05 in, BOND-06/11 stretch, BOND-07-10/12 to December; holdings C1 (retire bootstrap cron, add Wed holdings run, each by CR); keep Drift & Budget tab; bond summaries facts only; nullable fail-reason column (own CR)?",
+  "options": [
+    "Approve as recommended",
+    "Approve with changes"
+  ],
+  "reply": "Reply \"approve scope as recommended\" or list changes",
+  "due": "2026-11-11",
+  "status": "answered",
+  "answer": "approve scope as recommended",
+  "answered_at": "2026-11-10T20:16:00Z"
+}

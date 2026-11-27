@@ -1,0 +1,56 @@
+{
+  "packet": "MA-NOV-EXP.W1.REVIEW",
+  "title": "Independent review of the exposure route (W1 + W1R2)",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ARCH / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Architect",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1.REVIEW_Control_v1.md",
+    "sha256": "45b43f50363022ed0dfa63d71d76fef6781961cfaa4360fbda58303d19207f82"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1.REVIEW_Task_v1.md",
+    "sha256": "621580c43ef594daecd9f4220327fec5b01d05c227f1f4d216e9abf26f102804"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-EXP.W1.REVIEW_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "— (this is the review)",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-12T07:21:31Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-12T07:13Z",
+    "words": "approve MA-NOV-EXP.W1.REVIEW",
+    "control_sha256": "45b43f50363022ed0dfa63d71d76fef6781961cfaa4360fbda58303d19207f82",
+    "task_sha256": "621580c43ef594daecd9f4220327fec5b01d05c227f1f4d216e9abf26f102804",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261112T071540Z-fc15",
+    "mode": "interactive",
+    "session_id": "2546c065-15de-4c79-925a-3c61ee74f46e",
+    "started": "2026-11-12T07:15:40Z",
+    "ended_by_session": "2546c065-15de-4c79-925a-3c61ee74f46e",
+    "ended": "2026-11-12T07:21:31Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.W1.REVIEW_Report.md",
+    "report_sha256": "a970aa16ef5bff961730b7f0e0f80117dd456ca1eb967a73dd62c5605cd62743"
+  },
+  "heartbeat": null,
+  "closed_at": "2026-11-12T20:26:04Z",
+  "outcome": "PASS_WITH_NOTES: 0 B, 1 M (deploy commands need -c), 8 N; ETF PL and Tech Ops signed; C-1 may proceed with conditions"
+}

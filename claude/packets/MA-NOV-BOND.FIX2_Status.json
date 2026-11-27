@@ -1,0 +1,70 @@
+{
+  "packet": "MA-NOV-BOND.FIX2",
+  "title": "Term-sheet identifiers (F6), FWP conflicts (F5), dropped-tranche drafts (F2b), offline dry run + apply SQL",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.FIX2_Control_v1.md",
+    "sha256": "785ebf6c11c4355f197f9ec179f49b277dd435eb1dc32a23a4274addf44b2055"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.FIX2_Task_v1.md",
+    "sha256": "c20d80fef3b045acf203d1d8c8404862ff92b903f616ceab1ad5d063b0660f9d"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/bonds/bonds-parse.mjs",
+      "App/Corporate Atlas/bonds/bonds-ingest.mjs",
+      "App/Corporate Atlas/bonds/bonds-lib.mjs",
+      "App/Corporate Atlas/bonds/tests/",
+      "App/Corporate Atlas/bonds/fixtures/",
+      "App/Corporate Atlas/bonds/apply/",
+      "claude/packets/MA-NOV-BOND.FIX2_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; BOND.REVIEW before U6",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-22T11:00:38Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-22T10:13Z",
+    "words": "Approve FIX 2 and am running the Switch on",
+    "control_sha256": "785ebf6c11c4355f197f9ec179f49b277dd435eb1dc32a23a4274addf44b2055",
+    "task_sha256": "c20d80fef3b045acf203d1d8c8404862ff92b903f616ceab1ad5d063b0660f9d",
+    "recorded_by": "Main Lane (recorded after BFS.ON ended, per the no-writes-during-runs rule)"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261122T103749Z-be59",
+    "mode": "interactive",
+    "session_id": "8564cb3e-200e-4801-81da-c0a6727374e0",
+    "started": "2026-11-22T10:37:49Z",
+    "ended_by_session": "8564cb3e-200e-4801-81da-c0a6727374e0",
+    "ended": "2026-11-22T11:00:38Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BOND.FIX2_Report.md",
+    "report_sha256": "1373dc9fa85109e85df9d4ea9fbb1d33418b4ea40d6a48d5f9089b0149f16e19"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-22T12:29:31Z",
+    "commit": "f64652c = origin",
+    "tests": "5 bond suites 0 fail (re-run)",
+    "result": "after apply: T1 0 no-reason rows; T2 100%; T3 86.2% (550/638) from 43.7%; T4 0 failed; T5 0 unexplained. F6: 273 of 359 identifiers from term sheets, each checked against source; 86 left blank (48 no cached sheet, 38 unhandled layout). F2b: all 8 drafts linked. AT&T euro/dollar CUSIP guard added. SQL: 945 guarded statements, ~1,229 rows, one run, not run.",
+    "decision_for_review": "F5: the 3 conflicts were reader misreads, fixed → final (Control said stay failed unless reopening); Main Lane recommends accept, review to confirm; revert keeps T4 ≤ 3"
+  },
+  "closed_at": "2026-11-22T22:43:01Z",
+  "outcome": "Closed on BOND.REVIEW: reliability correct; FWP-conflict decision accepted by the reviewer (Founder to ratify); f64652c"
+}

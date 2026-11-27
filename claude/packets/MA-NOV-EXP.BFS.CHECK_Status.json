@@ -1,0 +1,56 @@
+{
+  "packet": "MA-NOV-EXP.BFS.CHECK",
+  "title": "Read the first paused 06:00 run of the back-fill job",
+  "state": "CLOSED",
+  "phase": "CHECK",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Operations Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.CHECK_Control_v1.md",
+    "sha256": "22a439caed1538078e9f91d1347e3fa0873178de4f088bd847bdbbee06929b69"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.CHECK_Task_v1.md",
+    "sha256": "24f27f98fac30482edfe4d95d03b7d8fe78c42b21f0d0415cbeb90cbff11e425"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-EXP.BFS.CHECK_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "Main Lane",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-22T09:40:39Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-22T09:37Z",
+    "words": "approve MA-NOV-EXP.BFS.CHECK and MA-NOV-BOND.FIX1",
+    "control_sha256": "22a439caed1538078e9f91d1347e3fa0873178de4f088bd847bdbbee06929b69",
+    "task_sha256": "24f27f98fac30482edfe4d95d03b7d8fe78c42b21f0d0415cbeb90cbff11e425",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261122T093819Z-16ac",
+    "mode": "interactive",
+    "session_id": "381aa880-5b8c-45c6-8b5e-761489c3f738",
+    "started": "2026-11-22T09:38:19Z",
+    "ended_by_session": "381aa880-5b8c-45c6-8b5e-761489c3f738",
+    "ended": "2026-11-22T09:40:39Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.BFS.CHECK_Report.md",
+    "report_sha256": "c084d7776182a16e146974dc1bcba5efa5ce747efa68841f583987fca6aa587f"
+  },
+  "heartbeat": null,
+  "closed_at": "2026-11-22T09:49:05Z",
+  "outcome": "READY TO SWITCH ON: expbf skipped/pause, 0 rows, pause open, no g3v2s- rows, 06:50 normal. Phase 1 skipped/budget is the normal Sunday result (also 8 and 15 Nov on the old version)."
+}

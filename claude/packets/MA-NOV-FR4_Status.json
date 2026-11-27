@@ -1,0 +1,22 @@
+{
+  "packet": "MA-NOV-FR4",
+  "kind": "founder-request",
+  "title": "Exposure-to-company spec approval",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-11T20:47:41Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Approve claude/specs/MA-NOV-EXP_Spec.md with Main Lane amendments A1 (live look-through capped at ≤50k reads per call, about ≤15,000 holdings; BND labelled too large for November) and A2 (December recurring refresh must not run in the ETF Worker), and decisions D1–D9 as recommended?",
+  "options": [
+    "Approve with A1, A2 and D1–D9 as recommended",
+    "Approve with changes",
+    "Send back"
+  ],
+  "reply": "Reply \"approve EXP spec as recommended\" or list changes",
+  "due": "2026-11-12",
+  "status": "answered",
+  "answer": "approve EXP spec as recommended (A1, A2, D1–D9 as recommended)",
+  "answered_at": "2026-11-11T20:47:00Z"
+}

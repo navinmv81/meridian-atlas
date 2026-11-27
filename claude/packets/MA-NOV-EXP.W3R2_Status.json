@@ -1,0 +1,65 @@
+{
+  "packet": "MA-NOV-EXP.W3R2",
+  "title": "Exposure screen review fixes (router M-1, focus, contrast, wording)",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W3R2_Control_v1.md",
+    "sha256": "4611ce49e1646b5dc271d30e28f168bb5bf5acf16df4ec327cfd57d5e9e52e4c"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W3R2_Task_v1.md",
+    "sha256": "a7c390fa636e12f4cb9a772adf0e2bb5dd5ad2146e3e2a493ae4c64f0194f760"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/index.html",
+      "App/ma-entities.js",
+      "App/Corporate Atlas/tests/",
+      "claude/packets/MA-NOV-EXP.W3R2_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; then Founder UAT (W7)",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-18T20:43:47Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-18T20:18Z",
+    "words": "approve MA-NOV-EXP.W3R2",
+    "control_sha256": "4611ce49e1646b5dc271d30e28f168bb5bf5acf16df4ec327cfd57d5e9e52e4c",
+    "task_sha256": "a7c390fa636e12f4cb9a772adf0e2bb5dd5ad2146e3e2a493ae4c64f0194f760",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261118T201929Z-ca32",
+    "mode": "interactive",
+    "session_id": "83437f4a-b032-45ff-9468-3ddf163e9854",
+    "started": "2026-11-18T20:19:29Z",
+    "ended_by_session": "83437f4a-b032-45ff-9468-3ddf163e9854",
+    "ended": "2026-11-18T20:43:47Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.W3R2_Report.md",
+    "report_sha256": "359641e86f94ffbdbb710820c5d27003e085c1b2bd9e81c61b6576ed74cfe35a"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-19T06:26:13Z",
+    "commit": "8adcff1 = origin; 4 files",
+    "tests": "exp-ui re-run pass"
+  },
+  "closed_at": "2026-11-19T06:26:13Z",
+  "outcome": "8adcff1: #/exposure now in the index.html router (M-1, workaround removed); N-3 focus on Back; N-4 headers to --text2 (.exp-dim secondary text still --dim); N-6 label. Preview checks passed. Deviation accepted: fi-010 test stub now keeps all listeners (it kept only the last)."
+}

@@ -1,0 +1,63 @@
+{
+  "packet": "MA-NOV-SA1",
+  "title": "November scope assessment (read-only)",
+  "state": "CLOSED",
+  "phase": "ASSESS",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ARCH / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Architect",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-SA1_Control_v1.md",
+    "sha256": "977766a5a8829a3ba2d59f555ce532e9fe187a3fbe74068f64c406d3712e5139"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-SA1_Task_v1.md",
+    "sha256": "2c22766bc46602336e07fa5add4f432b4fc6b31909e44fd47ea28ae5113a0668"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-SA1_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "Main Lane; Founder scope approval",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-10T19:36:41Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-10T19:29Z",
+    "words": "approve MA-NOV-SA1",
+    "control_sha256": "977766a5a8829a3ba2d59f555ce532e9fe187a3fbe74068f64c406d3712e5139",
+    "task_sha256": "2c22766bc46602336e07fa5add4f432b4fc6b31909e44fd47ea28ae5113a0668",
+    "recorded_by": "Main Lane",
+    "note": "includes up to 15 read-only D1 SELECTs (≤200k rows read)"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261110T193150Z-2119",
+    "mode": "interactive",
+    "session_id": "5d469b18-324a-4fd0-8a32-cc70ae921ec0",
+    "started": "2026-11-10T19:31:50Z",
+    "ended_by_session": "5d469b18-324a-4fd0-8a32-cc70ae921ec0",
+    "ended": "2026-11-10T19:36:41Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-SA1_Report.md",
+    "report_sha256": "419e433726fa37275dff4ef8cea49d362cae3746eacd56d7a5024bf612ab3aea"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-10T19:48:35Z",
+    "head": "f215681 unchanged",
+    "writes": "report only (no other tracked/untracked change attributable to the run)",
+    "queries": "1 attempted, failed 7403, 0 rows read"
+  },
+  "closed_at": "2026-11-10T20:17:14Z",
+  "outcome": "Scope approved as recommended (MA-NOV-FR2)"
+}

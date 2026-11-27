@@ -1,0 +1,76 @@
+{
+  "packet": "MA-NOV-EXP.BFS",
+  "title": "Scheduled exposure back-fill/refresh: spec addendum + change request",
+  "state": "CLOSED",
+  "phase": "SPEC",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Entities Product Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS_Control_v1.md",
+    "sha256": "53adebd86a58d23a8474684780459eb6511a639267f6c4e399a6d9165d676890"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS_Task_v1.md",
+    "sha256": "c67da26fcf1758ccdf10777118ffe49975b91a2a8acb5d2adb1feff7021a194f"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/specs/MA-NOV-EXP_Spec_Addendum_BF.md",
+      "claude/specs/MA-NOV-EXP_BF_Change_Request.md",
+      "claude/packets/MA-NOV-EXP.BFS_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "Main Lane; Founder approves addendum + CR",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-20T08:35:01Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-20T08:23Z",
+    "words": "MA-NOV-EXP.BFS (reply to the BFS card; taken as approve)",
+    "control_sha256": "53adebd86a58d23a8474684780459eb6511a639267f6c4e399a6d9165d676890",
+    "task_sha256": "c67da26fcf1758ccdf10777118ffe49975b91a2a8acb5d2adb1feff7021a194f",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261120T082507Z-e116",
+    "mode": "interactive",
+    "session_id": "c868de6d-f0cd-4656-b1ee-a0565b997d65",
+    "started": "2026-11-20T08:25:07Z",
+    "ended_by_session": "c868de6d-f0cd-4656-b1ee-a0565b997d65",
+    "ended": "2026-11-20T08:35:01Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.BFS_Report.md",
+    "report_sha256": "2d7aef3cdeb20d77fac459d2c9b8e25c31f681e5c465cf53c7c1cb286f57b294"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-20T09:28:53Z",
+    "head": "4cdd22e unchanged",
+    "writes": "addendum + CR + report only",
+    "reads": "18,647 rows (cap 120k); one wasted repeat statement disclosed",
+    "design": "06:00 entities-enrich firing, Tue–Sat, batches ≤12k holdings, CROSS JOIN plan 2.69 reads/holding (equity) 1.12 (bond), budget min(40k, 60k − U) with U from existing ops analytics (no new credential), fail closed, pause via existing ops_job_pause row, ship OFF, rollback by token",
+    "estimate": "300k–430k row-writes; April done ≈1 Dec (40k) or ≈28 Nov (50k); all ≈8–11 Dec"
+  },
+  "closed_at": "2026-11-20T17:22:20Z",
+  "outcome": "Addendum + CR approved with decisions 1–7 as recommended (NML-1120-3)",
+  "approved": {
+    "addendum": {
+      "file": "claude/specs/MA-NOV-EXP_Spec_Addendum_BF.md",
+      "sha256": "20fbc06022f3b38d6ddf4c251ca5308066544ddd9f0ac8bef612c117da322049"
+    },
+    "change_request": {
+      "file": "claude/specs/MA-NOV-EXP_BF_Change_Request.md",
+      "sha256": "adfc87b16a9115f9d1e931518c407a09d18be2f676649411aa6d26c99920c911"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR10",
+  "kind": "founder-request",
+  "title": "Stale warning reference (review M-2)",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-18T20:18:38Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Stale warning compares months within your portfolio only, so one stale ETF alone shows no warning (spec T6). (a) accept for November, re-baseline T6 and T2 at UAT, add a newest-stored-month field to the route in December (recommended); (b) add the route field before release (one more Worker redeploy).",
+  "options": [
+    "a (recommended)",
+    "b"
+  ],
+  "reply": "Reply \"M-2 a\" or \"M-2 b\"",
+  "due": "2026-11-19",
+  "status": "answered",
+  "answer": "M-2 b: add the newest-stored-month field to the route before release",
+  "answered_at": "2026-11-18T20:18:00Z"
+}

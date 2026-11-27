@@ -4,7 +4,7 @@
   "kind": "outcome",
   "state": "DRAFT",
   "phase": "SPEC",
-  "rev": 1,
+  "rev": 2,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "— (not admitted)",
   "write_owner": "NONE",
@@ -27,6 +27,7 @@
   "blocker": null,
   "review_needed": false,
   "usage_class": "—",
-  "updated": "2026-11-08T08:44:52Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-10T20:17:14Z",
+  "updated_by": "Main Lane",
+  "scope_decision": "Approved 10 Nov (NML-1110-6): HOME-01–07 all in"
 }

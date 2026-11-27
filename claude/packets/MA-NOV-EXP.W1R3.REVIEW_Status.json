@@ -1,0 +1,56 @@
+{
+  "packet": "MA-NOV-EXP.W1R3.REVIEW",
+  "title": "Light review of the route rewrite (c5d0cad)",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ARCH / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Architect",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1R3.REVIEW_Control_v1.md",
+    "sha256": "cb9dd6047c3485ee60c4a5ab9c7b35579ceb98a83467a64c3f6392cbcc3f3fc5"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1R3.REVIEW_Task_v1.md",
+    "sha256": "50bf91ab7613d3fd70fd15ac910a0b0a2112e3a0dbd1da25234a54f9bf520b53"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-EXP.W1R3.REVIEW_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "— (this is the review)",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-11-13T07:15:53Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-13T07:12Z",
+    "words": "approve MA-NOV-EXP.W1R3.REVIEW",
+    "control_sha256": "cb9dd6047c3485ee60c4a5ab9c7b35579ceb98a83467a64c3f6392cbcc3f3fc5",
+    "task_sha256": "50bf91ab7613d3fd70fd15ac910a0b0a2112e3a0dbd1da25234a54f9bf520b53",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261113T071302Z-0b84",
+    "mode": "interactive",
+    "session_id": "4719b6a8-11fb-4eda-a4df-9ead291cd974",
+    "started": "2026-11-13T07:13:02Z",
+    "ended_by_session": "4719b6a8-11fb-4eda-a4df-9ead291cd974",
+    "ended": "2026-11-13T07:15:53Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.W1R3.REVIEW_Report.md",
+    "report_sha256": "a6f0d6fb6c591f02febf32d9017f22ceec87cacecca26842c61a30662f3cbccb"
+  },
+  "heartbeat": null,
+  "closed_at": "2026-11-13T07:17:21Z",
+  "outcome": "PASS_WITH_NOTES: no B/M; N-1 net_assets 15 digits (accept), N-2 cache key still raw URL (gates C-2), N-3 comment, N-4 earlier N-4/N-6 unchanged; old vs new bodies identical; C1R2 may deploy c5d0cad with conditions"
+}

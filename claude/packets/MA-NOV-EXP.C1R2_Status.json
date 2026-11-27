@@ -1,0 +1,64 @@
+{
+  "packet": "MA-NOV-EXP.C1R2",
+  "title": "Redeploy exposure route c5d0cad (C-1, second attempt)",
+  "state": "CLOSED",
+  "phase": "DEPLOY",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Operations Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.C1R2_Control_v1.md",
+    "sha256": "00e80a7db5da18a6e29c8ad8357eb4eb44a36d46e43b7a44a2f2c1c0dbbf1430"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.C1R2_Task_v1.md",
+    "sha256": "dc419a90f4034c1a11df0e471a121c19e9bfe0162ab9f26e1b507aaab7436fb2"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-EXP.C1R2_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "Main Lane verification (version ids, checks, CPU)",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-13T08:27:34Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-13T08:22Z",
+    "words": "approve MA-NOV-EXP.C1R2 (= production deploy approval for C-1, second attempt)",
+    "control_sha256": "00e80a7db5da18a6e29c8ad8357eb4eb44a36d46e43b7a44a2f2c1c0dbbf1430",
+    "task_sha256": "dc419a90f4034c1a11df0e471a121c19e9bfe0162ab9f26e1b507aaab7436fb2",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261113T082305Z-8985",
+    "mode": "interactive",
+    "session_id": "98e96665-718c-48e9-af24-6ba56523d9d5",
+    "started": "2026-11-13T08:23:05Z",
+    "ended_by_session": "98e96665-718c-48e9-af24-6ba56523d9d5",
+    "ended": "2026-11-13T08:27:34Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.C1R2_Report.md",
+    "report_sha256": "15e600479d4bd17992b18c0ce4daa7df946866823b2fa487666cf9074f4ba302"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-13T10:05:58Z",
+    "production": "866c6cb2 (c5d0cad) deployed; previous 4e7ee20b",
+    "triggers": "none fired; max cpuTime 4 ms; no 5xx",
+    "verified": "rows refusals (MBB/BND/AGG 422, 14 rows), SPY/injection, regression",
+    "not_verified": "EEM/SPAB/BNDX/VXUS served from C1 build cache entries (key exp-1, written 2026-11-12 21:19Z, 24 h TTL); VXUS wrongly 200 until ~21:19Z (no caller yet)",
+    "learning": "A rollback does not clear the edge cache; the cache key must carry a build generation."
+  },
+  "closed_at": "2026-11-13T16:41:43Z",
+  "outcome": "DEPLOYED 866c6cb2 (c5d0cad), no trigger; look-through checks served from the rolled-back C1 cache, so CPU unmeasured; continued by MA-NOV-EXP.W1R4"
+}

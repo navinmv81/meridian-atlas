@@ -1,0 +1,69 @@
+{
+  "packet": "MA-NOV-EXP.BFS.BUILD",
+  "title": "Scheduled exposure back-fill: build + tests (ships off, no deploy)",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 8,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.BUILD_Control_v1.md",
+    "sha256": "7498b3014403e0458bd99a27297667001e87ac87bfa146e3cf2fcf28aa606e11"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.BUILD_Task_v1.md",
+    "sha256": "09a1b87f660b4895a7638fa813d89369294e94f93d9b1e10654875d4b227bc72"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/src/exp-backfill.js",
+      "App/Corporate Atlas/src/entities-enrich.js",
+      "App/Corporate Atlas/tests/",
+      "claude/packets/MA-NOV-EXP.BFS.BUILD_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "BFS.REVIEW",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-20T17:48:18Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-20T17:28Z",
+    "words": "approve MA-NOV-EXP.BFS.BUILD",
+    "control_sha256": "7498b3014403e0458bd99a27297667001e87ac87bfa146e3cf2fcf28aa606e11",
+    "task_sha256": "09a1b87f660b4895a7638fa813d89369294e94f93d9b1e10654875d4b227bc72",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261120T173350Z-e306",
+    "mode": "interactive",
+    "session_id": "de9e2c45-f74e-4f39-9445-0881bf494356",
+    "started": "2026-11-20T17:33:50Z",
+    "ended_by_session": "de9e2c45-f74e-4f39-9445-0881bf494356",
+    "ended": "2026-11-20T17:48:18Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.BFS.BUILD_Report.md",
+    "report_sha256": "d48b45b391beeee2658136bb60b8cbbba91cb9c84c687ed2234f75a4c08631f0"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-20T17:50:13Z",
+    "commit": "9316644 = origin; 6 files",
+    "wiring": "entities-enrich.js +16/−2: import, back-fill after Phase 1 in the 06:00 firing only, skip reported on hold/budget; checkWriteBudget gains out param (D1)",
+    "tests": "exp-backfill 16/16, wiring 7/7, fixture 1/1 (re-run)",
+    "b10": "9,676 rows read; 2,426 exposure rows; no SCAN of large tables",
+    "deviations": "D1 out param; D2 INDEXED BY not yet EXPLAINed live; D3 not_enabled sends no heartbeat"
+  },
+  "closure_by": "MA-NOV-EXP.BFS.FIX",
+  "closed_at": "2026-11-20T21:15:24Z",
+  "outcome": "9316644; review M1/M2 closed by MA-NOV-EXP.BFS.FIX (76d8283)"
+}

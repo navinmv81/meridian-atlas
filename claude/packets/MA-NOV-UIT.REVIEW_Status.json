@@ -1,0 +1,64 @@
+{
+  "packet": "MA-NOV-UIT.REVIEW",
+  "title": "Independent review of the one-off UIT holdings load (read-only)",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ETF / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Reviewer",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-UIT.REVIEW_Control_v1.md",
+    "sha256": "7baf968724b75b4e1d7dfa6d58ab1268c661e435462134766b1a7853e5b10605"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-UIT.REVIEW_Task_v1.md",
+    "sha256": "072af23d5b93b483af27487185249566062327e3952091457c5bd869ccddedfb"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-UIT.REVIEW_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-27T15:34:21Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-27T11:20Z",
+    "words": "approve MA-NOV-UIT.REVIEW",
+    "control_sha256": "7baf968724b75b4e1d7dfa6d58ab1268c661e435462134766b1a7853e5b10605",
+    "task_sha256": "072af23d5b93b483af27487185249566062327e3952091457c5bd869ccddedfb",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261127T115440Z-c9db",
+    "mode": "interactive",
+    "session_id": "e41a0949-9304-4714-8189-43ac7c7e0ad2",
+    "started": "2026-11-27T11:54:40Z",
+    "ended_by_session": "e41a0949-9304-4714-8189-43ac7c7e0ad2",
+    "ended": "2026-11-27T12:04:21Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-UIT.REVIEW_Report.md",
+    "report_sha256": "bc9a38b82cfb2cc8e55f1e88e116ba3a3bf1c0d5b610becd4f4cc815daa7aa58"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-27T15:34:21Z",
+    "commit": "e8868b3 = origin",
+    "report_sha256": "bc9a38b82cfb2cc8e55f1e88e116ba3a3bf1c0d5b610becd4f4cc815daa7aa58",
+    "result": "PASS_WITH_NOTES, no B/M. Own parse: 1,039/1,039 rows identical; mapping SPY 98.6% / QQQ 98.9% / DIA 97.2% / MDY 100% of weight; guards re-read live; apply procedure §8",
+    "notes": "F4 NO_NPORT set in ma-etf.js still lists SPY/QQQ/DIA → PATCH.REL; F5 fund_entity_link.series_id NULL → back-fill/entity exposure excludes the 4 (December); F1 Sunday ordering harmless"
+  },
+  "closed_at": "2026-11-27T15:34:21Z",
+  "outcome": "PASS_WITH_NOTES; UIT.APPLY may run per §8"
+}

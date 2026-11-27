@@ -1,0 +1,62 @@
+{
+  "packet": "MA-NOV-DIAG.HEALTH",
+  "title": "Read-only: SPY exposure gap + scheduled job health",
+  "state": "CLOSED",
+  "phase": "DIAGNOSE",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Operations Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-DIAG.HEALTH_Control_v1.md",
+    "sha256": "2f932607218935bf25ab1d7d03503c1194fec4a64f05e2c3b6c81d564eed7283"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-DIAG.HEALTH_Task_v1.md",
+    "sha256": "c0b600cf767ce90789537f498b6b5b25a42b4338d230030d1a0f9eb49c0dc6a3"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-DIAG.HEALTH_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-26T21:47:52Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-26T21:36Z",
+    "words": "approve MA-NOV-DIAG.HEALTH",
+    "control_sha256": "2f932607218935bf25ab1d7d03503c1194fec4a64f05e2c3b6c81d564eed7283",
+    "task_sha256": "c0b600cf767ce90789537f498b6b5b25a42b4338d230030d1a0f9eb49c0dc6a3",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261126T213643Z-a026",
+    "mode": "interactive",
+    "session_id": "dc3a7308-85cd-492e-8c1a-c781aa8b788d",
+    "started": "2026-11-26T21:36:43Z",
+    "ended_by_session": "dc3a7308-85cd-492e-8c1a-c781aa8b788d",
+    "ended": "2026-11-26T21:41:41Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-DIAG.HEALTH_Report.md",
+    "report_sha256": "ee66f2307c171910003e428927a25ce5bfab462f91c0713a21c0ebc4afcba935"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-26T21:47:52Z",
+    "commit": "c5581cf = origin",
+    "result": "read-only, 13 SELECTs ~6.5k rows, 0 writes. SPY = series-less 1940-Act UIT that does file NPORT-P; pipeline keys on series_id; etf_master note wrong. Jobs: 7 OK, holdings LATE (never completes a cycle), financialfact SILENT (exit 78), bootstrap idle on a cron slot"
+  },
+  "closed_at": "2026-11-26T21:47:52Z",
+  "outcome": "Diagnosis delivered; fixes queued for December via CARRY"
+}

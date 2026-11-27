@@ -1,0 +1,68 @@
+{
+  "packet": "MA-NOV-P1.FIX4",
+  "title": "H1/H2, Claude.md v1.2 install + CLAUDE.md patch, Tower redesign",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENG / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-P1.FIX4_Control_v1.md",
+    "sha256": "5286fe553b8fa01b8534536924c4b4831609547f313c1527116ca33e4ba6d2e6"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-P1.FIX4_Task_v1.md",
+    "sha256": "aa71de0c60cc6260cd520003056bdf94a050890e90e5374819b26faa1b0ee9b3"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "tools/factory/",
+      "claude/governance/",
+      "CLAUDE.md",
+      "claude/packets/MA-NOV-P1.FIX4_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane verification tonight; MA-NOV-P1.REVIEW4 (light) after the reset",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-10T18:13:12Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-10T17:59Z",
+    "words": "approve MA-NOV-P1.FIX4",
+    "control_sha256": "5286fe553b8fa01b8534536924c4b4831609547f313c1527116ca33e4ba6d2e6",
+    "task_sha256": "aa71de0c60cc6260cd520003056bdf94a050890e90e5374819b26faa1b0ee9b3",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261110T175937Z-9ac0",
+    "mode": "interactive",
+    "session_id": "34f1770c-7ee3-4762-9fc3-234b96eb2e74",
+    "started": "2026-11-10T17:59:37Z",
+    "ended_by_session": "34f1770c-7ee3-4762-9fc3-234b96eb2e74",
+    "ended": "2026-11-10T18:13:12Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-P1.FIX4_Report.md",
+    "report_sha256": "c045cb59edf20928963828be3e9e918c4e4b2b0db8907cb3baa8072dbe89018d"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-10T18:46:00Z",
+    "commit": "f21568183870ee27f3e70a3e8394456df12117d5",
+    "pushed_by": "Founder (Terminal, after renewing the expired GitHub token)",
+    "ls_remote": "f215681 = local = origin/November-2026",
+    "tests": "48/48 pass",
+    "scope": "only tools/factory/, claude/governance/, CLAUDE.md, pinned claude/ files"
+  },
+  "closed_at": "2026-11-11T20:57:47Z",
+  "outcome": "Closed on REVIEW4 PASS_WITH_NOTES"
+}

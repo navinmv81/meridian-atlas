@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR7",
+  "kind": "founder-request",
+  "title": "Redeploy route: straight to C1R2 or light review first",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-13T07:10:31Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "W1R3 rewrote the route SQL into one statement (body identical on real D1, 27 tests). Go straight to C1R2 (deploy 51fdbdf5 with the same rollback triggers plus correctness checks on EEM, SPAB, BNDX), recommended; or run a light independent review of the W1R3 change first (~3% usage, half a day)?",
+  "options": [
+    "C1R2 now (recommended)",
+    "Review first"
+  ],
+  "reply": "Reply \"C1R2 now\" or \"review first\"",
+  "due": "2026-11-13",
+  "status": "answered",
+  "answer": "review first",
+  "answered_at": "2026-11-13T07:09:00Z"
+}

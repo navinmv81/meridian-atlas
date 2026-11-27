@@ -1,0 +1,65 @@
+{
+  "packet": "MA-NOV-BOND.APPLY",
+  "title": "Bond writes to D1: reliability (CR1 + FIX2) and offering (CR2 + 2 runs)",
+  "state": "CLOSED",
+  "phase": "APPLY",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.APPLY_Control_v1.md",
+    "sha256": "1b5fc637f9c1c56f7d80abb8bde1b0874bab1fde6d02eeec2be999a27d1216cc"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.APPLY_Task_v1.md",
+    "sha256": "2fbdb614505035ab8df7787aa79ae0237f0da89876c094cb96a78a2818d3ae83"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-BOND.APPLY_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; go-live packet re-checks live",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-25T21:35:22Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-25T21:12Z",
+    "words": "approve MA-NOV-BOND.APPLY and MA-NOV-BOND.UI v2",
+    "control_sha256": "1b5fc637f9c1c56f7d80abb8bde1b0874bab1fde6d02eeec2be999a27d1216cc",
+    "task_sha256": "2fbdb614505035ab8df7787aa79ae0237f0da89876c094cb96a78a2818d3ae83",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261125T211749Z-6470",
+    "mode": "interactive",
+    "session_id": "42d94e40-8a6b-43e8-9381-7959d16f1782",
+    "started": "2026-11-25T21:17:49Z",
+    "ended_by_session": "42d94e40-8a6b-43e8-9381-7959d16f1782",
+    "ended": "2026-11-25T21:32:47Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BOND.APPLY_Report.md",
+    "report_sha256": "54df631fe1caf4e1007b8348f62ea971050aa892ddcb6c7a5ba9c4dff27ac634"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-25T21:35:22Z",
+    "commit": "f442c51 = origin",
+    "report_sha256": "54df631fe1caf4e1007b8348f62ea971050aa892ddcb6c7a5ba9c4dff27ac634",
+    "result": "DONE: probe (DROP COLUMN accepted), CR1, FIX2 (945/945, 638/550/0), CR2, offering 7,989 + 7,581 (11,576 facts + 3,994 parties at 1.2.0, 0 withheld, 0 orphans); bond_issuance H2 80154167…0b01 unchanged by offering; 16,931 writes; day ≈49.5k",
+    "deviation": "reads 2.09M vs 50k limit (PRAGMA quick_check scanned whole DB); Founder chose Continue in-session; account 2.34M/5M; future integrity checks table-scoped, no quick_check",
+    "backfill": "Tue 24 partial 34,274 writes; Wed 25 partial 32,420; no errors; phase1 success both days"
+  },
+  "closed_at": "2026-11-25T21:35:22Z",
+  "outcome": "Bond writes live on meridian-etf (f442c51); rollback order in report §9 (≈19.6k writes full unwind)"
+}

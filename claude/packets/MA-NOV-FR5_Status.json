@@ -1,0 +1,22 @@
+{
+  "packet": "MA-NOV-FR5",
+  "kind": "founder-request",
+  "title": "EXP route read cost (W1 stop gate D-1)",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-12T06:48:26Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Live look-through reads 9.3 rows per holding, not 2.7. Choose: (c) W1 rev 2 tries a leaner query, then cap at ≤50k rows using the newly measured ratio; ETFs over the cap show \"too large for live look-through in November\" (recommended). (a) cap now at ~5,000 holdings (refuses VXUS, AGG, MBB, SPAB, BNDX, BND). (b) keep 15,000 and allow up to ~140k reads per call (breaks the three-point check 50k rule; not recommended).",
+  "options": [
+    "c (recommended)",
+    "a",
+    "b"
+  ],
+  "reply": "Reply \"D-1 c\", \"D-1 a\" or \"D-1 b\"",
+  "due": "2026-11-12",
+  "status": "answered",
+  "answer": "D-1 c",
+  "answered_at": "2026-11-12T06:47:00Z"
+}

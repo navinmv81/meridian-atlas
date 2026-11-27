@@ -1,0 +1,72 @@
+{
+  "packet": "MA-NOV-PATCH.REL",
+  "title": "November patch release: UIT funds on screen, trust wording, bootstrap cron off, dead agent removed",
+  "state": "CLOSED",
+  "phase": "DEPLOY",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Operations Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-PATCH.REL_Control_v1.md",
+    "sha256": "ba257bef67477539607c004a599c998c17a87c34e6b9a63a5c2084fe109f50e4"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-PATCH.REL_Task_v1.md",
+    "sha256": "8d2a2c62687be46b636857723c843fcc88ed720b7a3afa67263de2654dbf5152"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/ma-etf.js",
+      "App/ma-entities.js",
+      "App/index.html",
+      "generate-docs.mjs",
+      "App/ETF Refresh/wrangler-bootstrap.toml",
+      "App/Corporate Atlas/tests/",
+      "App/Ops/tests/",
+      "docs/",
+      "CLAUDE.md",
+      "claude/packets/MA-NOV-PATCH.REL_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-27T17:28:06Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-27T17:08Z",
+    "words": "MA-NOV-PATCH.REL (in reply to the approval card)",
+    "control_sha256": "ba257bef67477539607c004a599c998c17a87c34e6b9a63a5c2084fe109f50e4",
+    "task_sha256": "8d2a2c62687be46b636857723c843fcc88ed720b7a3afa67263de2654dbf5152",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261127T171054Z-1ae7",
+    "mode": "interactive",
+    "session_id": "702df55e-f1fe-49df-a81e-59f60d7602f4",
+    "started": "2026-11-27T17:10:54Z",
+    "ended_by_session": "702df55e-f1fe-49df-a81e-59f60d7602f4",
+    "ended": "2026-11-27T17:26:49Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-PATCH.REL_Report.md",
+    "report_sha256": "19f74176966f2b694287a3a93895e91ec782a0adce0a8714ce9d981f922aa398"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-27T17:28:06Z",
+    "commits": "7cdb345 + 80a16e9 = origin",
+    "result": "RELEASED: SPY/QQQ/DIA/MDY exposure 200 (504/105/30/400 holdings); GLD new wording; Holdings tabs SPY/MDY live; IVV unchanged; 11/11 served files identical, stamps rel-20261127; bootstrap b2ab8f09 → 4e417f40 no cron (4/5 slots); financialfact agent booted out, plist moved",
+    "note": "one extra line in exp_compute (passes detail for wording) disclosed, within the exposure block"
+  },
+  "closed_at": "2026-11-27T17:28:06Z",
+  "outcome": "November patch release live 27 Nov 17:14Z"
+}

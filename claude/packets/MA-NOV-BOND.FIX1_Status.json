@@ -1,0 +1,69 @@
+{
+  "packet": "MA-NOV-BOND.FIX1",
+  "title": "Bond parser 1.3.0: F1, F2, F3, F4, F7, F8 (local only)",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 9,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.FIX1_Control_v1.md",
+    "sha256": "169615f2fea4dfdf1726498e2aabbb0c714f9c4cadae86e5822d5587638d7a61"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.FIX1_Task_v1.md",
+    "sha256": "c55b17455c99cda72466583a9dc6ec89b8a9243b22826d9845c79489d8e28b02"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/bonds/bonds-parse.mjs",
+      "App/Corporate Atlas/bonds/bonds-ingest.mjs",
+      "App/Corporate Atlas/bonds/bonds-lib.mjs",
+      "App/Corporate Atlas/bonds/tests/",
+      "App/Corporate Atlas/bonds/fixtures/",
+      "claude/packets/MA-NOV-BOND.FIX1_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; BOND.REVIEW before writes",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-22T10:10:03Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-22T09:37Z",
+    "words": "approve MA-NOV-EXP.BFS.CHECK and MA-NOV-BOND.FIX1",
+    "control_sha256": "169615f2fea4dfdf1726498e2aabbb0c714f9c4cadae86e5822d5587638d7a61",
+    "task_sha256": "c55b17455c99cda72466583a9dc6ec89b8a9243b22826d9845c79489d8e28b02",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261122T095847Z-6db3",
+    "mode": "interactive",
+    "session_id": "78115134-ade4-4491-a43d-1968c1add478",
+    "started": "2026-11-22T09:58:47Z",
+    "ended_by_session": "78115134-ade4-4491-a43d-1968c1add478",
+    "ended": "2026-11-22T10:10:03Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BOND.FIX1_Report.md",
+    "report_sha256": "b8027ac47f78dd3bde961d5707690fccea542059804c281db653b049819528c0"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-22T10:13:02Z",
+    "commit": "6aa5c39 = origin",
+    "tests": "all 4 bond suites 0 fail (re-run); 70/70 per report",
+    "result": "offline 653 filings: parse_failed 9→3 (F5 left), preliminary 198→151 (143 superseded), rows without reason 331→0 (T1), T5: 1 listed change (NextEra remarketing, = R-4), 0 unlisted",
+    "open": "8 drafts with a tranche dropped at pricing do not link (F2 rule) → F2b in FIX2"
+  },
+  "closed_at": "2026-11-22T22:43:01Z",
+  "outcome": "Closed on BOND.REVIEW: reliability correct; 6aa5c39"
+}

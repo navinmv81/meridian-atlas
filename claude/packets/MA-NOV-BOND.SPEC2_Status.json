@@ -1,0 +1,67 @@
+{
+  "packet": "MA-NOV-BOND.SPEC2",
+  "title": "Bonds BOND-01–12 for November: spec v2",
+  "state": "CLOSED",
+  "phase": "SPEC",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.SPEC2_Control_v1.md",
+    "sha256": "dff8ba1f49f44ca0ed41d64985c93b3db87058cb05d3e30b1f1df471068d63ff"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.SPEC2_Task_v1.md",
+    "sha256": "e2df6eded316d5c493f854a0070c51afbc040a93f5b582436ca1121b3a98d167"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/specs/MA-NOV-BOND_Spec_v2.md",
+      "claude/packets/MA-NOV-BOND.SPEC2_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "Main Lane; Founder spec approval",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-21T21:07:34Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-21T20:56Z",
+    "words": "approve MA-NOV-BOND.SPEC2",
+    "control_sha256": "dff8ba1f49f44ca0ed41d64985c93b3db87058cb05d3e30b1f1df471068d63ff",
+    "task_sha256": "e2df6eded316d5c493f854a0070c51afbc040a93f5b582436ca1121b3a98d167",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261121T205632Z-d760",
+    "mode": "interactive",
+    "session_id": "ba36a0da-ac72-48b0-a028-0445b48c1215",
+    "started": "2026-11-21T20:56:32Z",
+    "ended_by_session": "ba36a0da-ac72-48b0-a028-0445b48c1215",
+    "ended": "2026-11-21T21:07:34Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BOND.SPEC2_Report.md",
+    "report_sha256": "262ed00adcd935d0bc201f47258a3630150b8152b3ef55a9f7c43b0733552bba"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-22T09:08:52Z",
+    "head": "63fcf54 unchanged",
+    "writes": "spec v2 + report only",
+    "measure": "all 325 cached finals + 154 term sheets offline; 1 D1 read (632 rows); 52 bond tests pass"
+  },
+  "closed_at": "2026-11-22T09:25:12Z",
+  "outcome": "Spec v2 approved with decisions 1–13 as recommended (NML-1122-2)",
+  "approved_spec": {
+    "file": "claude/specs/MA-NOV-BOND_Spec_v2.md",
+    "sha256": "c42818156bb9589dac938a4e5ea42f0ff787ad2a574c8217b7736a25a6208aef"
+  }
+}

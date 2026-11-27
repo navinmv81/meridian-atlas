@@ -1,0 +1,56 @@
+{
+  "packet": "MA-NOV-EXP.UI.REVIEW",
+  "title": "Independent review of exposure calculation + screen (W2 + W3)",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ARCH / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Architect",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.UI.REVIEW_Control_v1.md",
+    "sha256": "a9d8131585af829bbf8bbfe8de0fcd274c8fd766ed919b1a9d52217311f72c7e"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.UI.REVIEW_Task_v1.md",
+    "sha256": "05eb04be66a0e7c8b12be4c87901b7d70754c4503a7b7f7a13fe5005ba95702c"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-EXP.UI.REVIEW_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "— (this is the review)",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-18T19:53:50Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-18T19:38Z",
+    "words": "approve MA-NOV-EXP.UI.REVIEW",
+    "control_sha256": "a9d8131585af829bbf8bbfe8de0fcd274c8fd766ed919b1a9d52217311f72c7e",
+    "task_sha256": "05eb04be66a0e7c8b12be4c87901b7d70754c4503a7b7f7a13fe5005ba95702c",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261118T194309Z-44c2",
+    "mode": "interactive",
+    "session_id": "4eb0f6c7-90da-4ac9-947e-f09149291d7e",
+    "started": "2026-11-18T19:43:09Z",
+    "ended_by_session": "4eb0f6c7-90da-4ac9-947e-f09149291d7e",
+    "ended": "2026-11-18T19:53:50Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.UI.REVIEW_Report.md",
+    "report_sha256": "be8ddf80e0cfc32cca42885fa74952a0cdea34d5fe2a92576a0bd4bb8644e8f5"
+  },
+  "heartbeat": null,
+  "closed_at": "2026-11-18T20:06:27Z",
+  "outcome": "PASS_WITH_NOTES: 0 B, 2 M (router claim; single-ETF stale reference), 7 N; T1 independently reproduced; escaping, fuzz, storage, a11y, performance OK; UAT yes; release with conditions"
+}

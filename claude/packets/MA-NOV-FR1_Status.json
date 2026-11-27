@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR1",
+  "kind": "founder-request",
+  "title": "Scope assessment timing",
+  "state": "DRAFT",
+  "owner": "Program Orchestrator (November Main Lane)",
+  "rev": 2,
+  "updated": "2026-11-10T19:07:12Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Run MA-NOV-SA1 (read-only scope assessment, about 4-6% of weekly usage) tonight or Wednesday after 09:00?",
+  "options": [
+    "Tonight",
+    "Wed after 09:00"
+  ],
+  "reply": "Reply \"SA1 tonight\" or \"SA1 Wed\"",
+  "due": "2026-11-11",
+  "status": "answered",
+  "answer": "SA1 tonight",
+  "answered_at": "2026-11-10T19:06:00Z"
+}

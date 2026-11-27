@@ -1,0 +1,67 @@
+{
+  "packet": "MA-NOV-UI.POLISH",
+  "title": "Exposure screen release polish + desktop header search width",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-UX / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-UI.POLISH_Control_v1.md",
+    "sha256": "86422168cd770cb5a6f35c49222f6883c0c3ec278986b28c78ca67119f83319c"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-UI.POLISH_Task_v1.md",
+    "sha256": "10092cd0347aedc161da3cb6e015d96906ffbd719ceafb17e2d3cd39fa1c4d24"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/ma-entities.js",
+      "App/index.html",
+      "App/Corporate Atlas/tests/exp-ui.test.mjs",
+      "App/Corporate Atlas/tests/home-entry.test.mjs",
+      "claude/packets/MA-NOV-UI.POLISH_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Combined review OPS + HOME + POLISH; Founder UAT",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-21T15:56:12Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-21T15:00Z",
+    "words": "OK ALL GOOD - approve MA-NOV-UI.POLISH.",
+    "control_sha256": "86422168cd770cb5a6f35c49222f6883c0c3ec278986b28c78ca67119f83319c",
+    "task_sha256": "10092cd0347aedc161da3cb6e015d96906ffbd719ceafb17e2d3cd39fa1c4d24",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261121T154626Z-09c1",
+    "mode": "interactive",
+    "session_id": "c38068c8-9996-448e-87f3-addcb96ebd07",
+    "started": "2026-11-21T15:46:26Z",
+    "ended_by_session": "c38068c8-9996-448e-87f3-addcb96ebd07",
+    "ended": "2026-11-21T15:56:12Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-UI.POLISH_Report.md",
+    "report_sha256": "34d07f6b90161a9fa6220b43b22b07379702f3cb1a5cdefad4e74ec5aeb3497d"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-21T16:23:37Z",
+    "commit": "63fcf54 = origin; 3 files",
+    "tests": "exp-ui, home-entry, exp-compute 0 fail (re-run)",
+    "header": "search 40 → 195 px at 1280; 1024 header overflow (pre-existing) fixed via second tile row; clock hidden 1280–1499"
+  },
+  "closed_at": "2026-11-21T18:09:37Z",
+  "outcome": "Closed on UI.REVIEW PASS_WITH_NOTES; 63fcf54"
+}

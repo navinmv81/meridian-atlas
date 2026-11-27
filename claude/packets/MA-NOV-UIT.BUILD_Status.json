@@ -1,0 +1,67 @@
+{
+  "packet": "MA-NOV-UIT.BUILD",
+  "title": "One-off N-PORT holdings for series-less UITs (SPY, QQQ, DIA, MDY) — offline",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ETF / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "ETF Product Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-UIT.BUILD_Control_v1.md",
+    "sha256": "265243f909c9329c3c3586d261d9718f68cb5167d931381743049ae3519eff81"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-UIT.BUILD_Task_v1.md",
+    "sha256": "b4322dbda82966b7cad546a38345fb5c05dc634d5152818ad5f0ee6e812bf3d6"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/ETF Refresh/uit/",
+      "App/ETF Refresh/src/holdings-pipeline.js",
+      "claude/packets/MA-NOV-UIT.BUILD_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "MA-NOV-UIT.REVIEW; Main Lane",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-27T08:43:49Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-27T07:32Z",
+    "words": "Approve MA-NOV-UIT.BUILD",
+    "control_sha256": "265243f909c9329c3c3586d261d9718f68cb5167d931381743049ae3519eff81",
+    "task_sha256": "b4322dbda82966b7cad546a38345fb5c05dc634d5152818ad5f0ee6e812bf3d6",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261127T073448Z-d203",
+    "mode": "interactive",
+    "session_id": "27ae260c-2650-4812-bbaf-e76b7899f949",
+    "started": "2026-11-27T07:34:48Z",
+    "ended_by_session": "27ae260c-2650-4812-bbaf-e76b7899f949",
+    "ended": "2026-11-27T07:47:09Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-UIT.BUILD_Report.md",
+    "report_sha256": "4a1ff12982d793c383699601b8d79f98f1b39e732d2c6bdb9df16373fc80def1"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-27T08:43:49Z",
+    "commit": "e4f2f02 = origin",
+    "report_sha256": "4a1ff12982d793c383699601b8d79f98f1b39e732d2c6bdb9df16373fc80def1",
+    "tests": "uit-build 11/11 (re-run); pipeline diff = export keyword only",
+    "result": "4 funds kept: SPY C0000884394 (504), QQQ real S000101292 (105), DIA C0001041130 (30), MDY C0000936958 (400); etf_master CIKs wrong for DIA/MDY (corrected, D2); apply 1,051 stmts/14 batches ≈12.5k writes; dry run apply/re-apply 0/rollback identical; no cache bump needed (1 h 404 TTL)",
+    "deviation": "reads 88k vs 60k (one control read planned on idx_holdings_month); verify guidance added"
+  },
+  "closed_at": "2026-11-27T08:43:49Z",
+  "outcome": "Built offline (e4f2f02); SQL not run; goes to UIT.REVIEW"
+}

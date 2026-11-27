@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR17",
+  "kind": "founder-request",
+  "title": "Approve bond spec v2 (decisions 1–13)",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-22T09:25:12Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Approve claude/specs/MA-NOV-BOND_Spec_v2.md with decisions 1–13 as recommended (offering information MUST; two write approvals Thu 26 and Sat 28; 95% verification gate; cut order §15).",
+  "options": [
+    "Approve as recommended",
+    "Approve with changes"
+  ],
+  "reply": "Reply \"approve bond spec v2 as recommended\" or list changes",
+  "due": "2026-11-22",
+  "status": "answered",
+  "answer": "approve bond spec v2 as recommended",
+  "answered_at": "2026-11-22T09:24:00Z"
+}

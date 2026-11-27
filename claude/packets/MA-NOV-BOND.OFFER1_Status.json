@@ -1,0 +1,68 @@
+{
+  "packet": "MA-NOV-BOND.OFFER1",
+  "title": "Offering facts part 1: parties, identity, terms, dates, source refs (offline)",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 8,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.OFFER1_Control_v1.md",
+    "sha256": "abac42432e350600dff4b9c6511cb3862c5cc6e5fbcb397b0d890147629d3a2d"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.OFFER1_Task_v1.md",
+    "sha256": "16dc2f27fd3ac094b7c380d26b8b5319bad3e7fb99144ab0f36bed3c2cd43ce4"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/bonds/bonds-offering.mjs",
+      "App/Corporate Atlas/bonds/bonds-lib.mjs",
+      "App/Corporate Atlas/bonds/tests/",
+      "App/Corporate Atlas/bonds/fixtures/",
+      "claude/packets/MA-NOV-BOND.OFFER1_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; BOND.REVIEW",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-23T20:19:54Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-22T14:44Z",
+    "words": "approve bond CR and MA-NOV-BOND.OFFER1",
+    "control_sha256": "abac42432e350600dff4b9c6511cb3862c5cc6e5fbcb397b0d890147629d3a2d",
+    "task_sha256": "16dc2f27fd3ac094b7c380d26b8b5319bad3e7fb99144ab0f36bed3c2cd43ce4",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261122T144519Z-9022",
+    "mode": "interactive",
+    "session_id": "2623a546-4edd-4007-8928-5ebdb500ed52",
+    "started": "2026-11-22T14:45:19Z",
+    "ended_by_session": "2623a546-4edd-4007-8928-5ebdb500ed52",
+    "ended": "2026-11-22T15:19:48Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BOND.OFFER1_Report.md",
+    "report_sha256": "f3fa43434827b2c920602cb309f87d31ae90e26a4687d6b9079b86c97301ad2b"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-22T15:22:59Z",
+    "commit": "5ae101f = origin",
+    "tests": "6 bond suites 0 fail (re-run); 109/109 per report",
+    "result": "322 debt filings / 633 tranches offline: document date 100%, amount/currency 100%, coupon/maturity 99.7%, price 96.9%, interest paid 92.9%, day count 77.3% (−8.7 vs spec), priced on 77.3%, issue date 95.7%, CUSIP/ISIN 88.8%; 3,926 parties, 321/322 filings with a selling bank; 0 trustee/guarantor/issuer read as a bank; 11,387 rows for the offering apply"
+  },
+  "closure_by": "MA-NOV-BOND.FIX3",
+  "closed_at": "2026-11-23T20:19:54Z",
+  "outcome": "Closed via MA-NOV-BOND.FIX3 (review findings fixed and re-checked; SQL superseded by 1.2.0 two-run build)"
+}

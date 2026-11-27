@@ -1,0 +1,66 @@
+{
+  "packet": "MA-NOV-EXP.W1R3",
+  "title": "Exposure route: cut CPU, body-size cap, preview measurement",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1R3_Control_v1.md",
+    "sha256": "d55ba1c342c49dcaea83d1a3e806482d4d9ad859510248a77d3e158e216e6328"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1R3_Task_v1.md",
+    "sha256": "401af74ed1786508ee37447084a65ca5d5743df8c7f8b12d96c0459deb19eeb6"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/src/entities-api.js",
+      "App/Corporate Atlas/tests/",
+      "claude/packets/MA-NOV-EXP.W1R3_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane verification; then C1R2 redeploy with the same triggers",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-13T07:04:08Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-13T06:40Z",
+    "words": "MA-NOV-EXP.W1R3 (reply to the W1R3 Start Approval card; taken as approve; covers non-deployed preview uploads only)",
+    "control_sha256": "d55ba1c342c49dcaea83d1a3e806482d4d9ad859510248a77d3e158e216e6328",
+    "task_sha256": "401af74ed1786508ee37447084a65ca5d5743df8c7f8b12d96c0459deb19eeb6",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261113T064506Z-cb12",
+    "mode": "interactive",
+    "session_id": "c548e1c5-1be8-4e44-b404-510c8b72b7bc",
+    "started": "2026-11-13T06:45:06Z",
+    "ended_by_session": "c548e1c5-1be8-4e44-b404-510c8b72b7bc",
+    "ended": "2026-11-13T07:04:08Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.W1R3_Report.md",
+    "report_sha256": "e2431668b5d1ca4b23899a841a1660f4e7cf65272a8b491e5f273f9526c3f098"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-13T07:07:06Z",
+    "commit": "c5d0cad = origin; 2 files (src/entities-api.js, tests/exp-route.test.mjs)",
+    "tests": "exp-route 27/27 (re-run)",
+    "assessment": "Sound diagnosis (fixed per-request cost; 3 D1 calls → 1, body built and size-checked in D1); VXUS body identical to old SQL on real D1; row-guard bug caught by its own test and fixed (MBB 14 rows); production untouched (4e7ee20b). Not met: preview CPU (tail does not see preview-URL requests) — CPU proof moves to C1R2. Conservative 128 KiB size cap refuses VXUS for now; size refusals cached 1 h (deviation D-2, accepted).",
+    "learning": "Preview versions cannot be used to measure CPU with wrangler tail; CPU proof needs a deploy with rollback triggers."
+  },
+  "closed_at": "2026-11-13T07:17:21Z",
+  "outcome": "Closed on W1R3.REVIEW PASS_WITH_NOTES; commit c5d0cad"
+}

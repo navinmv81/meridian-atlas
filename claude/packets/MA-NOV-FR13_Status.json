@@ -1,0 +1,17 @@
+{
+  "packet": "MA-NOV-FR13",
+  "kind": "founder-request",
+  "title": "CHECKLIST: switch on the scheduled back-fill",
+  "state": "DRAFT",
+  "rev": 4,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-22T09:58:46Z",
+  "updated_by": "Main Lane",
+  "request_type": "start",
+  "question": "BFS.CHECK verdict: READY TO SWITCH ON (Sun 22 06:00: expbf skipped/pause, 0 rows; Phase 1 skipped/budget as every Sunday). Reply \"switch on back-fill\" — that approves MA-NOV-EXP.BFS.ON, which ends the pause row. First real run: Tue 24 Nov 06:00Z.",
+  "reply": "After BFS.DEPLOY passes, reply \"switch on back-fill\"",
+  "due": "after BFS.DEPLOY (target Wed 25 Nov)",
+  "status": "answered",
+  "answer": "switch on back-fill",
+  "answered_at": "2026-11-22T09:58:00Z"
+}

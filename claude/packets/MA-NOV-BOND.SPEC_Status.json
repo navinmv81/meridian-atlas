@@ -1,0 +1,64 @@
+{
+  "packet": "MA-NOV-BOND.SPEC",
+  "title": "Bond reliability (BOND-01–05) + offering information option: spec",
+  "state": "CLOSED",
+  "phase": "SPEC",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-DATA / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Data-Identity Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.SPEC_Control_v1.md",
+    "sha256": "912bb492cc356a4c13c2179cb362ab2d901c7b2220c4cfc148e4e28dd4057930"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.SPEC_Task_v1.md",
+    "sha256": "0e1c261e6af78b5cff3b2cb972c5bb95126b5a8f0b40d4edeee941620660d48d"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/specs/MA-NOV-BOND_Spec.md",
+      "claude/packets/MA-NOV-BOND.SPEC_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "Main Lane; Founder spec approval",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-21T19:53:45Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-21T19:43Z",
+    "words": "approve MA-NOV-BOND.SPEC",
+    "control_sha256": "912bb492cc356a4c13c2179cb362ab2d901c7b2220c4cfc148e4e28dd4057930",
+    "task_sha256": "0e1c261e6af78b5cff3b2cb972c5bb95126b5a8f0b40d4edeee941620660d48d",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261121T194350Z-f724",
+    "mode": "interactive",
+    "session_id": "e6765910-f9f7-4972-9f3c-ac218dfc505f",
+    "started": "2026-11-21T19:43:50Z",
+    "ended_by_session": "e6765910-f9f7-4972-9f3c-ac218dfc505f",
+    "ended": "2026-11-21T19:53:45Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BOND.SPEC_Report.md",
+    "report_sha256": "5068d502eb93abcc844eb77b6a65fbbce2d8f13eddb30297592b5b0c545eba0d"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-21T19:54:49Z",
+    "head": "63fcf54 unchanged",
+    "writes": "spec + report only",
+    "reads": "7 SELECTs, 17,294 rows",
+    "deviation": "called a pure title-classifier function on stored titles (no network, no writes); disclosed; accepted"
+  },
+  "closed_at": "2026-11-21T20:04:09Z",
+  "outcome": "Spec v1 not approved; Founder brought BOND-06–12 into November (NML-1121-12); superseded by MA-NOV-BOND.SPEC2 (v1 kept as the reliability base)"
+}

@@ -1,0 +1,67 @@
+{
+  "packet": "MA-NOV-EXP.W1R2",
+  "title": "EXP route: leaner query, measured ≤50k cap, commit",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1R2_Control_v1.md",
+    "sha256": "21b67eb72750c3fe710e35ffbb3566bc1ebcac83e7d4b05b23ab910a8efbc880"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W1R2_Task_v1.md",
+    "sha256": "44b112d51d3bccb0d401e4cd6b0433ee3529e57d6acf97bb06bf356c3a47035b"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/src/entities-api.js",
+      "App/Corporate Atlas/tests/",
+      "claude/packets/MA-NOV-EXP.W1R2_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "MA-NOV-EXP.W1.REVIEW (W1 + W1R2; ETF PL + Tech Ops sign-off); then Founder deploy approval (C-1)",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-12T07:04:24Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-12T06:51Z",
+    "words": "MA-NOV-EXP.W1R2 (reply to the W1R2 Start Approval card; taken as approve)",
+    "control_sha256": "21b67eb72750c3fe710e35ffbb3566bc1ebcac83e7d4b05b23ab910a8efbc880",
+    "task_sha256": "44b112d51d3bccb0d401e4cd6b0433ee3529e57d6acf97bb06bf356c3a47035b",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261112T065238Z-a2f4",
+    "mode": "interactive",
+    "session_id": "c89a296c-deb4-4580-b072-df7138486922",
+    "started": "2026-11-12T06:52:38Z",
+    "ended_by_session": "c89a296c-deb4-4580-b072-df7138486922",
+    "ended": "2026-11-12T07:04:24Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.W1R2_Report.md",
+    "report_sha256": "1a25afbf2779f2c5826fdfa2f4fc22f4399e97f93482d7d6de61e93f3f625267"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-12T07:08:31Z",
+    "commit": "90331a17f0174f020e350f3174d1adf1196dba07 = origin",
+    "files": "4, all under App/Corporate Atlas (src/entities-api.js, tests/)",
+    "tests": "exp-route 23/23 (re-run by Main Lane)",
+    "result": "4.68 rows/holding (EEM 5,763), VXUS 38,254 measured; cap 10,000 holdings; refuses BND, AGG, MBB",
+    "deviation": "entities not sorted by weight in the response; front end sorts"
+  },
+  "closed_at": "2026-11-12T20:26:04Z",
+  "outcome": "Closed on W1.REVIEW PASS_WITH_NOTES; commit 90331a1"
+}

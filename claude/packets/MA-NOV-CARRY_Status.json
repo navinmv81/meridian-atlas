@@ -4,7 +4,7 @@
   "kind": "carry-over register",
   "state": "DRAFT",
   "phase": "SPEC",
-  "rev": 6,
+  "rev": 16,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "— (not admitted)",
   "write_owner": "NONE",
@@ -22,7 +22,7 @@
   "blocker": null,
   "review_needed": false,
   "usage_class": "—",
-  "updated": "2026-11-10T06:52:00Z",
+  "updated": "2026-11-26T21:47:52Z",
   "updated_by": "Main Lane",
   "observations": [
     {
@@ -64,6 +64,101 @@
       "at": "2026-11-10T06:52:00Z",
       "item": "ETF holdings batch size — DECIDED (Founder, 10 Nov 06:51)",
       "note": "Option A: no change. The 80k guard stops the Sunday run cleanly and etf_offset advances only past finished ETFs, so there is no budget risk; cost is slow refresh (133/237, ~6–15 weeks to complete a cycle). Budget cases EXC-S-6E6D3D658179 / EXC-S-0985E036CADD to be acknowledged with this note. Option C (faster cycle; cron slots 5/5) goes to the November scope assessment because EXP-08 depends on holdings freshness."
+    },
+    {
+      "at": "2026-11-11T20:57:47Z",
+      "item": "Tower Closed column (REVIEW4 N1)",
+      "note": "Closed column shows the 10 most recent of 14 CLOSED packets with count 10; show the true count or \"+N more\" in the next Tower touch-up."
+    },
+    {
+      "at": "2026-11-11T20:57:47Z",
+      "item": "Review Controls and git ls-remote (REVIEW4 N2)",
+      "note": "Reviewer ran one read-only git ls-remote although the Control said no network. Harmless; future review Controls allow read-only ls-remote explicitly."
+    },
+    {
+      "at": "2026-11-13T18:06:23Z",
+      "item": "gleif-reconcile-011 test 41/42 (pre-existing)",
+      "note": "One failing test in the Corporate Atlas gleif-reconcile suite, reported by W1R4 and W2; files unchanged since 58cd922 and unrelated to EXP. Triage with Data-Identity in a later packet."
+    },
+    {
+      "at": "2026-11-18T20:06:27Z",
+      "item": "EXP review follow-ups (UI.REVIEW N-2, N-7, data note)",
+      "note": "N-2 ETF holdings link closes the exposure layer (fix in ma-etf.js, ETF lane); N-7 \"241 of 264\" label is literal text, fill from data; some entity_master names are non-Latin (e.g. Tencent) — Corporate Atlas DQ."
+    },
+    {
+      "at": "2026-11-19T06:26:13Z",
+      "item": "EXP .exp-dim contrast (UI.REVIEW N-4 remainder)",
+      "note": "11–12 px secondary text (.exp-dim) still uses --dim (3.80:1). Headers fixed in W3R2. Fix with the release polish or KI."
+    },
+    {
+      "at": "2026-11-19T20:32:44Z",
+      "item": "EXP Gaps panel wording",
+      "note": "Gaps panel still uses \"Unsupported inputs\" / \"Load errors\"; align with the W3R3 plain-language panel in the release polish."
+    },
+    {
+      "at": "2026-11-20T18:17:41Z",
+      "item": "Back-fill job notes (BFS.REVIEW N1, N3; ETF index dependency)",
+      "note": "N1 a Phase 1 exception skips the back-fill without a heartbeat (Tower may show job_missed); N3 never delete the expbf pause history (Ops runbook); any ETF migration touching idx_holdings_status_series_month must name the expbf job; C1 (December) must add Wednesday to SKIP_UTC_DAYS."
+    },
+    {
+      "at": "2026-11-21T15:00:50Z",
+      "item": "Release: script cache-busting (REL.CR / REL.GO)",
+      "note": "Founder preview: homepage search did nothing until a hard refresh — browser had a cached old ma-search.js with the new index.html. Pages serves max-age=600 with unversioned script tags (CLAUDE.md). Release must add version stamps to the 11 script/style references (e.g. ?v=<commit>) via generate-docs or index.html so visitors get matching files."
+    },
+    {
+      "at": "2026-11-21T18:09:37Z",
+      "item": "UI.REVIEW notes for later",
+      "note": "N-1 901–1100 px market cards clip right columns (pre-existing; extend stacking or card overflow); N-2 phone focus order vs visual order (reorder DOM later); N-3 near-duplicate company entities in search (e.g. Taiwan Semiconductor #97144/#259478) → entity de-dup item; N-4 dead CSS .hr-res.sel."
+    },
+    {
+      "at": "2026-11-26T21:32:10Z",
+      "by": "Main Lane",
+      "note": "REL.GO: generate-docs.mjs --dry-run writes .docs-dry-run/ inside the repo, which trips the end scope check → write it outside the repo (e.g. os.tmpdir()) or add .docs-dry-run/ to release packets' allowed paths and .gitignore. 11 untracked files left in place (bridge cannot delete)."
+    },
+    {
+      "at": "2026-11-26T21:32:10Z",
+      "by": "Main Lane",
+      "note": "REL.GO: SPY has no N-PORT series id → /api/exposure/etf/SPY 404 no_holdings (data gap, not code). December: check etf_master/series mapping for SPY."
+    },
+    {
+      "at": "2026-11-26T21:32:10Z",
+      "by": "Main Lane",
+      "note": "REL.GO: ma-ops.js is loaded unstamped by the Ops console shell (outside index.html) → stamp it in the next release."
+    },
+    {
+      "at": "2026-11-26T21:32:10Z",
+      "by": "Main Lane",
+      "note": "BOND.UI: F3 coverage totals and #/fi directory counts not built → December."
+    },
+    {
+      "at": "2026-11-26T21:47:52Z",
+      "item": "DIAG: UIT holdings path",
+      "note": "SPY/QQQ/DIA/MDY have no exposure: series-less UITs (SPY files NPORT-P, no seriesId). Fix: CIK-keyed NPORT discovery + surrogate key C<cik>; correct etf_master notes. ETF Product Lead, medium, three-point check, <10k writes."
+    },
+    {
+      "at": "2026-11-26T21:47:52Z",
+      "item": "DIAG: holdings never completes a cycle",
+      "note": "cf.meridian-holdings partial every Sunday (8–13 of 20 ETFs, ~81k writes vs 80k guard); offset 149/237; next batch predicted 157k. Size/split the Sunday run. ETF Product Lead."
+    },
+    {
+      "at": "2026-11-26T21:47:52Z",
+      "item": "DIAG: financialfact-backfill SILENT",
+      "note": "exit 78 daily since ~23 Aug; registry held. Uninstall agent or diagnose (TCC/plist). Operations Lead."
+    },
+    {
+      "at": "2026-11-26T21:47:52Z",
+      "item": "DIAG: FIRDS no ledger emitter",
+      "note": "failed 5 Sundays (10-04→11-01) with no alert; recovered 11-08. Add ledger emitter. Data-Identity Lead, small."
+    },
+    {
+      "at": "2026-11-26T21:47:52Z",
+      "item": "DIAG: bootstrap cron idle",
+      "note": "meridian-bootstrap 6 runs/day, 0 work since 2026-06-11; remove cron to free 1 of 5 slots (three-point check)."
+    },
+    {
+      "at": "2026-11-26T21:47:52Z",
+      "item": "DIAG: commodity/crypto trusts wording",
+      "note": "12 non-1940-Act trusts: show \"no holdings filing\" instead of \"no holdings\". UI, small."
     }
   ]
 }

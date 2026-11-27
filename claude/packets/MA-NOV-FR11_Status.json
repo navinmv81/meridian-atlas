@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR11",
+  "kind": "founder-request",
+  "title": "Exposure back-fill is ~3x larger than planned",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-20T07:11:51Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "The April–August back-fill needs ≈450k row-writes (April alone ≈148k), not the ≈50–200k estimated; at ≤50k/day it cannot finish in November. It only feeds the company page ETF-holder panel; the exposure screen reads holdings directly and is unaffected. A (recommended): move it to December with the recurring refresh (D5), built once, in batches inside the write budget; November release keeps the panel at Jan–Mar 2026 with its month labels. B: holder-batch packet now and ≤50k/day batches from Tue 24 (finishes mid-December, Founder approval each write day).",
+  "options": [
+    "A (recommended)",
+    "B"
+  ],
+  "reply": "Reply \"back-fill A\" or \"back-fill B\"",
+  "due": "2026-11-24",
+  "status": "answered",
+  "answer": "scheduled now (build the batched back-fill as a scheduled job in Cloudflare now; take stock afterwards)",
+  "answered_at": "2026-11-20T07:10:00Z"
+}

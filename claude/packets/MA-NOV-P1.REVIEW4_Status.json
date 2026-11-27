@@ -1,0 +1,56 @@
+{
+  "packet": "MA-NOV-P1.REVIEW4",
+  "title": "Light Architect review of P1.FIX4",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ARCH / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Architect",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-P1.REVIEW4_Control_v1.md",
+    "sha256": "9222b7a95cdfa783e7105fdcc270a8d3f26f62f8e7ee80fd09831cd525a7e8b0"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-P1.REVIEW4_Task_v1.md",
+    "sha256": "1758a73a06dea74564ad3bb42e66c389b18d3a67cc9af5f139e38d25ef6433e1"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-P1.REVIEW4_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "— (this is the review)",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-11-11T20:55:11Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-11T20:51Z",
+    "words": "MA-NOV-P1.REVIEW4 (reply to the REVIEW4 Start Approval card; taken as approve)",
+    "control_sha256": "9222b7a95cdfa783e7105fdcc270a8d3f26f62f8e7ee80fd09831cd525a7e8b0",
+    "task_sha256": "1758a73a06dea74564ad3bb42e66c389b18d3a67cc9af5f139e38d25ef6433e1",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261111T205210Z-0404",
+    "mode": "interactive",
+    "session_id": "52b6579a-3738-4c6c-a483-608db33e647c",
+    "started": "2026-11-11T20:52:10Z",
+    "ended_by_session": "52b6579a-3738-4c6c-a483-608db33e647c",
+    "ended": "2026-11-11T20:55:11Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-P1.REVIEW4_Report.md",
+    "report_sha256": "013dff0fee5a49ee29e4e12db6c8daad5930b17d04236a009ace2d6037119a16"
+  },
+  "heartbeat": null,
+  "closed_at": "2026-11-11T20:57:47Z",
+  "outcome": "PASS_WITH_NOTES: H1, H2, v1.2 install, CLAUDE.md patch, Tower redesign all closed; 48/48 tests; N1 Closed column shows 10 of 14; N2 one read-only ls-remote (Control said no network)"
+}

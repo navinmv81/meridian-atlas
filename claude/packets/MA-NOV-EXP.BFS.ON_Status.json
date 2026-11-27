@@ -1,0 +1,58 @@
+{
+  "packet": "MA-NOV-EXP.BFS.ON",
+  "title": "Switch on the scheduled exposure back-fill (FR13)",
+  "state": "CLOSED",
+  "phase": "OPS",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Operations Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.ON_Control_v1.md",
+    "sha256": "d9b81aba04f92b342fa9ff4d7b9acddb94128808e1cc558c6a951029cf260120"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.ON_Task_v1.md",
+    "sha256": "e1e99001a680b683241aeab332eab126dbee3e3f9dd50fd9521c919770cb5669"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Ops/migrations/switch-on-2026-11-22-expbf.sql",
+      "claude/packets/MA-NOV-EXP.BFS.ON_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-22T10:15:12Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-22T09:58Z",
+    "words": "switch on back-fill",
+    "control_sha256": "d9b81aba04f92b342fa9ff4d7b9acddb94128808e1cc558c6a951029cf260120",
+    "task_sha256": "e1e99001a680b683241aeab332eab126dbee3e3f9dd50fd9521c919770cb5669",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261122T101403Z-6e3c",
+    "mode": "interactive",
+    "session_id": "1d011c43-7846-486a-b930-e761ccd75457",
+    "started": "2026-11-22T10:14:03Z",
+    "ended_by_session": "1d011c43-7846-486a-b930-e761ccd75457",
+    "ended": "2026-11-22T10:15:12Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.BFS.ON_Report.md",
+    "report_sha256": "7b5ea383cfe421eb9b92947bced6d69280023b8b99b4576c71a724cf32678e16"
+  },
+  "heartbeat": null,
+  "closed_at": "2026-11-22T10:17:58Z",
+  "outcome": "Back-fill switched on: expbf pause row ended (1 row), case event written; first run Tue 24 Nov 06:00Z (Sun/Mon skipped; budget guard may skip)"
+}

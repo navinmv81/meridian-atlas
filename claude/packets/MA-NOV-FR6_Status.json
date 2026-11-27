@@ -1,0 +1,22 @@
+{
+  "packet": "MA-NOV-FR6",
+  "kind": "founder-request",
+  "title": "Exposure route CPU (C1 rolled back)",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-13T06:36:04Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "Uncached EEM (first request after deploy) took 11 ms CPU and VXUS 12 ms, over the 10 ms Free limit; SPAB 8 ms and BNDX 5 ms passed; all outcomes ok. A (recommended): fix packet W1R3 finds and cuts the CPU (cold start, cache-copy of large bodies), adds a body-size cap, measures without production traffic if possible, then redeploy. B: accept and roll back only on real CPU errors (1102). C: lower the cap now (refuses VXUS) and redeploy.",
+  "options": [
+    "A (recommended)",
+    "B",
+    "C"
+  ],
+  "reply": "Reply \"CPU A\", \"CPU B\" or \"CPU C\"",
+  "due": "2026-11-13",
+  "status": "answered",
+  "answer": "CPU A",
+  "answered_at": "2026-11-13T06:35:00Z"
+}

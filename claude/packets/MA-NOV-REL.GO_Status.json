@@ -1,0 +1,70 @@
+{
+  "packet": "MA-NOV-REL.GO",
+  "title": "November single go-live: exposure, Ops, homepage, bonds (index + entities-api + Pages)",
+  "state": "CLOSED",
+  "phase": "RELEASE",
+  "rev": 10,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2), Founder present",
+  "write_owner": "Operations Lead",
+  "control": {
+    "version": "v2",
+    "file": "MA-NOV-REL.GO_Control_v2.md",
+    "sha256": "6f3779da9ec447fef166807c234f2da2ef7a5c53ba14c0dfce4dfe25eda5a9a8"
+  },
+  "task": {
+    "version": "v2",
+    "file": "MA-NOV-REL.GO_Task_v2.md",
+    "sha256": "f251165c169e31e37c8975b898622d24e6ff44a9efe9d5b439028d9628c46911"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/index.html",
+      "App/Ops/tests/ops-a.test.mjs",
+      "App/Corporate Atlas/migrations/ma-nov-bond-idx1.sql",
+      "App/Corporate Atlas/migrations/ma-nov-bond-idx1-rollback.sql",
+      "docs/",
+      "CLAUDE.md",
+      "claude/specs/MA-NOV-REL_CR.md",
+      "claude/packets/MA-NOV-REL.GO_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane verification",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-26T21:31:57Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-26T21:12Z",
+    "words": "approve MA-NOV-REL.GO v2",
+    "control_sha256": "6f3779da9ec447fef166807c234f2da2ef7a5c53ba14c0dfce4dfe25eda5a9a8",
+    "task_sha256": "f251165c169e31e37c8975b898622d24e6ff44a9efe9d5b439028d9628c46911",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261126T211309Z-3827",
+    "mode": "interactive",
+    "session_id": "82c907f2-07dd-42f4-9d11-ed486c02478c",
+    "started": "2026-11-26T21:13:09Z",
+    "ended_by_session": "82c907f2-07dd-42f4-9d11-ed486c02478c",
+    "ended": "2026-11-26T21:30:04Z",
+    "outcome": "BLOCKED",
+    "blocked_reason": "scope violation: .docs-dry-run/index.html, .docs-dry-run/ma-13f.js, .docs-dry-run/ma-data.js, .docs-dry-run/ma-dcf.js, .docs-dry-run/ma-entities.js, .docs-dry-run/ma-etf.js, .docs-dry-run/ma-market.js, .docs-dry-run/ma-modal.js, .docs-dry-run/ma-ops.js, .docs-dry-run/ma-research.js, .docs-dry-run/ma-search.js"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-26T21:31:57Z",
+    "commits": "74a9a03 + bb3815b = origin",
+    "result": "RELEASED: idx_bi_cik_status live (944 writes, plans verified); entities-api a9ffeaae → e35d7c55; Pages October-2026 → November-2026 /docs (Founder switched 21:22:26Z); 11/11 served files byte-identical, stamps 9/9, all API and front-end checks pass",
+    "deviations": "ops-a test 2-line fix (Founder-authorized in session); .docs-dry-run/ scope flag (generator scratch, untracked)",
+    "findings": "SPY no N-PORT series id (exposure 404 no_holdings, data); BOND.UI \"25 facts\" was rows read (19 facts + 6 states served); CLAUDE.md stale branch line fixed by Main Lane"
+  },
+  "closed_at": "2026-11-26T21:31:57Z",
+  "outcome": "November released 26 Nov 21:22Z: exposure, Ops, homepage, bonds; rollback = Pages → October-2026 /docs 98e830e, Worker → a9ffeaae, index rollback file"
+}

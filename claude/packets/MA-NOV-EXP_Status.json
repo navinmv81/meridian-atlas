@@ -4,7 +4,7 @@
   "kind": "outcome",
   "state": "DRAFT",
   "phase": "SPEC",
-  "rev": 1,
+  "rev": 8,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "— (not admitted)",
   "write_owner": "NONE",
@@ -30,10 +30,54 @@
     "013 held identity subset (11)"
   ],
   "scope_source": "claude/meridian_atlas_november_content_scope_and_requirements.md (2 Nov kickoff edition, c16c8e19…5a03)",
-  "next_gate": "Scope assessment (Spec §7 checkpoint 1) after P1.FIX3 and the weekly usage reset; Founder scope approval before any spec",
+  "next_gate": "EXP.W2 (exposure calculation in the browser)",
   "blocker": null,
   "review_needed": false,
   "usage_class": "—",
-  "updated": "2026-11-08T08:44:52Z",
-  "updated_by": "Main Lane"
+  "updated": "2026-11-20T17:22:20Z",
+  "updated_by": "Main Lane",
+  "scope_decision": "Approved 10 Nov (NML-1110-6): EXP-01–12 all in; EXP-08 period differences over the two stored months; holdings C1 by CR",
+  "baseline": "BQ2 11 Nov: entity_exposure_monthly latest 2026-03 (computed 2026-06-14, gate3 once) vs fund_holdings_monthly 2026-08; fund_exposure_coverage 2026-03 = 42 funds of 237, mean mapped 76.2%, 5 <50%. Mapping 32,769 (heuristic 1,649). Holdings offset 133/237. EXP needs gate3 for 2026-04..08 (write volume to be estimated in the spec).",
+  "spec": {
+    "file": "claude/specs/MA-NOV-EXP_Spec.md",
+    "sha256": "785df4d54f96c580c7b72829be9cd0ed11990b5583213fb4045fe66b48e2fc3e",
+    "approved": "2026-11-11 (NML-1111-5)",
+    "amendments": [
+      "A1 live look-through ≤50k rows read per call (~15,000 holdings); BND labelled too large in November",
+      "A2 December recurring refresh must not run in an ETF Worker"
+    ]
+  },
+  "review_notes": {
+    "at": "2026-11-12T20:26:04Z",
+    "gates_for_C2": [
+      "N-1 resolved (cache works)",
+      "N-2 resolved in W1R4 (canonical, versioned key)"
+    ],
+    "for_W2": [
+      "N-6 client sorts entities by weight, with a test"
+    ],
+    "later": [
+      "N-3 cap on max(snapshot count, complete rows) or a DQ check",
+      "N-4 500 body: internal + contract",
+      "N-5 /etf-exposure funds = DISTINCT holder_entity_id",
+      "N-7 3-hop redirects accepted as redirect_unresolved",
+      "N-8 ETF-lane KIs: EEM period_end oddity; correlated MAX in /api/etf-exposure"
+    ]
+  },
+  "live": {
+    "at": "2026-11-13T17:24:41Z",
+    "worker": "meridian-entities-api bb8ad0aa (commit 54b1446)",
+    "route": "GET /api/exposure/etf/{symbol}",
+    "served": "all ETFs with ≤10,000 holdings and body ≤128 KiB (incl. EEM, SPAB, BNDX)",
+    "refused": "VXUS (size), BND, AGG, MBB (rows)",
+    "cpu": "cold EEM 7 ms; max uncached 7 ms"
+  },
+  "vxus_note": "Size cap steps (192/256 KiB) cannot reach VXUS (369 KB); VXUS needs a slimmer body (names fetched separately) or the precomputed per-ETF table (December).",
+  "uat": {
+    "at": "2026-11-19T20:17:51Z",
+    "by": "Founder",
+    "result": "PASS (panel ok, 2026-11-20 17:21, after W3R3)",
+    "condition": "MA-NOV-EXP.W3R3",
+    "closed": "2026-11-20T17:22:20Z"
+  }
 }

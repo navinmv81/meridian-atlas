@@ -1,0 +1,69 @@
+{
+  "packet": "MA-NOV-EXP.W2",
+  "title": "Exposure calculation (exp_validate, exp_compute) + tests",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 8,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W2_Control_v1.md",
+    "sha256": "4a4df0f0f0e06e16319de1d486a9d5c725baddbe3ad291a06bb80e55bb9ded81"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.W2_Task_v1.md",
+    "sha256": "bf1bd489930209cee8870b3144517e43e4e9f4be0703712ee9ed907fe9a29d5a"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/ma-entities.js",
+      "App/Corporate Atlas/tests/",
+      "claude/packets/MA-NOV-EXP.W2_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; independent review with W3 before C-2",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-13T18:03:54Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-13T17:35Z",
+    "words": "approve MA-NOV-EXP.W2",
+    "control_sha256": "4a4df0f0f0e06e16319de1d486a9d5c725baddbe3ad291a06bb80e55bb9ded81",
+    "task_sha256": "bf1bd489930209cee8870b3144517e43e4e9f4be0703712ee9ed907fe9a29d5a",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261113T174852Z-02ad",
+    "mode": "interactive",
+    "session_id": "f23f0d95-1827-4166-b2c0-e86f3a7af4a5",
+    "started": "2026-11-13T17:48:52Z",
+    "ended_by_session": "f23f0d95-1827-4166-b2c0-e86f3a7af4a5",
+    "ended": "2026-11-13T18:03:54Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.W2_Report.md",
+    "report_sha256": "ca65b4d9506e4439b91fbed17fbb1d825a11aa299365ae3dadf5d01d82d53f0b"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-13T18:06:23Z",
+    "commit": "c7886b7 = origin",
+    "change": "ma-entities.js: one appended EXP block, no existing lines removed; new exp-compute tests",
+    "tests": "exp-compute 152/152 per report; Main Lane re-run: pass, 0 fail",
+    "open_for_review": [
+      "§4 choices: unresolved-after-merge weight gets its own reconciliation line; 400 / unknown symbol / month not stored count as unsupported"
+    ],
+    "preexisting": "gleif-reconcile-011 41/42, unrelated (files unchanged since 58cd922)"
+  },
+  "closed_at": "2026-11-18T20:06:27Z",
+  "outcome": "Closed on UI.REVIEW PASS_WITH_NOTES; commit c7886b7"
+}

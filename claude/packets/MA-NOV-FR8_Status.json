@@ -1,0 +1,21 @@
+{
+  "packet": "MA-NOV-FR8",
+  "kind": "founder-request",
+  "title": "Route cache: verify after 21:19Z, or fix the key now",
+  "state": "DRAFT",
+  "rev": 2,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "updated": "2026-11-13T16:41:43Z",
+  "updated_by": "Main Lane",
+  "request_type": "decision",
+  "question": "C1R2 deployed (866c6cb2) without triggers, but look-throughs were served from the rolled-back build cache, so CPU and the VXUS size refusal are unmeasured. A (recommended): small packet W1R4 — cache key = generation + SYMBOL + month|latest (fixes review N-2, which gates the screen anyway) — then redeploy C1R3 with the full checks. B: no code; re-run the checks after 21:19Z today (N-2 still to do before the screen).",
+  "options": [
+    "A (recommended)",
+    "B"
+  ],
+  "reply": "Reply \"cache A\" or \"cache B\"",
+  "due": "2026-11-13",
+  "status": "answered",
+  "answer": "cache A",
+  "answered_at": "2026-11-13T16:40:00Z"
+}

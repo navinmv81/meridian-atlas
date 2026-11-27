@@ -1,0 +1,64 @@
+{
+  "packet": "MA-NOV-EXP.BFS.GO",
+  "title": "Back-fill job: read limit 300k, Ops rows (paused), deploy",
+  "state": "CLOSED",
+  "phase": "DEPLOY",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Operations Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.GO_Control_v1.md",
+    "sha256": "353ae3f7bd7ce22c5de295d738d9bfe06b3215bd734d1078b2c1f1fa5f50b5de"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.GO_Task_v1.md",
+    "sha256": "c65793c6fa14f1dd94666642cd9eb0e51d77d0ddba56b174f45b24989a9d91ec"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/Corporate Atlas/src/exp-backfill.js",
+      "App/Corporate Atlas/tests/",
+      "App/Ops/migrations/registry-load-2026-11-20-expbf.sql",
+      "claude/packets/MA-NOV-EXP.BFS.GO_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane; BFS.CHECK after the next 06:00 run",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "small",
+  "updated": "2026-11-21T08:26:42Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-21T08:15Z",
+    "words": "Its saturday 21 Nov 08:15 approve MA-NOV-EXP.BFS.GO. (= constant + Ops rows + deploy; not the switch-on)",
+    "control_sha256": "353ae3f7bd7ce22c5de295d738d9bfe06b3215bd734d1078b2c1f1fa5f50b5de",
+    "task_sha256": "c65793c6fa14f1dd94666642cd9eb0e51d77d0ddba56b174f45b24989a9d91ec",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261121T082142Z-89fa",
+    "mode": "interactive",
+    "session_id": "08af1e78-4c19-4d65-97da-ecff76cd180b",
+    "started": "2026-11-21T08:21:42Z",
+    "ended_by_session": "08af1e78-4c19-4d65-97da-ecff76cd180b",
+    "ended": "2026-11-21T08:26:42Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.BFS.GO_Report.md",
+    "report_sha256": "6d49490683d1ab7d4c1ff1ce0bf7cdab27e3a668cd0bab13795a59a91e64e293"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-21T08:32:47Z",
+    "commit": "bc1d079 = origin; 3 files"
+  },
+  "closed_at": "2026-11-21T08:32:47Z",
+  "outcome": "bc1d079: read limit 300k; Ops rows (pause first, registry cap 40k, 2 case events) executed and verified; meridian-entities-enrich deployed aa39edf6 (previous 5c64e54e, rollback target); crons and bindings unchanged; job OFF (pause open to 2099). Switch-on/off SQL in report."
+}

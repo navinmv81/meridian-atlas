@@ -1,0 +1,56 @@
+{
+  "packet": "MA-NOV-BOND.REVIEW",
+  "title": "Independent review of all bond work + 20-filing source check",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ARCH / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Architect",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.REVIEW_Control_v1.md",
+    "sha256": "6d316719124885f897f2e12ce34a2ffe73b13350d004e59fce2991c6329162b4"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-BOND.REVIEW_Task_v1.md",
+    "sha256": "cc475432d68d2a9c33dbbb224573bf93ba50dcc918958e86cf6495fa74cb26d9"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-BOND.REVIEW_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "— (this is the review)",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-22T21:47:11Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-22T19:38Z",
+    "words": "approve MA-NOV-BOND.REVIEW and MA-NOV-BOND.UI",
+    "control_sha256": "6d316719124885f897f2e12ce34a2ffe73b13350d004e59fce2991c6329162b4",
+    "task_sha256": "cc475432d68d2a9c33dbbb224573bf93ba50dcc918958e86cf6495fa74cb26d9",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261122T213157Z-1367",
+    "mode": "interactive",
+    "session_id": "cd2d5244-80ca-46a8-a89f-5f2c59935afb",
+    "started": "2026-11-22T21:31:57Z",
+    "ended_by_session": "cd2d5244-80ca-46a8-a89f-5f2c59935afb",
+    "ended": "2026-11-22T21:47:11Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-BOND.REVIEW_Report.md",
+    "report_sha256": "d9a78f44139721cfdd5fff944b5af116ed6a8ae35125e463f8607feb97931f78"
+  },
+  "heartbeat": null,
+  "closed_at": "2026-11-22T22:43:01Z",
+  "outcome": "PASS_WITH_NOTES: reliability (FIX1/FIX2/CR1) safe to write with conditions; offering write BLOCKED by §6.3 (9 wrong-tranche rows in AbbVie; 3 fields < 95%: use of proceeds 80%, proceeds total 83%, place list 90%) until FIX3; overall 98.5% of 1,240 checked rows correct; 0 trustee/guarantor as bank"
+}

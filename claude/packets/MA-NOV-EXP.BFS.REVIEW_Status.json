@@ -1,0 +1,56 @@
+{
+  "packet": "MA-NOV-EXP.BFS.REVIEW",
+  "title": "Independent review of the scheduled back-fill build",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 6,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-ARCH / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Architect",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.REVIEW_Control_v1.md",
+    "sha256": "02548820b1e8e0a4941519dd0e030f809bef0e915c1e185dd279c9f9d1d07f1b"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-EXP.BFS.REVIEW_Task_v1.md",
+    "sha256": "929028869a847fd9c3e0414e294ffecb0ada6ecf98a990156a4e73abfe2a0985"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-NOV-EXP.BFS.REVIEW_Report.md"
+    ],
+    "allow_commits": false
+  },
+  "reviewer": "— (this is the review)",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-20T18:08:12Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-20T18:02Z",
+    "words": "approve MA-NOV-EXP.BFS.REVIEW",
+    "control_sha256": "02548820b1e8e0a4941519dd0e030f809bef0e915c1e185dd279c9f9d1d07f1b",
+    "task_sha256": "929028869a847fd9c3e0414e294ffecb0ada6ecf98a990156a4e73abfe2a0985",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261120T180309Z-8eea",
+    "mode": "interactive",
+    "session_id": "78d4b839-e969-41b1-a25b-8f4426f90cf9",
+    "started": "2026-11-20T18:03:09Z",
+    "ended_by_session": "78d4b839-e969-41b1-a25b-8f4426f90cf9",
+    "ended": "2026-11-20T18:08:12Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-EXP.BFS.REVIEW_Report.md",
+    "report_sha256": "f8272b832e08a765a689245a7b21c1871f523fefc6f84976114c7fa8406a2a27"
+  },
+  "heartbeat": null,
+  "closed_at": "2026-11-20T18:17:41Z",
+  "outcome": "PASS_WITH_NOTES: 0 B, 2 M (M1 per-run batch/call/read limits not enforced; M2 write overshoot not stopped), 6 N; safety, isolation, identity, D2 live plan confirmed; ETF PL acknowledged hard index dependency; Data-Identity signed off; OPS may proceed, fix M1/M2 before switch-on (preferably before deploy)"
+}

@@ -1,0 +1,68 @@
+{
+  "packet": "MA-NOV-UI.OPS.BUILD",
+  "title": "Ops console cleanup (OPS-01–06)",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 7,
+  "owner": "Program Orchestrator (November Main Lane)",
+  "lane": "LANE-NOV-UX / Claude Code (fixed line, LANE_OPENER_v2)",
+  "write_owner": "Engineering Lead",
+  "control": {
+    "version": "v1",
+    "file": "MA-NOV-UI.OPS.BUILD_Control_v1.md",
+    "sha256": "0cf79ec214657b4ef00a4a59c98a1f0148846dc46ee247164b3b527c3f3ebc28"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-NOV-UI.OPS.BUILD_Task_v1.md",
+    "sha256": "2f556c8e450950283125fcc60a6725264dfd498ab64d9127d5c2efa25f82356c"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "App/ma-ops.js",
+      "App/Ops/tests/ops-a.test.mjs",
+      "App/Ops/tests/ops-console.test.mjs",
+      "App/Ops/tests/preview/",
+      "claude/packets/MA-NOV-UI.OPS.BUILD_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "UI.OPS.REVIEW; Founder UAT via harness",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-21T09:45:01Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-21T09:27Z",
+    "words": "approve MA-NOV-UI.OPS.BUILD",
+    "control_sha256": "0cf79ec214657b4ef00a4a59c98a1f0148846dc46ee247164b3b527c3f3ebc28",
+    "task_sha256": "2f556c8e450950283125fcc60a6725264dfd498ab64d9127d5c2efa25f82356c",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261121T092812Z-cfe1",
+    "mode": "interactive",
+    "session_id": "cf41a2e3-7e8b-4bff-8fe4-dbfcbbbb0200",
+    "started": "2026-11-21T09:28:12Z",
+    "ended_by_session": "cf41a2e3-7e8b-4bff-8fe4-dbfcbbbb0200",
+    "ended": "2026-11-21T09:45:01Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-NOV-UI.OPS.BUILD_Report.md",
+    "report_sha256": "0235c2fb2ccab0a2c0693b4620f10cd219b38517428b1640cbd4d938006e60fb"
+  },
+  "heartbeat": null,
+  "main_lane_verification": {
+    "at": "2026-11-21T12:23:59Z",
+    "commit": "4ad4ca3 = origin; 5 files",
+    "tests": "ops-a + ops-console re-run pass",
+    "checks": "OPS_COLORS absent; style= count 1",
+    "deviations": "7 listed; note D2: the docs-mirror check was turned into an INFO line (it fails by design until release; REL.GO must restore it as a hard check)"
+  },
+  "closed_at": "2026-11-21T18:09:37Z",
+  "outcome": "Closed on UI.REVIEW PASS_WITH_NOTES; 4ad4ca3"
+}
