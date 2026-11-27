@@ -1,0 +1,261 @@
+{
+ "packet": "MA-NOV-UIT.BUILD",
+ "built": "2026-11-27T07:42:34.109Z",
+ "pipeline_sha256": "7f51ab7ab510521f8a504aa52d815673c34899bc14abaea5967275b567ee9c47",
+ "seed_sha256": "361f7719e95d145b233781c2feb11c8f0e321d2b8e480bd04dddf50875a9d1ec",
+ "cache_manifest": {
+  "SPY": {
+   "accession": "0001410368-26-123764",
+   "url": "https://www.sec.gov/Archives/edgar/data/884394/000141036826123764/primary_doc.xml",
+   "fetched": "2026-11-27T07:40:46.377Z",
+   "bytes": 454800,
+   "sha256_xml": "ecebbcc4a3b06225e54095d7c2eda12a4e4c9d46a512e8c2c923f8630af924ec",
+   "file": "SPY-0001410368-26-123764.xml.gz",
+   "sha256_gz": "a9efd7cee97e22a236faf171c58134dc69268e75ad08d512df7de2f130d0228f"
+  },
+  "QQQ": {
+   "accession": "0001067839-26-000030",
+   "url": "https://www.sec.gov/Archives/edgar/data/1067839/000106783926000030/primary_doc.xml",
+   "fetched": "2026-11-27T07:40:46.818Z",
+   "bytes": 116905,
+   "sha256_xml": "86f2d61f048c29209592872c5807e6e220d02e0dd7ea9164af446f36561c8d22",
+   "file": "QQQ-0001067839-26-000030.xml.gz",
+   "sha256_gz": "150607f33b782cfa0bbe688c7c54f88a6e45483baab300cdabe0a6e421141e0b"
+  },
+  "DIA": {
+   "accession": "0001410368-26-095867",
+   "url": "https://www.sec.gov/Archives/edgar/data/1041130/000141036826095867/primary_doc.xml",
+   "fetched": "2026-11-27T07:40:47.487Z",
+   "bytes": 30260,
+   "sha256_xml": "7126120757c4f6188faca9eb1a325d12ab6a7cc306384f4605159814621940cf",
+   "file": "DIA-0001410368-26-095867.xml.gz",
+   "sha256_gz": "4888d816f140598b9b2ee5cdb6ad7490d6bc1385b79f5b59769e509a64e88821"
+  },
+  "MDY": {
+   "accession": "0000940400-26-047939",
+   "url": "https://www.sec.gov/Archives/edgar/data/936958/000094040026047939/primary_doc.xml",
+   "fetched": "2026-11-27T07:40:48.085Z",
+   "bytes": 388762,
+   "sha256_xml": "c9e0ac19551eac7d913127220fe8bc00808d589ca16947f3ad212f0df3464ec1",
+   "file": "MDY-0000940400-26-047939.xml.gz",
+   "sha256_gz": "0d971a4c392a02cf0cc1fcec1501b084eec1ac7c694560f3c08e816d81738fb7"
+  }
+ },
+ "funds": [
+  {
+   "ticker": "SPY",
+   "cik": "0000884394",
+   "etf_master_cik_before": "0000884394",
+   "key": "C0000884394",
+   "key_type": "surrogate",
+   "accession": "0001410368-26-123764",
+   "report_month": "2026-09",
+   "file_date": "2026-11-25",
+   "header": {
+    "regName": "State Street(R) SPDR(R) S&amp;P 500(R) ETF Trust",
+    "regFileNumber": "811-06125",
+    "regCik": "0000884394",
+    "seriesName": "N/A",
+    "seriesId": null,
+    "seriesLei": "549300NZAMSJ8FXPQQ63",
+    "repPdEnd": "2026-09-30",
+    "repPdDate": "2026-09-30"
+   },
+   "holdings": 504,
+   "id_range": [
+    2000001,
+    2000504
+   ],
+   "net_assets": 809216143062.12,
+   "coverage_depth": 1,
+   "dropped": {
+    "R4": 1,
+    "R1": 8,
+    "R2": 7,
+    "R8": 1
+   },
+   "etf_master_before": {
+    "cik": "0000884394",
+    "series_id": null,
+    "has_nport": 0,
+    "coverage_status": "directory",
+    "notes": "Grantor trust (Unit Investment Trust), not a 1940 Act fund. No N-PORT. Files annual report on Form 10-K. CIK is the trust itself.",
+    "coverage_depth": 0
+   },
+   "etf_master_after": {
+    "cik": "0000884394",
+    "series_id": "C0000884394",
+    "has_nport": 1,
+    "coverage_status": "deep",
+    "notes": "1940-Act UIT, files NPORT-P, no series id; surrogate key C0000884394; loaded one-off by MA-NOV-UIT",
+    "coverage_depth": 1
+   }
+  },
+  {
+   "ticker": "QQQ",
+   "cik": "0001067839",
+   "etf_master_cik_before": "0001067839",
+   "key": "S000101292",
+   "key_type": "series",
+   "accession": "0001067839-26-000030",
+   "report_month": "2026-06",
+   "file_date": "2026-08-28",
+   "header": {
+    "regName": "Invesco QQQ Trust, Series 1",
+    "regFileNumber": "811-08947",
+    "regCik": "0001067839",
+    "seriesName": "Invesco QQQ Trust, Series 1",
+    "seriesId": "S000101292",
+    "seriesLei": "549300VY6FEJBCIMET58",
+    "repPdEnd": "2026-09-30",
+    "repPdDate": "2026-06-30"
+   },
+   "holdings": 105,
+   "id_range": [
+    2010001,
+    2010105
+   ],
+   "net_assets": 490103179941.66,
+   "coverage_depth": 1,
+   "dropped": {
+    "R4": 1,
+    "R1": 4,
+    "R2": 3,
+    "R8": 1
+   },
+   "etf_master_before": {
+    "cik": "0001067839",
+    "series_id": null,
+    "has_nport": 0,
+    "coverage_status": "directory",
+    "notes": "Unit Investment Trust under the 1940 Act (UIT). Files annual reports but does NOT file N-PORT. CIK is the trust itself.",
+    "coverage_depth": 0
+   },
+   "etf_master_after": {
+    "cik": "0001067839",
+    "series_id": "S000101292",
+    "has_nport": 1,
+    "coverage_status": "deep",
+    "notes": "1940-Act fund, files NPORT-P under series id S000101292; loaded one-off by MA-NOV-UIT",
+    "coverage_depth": 1
+   }
+  },
+  {
+   "ticker": "DIA",
+   "cik": "0001041130",
+   "etf_master_cik_before": "0001041014",
+   "key": "C0001041130",
+   "key_type": "surrogate",
+   "accession": "0001410368-26-095867",
+   "report_month": "2026-07",
+   "file_date": "2026-09-18",
+   "header": {
+    "regName": "SPDR DOW JONES INDUSTRIAL AVERAGE ETF TRUST",
+    "regFileNumber": "811-09170",
+    "regCik": "0001041130",
+    "seriesName": "N/A",
+    "seriesId": null,
+    "seriesLei": "54930039F2SG3UG2OZ18",
+    "repPdEnd": "2026-10-31",
+    "repPdDate": "2026-07-31"
+   },
+   "holdings": 30,
+   "id_range": [
+    2020001,
+    2020030
+   ],
+   "net_assets": 45207847202.28,
+   "coverage_depth": 1,
+   "dropped": {
+    "R4": 1,
+    "R1": 3,
+    "R2": 2,
+    "R8": 1
+   },
+   "etf_master_before": {
+    "cik": "0001041014",
+    "series_id": null,
+    "has_nport": 0,
+    "coverage_status": "directory",
+    "notes": "Unit Investment Trust (UIT). No N-PORT. CIK is the trust itself.",
+    "coverage_depth": 0
+   },
+   "etf_master_after": {
+    "cik": "0001041130",
+    "series_id": "C0001041130",
+    "has_nport": 1,
+    "coverage_status": "deep",
+    "notes": "1940-Act UIT, files NPORT-P, no series id; surrogate key C0001041130; loaded one-off by MA-NOV-UIT",
+    "coverage_depth": 1
+   }
+  },
+  {
+   "ticker": "MDY",
+   "cik": "0000936958",
+   "etf_master_cik_before": "0000916132",
+   "key": "C0000936958",
+   "key_type": "surrogate",
+   "accession": "0000940400-26-047939",
+   "report_month": "2026-09",
+   "file_date": "2026-11-25",
+   "header": {
+    "regName": "SPDR S&amp;P MIDCAP 400 ETF TRUST",
+    "regFileNumber": "811-08972",
+    "regCik": "0000936958",
+    "seriesName": "State Street SPDR S&amp;P MidCap 400SM ETF Trust",
+    "seriesId": null,
+    "seriesLei": "5493003TT35P3SIWJJ72",
+    "repPdEnd": "2026-09-30",
+    "repPdDate": "2026-09-30"
+   },
+   "holdings": 400,
+   "id_range": [
+    2030001,
+    2030400
+   ],
+   "net_assets": 25218638191.93,
+   "coverage_depth": 1,
+   "dropped": {
+    "R4": 1,
+    "R1": 6,
+    "R2": 5,
+    "R8": 1
+   },
+   "etf_master_before": {
+    "cik": "0000916132",
+    "series_id": null,
+    "has_nport": 0,
+    "coverage_status": "directory",
+    "notes": "Unit Investment Trust (UIT). No N-PORT. CIK is the trust itself.",
+    "coverage_depth": 0
+   },
+   "etf_master_after": {
+    "cik": "0000936958",
+    "series_id": "C0000936958",
+    "has_nport": 1,
+    "coverage_status": "deep",
+    "notes": "1940-Act UIT, files NPORT-P, no series id; surrogate key C0000936958; loaded one-off by MA-NOV-UIT",
+    "coverage_depth": 1
+   }
+  }
+ ],
+ "totals": {
+  "fund_holdings_monthly": 1039,
+  "fund_snapshot_monthly": 4,
+  "etf_master_updates": 4,
+  "apply_batches": 14,
+  "apply_statements": 1051,
+  "rollback_batches": 2,
+  "rollback_statements": 13
+ },
+ "files": {
+  "uit-apply-run1.sql": {
+   "bytes": 531407,
+   "sha256": "720503fcea976b0ea4cc5e3561ed252a8f9ae8fb9046e85467ef274406de15c0"
+  },
+  "uit-rollback-run1.sql": {
+   "bytes": 3944,
+   "sha256": "12695c51a48548b92c39de0e77ab9df89744f44d460e6420202a6417b9de739e"
+  }
+ }
+}

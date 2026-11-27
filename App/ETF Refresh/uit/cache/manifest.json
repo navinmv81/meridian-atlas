@@ -1,0 +1,38 @@
+{
+ "SPY": {
+  "accession": "0001410368-26-123764",
+  "url": "https://www.sec.gov/Archives/edgar/data/884394/000141036826123764/primary_doc.xml",
+  "fetched": "2026-11-27T07:40:46.377Z",
+  "bytes": 454800,
+  "sha256_xml": "ecebbcc4a3b06225e54095d7c2eda12a4e4c9d46a512e8c2c923f8630af924ec",
+  "file": "SPY-0001410368-26-123764.xml.gz",
+  "sha256_gz": "a9efd7cee97e22a236faf171c58134dc69268e75ad08d512df7de2f130d0228f"
+ },
+ "QQQ": {
+  "accession": "0001067839-26-000030",
+  "url": "https://www.sec.gov/Archives/edgar/data/1067839/000106783926000030/primary_doc.xml",
+  "fetched": "2026-11-27T07:40:46.818Z",
+  "bytes": 116905,
+  "sha256_xml": "86f2d61f048c29209592872c5807e6e220d02e0dd7ea9164af446f36561c8d22",
+  "file": "QQQ-0001067839-26-000030.xml.gz",
+  "sha256_gz": "150607f33b782cfa0bbe688c7c54f88a6e45483baab300cdabe0a6e421141e0b"
+ },
+ "DIA": {
+  "accession": "0001410368-26-095867",
+  "url": "https://www.sec.gov/Archives/edgar/data/1041130/000141036826095867/primary_doc.xml",
+  "fetched": "2026-11-27T07:40:47.487Z",
+  "bytes": 30260,
+  "sha256_xml": "7126120757c4f6188faca9eb1a325d12ab6a7cc306384f4605159814621940cf",
+  "file": "DIA-0001410368-26-095867.xml.gz",
+  "sha256_gz": "4888d816f140598b9b2ee5cdb6ad7490d6bc1385b79f5b59769e509a64e88821"
+ },
+ "MDY": {
+  "accession": "0000940400-26-047939",
+  "url": "https://www.sec.gov/Archives/edgar/data/936958/000094040026047939/primary_doc.xml",
+  "fetched": "2026-11-27T07:40:48.085Z",
+  "bytes": 388762,
+  "sha256_xml": "c9e0ac19551eac7d913127220fe8bc00808d589ca16947f3ad212f0df3464ec1",
+  "file": "MDY-0000940400-26-047939.xml.gz",
+  "sha256_gz": "0d971a4c392a02cf0cc1fcec1501b084eec1ac7c694560f3c08e816d81738fb7"
+ }
+}

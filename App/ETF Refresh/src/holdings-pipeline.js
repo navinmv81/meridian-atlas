@@ -302,7 +302,7 @@ async function processEtfHoldings(db, etf) {
 
 // ── Parse & store ─────────────────────────────────────────────────────────────
 
-async function storeHoldings(db, series_id, ticker, reportMonth, fileDate, xml, insertOffset = 0) {
+export async function storeHoldings(db, series_id, ticker, reportMonth, fileDate, xml, insertOffset = 0) {
   // Lightweight tag extractor — text content only
   const getTag = (src, tag) => {
     const m = src.match(

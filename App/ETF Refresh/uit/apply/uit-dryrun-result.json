@@ -1,0 +1,384 @@
+{
+ "before": {
+  "etf_master": {
+   "rows": 6,
+   "sha256": "fff9dbe287a838e6c6d4bee4aca0fc22b00b96efd6a56a4530617e8682148fdc"
+  },
+  "fund_snapshot_monthly": {
+   "rows": 5,
+   "sha256": "6b7b09223e6a2489b150f8810f93d525cf8fb2f07ebcee01644e63a53da6efc9"
+  },
+  "fund_holdings_monthly": {
+   "rows": 1026,
+   "sha256": "7d7637d94ea971b478f82a98355a0e87ba7e9e020d5e1eb27bcc01e480478519"
+  },
+  "holdings_pipeline_state": {
+   "rows": 0,
+   "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "sqlite_sequence": {
+   "rows": 1,
+   "sha256": "f2b563fdaae08dc5bdc25b246eae0c2f5aee7ac7ee1ae6ede3d426b2c2765cbe"
+  }
+ },
+ "afterApply": {
+  "etf_master": {
+   "rows": 6,
+   "sha256": "7a16cbcee37c2d2847d322c5c7bb40cec761a72ddf585de9f8dd51037deed184"
+  },
+  "fund_snapshot_monthly": {
+   "rows": 9,
+   "sha256": "3aed5d9eae65896966d221556be27c6185cabaa3a55db329ca8e52e7707c0841"
+  },
+  "fund_holdings_monthly": {
+   "rows": 2065,
+   "sha256": "22653b4146edf9c9658f196eac8e8d98ee94ccb990e32a583943b81a5ebf3661"
+  },
+  "holdings_pipeline_state": {
+   "rows": 0,
+   "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "sqlite_sequence": {
+   "rows": 1,
+   "sha256": "089e513cd9b30284dc2297c9cd9ad19ccd608d83e1c89e18be8aca0d15228a7c"
+  }
+ },
+ "apply": [
+  {
+   "n": 1,
+   "label": "SPY C0000884394 2026-09 part 1/6",
+   "total": 100,
+   "ok": true
+  },
+  {
+   "n": 2,
+   "label": "SPY C0000884394 2026-09 part 2/6",
+   "total": 100,
+   "ok": true
+  },
+  {
+   "n": 3,
+   "label": "SPY C0000884394 2026-09 part 3/6",
+   "total": 100,
+   "ok": true
+  },
+  {
+   "n": 4,
+   "label": "SPY C0000884394 2026-09 part 4/6",
+   "total": 100,
+   "ok": true
+  },
+  {
+   "n": 5,
+   "label": "SPY C0000884394 2026-09 part 5/6",
+   "total": 100,
+   "ok": true
+  },
+  {
+   "n": 6,
+   "label": "SPY C0000884394 2026-09 part 6/6",
+   "total": 510,
+   "ok": true
+  },
+  {
+   "n": 7,
+   "label": "QQQ S000101292 2026-06 part 1/2",
+   "total": 100,
+   "ok": true
+  },
+  {
+   "n": 8,
+   "label": "QQQ S000101292 2026-06 part 2/2",
+   "total": 112,
+   "ok": true
+  },
+  {
+   "n": 9,
+   "label": "DIA C0001041130 2026-07 part 1/1",
+   "total": 62,
+   "ok": true
+  },
+  {
+   "n": 10,
+   "label": "MDY C0000936958 2026-09 part 1/5",
+   "total": 100,
+   "ok": true
+  },
+  {
+   "n": 11,
+   "label": "MDY C0000936958 2026-09 part 2/5",
+   "total": 100,
+   "ok": true
+  },
+  {
+   "n": 12,
+   "label": "MDY C0000936958 2026-09 part 3/5",
+   "total": 100,
+   "ok": true
+  },
+  {
+   "n": 13,
+   "label": "MDY C0000936958 2026-09 part 4/5",
+   "total": 100,
+   "ok": true
+  },
+  {
+   "n": 14,
+   "label": "MDY C0000936958 2026-09 part 5/5",
+   "total": 402,
+   "ok": true
+  }
+ ],
+ "reapply_total": 0,
+ "reapply_identical": true,
+ "etf_master_after": [
+  {
+   "ticker": "DIA",
+   "series_id": "C0001041130",
+   "cik": "0001041130",
+   "has_nport": 1,
+   "coverage_status": "deep",
+   "coverage_depth": 1,
+   "notes": "1940-Act UIT, files NPORT-P, no series id; surrogate key C0001041130; loaded one-off by MA-NOV-UIT"
+  },
+  {
+   "ticker": "MDY",
+   "series_id": "C0000936958",
+   "cik": "0000936958",
+   "has_nport": 1,
+   "coverage_status": "deep",
+   "coverage_depth": 1,
+   "notes": "1940-Act UIT, files NPORT-P, no series id; surrogate key C0000936958; loaded one-off by MA-NOV-UIT"
+  },
+  {
+   "ticker": "QQQ",
+   "series_id": "S000101292",
+   "cik": "0001067839",
+   "has_nport": 1,
+   "coverage_status": "deep",
+   "coverage_depth": 1,
+   "notes": "1940-Act fund, files NPORT-P under series id S000101292; loaded one-off by MA-NOV-UIT"
+  },
+  {
+   "ticker": "SPY",
+   "series_id": "C0000884394",
+   "cik": "0000884394",
+   "has_nport": 1,
+   "coverage_status": "deep",
+   "coverage_depth": 1,
+   "notes": "1940-Act UIT, files NPORT-P, no series id; surrogate key C0000884394; loaded one-off by MA-NOV-UIT"
+  }
+ ],
+ "shapes": [
+  {
+   "series_id": "C0001041130",
+   "report_month": "2026-07",
+   "rows": 30,
+   "snapshot_holdings_count": 30,
+   "snapshot_null_fields": [],
+   "status": {
+    "complete": 30
+   },
+   "asset_cat": {
+    "EC": 30
+   },
+   "weight_sum_pct": 99.95,
+   "cusip9_share": 1,
+   "null_rate": {
+    "security_name": 0,
+    "cusip": 0,
+    "isin": 0,
+    "security_ticker": 1,
+    "position_value": 0,
+    "weight_pct": 0,
+    "shares": 0,
+    "issuer_country": 0
+   }
+  },
+  {
+   "series_id": "C0000936958",
+   "report_month": "2026-09",
+   "rows": 400,
+   "snapshot_holdings_count": 400,
+   "snapshot_null_fields": [],
+   "status": {
+    "complete": 400
+   },
+   "asset_cat": {
+    "EC": 400
+   },
+   "weight_sum_pct": 99.34,
+   "cusip9_share": 1,
+   "null_rate": {
+    "security_name": 0,
+    "cusip": 0,
+    "isin": 0,
+    "security_ticker": 1,
+    "position_value": 0,
+    "weight_pct": 0,
+    "shares": 0,
+    "issuer_country": 0
+   }
+  },
+  {
+   "series_id": "S000101292",
+   "report_month": "2026-06",
+   "rows": 105,
+   "snapshot_holdings_count": 105,
+   "snapshot_null_fields": [],
+   "status": {
+    "complete": 105
+   },
+   "asset_cat": {
+    "EC": 102,
+    "STIV": 2,
+    "DE": 1
+   },
+   "weight_sum_pct": 100.28,
+   "cusip9_share": 0.962,
+   "null_rate": {
+    "security_name": 0,
+    "cusip": 0,
+    "isin": 0.029,
+    "security_ticker": 1,
+    "position_value": 0,
+    "weight_pct": 0,
+    "shares": 0,
+    "issuer_country": 0
+   }
+  },
+  {
+   "series_id": "C0000884394",
+   "report_month": "2026-09",
+   "rows": 504,
+   "snapshot_holdings_count": 504,
+   "snapshot_null_fields": [],
+   "status": {
+    "complete": 504
+   },
+   "asset_cat": {
+    "EC": 503,
+    "DE": 1
+   },
+   "weight_sum_pct": 99.97,
+   "cusip9_share": 1,
+   "null_rate": {
+    "security_name": 0,
+    "cusip": 0,
+    "isin": 0,
+    "security_ticker": 1,
+    "position_value": 0,
+    "weight_pct": 0,
+    "shares": 0,
+    "issuer_country": 0
+   }
+  },
+  {
+   "series_id": "S000004310",
+   "report_month": "2026-03",
+   "rows": 507,
+   "snapshot_holdings_count": 507,
+   "snapshot_null_fields": [],
+   "status": {
+    "complete": 507
+   },
+   "asset_cat": {
+    "EC": 503,
+    "STIV": 3,
+    "DE": 1
+   },
+   "weight_sum_pct": 100.07,
+   "cusip9_share": 0.945,
+   "null_rate": {
+    "security_name": 0,
+    "cusip": 0,
+    "isin": 0.002,
+    "security_ticker": 1,
+    "position_value": 0,
+    "weight_pct": 0,
+    "shares": 0,
+    "issuer_country": 0
+   }
+  },
+  {
+   "series_id": "S000002839",
+   "report_month": "2026-03",
+   "rows": 519,
+   "snapshot_holdings_count": 519,
+   "snapshot_null_fields": [],
+   "status": {
+    "complete": 519
+   },
+   "asset_cat": {
+    "EC": 504,
+    "DE": 13,
+    "STIV": 2
+   },
+   "weight_sum_pct": 100.14,
+   "cusip9_share": 0.969,
+   "null_rate": {
+    "security_name": 0,
+    "cusip": 0,
+    "isin": 0.031,
+    "security_ticker": 1,
+    "position_value": 0,
+    "weight_pct": 0,
+    "shares": 0,
+    "issuer_country": 0
+   }
+  }
+ ],
+ "rollback": [
+  {
+   "n": 1,
+   "label": "etf_master restore ×4, snapshot delete ×4, holdings delete ×4",
+   "got": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    504,
+    105,
+    30,
+    400
+   ],
+   "ok": true
+  },
+  {
+   "n": 2,
+   "label": "AUTOINCREMENT counter restore (optional: skip if D1 refuses writes to sqlite_sequence; no data effect)",
+   "got": [
+    1
+   ],
+   "ok": true
+  }
+ ],
+ "rollback_again_total": 0,
+ "afterRollback": {
+  "etf_master": {
+   "rows": 6,
+   "sha256": "fff9dbe287a838e6c6d4bee4aca0fc22b00b96efd6a56a4530617e8682148fdc"
+  },
+  "fund_snapshot_monthly": {
+   "rows": 5,
+   "sha256": "6b7b09223e6a2489b150f8810f93d525cf8fb2f07ebcee01644e63a53da6efc9"
+  },
+  "fund_holdings_monthly": {
+   "rows": 1026,
+   "sha256": "7d7637d94ea971b478f82a98355a0e87ba7e9e020d5e1eb27bcc01e480478519"
+  },
+  "holdings_pipeline_state": {
+   "rows": 0,
+   "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "sqlite_sequence": {
+   "rows": 1,
+   "sha256": "f2b563fdaae08dc5bdc25b246eae0c2f5aee7ac7ee1ae6ede3d426b2c2765cbe"
+  }
+ },
+ "rollback_identical_to_seed": true
+}

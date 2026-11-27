@@ -1,0 +1,19 @@
+-- MA-NOV-UIT.BUILD rollback for uit-apply-run1.sql. Restores the exact prior etf_master values and deletes exactly the inserted rows (by id range).
+-- 2 batches, 13 statements. Stop on the first batch whose per-statement changes differ from its expected vector.
+
+-- batch 1: etf_master restore ×4, snapshot delete ×4, holdings delete ×4, 12 statements, expected [1,1,1,1,1,1,1,1,504,105,30,400]
+UPDATE etf_master SET cik = '0000884394', series_id = NULL, has_nport = 0, coverage_status = 'directory', notes = 'Grantor trust (Unit Investment Trust), not a 1940 Act fund. No N-PORT. Files annual report on Form 10-K. CIK is the trust itself.', coverage_depth = 0 WHERE ticker = 'SPY' AND cik IS '0000884394' AND series_id IS 'C0000884394' AND has_nport IS 1 AND coverage_status IS 'deep' AND notes IS '1940-Act UIT, files NPORT-P, no series id; surrogate key C0000884394; loaded one-off by MA-NOV-UIT' AND coverage_depth IS 1 AND updated_at IS '2026-06-01 20:14:11';
+UPDATE etf_master SET cik = '0001067839', series_id = NULL, has_nport = 0, coverage_status = 'directory', notes = 'Unit Investment Trust under the 1940 Act (UIT). Files annual reports but does NOT file N-PORT. CIK is the trust itself.', coverage_depth = 0 WHERE ticker = 'QQQ' AND cik IS '0001067839' AND series_id IS 'S000101292' AND has_nport IS 1 AND coverage_status IS 'deep' AND notes IS '1940-Act fund, files NPORT-P under series id S000101292; loaded one-off by MA-NOV-UIT' AND coverage_depth IS 1 AND updated_at IS '2026-06-01 20:14:11';
+UPDATE etf_master SET cik = '0001041014', series_id = NULL, has_nport = 0, coverage_status = 'directory', notes = 'Unit Investment Trust (UIT). No N-PORT. CIK is the trust itself.', coverage_depth = 0 WHERE ticker = 'DIA' AND cik IS '0001041130' AND series_id IS 'C0001041130' AND has_nport IS 1 AND coverage_status IS 'deep' AND notes IS '1940-Act UIT, files NPORT-P, no series id; surrogate key C0001041130; loaded one-off by MA-NOV-UIT' AND coverage_depth IS 1 AND updated_at IS '2026-06-01 20:14:11';
+UPDATE etf_master SET cik = '0000916132', series_id = NULL, has_nport = 0, coverage_status = 'directory', notes = 'Unit Investment Trust (UIT). No N-PORT. CIK is the trust itself.', coverage_depth = 0 WHERE ticker = 'MDY' AND cik IS '0000936958' AND series_id IS 'C0000936958' AND has_nport IS 1 AND coverage_status IS 'deep' AND notes IS '1940-Act UIT, files NPORT-P, no series id; surrogate key C0000936958; loaded one-off by MA-NOV-UIT' AND coverage_depth IS 1 AND updated_at IS '2026-06-01 20:14:11';
+DELETE FROM fund_snapshot_monthly WHERE series_id = 'C0000884394' AND report_month = '2026-09' AND filing_date = '2026-11-25' AND holdings_count = 504;
+DELETE FROM fund_snapshot_monthly WHERE series_id = 'S000101292' AND report_month = '2026-06' AND filing_date = '2026-08-28' AND holdings_count = 105;
+DELETE FROM fund_snapshot_monthly WHERE series_id = 'C0001041130' AND report_month = '2026-07' AND filing_date = '2026-09-18' AND holdings_count = 30;
+DELETE FROM fund_snapshot_monthly WHERE series_id = 'C0000936958' AND report_month = '2026-09' AND filing_date = '2026-11-25' AND holdings_count = 400;
+DELETE FROM fund_holdings_monthly WHERE series_id = 'C0000884394' AND report_month = '2026-09' AND id BETWEEN 2000001 AND 2000504;
+DELETE FROM fund_holdings_monthly WHERE series_id = 'S000101292' AND report_month = '2026-06' AND id BETWEEN 2010001 AND 2010105;
+DELETE FROM fund_holdings_monthly WHERE series_id = 'C0001041130' AND report_month = '2026-07' AND id BETWEEN 2020001 AND 2020030;
+DELETE FROM fund_holdings_monthly WHERE series_id = 'C0000936958' AND report_month = '2026-09' AND id BETWEEN 2030001 AND 2030400;
+
+-- batch 2: AUTOINCREMENT counter restore (optional: skip if D1 refuses writes to sqlite_sequence; no data effect), 1 statements, expected [1]
+UPDATE sqlite_sequence SET seq = MAX((SELECT MAX(id) FROM fund_holdings_monthly), 798655) WHERE name = 'fund_holdings_monthly' AND seq = 2030400;
