@@ -7,7 +7,9 @@ account_id = "ea36070477560935a68ad9110a2fd40b"
 # HOLD lifted 2026-06-14 — bootstrap cron reduced from */15 to every 4h
 # Original schedule was: */15 * * * *
 [triggers]
-crons = ["0 */4 * * *"]
+# MA-NOV-PATCH.REL 2026-11-27: cron removed. Was: crons = ["0 */4 * * *"]. Bootstrap complete since 2026-06-11,
+# 0 work per run; frees 1 of 5 account cron slots (MA-NOV-DIAG.HEALTH §3.5). Rollback: restore the line and redeploy.
+crons = []
 
 [[d1_databases]]
 binding = "DB"
