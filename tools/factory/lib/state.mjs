@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { repoRoot, packetsDir, factoryDir, stableStringify, isoSec } from './util.mjs';
+import { repoRoot, packetsDir, factoryDir, stableStringify, isoSec, isFactoryPacket } from './util.mjs';
 
 export class OwnershipError extends Error { constructor(m) { super(m); this.name = 'OwnershipError'; } }
 export class TransitionError extends Error { constructor(m) { super(m); this.name = 'TransitionError'; } }
@@ -25,7 +25,7 @@ const TRANSITIONS = {
 };
 const HELD_STATES = ['BLOCKED', 'PAUSED', 'CAPACITY_HOLD'];
 
-// Field ownership (MA-NOV-000 §Q6.1, Founder choice 4) — applies to MA-NOV-* packets.
+// Field ownership (MA-NOV-000 §Q6.1, Founder choice 4) — applies to every PACKET_PREFIXES packet (MA-NOV-*, MA-DEC-*).
 export const WRITERS = ['dispatcher', 'dispatcher-hold', 'main-lane'];
 const DISPATCHER_FIELDS = new Set(['lease', 'heartbeat', 'run', 'updated', 'updated_by', 'state']);
 const DISPATCHER_TRANSITIONS = new Set(['READY>EXECUTING', 'EXECUTING>REVIEW_NEEDED', 'EXECUTING>BLOCKED']);
@@ -54,10 +54,12 @@ export function readStatus(id, { root = repoRoot() } = {}) {
 }
 
 // All Status files whose packet id starts with `prefix`, sorted by id. Temp files are ignored.
+// `prefix`: one prefix string, or a list of them (e.g. PACKET_PREFIXES) — a file matches if it starts with any.
 export function listStatus(prefix = '', { root = repoRoot() } = {}) {
   const dir = packetsDir(root);
+  const prefixes = Array.isArray(prefix) ? prefix : [prefix];
   return fs.readdirSync(dir)
-    .filter((f) => f.endsWith('_Status.json') && !f.startsWith('.') && f.startsWith(prefix))
+    .filter((f) => f.endsWith('_Status.json') && !f.startsWith('.') && prefixes.some((p) => f.startsWith(p)))
     .sort()
     .map((f) => {
       const s = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
@@ -73,7 +75,7 @@ function changedKeys(a, b) {
 
 function checkOwnership(id, writer, cur, next) {
   if (!WRITERS.includes(writer)) throw new OwnershipError(`unknown writer "${writer}"`);
-  if (!id.startsWith('MA-NOV-') || writer === 'main-lane') return;
+  if (!isFactoryPacket(id) || writer === 'main-lane') return;
   const changed = changedKeys(cur, next);
   const allowed = writer === 'dispatcher' ? DISPATCHER_FIELDS : DISPATCHER_HOLD_FIELDS;
   const bad = changed.filter((k) => !allowed.has(k));

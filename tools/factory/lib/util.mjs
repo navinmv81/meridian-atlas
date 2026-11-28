@@ -35,6 +35,10 @@ function sortKeys(v) {
   return v;
 }
 
+// Month prefixes (MA-DEC-BOOT): the packet-id prefixes the factory lists, selects and guards. Add the next month here.
+export const PACKET_PREFIXES = ['MA-NOV-', 'MA-DEC-'];
+export const isFactoryPacket = (id) => typeof id === 'string' && PACKET_PREFIXES.some((p) => id.startsWith(p));
+
 export function readJsonIfExists(file) {
   if (!fs.existsSync(file)) return null;
   return JSON.parse(fs.readFileSync(file, 'utf8'));

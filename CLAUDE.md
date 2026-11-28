@@ -4,7 +4,7 @@ This file is read automatically by Claude Code at the start of every session in 
 
 Standing operating rules: `Claude.md` v1.1 (Project) as amended by `claude/governance/Claude_md_v1.2.md`.
 
-*Last updated: 2026-11-10 (MA-NOV-P1.FIX4) — governance now lives in `claude/governance/Claude_md_v1.2.md`; this file holds environment truth only. Earlier history: `git log -p CLAUDE.md`.*
+*Last updated: 2026-11-28 (MA-DEC-BOOT) — governance now lives in `claude/governance/Claude_md_v1.2.md`; this file holds environment truth only. Earlier history: `git log -p CLAUDE.md`.*
 
 ---
 
@@ -27,7 +27,7 @@ Standing operating rules: `Claude.md` v1.1 (Project) as amended by `claude/gover
 
 - **LOCAL_MASTER folder:** `Meridian Atlas Clean (v11)` — **changed 2026-08-15 (MA-SEP-000), supersedes `June Refresh/`.** Confirmed by Founder; a manual copy-over from this folder into the deploy checkout was already performed after the Current State v12 document was written (12 Aug), so the live site currently reflects this folder's content. *(Update 2026-09-23, MA-OCT-000: the live site is now served directly from this repo's `September-2026` `/docs` (see DEPLOY_BRANCH below) — no copy-over step exists any more.)*
 - **LOCAL_MASTER absolute path (added 2026-08-17):** `/Users/navinkumar/Desktop/MeridianAtlas/Meridian Atlas Clean (v11)/` — **VERIFIED 2026-11-10 (MA-NOV-P1.FIX4): `pwd` returned this path, branch `November-2026`, remote `origin` = `navinmv81/meridian-atlas`.** Originally inferred by analogy to the confirmed sibling-folder path pattern (`/Users/navinkumar/Desktop/MeridianAtlas/June Refresh/`, documented in `GitHub_Pages_Deployment_Record_2026-06-21.md`) and CLAUDE.md's own existing statement that archived paths live "one directory level up, at `MeridianAtlas/` root" relative to this folder. MA-SEP-000's change request named the folder but never recorded its OS path — this was a real gap for any local session opening this repo for the first time. **The first action of any local Claude Code session should be to confirm this path (`pwd`, confirm `git branch` shows `November-2026`, confirm `git remote -v` shows `navinmv81/meridian-atlas`) and correct this line if it's wrong**, rather than trust it blindly.
-- **LOCAL_MASTER's own git branch:** **`November-2026`** (NML-1106-4). `November-2026` `/docs` is the live Pages source (since 2026-11-26, MA-NOV-REL.GO; see DEPLOY_BRANCH). `October-2026` `/docs` at `98e830e` is the rollback source; `September-2026` is frozen at `420487d`.
+- **LOCAL_MASTER's own git branch:** **`December-2026`** (cut from `November-2026` `9cb8dc7`, DML-1128-2). `November-2026` `/docs` stays the live Pages source (since 2026-11-26, MA-NOV-REL.GO; see DEPLOY_BRANCH) until the December go-live. `October-2026` `/docs` at `98e830e` is the rollback source; `September-2026` is frozen at `420487d`.
 - **DEPLOY_BRANCH (GitHub Pages source):** **`November-2026`, folder `/docs`.** Changed 2026-11-26 by **MA-NOV-REL.GO**; supersedes `October-2026`. Control v2 `6f3779da…a9a8`; Founder "approve MA-NOV-REL.GO v2" (release approval).
   - The Founder switched Pages manually and confirmed "switched" at 21:22Z. Source commit: `74a9a03` (Part A, pushed 21:16:12Z).
   - Verified read-only at 21:26Z: all 11 files served at `https://navinmv81.github.io/meridian-atlas/` are byte-identical to `docs/` at `74a9a03`, `/.nojekyll` is served (200), and all 9 script tags carry `?v=rel-20261126`.
@@ -77,10 +77,10 @@ Claude must invoke the following enabled skills where a task matches their state
 - Before ending any session: update the packet's state on the Sprint Board with a one-line outcome note. The next session reads that note — not this conversation's history.
 - Founder capacity this sprint: ~2–3 hours/day average. Plan on servicing one packet checkpoint (spec approval, UAT, or close-out) per day — not multiple packets' checkpoints the same day.
 
-**Main Lane (November):** the Program Orchestrator session is the sole writer of Status files and Main Lane records (see `claude/governance/Claude_md_v1.2.md` §3 Write Ownership). Packet work runs one packet per fresh session via `claude/packets/LANE_OPENER_v2.md`.
+**Main Lane (December):** the Program Orchestrator session is the sole writer of Status files and Main Lane records (see `claude/governance/Claude_md_v1.2.md` §3 Write Ownership). Packet work runs one packet per fresh session via `claude/packets/LANE_OPENER_v2.md`. Decisions: `claude/December_Decisions_Log.md`.
 
 ---
 
 ## Current Sprint Packet
 
-Current packets and Founder requests: see the Control Tower (`claude/factory/control-tower.html`) and `claude/packets/STATUS_BOARD.md`, both generated from `claude/packets/*_Status.json` by `node tools/factory/project.mjs`. Decisions: `claude/November_Decisions_Log.md`. October closed (NML-1107-2). **November closed 2026-11-28 (NML-1128-1)** — record: `claude/Release_Ledger_November_2026.md`, `Meridian_Atlas_Current_State_v15.docx`; December carry-overs in `claude/packets/MA-NOV-CARRY_Status.json`. No packet is open; December has not started.
+Current packets and Founder requests: see the Control Tower (`claude/factory/control-tower.html`) and `claude/packets/STATUS_BOARD.md`, both generated from `claude/packets/*_Status.json` by `node tools/factory/project.mjs`. Decisions: `claude/November_Decisions_Log.md`. October closed (NML-1107-2). **November closed 2026-11-28 (NML-1128-1)** — record: `claude/Release_Ledger_November_2026.md`, `Meridian_Atlas_Current_State_v15.docx`; December carry-overs in `claude/packets/MA-NOV-CARRY_Status.json`. **December open (DML-1128-1)** — run spec: `claude/meridian_atlas_december_run_spec.md`; decisions: `claude/December_Decisions_Log.md`.

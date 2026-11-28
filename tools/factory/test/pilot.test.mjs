@@ -1,6 +1,6 @@
 // MA-NOV-P1.BUILD pilot tests (Task §7). Run: node --test tools/factory/test
 // Every test builds its own temp repo; the dispatcher launches only the stub in fixtures/.
-// Numbering: 1–13 (+4b, 4c) BUILD, 16–22 FIX, 23–32 FIX2, 33–40 FIX3, 41–48 FIX4. Ids 14–15 are deliberately unused: BUILD skipped them and
+// Numbering: 1–13 (+4b, 4c) BUILD, 16–22 FIX, 23–32 FIX2, 33–40 FIX3, 41–48 FIX4, 49–52 MA-DEC-BOOT (month-prefix.test.mjs). Ids 14–15 are deliberately unused: BUILD skipped them and
 // the FIX/REVIEW reports cite 16–22 by number, so renumbering would break those references.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,6 +13,8 @@ import { writeStatus, listStatus, OwnershipError, TransitionError, RevConflictEr
 import { acquireLease, LeaseError } from '../lib/lease.mjs';
 import { evaluate } from '../lib/eligibility.mjs';
 import { project, BOARD_TITLE, BOARD_SECTION, SCOPE_SECTION, SCOPE_KINDS, RECORD_KINDS, REQUEST_SECTION } from '../project.mjs';
+// MA-DEC-BOOT: tests 49–52 (month prefixes) live beside this file; `node --test tools/factory/test` runs this file only (package.json main).
+import './month-prefix.test.mjs';
 
 const A = 'MA-NOV-TA';
 const B = 'MA-NOV-TB';

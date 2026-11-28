@@ -86,6 +86,10 @@ P1.DEMO run `r-20261107T092212Z-c0da` showed that a headless worker launched fro
 - **Record kinds.** `kind` `outcome`, `carry-over register`, `founder-request`, `plan` (`RECORD_KINDS` in `lib/eligibility.mjs`) are never eligible and never in work columns. `founder-request` (`request_type`, `question`, `options[]`, `reply`, `due`, `status` open|answered|withdrawn, `answer`, `answered_at`): open → Tower *Waiting for you* and board *Waiting for the Founder*; answered/withdrawn → *Recent decisions*. `plan` (`milestones[{when,title,detail,status}]`, `handoffs[{step,today,how,target}]`) drives *Path* and *Handoffs*.
 - **Tower layout** follows `claude/factory/design/interim-tower-reference.html` (system fonts, no network). *Recent decisions* also lists state changes from `transitions.jsonl`.
 
+## Month prefixes (MA-DEC-BOOT)
+
+The factory lists, selects and guards packets by id prefix. The list is `PACKET_PREFIXES` in `lib/util.mjs` (today `['MA-NOV-', 'MA-DEC-']`), with `isFactoryPacket(id)` beside it. `evaluate` (eligibility for `check`, `begin` and `run`), the ownership guard in `lib/state.mjs`, `running`/`statusLines` in `dispatch.mjs` and the board and Tower in `project.mjs` all read that list; nothing else names a month. To add the next month, append its prefix (for example `'MA-JAN-'`) to `PACKET_PREFIXES` and extend `test/month-prefix.test.mjs`. `listStatus(prefix)` still takes a single prefix string, or a list.
+
 ## Ownership (MA-NOV-000 §Q6.1, Founder choice 4)
 
 | Writer | May change |

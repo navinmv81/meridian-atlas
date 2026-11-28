@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 // Tower/board generator (MA-NOV-P1.BUILD Task §4; interim design MA-NOV-P1.FIX4). No model calls, no network.
-// Reads claude/packets/MA-NOV-*_Status.json, claude/factory/PAUSE.json (optional), claude/factory/config.json,
+// Reads claude/packets/<PACKET_PREFIXES>*_Status.json (MA-NOV-*, MA-DEC-*), claude/factory/PAUSE.json (optional), claude/factory/config.json,
 // claude/factory/runs/*/run.json and claude/factory/transitions.jsonl.
 // Writes claude/packets/STATUS_BOARD.md and claude/factory/control-tower.html.
 // Usage: node tools/factory/project.mjs [--check]   (--check: print what would change, write nothing)
 import fs from 'node:fs';
 import path from 'node:path';
-import { repoRoot, packetsDir, factoryDir, sha256File, isoSec, stableStringify, readConfig, readPause } from './lib/util.mjs';
+import { repoRoot, packetsDir, factoryDir, sha256File, isoSec, stableStringify, readConfig, readPause, PACKET_PREFIXES } from './lib/util.mjs';
 import { listStatus, TRANSITIONS_FILE } from './lib/state.mjs';
 import { evaluate, SCOPE_KINDS, RECORD_KINDS } from './lib/eligibility.mjs';
 import { TOWER_LOGIC_FUNCTIONS } from './lib/tower-logic.mjs';
+
+// Status-file globs for the board and Tower source text, e.g. `claude/packets/MA-NOV-*_Status.json`, `claude/packets/MA-DEC-*_Status.json`.
+const SOURCE_GLOBS = PACKET_PREFIXES.map((p) => `claude/packets/${p}*_Status.json`);
 
 export const BOARD_TITLE = '# Status Board — November 2026 (generated — do not edit; run node tools/factory/project.mjs)';
 export const BOARD_SECTION = '## November 2026 — admitted packets';
@@ -90,7 +93,7 @@ function pick(s) {
 
 export function buildSnapshot({ root, now = new Date() }) {
   const cfg = readConfig(root);
-  const packets = listStatus('MA-NOV-', { root });
+  const packets = listStatus(PACKET_PREFIXES, { root });
   const ev = evaluate({ root, nowMs: now.getTime() });
   const reasons = Object.fromEntries(ev.ineligible.map((x) => [x.id, x.reasons]));
   const op = opener(root, cfg);
@@ -124,7 +127,7 @@ export function renderBoard(snap) {
     '',
     `generated_at: ${snap.generated_at}`,
     '',
-    '*Projection of `claude/packets/MA-NOV-*_Status.json` (the only live state). Hand edits are overwritten. October board archived unchanged at `claude/packets/STATUS_BOARD_October_2026.md`.*',
+    `*Projection of ${SOURCE_GLOBS.map((g) => `\`${g}\``).join(' and ')} (the only live state). Hand edits are overwritten. October board archived unchanged at \`claude/packets/STATUS_BOARD_October_2026.md\`.*`,
     '',
     `**Global pause:** ${snap.pause ? `ON — ${cell(snap.pause.reason)}` : 'off'} · **Capacity hold:** ${snap.capacity_hold ? `ON — ${cell(snap.capacity_hold.reason)} (set by ${cell(snap.capacity_hold.set_by)})` : 'off'}`,
     '',
@@ -358,7 +361,7 @@ footer{font-size:12px;color:var(--dim);border-top:1px solid var(--line);padding-
 <div class="wrap">
 <header>
 <div class="top"><h1>Meridian Atlas — November Control Tower</h1><span class="pill p-interim" id="status"><i class="pulse"></i><span id="status-t">snapshot</span></span></div>
-<div class="meta"><span class="mono">Generated ${esc(snap.generated_at)}</span><span>Reloads every <b>${snap.config.refresh_s}s</b></span><span><b>${anyLease ? 'dispatcher has an active lease' : 'dispatcher idle (no lease)'}</b></span><span>Model <b>${esc(snap.config.model || 'not recorded (choice 2b)')}</b></span><span>Source <b class="mono">claude/packets/MA-NOV-*_Status.json</b></span></div>
+<div class="meta"><span class="mono">Generated ${esc(snap.generated_at)}</span><span>Reloads every <b>${snap.config.refresh_s}s</b></span><span><b>${anyLease ? 'dispatcher has an active lease' : 'dispatcher idle (no lease)'}</b></span><span>Model <b>${esc(snap.config.model || 'not recorded (choice 2b)')}</b></span><span>Source <b class="mono">${esc(SOURCE_GLOBS.join(', '))}</b></span></div>
 </header>
 ${section('Waiting for you', asks.length ? `<div class="asks">${asks.join('\n')}</div>` : emptyP('Nothing waiting for the Founder.'), asks.length)}
 ${section('Work', board)}

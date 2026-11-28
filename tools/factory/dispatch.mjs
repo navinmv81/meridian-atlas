@@ -12,7 +12,7 @@ import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
-import { repoRoot, factoryDir, sha256File, isoSec, readConfig } from './lib/util.mjs';
+import { repoRoot, factoryDir, sha256File, isoSec, readConfig, PACKET_PREFIXES } from './lib/util.mjs';
 import { readStatus, writeStatusFresh, listStatus, statusPath, TRANSITIONS_FILE } from './lib/state.mjs';
 import { evaluate, reportCandidates } from './lib/eligibility.mjs';
 import { acquireLease, retireLease, readLeaseFile, leaseState, LeaseError, pidAlive,
@@ -578,14 +578,14 @@ export function endPacket(id, { root = repoRoot(), log = console.log, env = proc
 
 // Live leases = running (interactive runs have no heartbeat; their lease expiry is shown instead).
 export function running(root = repoRoot(), nowMs = Date.now()) {
-  return listStatus('MA-NOV-', { root }).map(({ id, status: s }) => ({ id, s, l: readLeaseFile(root, id) || s.lease }))
+  return listStatus(PACKET_PREFIXES, { root }).map(({ id, status: s }) => ({ id, s, l: readLeaseFile(root, id) || s.lease }))
     .filter((x) => x.l && leaseState(x.l, nowMs) !== 'stale')
     .map(({ id, l }) => ({ id, mode: l.mode || 'headless', holder: l.holder, run_id: l.run_id, started: l.acquired, expires: l.expires, lease_state: leaseState(l, nowMs) }));
 }
 
 export function statusLines(root = repoRoot()) {
   const run = Object.fromEntries(running(root).map((r) => [r.id, r]));
-  return listStatus('MA-NOV-', { root }).map(({ id, status: s }) => {
+  return listStatus(PACKET_PREFIXES, { root }).map(({ id, status: s }) => {
     const r = run[id];
     const live = r ? (r.mode === 'interactive'
       ? `running:interactive ${r.run_id} holder:${r.holder} expires:${r.expires}${r.lease_state === 'live' ? '' : ' (EXPIRED)'}`

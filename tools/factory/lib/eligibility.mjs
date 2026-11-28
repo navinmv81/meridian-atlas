@@ -1,7 +1,7 @@
 // Eligibility (MA-NOV-P1.BUILD Task §3): LANE_OPENER.md step 3, plus lease, pause, hold and run_profile.
 import fs from 'node:fs';
 import path from 'node:path';
-import { packetsDir, sha256File, readPause } from './util.mjs';
+import { packetsDir, sha256File, readPause, PACKET_PREFIXES } from './util.mjs';
 import { listStatus } from './state.mjs';
 import { readLeaseFile, leaseState } from './lease.mjs';
 
@@ -50,7 +50,7 @@ export const RECORD_KINDS = [...SCOPE_KINDS, 'founder-request', 'plan'];
 export const isRecordKind = (kind) => RECORD_KINDS.includes(kind);
 
 // forRun: false (check) | true or 'headless' (dispatch run) | 'interactive' (dispatch begin)
-export function evaluate({ root, nowMs = Date.now(), forRun = false, prefix = 'MA-NOV-' }) {
+export function evaluate({ root, nowMs = Date.now(), forRun = false, prefix = PACKET_PREFIXES }) {
   const packets = listStatus(prefix, { root });
   const pause = readPause(root);
   const cap = capacityHold(packets);
