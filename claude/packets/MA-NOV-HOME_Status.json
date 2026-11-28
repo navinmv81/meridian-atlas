@@ -3,8 +3,8 @@
   "title": "Outcome — Homepage as the research entrance (HOME-01–07): proposition, routes into exposure analysis and company research",
   "kind": "outcome",
   "state": "DRAFT",
-  "phase": "SPEC",
-  "rev": 2,
+  "phase": "LIVE",
+  "rev": 3,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "— (not admitted)",
   "write_owner": "NONE",
@@ -27,7 +27,17 @@
   "blocker": null,
   "review_needed": false,
   "usage_class": "—",
-  "updated": "2026-11-10T20:17:14Z",
+  "updated": "2026-11-28T09:05:57Z",
   "updated_by": "Main Lane",
-  "scope_decision": "Approved 10 Nov (NML-1110-6): HOME-01–07 all in"
+  "scope_decision": "Approved 10 Nov (NML-1110-6): HOME-01–07 all in",
+  "outcome_status": "delivered",
+  "released": {
+    "at": "2026-11-26T21:22:26Z",
+    "by": "MA-NOV-REL.GO",
+    "commits": [
+      "74a9a03",
+      "bb3815b"
+    ]
+  },
+  "closed_note": "November closed NML-1128-1"
 }

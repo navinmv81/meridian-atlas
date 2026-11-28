@@ -1,6 +1,6 @@
 # Status Board — November 2026 (generated — do not edit; run node tools/factory/project.mjs)
 
-generated_at: 2026-11-27T17:28:06Z
+generated_at: 2026-11-28T09:05:57Z
 
 *Projection of `claude/packets/MA-NOV-*_Status.json` (the only live state). Hand edits are overwritten. October board archived unchanged at `claude/packets/STATUS_BOARD_October_2026.md`.*
 
@@ -37,7 +37,7 @@ generated_at: 2026-11-27T17:28:06Z
 | MA-NOV-EXP.BFS.REVIEW — Independent review of the scheduled back-fill build | CLOSED | v1 `02548820b1e8e0a4941519dd0e030f809bef0e915c1e185dd279c9f9d1d07f1b` | LANE-NOV-ARCH / Claude Code (fixed line, LANE_OPENER_v2) | Architect | — | — | medium |
 | MA-NOV-EXP.BFS — Scheduled exposure back-fill/refresh: spec addendum + change request | CLOSED | v1 `53adebd86a58d23a8474684780459eb6511a639267f6c4e399a6d9165d676890` | LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2) | Entities Product Lead | — | — | medium |
 | MA-NOV-EXP.C1R2 — Redeploy exposure route c5d0cad (C-1, second attempt) | CLOSED | v1 `00e80a7db5da18a6e29c8ad8357eb4eb44a36d46e43b7a44a2f2c1c0dbbf1430` | LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2) | Operations Lead | — | — | small |
-| MA-NOV-EXP.C1 — Deploy exposure route to meridian-entities-api (C-1) | BLOCKED | v1 `e8f73015df8056e0d3b3de310af427de27b634cfe705f80b5760a28e133ded25` | LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2) | Operations Lead | superseded by MA-NOV-EXP.C1R2 | scope violation: claude/November_Decisions_Log.md | small |
+| MA-NOV-EXP.C1 — Deploy exposure route to meridian-entities-api (C-1) | CLOSED | v1 `e8f73015df8056e0d3b3de310af427de27b634cfe705f80b5760a28e133ded25` | LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2) | Operations Lead | — | — | small |
 | MA-NOV-EXP.SPEC — Exposure-to-company specification | CLOSED | v1 `fb6847e044f94a3efb413e336facf8cfcdb9d2f2e7324e29100522174a644689` | LANE-NOV-ENT / Claude Code (fixed line, LANE_OPENER_v2) | Entities Product Lead | — | — | medium |
 | MA-NOV-EXP.UI.REVIEW — Independent review of exposure calculation + screen (W2 + W3) | CLOSED | v1 `a9d8131585af829bbf8bbfe8de0fcd274c8fd766ed919b1a9d52217311f72c7e` | LANE-NOV-ARCH / Claude Code (fixed line, LANE_OPENER_v2) | Architect | — | — | medium |
 | MA-NOV-EXP.W1.REVIEW — Independent review of the exposure route (W1 + W1R2) | CLOSED | v1 `45b43f50363022ed0dfa63d71d76fef6781961cfaa4360fbda58303d19207f82` | LANE-NOV-ARCH / Claude Code (fixed line, LANE_OPENER_v2) | Architect | — | — | medium |
@@ -72,10 +72,6 @@ generated_at: 2026-11-27T17:28:06Z
 | MA-NOV-UIT.APPLY — Write the one-off UIT holdings (SPY, QQQ, DIA, MDY) to D1 | CLOSED | v1 `ebae5b0af663eb2a4abda9e5d9e963fcb5d1da3100836f3e957a4448d99a3e6b` | LANE-NOV-ETF / Claude Code (fixed line, LANE_OPENER_v2) | ETF Product Lead | — | — | small |
 | MA-NOV-UIT.BUILD — One-off N-PORT holdings for series-less UITs (SPY, QQQ, DIA, MDY) — offline | CLOSED | v1 `265243f909c9329c3c3586d261d9718f68cb5167d931381743049ae3519eff81` | LANE-NOV-ETF / Claude Code (fixed line, LANE_OPENER_v2) | ETF Product Lead | — | — | medium |
 | MA-NOV-UIT.REVIEW — Independent review of the one-off UIT holdings load (read-only) | CLOSED | v1 `7baf968724b75b4e1d7dfa6d58ab1268c661e435462134766b1a7853e5b10605` | LANE-NOV-ETF / Claude Code (fixed line, LANE_OPENER_v2) | Reviewer | — | — | small |
-
-## Waiting for the Founder
-
-- **MA-NOV-FR19** (decision) — Ratify: three term-sheet conflicts become normal bonds · reply: `Reply "ratify conflicts"` · due 2026-11-24
 
 ## November scope — outcomes
 

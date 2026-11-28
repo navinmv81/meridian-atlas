@@ -1,9 +1,9 @@
 {
   "packet": "MA-NOV-EXP.C1",
   "title": "Deploy exposure route to meridian-entities-api (C-1)",
-  "state": "BLOCKED",
+  "state": "CLOSED",
   "phase": "DEPLOY",
-  "rev": 6,
+  "rev": 10,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "LANE-NOV-OPS / Claude Code (fixed line, LANE_OPENER_v2)",
   "write_owner": "Operations Lead",
@@ -24,11 +24,11 @@
     "allow_commits": false
   },
   "reviewer": "Main Lane verification (version ids, checks)",
-  "next_gate": "superseded by MA-NOV-EXP.C1R2",
+  "next_gate": null,
   "blocker": null,
   "review_needed": false,
   "usage_class": "small",
-  "updated": "2026-11-12T21:21:19Z",
+  "updated": "2026-11-28T09:05:57Z",
   "updated_by": "Main Lane",
   "start_approval": {
     "by": "Founder",
@@ -51,5 +51,7 @@
   },
   "heartbeat": null,
   "main_lane_note": "Read as ROLLED BACK, not a scope breach: production is on 4e7ee20b (previous). The scope flag came from a Main Lane log edit at 21:13Z during the run (NML-1112-6). Closes via the CPU fix packet (FR6).",
-  "superseded_by": "MA-NOV-EXP.C1R2"
+  "superseded_by": "MA-NOV-EXP.C1R2",
+  "closed_at": "2026-11-28T09:05:57Z",
+  "outcome": "superseded: deployed e6ddf979 12 Nov, auto-rolled back (CPU); replaced by W1R3 → C1R2 → W1R4"
 }

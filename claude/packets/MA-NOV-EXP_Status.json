@@ -3,8 +3,8 @@
   "title": "Outcome — Connected exposure-to-company research (EXP-01–12): selected ETFs/equities → explainable combined exposure and gaps → company → connected evidence",
   "kind": "outcome",
   "state": "DRAFT",
-  "phase": "SPEC",
-  "rev": 8,
+  "phase": "LIVE",
+  "rev": 9,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "— (not admitted)",
   "write_owner": "NONE",
@@ -34,7 +34,7 @@
   "blocker": null,
   "review_needed": false,
   "usage_class": "—",
-  "updated": "2026-11-20T17:22:20Z",
+  "updated": "2026-11-28T09:05:57Z",
   "updated_by": "Main Lane",
   "scope_decision": "Approved 10 Nov (NML-1110-6): EXP-01–12 all in; EXP-08 period differences over the two stored months; holdings C1 by CR",
   "baseline": "BQ2 11 Nov: entity_exposure_monthly latest 2026-03 (computed 2026-06-14, gate3 once) vs fund_holdings_monthly 2026-08; fund_exposure_coverage 2026-03 = 42 funds of 237, mean mapped 76.2%, 5 <50%. Mapping 32,769 (heuristic 1,649). Holdings offset 133/237. EXP needs gate3 for 2026-04..08 (write volume to be estimated in the spec).",
@@ -79,5 +79,16 @@
     "result": "PASS (panel ok, 2026-11-20 17:21, after W3R3)",
     "condition": "MA-NOV-EXP.W3R3",
     "closed": "2026-11-20T17:22:20Z"
-  }
+  },
+  "outcome_status": "delivered",
+  "released": {
+    "at": "2026-11-26T21:22:26Z",
+    "by": "MA-NOV-REL.GO",
+    "commits": [
+      "74a9a03",
+      "bb3815b"
+    ],
+    "patch": "MA-NOV-PATCH.REL 7cdb345 (SPY/QQQ/DIA/MDY, no-holdings wording)"
+  },
+  "closed_note": "November closed NML-1128-1"
 }

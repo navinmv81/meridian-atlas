@@ -4,7 +4,7 @@
   "kind": "carry-over register",
   "state": "DRAFT",
   "phase": "SPEC",
-  "rev": 16,
+  "rev": 17,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "— (not admitted)",
   "write_owner": "NONE",
@@ -22,7 +22,7 @@
   "blocker": null,
   "review_needed": false,
   "usage_class": "—",
-  "updated": "2026-11-26T21:47:52Z",
+  "updated": "2026-11-28T09:05:57Z",
   "updated_by": "Main Lane",
   "observations": [
     {
@@ -160,5 +160,7 @@
       "item": "DIAG: commodity/crypto trusts wording",
       "note": "12 non-1940-Act trusts: show \"no holdings filing\" instead of \"no holdings\". UI, small."
     }
-  ]
+  ],
+  "register_status": "handed to December",
+  "handed_at": "2026-11-28T09:05:57Z"
 }

@@ -83,4 +83,4 @@ Claude must invoke the following enabled skills where a task matches their state
 
 ## Current Sprint Packet
 
-Current packets and Founder requests: see the Control Tower (`claude/factory/control-tower.html`) and `claude/packets/STATUS_BOARD.md`, both generated from `claude/packets/*_Status.json` by `node tools/factory/project.mjs`. Decisions: `claude/November_Decisions_Log.md`. October closed (NML-1107-2).
+Current packets and Founder requests: see the Control Tower (`claude/factory/control-tower.html`) and `claude/packets/STATUS_BOARD.md`, both generated from `claude/packets/*_Status.json` by `node tools/factory/project.mjs`. Decisions: `claude/November_Decisions_Log.md`. October closed (NML-1107-2). **November closed 2026-11-28 (NML-1128-1)** — record: `claude/Release_Ledger_November_2026.md`, `Meridian_Atlas_Current_State_v15.docx`; December carry-overs in `claude/packets/MA-NOV-CARRY_Status.json`. No packet is open; December has not started.

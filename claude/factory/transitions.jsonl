@@ -329,3 +329,14 @@
 {"at":"2026-11-27T17:26:49Z","id":"MA-NOV-PATCH.REL","writer":"dispatcher","from":"EXECUTING","to":"REVIEW_NEEDED","rev":4}
 {"at":"2026-11-27T17:28:06Z","id":"MA-NOV-PATCH.REL","writer":"main-lane","from":"REVIEW_NEEDED","to":"APPROVED","rev":5}
 {"at":"2026-11-27T17:28:06Z","id":"MA-NOV-PATCH.REL","writer":"main-lane","from":"APPROVED","to":"CLOSED","rev":6}
+{"at":"2026-11-28T09:05:57Z","id":"MA-NOV-FR19","writer":"main-lane","from":"DRAFT","to":"DRAFT","rev":2}
+{"at":"2026-11-28T09:05:57Z","id":"MA-NOV-EXP","writer":"main-lane","from":"DRAFT","to":"DRAFT","rev":9}
+{"at":"2026-11-28T09:05:57Z","id":"MA-NOV-OPS","writer":"main-lane","from":"DRAFT","to":"DRAFT","rev":3}
+{"at":"2026-11-28T09:05:57Z","id":"MA-NOV-HOME","writer":"main-lane","from":"DRAFT","to":"DRAFT","rev":3}
+{"at":"2026-11-28T09:05:57Z","id":"MA-NOV-BOND","writer":"main-lane","from":"DRAFT","to":"DRAFT","rev":7}
+{"at":"2026-11-28T09:05:57Z","id":"MA-NOV-EXP.C1","writer":"main-lane","from":"BLOCKED","to":"BLOCKED","rev":7}
+{"at":"2026-11-28T09:05:57Z","id":"MA-NOV-EXP.C1","writer":"main-lane","from":"BLOCKED","to":"REVIEW_NEEDED","rev":8}
+{"at":"2026-11-28T09:05:57Z","id":"MA-NOV-EXP.C1","writer":"main-lane","from":"REVIEW_NEEDED","to":"APPROVED","rev":9}
+{"at":"2026-11-28T09:05:57Z","id":"MA-NOV-EXP.C1","writer":"main-lane","from":"APPROVED","to":"CLOSED","rev":10}
+{"at":"2026-11-28T09:05:57Z","id":"MA-NOV-PLAN","writer":"main-lane","from":"DRAFT","to":"DRAFT","rev":19}
+{"at":"2026-11-28T09:05:57Z","id":"MA-NOV-CARRY","writer":"main-lane","from":"DRAFT","to":"DRAFT","rev":17}

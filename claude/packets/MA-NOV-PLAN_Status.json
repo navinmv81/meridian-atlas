@@ -4,8 +4,8 @@
   "title": "November path",
   "state": "DRAFT",
   "owner": "Program Orchestrator (November Main Lane)",
-  "rev": 18,
-  "updated": "2026-11-23T06:24:22Z",
+  "rev": 19,
+  "updated": "2026-11-28T09:05:57Z",
   "updated_by": "Main Lane",
   "milestones": [
     {
@@ -29,7 +29,7 @@
     {
       "when": "Wed 11 - Fri 13 Nov",
       "title": "EXP spec approved (OPS+HOME spec next)",
-      "detail": "A1, A2; D1\u2013D9 as recommended",
+      "detail": "A1, A2; D1–D9 as recommended",
       "status": "done"
     },
     {
@@ -58,7 +58,7 @@
     },
     {
       "when": "Sun 22 Nov",
-      "title": "Bond OFFER2 + independent bond review (offering blocked \u2192 FIX3)",
+      "title": "Bond OFFER2 + independent bond review (offering blocked → FIX3)",
       "detail": "01c5379; review 98.5% correct",
       "status": "done"
     },
@@ -76,12 +76,12 @@
     },
     {
       "when": "Thu 26 Nov",
-      "title": "ONE go-live: entities-api deploy + Pages \u2192 November-2026 /docs (exposure, Ops, homepage, bonds)",
+      "title": "ONE go-live: entities-api deploy + Pages → November-2026 /docs (exposure, Ops, homepage, bonds)",
       "detail": "release approval; post-release checks",
       "status": "planned"
     },
     {
-      "when": "Fri 27 \u2013 Mon 30 Nov",
+      "when": "Fri 27 – Mon 30 Nov",
       "title": "Final demonstration; buffer",
       "detail": "",
       "status": "planned"
@@ -91,6 +91,30 @@
       "title": "December: VXUS (precomputed table), holdings C1, BOND items cut by the cut order",
       "detail": "Approved re-plan NML-1113-9",
       "status": "planned"
+    },
+    {
+      "when": "Wed 25 Nov",
+      "title": "Bond writes + bond screen",
+      "detail": "BOND.APPLY f442c51 (16,931 writes); BOND.UI 01dd3dc",
+      "status": "done"
+    },
+    {
+      "when": "Thu 26 Nov",
+      "title": "Single November go-live",
+      "detail": "REL.GO 74a9a03/bb3815b; api e35d7c55; Pages → November-2026 /docs 21:22Z",
+      "status": "done"
+    },
+    {
+      "when": "Fri 27 Nov",
+      "title": "Patch: SPY/QQQ/DIA/MDY + housekeeping",
+      "detail": "UIT.APPLY f538f6e; PATCH.REL 7cdb345/80a16e9; bootstrap cron off",
+      "status": "done"
+    },
+    {
+      "when": "Sat 28 Nov",
+      "title": "November formally closed",
+      "detail": "NML-1128-1; Release Ledger; Current State v15",
+      "status": "done"
     }
   ],
   "handoffs": [
@@ -113,5 +137,7 @@
       "target": "Same"
     }
   ],
-  "availability": "Weekly usage 85% on Mon 23 Nov; regular reset Wed 25 09:00. Full-reset credit kept for later (expires 10 Dec 22:00 GMT) \u2014 Founder: using it Mon would only cover ~1.5 days before Wednesday's reset (NML-1123-1)."
+  "availability": "Weekly usage 85% on Mon 23 Nov; regular reset Wed 25 09:00. Full-reset credit kept for later (expires 10 Dec 22:00 GMT) — Founder: using it Mon would only cover ~1.5 days before Wednesday's reset (NML-1123-1).",
+  "plan_status": "closed",
+  "closed_at": "2026-11-28T09:05:57Z"
 }

@@ -3,8 +3,8 @@
   "title": "Outcome — Bond parsing reliability + prospectus enrichment (BOND-01–12): measured parsing improvement, visible exceptions, verified offering summaries",
   "kind": "outcome",
   "state": "DRAFT",
-  "phase": "SPEC",
-  "rev": 6,
+  "phase": "LIVE",
+  "rev": 7,
   "owner": "Program Orchestrator (November Main Lane)",
   "lane": "— (not admitted)",
   "write_owner": "NONE",
@@ -34,8 +34,18 @@
   "blocker": null,
   "review_needed": false,
   "usage_class": "—",
-  "updated": "2026-11-21T20:04:09Z",
+  "updated": "2026-11-28T09:05:57Z",
   "updated_by": "Main Lane",
   "scope_decision": "21 Nov (NML-1121-12): BOND-01–12 all in November; scope §6 exclusions stay out (new issuers/doc types, prices/yields/valuation/credit analytics, structured/market-linked notes); BOND-07 facts only, no narrative.",
-  "baseline": "BQ2 11 Nov: 943 rows = final 632, preliminary 184, skipped 118, parse_failed 9 (final 76.6% of final+prelim+failed). All 184 preliminary rows lack CUSIP/coupon/maturity/amount/label, so no tranche matching; 161 have a final for the same CIK (153 within 14 d), 23 have none."
+  "baseline": "BQ2 11 Nov: 943 rows = final 632, preliminary 184, skipped 118, parse_failed 9 (final 76.6% of final+prelim+failed). All 184 preliminary rows lack CUSIP/coupon/maturity/amount/label, so no tranche matching; 161 have a final for the same CIK (153 within 14 d), 23 have none.",
+  "outcome_status": "delivered",
+  "released": {
+    "at": "2026-11-26T21:22:26Z",
+    "by": "MA-NOV-REL.GO",
+    "commits": [
+      "74a9a03",
+      "bb3815b"
+    ]
+  },
+  "closed_note": "November closed NML-1128-1"
 }
