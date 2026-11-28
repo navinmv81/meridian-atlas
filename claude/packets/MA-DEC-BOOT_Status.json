@@ -1,0 +1,57 @@
+{
+  "packet": "MA-DEC-BOOT",
+  "title": "December bootstrap: December-2026 branch, December records, factory month prefix",
+  "state": "REVIEW_NEEDED",
+  "phase": "BOOT",
+  "rev": 4,
+  "owner": "Program Orchestrator (December Main Lane)",
+  "lane": "LANE-DEC-ENG / Claude Code (direct from Control; not dispatcher-bracketed)",
+  "write_owner": "Engineering Lead (LANE-DEC-ENG)",
+  "control": {
+    "version": "v1",
+    "file": "MA-DEC-BOOT_Control_v1.md",
+    "sha256": "af311fd645000bae31855d0935c63adca0899ab848b02c8f7ab4fd465f1b75f7"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-DEC-BOOT_Task_v1.md",
+    "sha256": "2d591b8c8c769c233ad3991857f4bbb001da77e68f7550c2703ae141de43bd89"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "tools/factory/",
+      "CLAUDE.md",
+      "claude/packets/MA-DEC-BOOT_Report.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true
+  },
+  "reviewer": "Main Lane verification + independent light delta review of the factory diff (before the first product-code packet)",
+  "next_gate": "Independent light delta review of the factory diff (MA-DEC-FACTORY.REVIEW, with FACTORY.LABEL)",
+  "blocker": null,
+  "review_needed": true,
+  "usage_class": "light",
+  "updated": "2026-11-28T12:16:02Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-28T09:21Z",
+    "words": "approve MA-DEC-BOOT",
+    "control_sha256": "af311fd645000bae31855d0935c63adca0899ab848b02c8f7ab4fd465f1b75f7",
+    "task_sha256": "2d591b8c8c769c233ad3991857f4bbb001da77e68f7550c2703ae141de43bd89",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": null,
+  "heartbeat": null,
+  "note": "Issued under DML-1128-2/3. Runs from its Control directly because the dispatcher only lists MA-NOV-* until this packet lands. Run executed directly by the Founder-started session (not bracketed); EXECUTING recorded by the Main Lane after the fact.",
+  "report": {
+    "file": "MA-DEC-BOOT_Report.md",
+    "sha256": "b73d04ca39ed871c18a3f2a1f100d069f099c13b1ff977ce4fb1e32e12a43449"
+  },
+  "main_lane_verification": {
+    "at": "2026-11-28T12:16:02Z",
+    "commits": "710242e (parent 9cb8dc7) = origin/December-2026; origin/November-2026 = 9cb8dc7",
+    "result": "13 paths as listed; 4 pinned files match inside the commit; docs/ App/ 13F Seed/ untouched; factory tests 52/52 re-run by the Main Lane (Linux Node 22, temp copy of tools/factory + claude/packets + config)"
+  }
+}

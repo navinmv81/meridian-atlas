@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Tower/board generator (MA-NOV-P1.BUILD Task §4; interim design MA-NOV-P1.FIX4). No model calls, no network.
-// Reads claude/packets/<PACKET_PREFIXES>*_Status.json (MA-NOV-*, MA-DEC-*), claude/factory/PAUSE.json (optional), claude/factory/config.json,
+// Reads claude/packets/<config.board.prefix | PACKET_PREFIXES>*_Status.json, claude/factory/PAUSE.json (optional), claude/factory/config.json,
 // claude/factory/runs/*/run.json and claude/factory/transitions.jsonl.
 // Writes claude/packets/STATUS_BOARD.md and claude/factory/control-tower.html.
 // Usage: node tools/factory/project.mjs [--check]   (--check: print what would change, write nothing)
@@ -12,11 +12,33 @@ import { evaluate, SCOPE_KINDS, RECORD_KINDS } from './lib/eligibility.mjs';
 import { TOWER_LOGIC_FUNCTIONS } from './lib/tower-logic.mjs';
 
 // Status-file globs for the board and Tower source text, e.g. `claude/packets/MA-NOV-*_Status.json`, `claude/packets/MA-DEC-*_Status.json`.
-const SOURCE_GLOBS = PACKET_PREFIXES.map((p) => `claude/packets/${p}*_Status.json`);
+const globsFor = (prefixes) => prefixes.map((p) => `claude/packets/${p}*_Status.json`);
 
-export const BOARD_TITLE = '# Status Board — November 2026 (generated — do not edit; run node tools/factory/project.mjs)';
-export const BOARD_SECTION = '## November 2026 — admitted packets';
-export const SCOPE_SECTION = '## November scope — outcomes';
+// MA-DEC-FACTORY.LABEL: month label and board prefix come from config.board ({label, prefix[, previous_archive]}).
+// With config.board absent, the output is exactly the November output (label "November 2026", all PACKET_PREFIXES).
+// Only the board and Tower are narrowed; eligibility, dispatch and the ownership guard keep seeing every PACKET_PREFIXES packet.
+const titleFor = (label) => `# Status Board — ${label} (generated — do not edit; run node tools/factory/project.mjs)`;
+const TITLE_RE = /^# Status Board — .+ \(generated — do not edit; run node tools\/factory\/project\.mjs\)$/;
+export const DEFAULT_PREVIOUS_ARCHIVE = 'claude/packets/STATUS_BOARD_November_2026.md';
+const OCTOBER_ARCHIVE = 'claude/packets/STATUS_BOARD_October_2026.md';
+export function boardLabels(cfg = {}) {
+  const b = cfg && cfg.board && typeof cfg.board === 'object' ? cfg.board : null;
+  const label = b && b.label ? String(b.label) : 'November 2026';
+  const month = label.split(' ')[0];
+  const prefixes = b && b.prefix ? [String(b.prefix)] : PACKET_PREFIXES;
+  const globs = globsFor(prefixes);
+  const archives = b
+    ? `Previous month's board archived unchanged at \`${b.previous_archive || DEFAULT_PREVIOUS_ARCHIVE}\`; October board at \`${OCTOBER_ARCHIVE}\`.`
+    : `October board archived unchanged at \`${OCTOBER_ARCHIVE}\`.`;
+  return { configured: !!b, label, month, prefixes, globs, archives,
+    tower: b ? `${label} Control Tower` : 'November Control Tower',
+    title: titleFor(label), boardSection: `## ${label} — admitted packets`, scopeSection: `## ${month} scope — outcomes` };
+}
+const NOV = boardLabels();
+
+export const BOARD_TITLE = NOV.title;
+export const BOARD_SECTION = NOV.boardSection;
+export const SCOPE_SECTION = NOV.scopeSection;
 export const REQUEST_SECTION = '## Waiting for the Founder';
 // FIX3 item 7: outcome / carry-over records are sprint scope, not work — shown in their own section only.
 // FIX4 item 7: founder-request and plan records are rendered too, and are never work or runnable (RECORD_KINDS).
@@ -93,7 +115,7 @@ function pick(s) {
 
 export function buildSnapshot({ root, now = new Date() }) {
   const cfg = readConfig(root);
-  const packets = listStatus(PACKET_PREFIXES, { root });
+  const packets = listStatus(boardLabels(cfg).prefixes, { root });
   const ev = evaluate({ root, nowMs: now.getTime() });
   const reasons = Object.fromEntries(ev.ineligible.map((x) => [x.id, x.reasons]));
   const op = opener(root, cfg);
@@ -121,19 +143,19 @@ function runningText(snap) {
 
 const openRequests = (snap) => snap.packets.filter((p) => p.kind === 'founder-request' && p.request.status === 'open');
 
-export function renderBoard(snap) {
+export function renderBoard(snap, lab = NOV) {
   const lines = [
-    BOARD_TITLE,
+    lab.title,
     '',
     `generated_at: ${snap.generated_at}`,
     '',
-    `*Projection of ${SOURCE_GLOBS.map((g) => `\`${g}\``).join(' and ')} (the only live state). Hand edits are overwritten. October board archived unchanged at \`claude/packets/STATUS_BOARD_October_2026.md\`.*`,
+    `*Projection of ${lab.globs.map((g) => `\`${g}\``).join(' and ')} (the only live state). Hand edits are overwritten. ${lab.archives}*`,
     '',
     `**Global pause:** ${snap.pause ? `ON — ${cell(snap.pause.reason)}` : 'off'} · **Capacity hold:** ${snap.capacity_hold ? `ON — ${cell(snap.capacity_hold.reason)} (set by ${cell(snap.capacity_hold.set_by)})` : 'off'}`,
     '',
     `**Running:** ${runningText(snap)}`,
     '',
-    BOARD_SECTION,
+    lab.boardSection,
     '',
     `| ${COLUMNS.join(' | ')} |`,
     `|${COLUMNS.map(() => '---').join('|')}|`,
@@ -149,7 +171,7 @@ export function renderBoard(snap) {
   }
   const scope = snap.packets.filter(isScope);
   if (scope.length) {
-    lines.push('', SCOPE_SECTION, '', '| Outcome | Kind | State | Requirements | Dependencies | Next gate |', '|---|---|---|---|---|---|');
+    lines.push('', lab.scopeSection, '', '| Outcome | Kind | State | Requirements | Dependencies | Next gate |', '|---|---|---|---|---|---|');
     for (const p of scope) {
       lines.push(`| ${[cell(p.title ? `${p.id} — ${p.title}` : p.id), cell(p.kind), cell(p.state), cell(p.requirements.join('; ')), cell(p.dependencies.join('; ')), cell(p.next_gate)].join(' | ')} |`);
     }
@@ -199,7 +221,7 @@ function ask(kind, title, body, { reply = null, due = null, id = null, label = n
 ${body ? `<div class="x">${body}</div>` : ''}${id ? `<div class="chips">${chip(id)}</div>` : ''}${replyLine(reply, due)}</div>`;
 }
 
-export function renderHtml(snap) {
+export function renderHtml(snap, lab = NOV) {
   copySeq = 0;
   const P = snap.packets.filter((p) => !isRecord(p));
   const by = (...states) => P.filter((p) => states.includes(p.state));
@@ -271,7 +293,7 @@ export function renderHtml(snap) {
     return `<tr><td>${esc(h.step)}</td><td><span class="lab ${c}">${esc(t)}</span></td><td>${esc(h.how)}</td><td class="dim">${esc(h.target)}</td></tr>`;
   }).join('')}</tbody></table></div>` : emptyP(plan ? 'The plan record has no handoffs.' : 'No plan record (kind "plan").');
 
-  // November scope
+  // <month> scope
   const scope = snap.packets.filter(isScope).map((p) => `<div class="scard"><div class="k"><span class="id">${esc(p.id)}</span><span>${pill('p-interim', p.kind)} ${statePill(p.state)}</span></div>
 <span class="t">${esc(p.title)}</span>
 <div class="chips">${p.requirements.length ? p.requirements.map((r) => chip(r, 'req')).join('') : '<span class="dim sm">No requirements listed</span>'}</div>
@@ -295,7 +317,7 @@ export function renderHtml(snap) {
 <meta charset="utf-8">
 <meta http-equiv="refresh" content="${snap.config.refresh_s}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>November Control Tower</title>
+<title>${esc(lab.tower)}</title>
 <style>
 :root{--bg:#f3f5f8;--panel:#ffffff;--line:#d8dee6;--fg:#16202b;--dim:#5b6878;--accent:#1f6fb8;--acc-bg:rgba(31,111,184,.09);
 --ok:#1c8650;--ok-bg:rgba(28,134,80,.10);--warn:#a46500;--warn-bg:rgba(164,101,0,.10);--bad:#c23b3b;--bad-bg:rgba(194,59,59,.09);--slate:#5b6b80;--sl-bg:rgba(91,107,128,.10);
@@ -360,8 +382,8 @@ footer{font-size:12px;color:var(--dim);border-top:1px solid var(--line);padding-
 <body>
 <div class="wrap">
 <header>
-<div class="top"><h1>Meridian Atlas — November Control Tower</h1><span class="pill p-interim" id="status"><i class="pulse"></i><span id="status-t">snapshot</span></span></div>
-<div class="meta"><span class="mono">Generated ${esc(snap.generated_at)}</span><span>Reloads every <b>${snap.config.refresh_s}s</b></span><span><b>${anyLease ? 'dispatcher has an active lease' : 'dispatcher idle (no lease)'}</b></span><span>Model <b>${esc(snap.config.model || 'not recorded (choice 2b)')}</b></span><span>Source <b class="mono">${esc(SOURCE_GLOBS.join(', '))}</b></span></div>
+<div class="top"><h1>Meridian Atlas — ${esc(lab.tower)}</h1><span class="pill p-interim" id="status"><i class="pulse"></i><span id="status-t">snapshot</span></span></div>
+<div class="meta"><span class="mono">Generated ${esc(snap.generated_at)}</span><span>Reloads every <b>${snap.config.refresh_s}s</b></span><span><b>${anyLease ? 'dispatcher has an active lease' : 'dispatcher idle (no lease)'}</b></span><span>Model <b>${esc(snap.config.model || 'not recorded (choice 2b)')}</b></span><span>Source <b class="mono">${esc(lab.globs.join(', '))}</b></span></div>
 </header>
 ${section('Waiting for you', asks.length ? `<div class="asks">${asks.join('\n')}</div>` : emptyP('Nothing waiting for the Founder.'), asks.length)}
 ${section('Work', board)}
@@ -370,7 +392,7 @@ ${section('Start a run', start)}
 ${section('Path', pathBody)}
 </div>
 ${section('Handoffs', handBody)}
-${section('November scope', scope.length ? `<div class="scopes">${scope.join('\n')}</div>` : emptyP('No outcome records.'), scope.length)}
+${section(`${lab.month} scope`, scope.length ? `<div class="scopes">${scope.join('\n')}</div>` : emptyP('No outcome records.'), scope.length)}
 <div class="two">
 ${section('Recent runs', list(runs, 'No dispatcher runs recorded.'))}
 ${section('Recent decisions', list(decisions, 'No decisions recorded yet.'))}
@@ -429,13 +451,14 @@ ${logic}
 export function boardIsGenerated(file) {
   if (!fs.existsSync(file)) return true;
   const first = fs.readFileSync(file, 'utf8').split('\n', 1)[0];
-  return first === BOARD_TITLE;
+  return TITLE_RE.test(first);
 }
 
 export function project({ root = repoRoot(), now = new Date(), write = true } = {}) {
   const snap = buildSnapshot({ root, now });
-  const board = renderBoard(snap);
-  const html = renderHtml(snap);
+  const lab = boardLabels(readConfig(root));
+  const board = renderBoard(snap, lab);
+  const html = renderHtml(snap, lab);
   const boardFile = path.join(packetsDir(root), 'STATUS_BOARD.md');
   const htmlFile = path.join(factoryDir(root), 'control-tower.html');
   if (write) {

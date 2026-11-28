@@ -24,6 +24,10 @@ open claude/factory/control-tower.html  # file://, reloads every refresh_s secon
 - `project.mjs` will not overwrite a `STATUS_BOARD.md` whose first line is not the generated title. This guards the hand-written October board, which is archived as `STATUS_BOARD_October_2026.md`.
 - Two generator runs differ only in `generated_at`.
 
+### Month label (MA-DEC-FACTORY.LABEL)
+
+The board and Tower headings come from `config.board` in `claude/factory/config.json`: `{"label": "December 2026", "prefix": "MA-DEC-"}` gives `# Status Board — December 2026 …`, `## December 2026 — admitted packets`, `## December scope — outcomes` and `Meridian Atlas — December 2026 Control Tower`, and lists only `MA-DEC-*` Status files. **Each month the Main Lane changes it there**: archive the outgoing `STATUS_BOARD.md` and `control-tower.html` as `…_<Month>_<YYYY>` from git, set `board.label`, `board.prefix`, and `board.previous_archive` (the outgoing board's archive path; default `claude/packets/STATUS_BOARD_November_2026.md`), and add the new prefix to `PACKET_PREFIXES` in `lib/util.mjs`. Without `board`, output is the November output byte-for-byte. Eligibility, `dispatch check`/`begin` and the ownership guard always see every `PACKET_PREFIXES` packet, whatever the board shows. The overwrite guard accepts any first line of the form `# Status Board — <label> (generated — do not edit; run node tools/factory/project.mjs)`.
+
 ## Two run modes. The Founder chose **interactive** (sign-in option B, 7 Nov 09:27)
 
 P1.DEMO run `r-20261107T092212Z-c0da` showed that a headless worker launched from the app bundle is not signed in. It failed with `authentication_failed` and "Not logged in · Please run /login", used 0 tokens and made 0 writes. The Founder chose **not** to sign headless workers in. So:
