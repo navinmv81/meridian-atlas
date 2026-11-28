@@ -9,15 +9,18 @@
 //             every pre-split route is served by exactly one Worker.
 //  [redirect] the 4 moved GETs on meridian-ops → 302 (never 301) to the same path + query on
 //             meridian-control, with ACAO '*' and no-store; HEAD too; CONTROL_BASE_URL override.
-//  [parity]   following the redirect gives the same status, body and CORS as the pre-split
-//             capture (tests/fixtures/a6-pre-split-capture.json); the 4 admin POSTs on
-//             meridian-control leave the governance tables exactly as the pre-split handler did.
+//  [parity]   MA-DEC-SEC.FIX0: following the redirect now lands on the retired-route 410 (no
+//             CORS, no D1 call) instead of the pre-split GET capture; the 4 admin POSTs on
+//             meridian-control still leave the governance tables exactly as the pre-split
+//             handler did (tests/fixtures/a6-pre-split-capture.json, posts section).
 //  [auth]     001 AC4 matrix on meridian-control: no JWT / forged signature / wrong aud
 //             (meridian-ops's) / expired / wrong iss / Access unconfigured → 401 and 0 rows;
 //             valid user session and service token → 2xx with the verified actor; the 4 legacy
 //             anonymous POSTs → 401 and 0 rows on both Workers; moved admin POSTs on
 //             meridian-ops → 404 and 0 rows.
-//  [cors]     public GETs ACAO '*'; admin responses and admin OPTIONS carry none.
+//  [cors]     MA-DEC-SEC.FIX0: the 4 retired public GETs → 410 with no ACAO and 0 D1 calls;
+//             no OPTIONS (public or admin) and no admin response carries CORS allowances;
+//             public 500s never echo err.message (source check).
 //  [writers]  grep: ops_* tables written only inside the meridian-ops bundle (ops-api.js + its
 //             imports); governance tables only in control-api.js (src/ only; tests/tools excluded).
 //
@@ -215,14 +218,23 @@ const post301 = (await Promise.all(MOVED_GETS.map(p => call(ops, envOps, 'GET', 
 check('[redirect] never 301', post301, null);
 
 // ================================ [parity] ================================
+// MA-DEC-SEC.FIX0 (ASSESS.SEC F3): the 4 public GETs are retired on meridian-control. A
+// redirect from meridian-ops (unchanged) now lands on 410 with no CORS and no D1 call.
+// A DB stub that counts every access proves the 410 path never touches D1.
+const GONE_BODY = JSON.stringify({ ok: false, error: 'gone: retired (MA-DEC-SEC.FIX0)' });
+function countingDb() {
+  const box = { n: 0 };
+  box.DB = new Proxy({}, { get(_t, k) { box.n++; return () => { throw new Error(`D1 touched: ${String(k)}`); }; } });
+  return box;
+}
 freshDb();
 for (const p of MOVED_GETS) {
   const r1 = await call(ops, envOps, 'GET', p);
   const target = new URL(r1.location);
-  const r2 = await call(control, envControl, 'GET', target.pathname + target.search);
-  const c = capture.gets[p];
-  check(`[parity] ${p}: after the redirect, status/body/CORS = pre-split capture`,
-    r2.status === c.status && JSON.stringify(r2.json) === JSON.stringify(c.json) && r2.acao === c.acao, { now: r2, capture: c });
+  const spy = countingDb();
+  const r2 = await call(control, { ...envControl, DB: spy.DB }, 'GET', target.pathname + target.search);
+  check(`[parity] ${p}: after the redirect → 410 gone, no CORS, 0 D1 calls (MA-DEC-SEC.FIX0)`,
+    r2.status === 410 && JSON.stringify(r2.json) === GONE_BODY && r2.acao === null && spy.n === 0, { now: r2, d1_calls: spy.n });
 }
 const seq = await runPostSeq(control, envControl);
 check('[parity] 4 admin POSTs: responses (status, body) = pre-split, over 13 calls',
@@ -286,13 +298,19 @@ for (const [p, b] of [POST_SEQ[0], POST_SEQ[3], POST_SEQ[7], POST_SEQ[8]]) {
 // ================================ [cors] ================================
 freshDb();
 for (const p of ['/api/ops/sprint-board', '/api/ops/release-ledger', '/api/ops/events', '/api/ops/drift']) {
-  const rr = await call(control, envControl, 'GET', p);
-  check(`[cors] meridian-control GET ${p} → 200, ACAO '*'`, rr.status === 200 && rr.acao === '*', rr);
+  const spy = countingDb();
+  const rr = await call(control, { ...envControl, DB: spy.DB }, 'GET', p);
+  check(`[cors] meridian-control GET ${p} → 410, no ACAO, 0 D1 calls (MA-DEC-SEC.FIX0)`, rr.status === 410 && rr.acao === null && spy.n === 0, { rr, d1_calls: spy.n });
 }
 let o = await call(control, envControl, 'OPTIONS', '/api/ops/admin/sprint-board');
 check('[cors] meridian-control admin OPTIONS → 204 with no CORS allowances', o.status === 204 && o.acao === null, o);
 o = await call(control, envControl, 'OPTIONS', '/api/ops/events');
-check('[cors] meridian-control public OPTIONS → 204 with ACAO *', o.status === 204 && o.acao === '*', o);
+check('[cors] meridian-control public OPTIONS → 204 with no CORS allowances (MA-DEC-SEC.FIX0)', o.status === 204 && o.acao === null, o);
+{
+  const src = read('src/control-api.js');
+  check('[cors] public 500 body is "internal error"; no response echoes err.message (MA-DEC-SEC.FIX0)',
+    !/error:\s*err\.message/.test(src) && /json\(\{ ok: false, error: 'internal error' \}, 500\)/.test(src), null);
+}
 const nf = await call(control, envControl, 'GET', '/api/ops/budget-risk');
 check('[cors] a meridian-ops route asked of meridian-control → 404 (no accidental overlap)', nf.status === 404, nf);
 

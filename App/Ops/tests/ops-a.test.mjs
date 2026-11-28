@@ -88,9 +88,8 @@ function world(faults = {}) {
       if (p === '/api/ops/admin/exceptions') return json({ ok: true, items: CASES, next_cursor: null });
       if (p === '/api/ops/admin/dq-tickets') return json({ ok: true, items: [], next_cursor: null });
       if (p.startsWith('/api/ops/admin/cases/')) return json(DETAIL(decodeURIComponent(p.split('/')[5])));
-      if (p === '/api/ops/sprint-board' || p === '/api/ops/release-ledger') return json({ items: [] });
-      if (p === '/api/ops/events') return json({ events: [] });
-      if (p === '/api/ops/drift') return json({ drift: [], has_drift: false });
+      // MA-DEC-SEC.FIX0: meridian-control retired these 4 GETs (410, no CORS); the stub mirrors that.
+      if (['/api/ops/sprint-board', '/api/ops/release-ledger', '/api/ops/events', '/api/ops/drift'].includes(p)) return json({ ok: false, error: 'gone: retired (MA-DEC-SEC.FIX0)' }, 410);
       if (p === '/api/ops/budget-risk') return json({ writes_today: 1, daily_limit: 100000, pct: 0 });
       if (p === '/api/ops/openfigi-status') return json({ coverage_pct: 1, instrument_entity_map_total: 1, instrument_master_total: 1, openfigicache_total: 1, openfigi_matched_no_entity: 0 });
       if (p === '/api/ops/cf/d1-today') return json({ rowsWritten: 1234, daily_cap: 100000, pct_of_cap: 1.2, rowsRead: 1, writeQueries: 1, readQueries: 1 });

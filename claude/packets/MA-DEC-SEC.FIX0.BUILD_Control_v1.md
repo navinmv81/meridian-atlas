@@ -1,0 +1,29 @@
+# MA-DEC-SEC.FIX0.BUILD — close the zero-caller anonymous routes (ASSESS.SEC F2, F3; SEC-02 option C) — build only — Control v1
+
+```text
+ISSUED BY:    Program Orchestrator (December Main Lane), 2026-11-28
+EXECUTED BY:  Engineering Lead — LANE-DEC-ENG, interactive Claude Code via LANE_OPENER_v3.md (fixed line)
+REVIEWED BY:  MA-DEC-SEC.FIX0.REVIEW — independent Architect review with ETF Product Lead sign-off on the meridian-holdings change
+APPROVED BY:  Founder — DML-1128-9 (1: fast-track F2+F3; 3: T2 literal removal); Start Approval in MA-DEC-SEC.FIX0.BUILD_Status.json. Deploy is a separate packet (MA-DEC-SEC.FIX0.GO) with its own release approval
+PACKET:       MA-DEC-SEC.FIX0.BUILD · Control v1 · usage class light · write owner Engineering Lead
+```
+
+## Session facts
+Folder `/Users/navinkumar/Desktop/MeridianAtlas/Meridian Atlas Clean (v11)`; branch `December-2026`, HEAD `833a188` = origin. Evidence: `claude/packets/MA-DEC-ASSESS.SEC_Report.md` §1.2, §1.6, §3, §6 F2/F3.
+
+## What
+- **A — `meridian-holdings` (ETF domain), `App/ETF Refresh/src/holdings-pipeline.js`:** remove the anonymous `GET /status` branch (lines ~67–69). A request to `/status` falls through to the existing default response. Delete `pipelineStatus()` only if nothing else calls it (grep); otherwise leave it unreferenced and say so. **Nothing else in this file changes** — not the `/run` auth, the cron handler, the pipeline, `checkHold`, or any write path. `wrangler-holdings.toml` unchanged (cron `0 4 * * sun` stays).
+- **B — `meridian-control`, `App/Ops/src/control-api.js`:** the four anonymous GETs (`/api/ops/sprint-board`, `/api/ops/release-ledger`, `/api/ops/events`, `/api/ops/drift`) return **410** `{"ok":false,"error":"gone: retired (MA-DEC-SEC.FIX0)"}` with **no** `Access-Control-Allow-Origin`, and run no D1 query. Public non-admin `OPTIONS` no longer sends `CORS_HEADERS`. Public 500s no longer echo `err.message` (use `"internal error"`). Leave `/api/ops/admin/*` (Access + JWT) and the legacy-POST 401 exactly as they are. Update the header comment. Remove the list functions only if nothing else calls them. Note: `meridian-ops` 302-redirects the legacy paths to meridian-control (REC.DOC AUD-06), so those redirects will now land on 410 — confirm from source and say so in the report; do not change `meridian-ops`.
+- **C — tests:** update `App/Ops/tests/control-split.mjs`, `ops-a.test.mjs`, `cases-contract.mjs` (and any other test that expects 200 from these routes) to expect the new behaviour; add a holdings test (or a source-level check) that `/status` no longer reaches D1. Run every suite under `App/Ops/tests/` and `App/ETF Refresh/` that exists today, plus `node --test tools/factory/test`; all green. Record counts before and after.
+- **D — release prep (no deploy):** `npx wrangler deployments list -c` for both Workers → record the current version ids (rollback targets). `npx wrangler deploy --dry-run --outdir <tmp outside repo> -c …` for both → record bundle size and that bindings, vars and the holdings cron are unchanged. Three-point check in the report: no cron added or changed; no new D1 query; D1 reads removed (est. 2–4M per `/status` call, control GETs per ASSESS.SEC §2).
+- **E — T2 literal (DML-1128-9 item 3):** in untracked `13F Seed/gleif-seed.js`, replace the hard-coded token on line ~10 with a read of `process.env.CF_API_TOKEN` (fail with a clear message if absent). Before and after, compute `sha256(literal)[0:12]` for every token-shaped string in the file; after the edit, `0faf5d254b0a` must be absent. **Never print the literal or any part of it. Never `git add` this file**; confirm it is still untracked (`git status --porcelain`) and not in the commit.
+- **F — commit:** one commit with A–C (explicit paths: the two source files, the changed/added test files) plus `claude/packets/MA-DEC-SEC.FIX0.BUILD_Control_v1.md` and `_Task_v1.md`. Message `MA-DEC-SEC.FIX0.BUILD: close zero-caller anonymous routes (holdings /status, control GETs) — not deployed`. Push `December-2026`.
+
+## Prohibited
+`wrangler deploy` (without `--dry-run`), `rollback`, `secret *`, any `wrangler d1`, Cloudflare API or dashboard change, any live HTTP request; changes to any other Worker, toml, cron, `App/*.js` front end, `docs/`, `index.html` stamps; reading `.env*`; printing any secret; staging `13F Seed/gleif-seed.js` or any untracked file not listed; Status files, board, Tower, Main Lane records, LANE_OPENER, config; `git add -A|.|<dir>`, amend, reset, rebase, pull, force, delete; subagents.
+
+## Stop gates
+Lock; HEAD ≠ `833a188` or ≠ origin; any suite failing after the change (fix within scope or stop); dry-run shows a changed binding, var or cron; `pipelineStatus` or a list function is called from somewhere unexpected (stop and report); fingerprint `0faf5d254b0a` still present after E; staged list ≠ commit list.
+
+## Success
+One commit on `December-2026` = origin; all suites green; rollback version ids and dry-run results recorded; three-point check written; T2 fingerprint gone from the untracked file, file still untracked; report; `end` → REVIEW_NEEDED, 0 scope violations.

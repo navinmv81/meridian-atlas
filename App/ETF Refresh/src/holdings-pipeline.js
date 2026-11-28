@@ -64,9 +64,6 @@ export default {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    if (url.pathname === '/status') {
-      return pipelineStatus(env);
-    }
     return new Response('Holdings Pipeline Worker', { status: 200 });
   }
 };
@@ -965,26 +962,6 @@ async function computeUniverseChanges(db) {
   }
 
   console.log(`computeUniverseChanges: inserted ${allRows.length} rows for ${previousMonth} → ${currentMonth}`);
-}
-
-// ── Pipeline status ───────────────────────────────────────────────────────────
-
-async function pipelineStatus(env) {
-  const { results } = await env.DB.prepare(
-    `SELECT key, value FROM holdings_pipeline_state`
-  ).all();
-  const state = Object.fromEntries(results.map(r => [r.key, r.value]));
-
-  const counts = await env.DB.prepare(`
-    SELECT
-      (SELECT COUNT(DISTINCT series_id) FROM fund_snapshot_monthly) as snapshots,
-      (SELECT COUNT(*) FROM fund_holdings_monthly) as total_holdings,
-      (SELECT COUNT(DISTINCT series_id) FROM fund_holdings_monthly) as etfs_with_holdings
-  `).first();
-
-  return new Response(JSON.stringify({ ...state, ...counts }), {
-    headers: { 'Content-Type': 'application/json' }
-  });
 }
 
 // MA-OCT-002b B2/B3: the run summary → one contract-v1 end event (detail ≤ 2 KB: ≤ 20 per_etf entries).

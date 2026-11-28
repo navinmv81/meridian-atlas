@@ -4,21 +4,23 @@
 // that meridian-ops keeps route headroom for 003/004. SAME PATHS as before, so
 // 005 only changes ma-ops.js's base URL. On-request only, no Cron Trigger.
 //
-// Endpoints (8):
-//   GET  /api/ops/sprint-board[?stage=]      GET  /api/ops/release-ledger
-//   GET  /api/ops/events[?ticket_id=&release_id=&since=&limit=]
-//   GET  /api/ops/drift                       (release drift: worker vs frontend status)
+// Endpoints (4, all admin):
 //   POST /api/ops/admin/sprint-board          POST /api/ops/admin/sprint-board/:id/stage
 //   POST /api/ops/admin/release-ledger        POST /api/ops/admin/release-ledger/:id/event
 // Rule (not an endpoint): the 4 legacy anonymous POST paths are an explicit 401
 // deny, copied from meridian-ops (MA-OCT-001 §6).
+// RETIRED (MA-DEC-SEC.FIX0, ASSESS.SEC F3): the 4 anonymous GETs
+// /api/ops/sprint-board, /api/ops/release-ledger, /api/ops/events and
+// /api/ops/drift had zero callers (the console dropped them in MA-NOV-UI OPS-01).
+// They now answer 410 with no CORS allowance and run no D1 query. meridian-ops
+// still 302-redirects those paths here, so the redirect lands on the 410.
 //
 // AUTH: /api/ops/admin/* sits behind the Cloudflare Access app "meridian-control
 // admin" (its own AUD, 001 allow list) and the JWT is re-verified here on every
 // request (verifyAccessJwt, vendored from ops-api.js — no cross-file imports).
 // With CF_ACCESS_TEAM_DOMAIN or CF_ACCESS_AUD unset, every admin route fails
-// closed with 401. Public GETs keep Access-Control-Allow-Origin '*'; admin
-// responses carry no CORS allowances.
+// closed with 401. Admin responses, the retired-GET 410s and public OPTIONS carry
+// no CORS allowances (MA-DEC-SEC.FIX0); public 500s never echo the error text.
 //
 // DOMAIN BOUNDARY (§13 decision): sprintboarditems, releaseledger and
 // operationalevents stay Ops-domain (owner Operations Lead; business owner of the
@@ -81,14 +83,6 @@ async function readJson(request) {
 }
 
 // --- Sprint Board -----------------------------------------------------
-
-async function listSprintBoard(env, url) {
-  const stage = url.searchParams.get('stage');
-  const rows = stage
-    ? await env.DB.prepare(`SELECT * FROM sprintboarditems WHERE stage = ? ORDER BY updated_at DESC`).bind(stage).all()
-    : await env.DB.prepare(`SELECT * FROM sprintboarditems ORDER BY updated_at DESC`).all();
-  return json({ ok: true, items: rows.results });
-}
 
 async function createSprintTicket(env, body, who) {
   if (!body || !body.ticket_id || !body.title || !body.domain || !body.lane || !body.owner_role) {
@@ -160,11 +154,6 @@ async function changeTicketStage(env, ticketId, body, who) {
 }
 
 // --- Release Ledger -----------------------------------------------------
-
-async function listReleaseLedger(env) {
-  const rows = await env.DB.prepare(`SELECT * FROM releaseledger ORDER BY updated_at DESC`).all();
-  return json({ ok: true, items: rows.results });
-}
 
 async function createRelease(env, body, who) {
   if (!body || !body.release_id || !body.ticket_ids || !body.change_summary) {
@@ -280,36 +269,6 @@ async function recordReleaseEvent(env, releaseId, body, who) {
 
   await env.DB.batch(statements);
   return json({ ok: true, release_id: releaseId, status });
-}
-
-// --- Events and release drift -----------------------------------------
-
-async function listEvents(env, url) {
-  const ticketId = url.searchParams.get('ticket_id');
-  const releaseId = url.searchParams.get('release_id');
-  const since = url.searchParams.get('since');
-  const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10), 500);
-
-  let query = `SELECT * FROM operationalevents WHERE 1=1`;
-  const binds = [];
-  if (ticketId) { query += ` AND ticket_id = ?`; binds.push(ticketId); }
-  if (releaseId) { query += ` AND release_id = ?`; binds.push(releaseId); }
-  if (since) { query += ` AND created_at >= ?`; binds.push(since); }
-  query += ` ORDER BY created_at DESC LIMIT ?`;
-  binds.push(limit);
-
-  const rows = await env.DB.prepare(query).bind(...binds).all();
-  return json({ ok: true, events: rows.results });
-}
-
-async function driftCheck(env) {
-  const rows = await env.DB.prepare(`
-    SELECT release_id, change_summary, worker_deploy_status, frontend_push_status, status
-    FROM releaseledger
-    WHERE (worker_deploy_status = 'deployed' AND frontend_push_status NOT IN ('pushed', 'not_started'))
-       OR (frontend_push_status = 'pushed' AND worker_deploy_status NOT IN ('deployed', 'not_started'))
-  `).all();
-  return json({ ok: true, drift: rows.results, has_drift: rows.results.length > 0 });
 }
 
 // --- Cloudflare Access verification (admin prefix) -----------------------
@@ -450,6 +409,9 @@ async function handleAdmin(request, env, url, path, method) {
 // The 4 pre-001 anonymous POST paths: explicit deny, nothing is written (copied from meridian-ops).
 const LEGACY_POST_RE = /^\/api\/ops\/(sprint-board(\/[^/]+\/stage)?|release-ledger(\/[^/]+\/event)?)$/;
 
+// MA-DEC-SEC.FIX0: the 4 retired anonymous GETs (no callers; answered 410).
+const RETIRED_GET_PATHS = new Set(['/api/ops/sprint-board', '/api/ops/release-ledger', '/api/ops/events', '/api/ops/drift']);
+
 // --- Router --------------------------------------------------------------
 
 export default {
@@ -460,7 +422,8 @@ export default {
     const isPrivate = path.startsWith('/api/ops/admin/');
 
     if (method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: isPrivate ? {} : CORS_HEADERS });
+      // MA-DEC-SEC.FIX0: no CORS allowances on any preflight (the public GETs are retired).
+      return new Response(null, { status: 204, headers: {} });
     }
 
     try {
@@ -470,17 +433,17 @@ export default {
         return json({ ok: false, error: 'moved to /api/ops/admin/…; authentication required' }, 401);
       }
 
-      if (path === '/api/ops/sprint-board' && method === 'GET') return await listSprintBoard(env, url);
-      if (path === '/api/ops/release-ledger' && method === 'GET') return await listReleaseLedger(env);
-      if (path === '/api/ops/events' && method === 'GET') return await listEvents(env, url);
-      if (path === '/api/ops/drift' && method === 'GET') return await driftCheck(env);
+      // MA-DEC-SEC.FIX0 (ASSESS.SEC F3): retired zero-caller GETs → 410, no CORS, no D1.
+      if (method === 'GET' && RETIRED_GET_PATHS.has(path)) {
+        return jsonPrivate({ ok: false, error: 'gone: retired (MA-DEC-SEC.FIX0)' }, 410);
+      }
 
       return json({ ok: false, error: 'not found' }, 404);
     } catch (err) {
       console.error('[meridian-control] unhandled error:', err && err.message);
       return isPrivate
         ? jsonPrivate({ ok: false, error: 'internal error' }, 500)
-        : json({ ok: false, error: err.message }, 500);
+        : json({ ok: false, error: 'internal error' }, 500);
     }
   }
 };

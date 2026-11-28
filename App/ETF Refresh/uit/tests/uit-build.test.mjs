@@ -17,6 +17,44 @@ const applyText = fs.readFileSync(path.join(UIT, 'apply', 'uit-apply-run1.sql'),
 const rollbackText = fs.readFileSync(path.join(UIT, 'apply', 'uit-rollback-run1.sql'), 'utf8');
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 const PIPELINE_HEAD_SHA = '5558bec047c33677f7e9ebf6f12d6eb8e831012139082f574ebc935e25872943'; // git HEAD c5581cf blob, before the edit
+// MA-DEC-SEC.FIX0 (Control v2 change 1): holdings-pipeline.js may be in exactly one of two states.
+// UIT_PIPELINE_SHA = the file as built and applied by MA-NOV-UIT (= uit-summary.json pipeline_sha256).
+// FIX0_PIPELINE_SHA = that file minus the anonymous GET /status branch and pipelineStatus() — nothing else.
+const UIT_PIPELINE_SHA = '7f51ab7ab510521f8a504aa52d815673c34899bc14abaea5967275b567ee9c47';
+const FIX0_PIPELINE_SHA = '43d163658cf3099319cccab453e2cb110ed5d97dcf08118a971eecf1ee97d5a5';
+// The exact text MA-DEC-SEC.FIX0 removed, used to rebuild the UIT file from the FIX0 file.
+const FIX0_REMOVED_STATUS_BRANCH = "    if (url.pathname === '/status') {\n      return pipelineStatus(env);\n    }\n";
+const FIX0_REMOVED_PIPELINE_STATUS = [
+  '// ── Pipeline status ───────────────────────────────────────────────────────────',
+  '',
+  'async function pipelineStatus(env) {',
+  '  const { results } = await env.DB.prepare(',
+  '    `SELECT key, value FROM holdings_pipeline_state`',
+  '  ).all();',
+  '  const state = Object.fromEntries(results.map(r => [r.key, r.value]));',
+  '',
+  '  const counts = await env.DB.prepare(`',
+  '    SELECT',
+  '      (SELECT COUNT(DISTINCT series_id) FROM fund_snapshot_monthly) as snapshots,',
+  '      (SELECT COUNT(*) FROM fund_holdings_monthly) as total_holdings,',
+  '      (SELECT COUNT(DISTINCT series_id) FROM fund_holdings_monthly) as etfs_with_holdings',
+  '  `).first();',
+  '',
+  '  return new Response(JSON.stringify({ ...state, ...counts }), {',
+  "    headers: { 'Content-Type': 'application/json' }",
+  '  });',
+  '}',
+  '',
+  '',
+].join('\n');
+function uitPipelineSource(src) {
+  if (sha(src) === UIT_PIPELINE_SHA) return src;
+  assert.equal(sha(src), FIX0_PIPELINE_SHA, 'holdings-pipeline.js is neither the UIT build nor the approved MA-DEC-SEC.FIX0 change');
+  const a = "    return new Response('Holdings Pipeline Worker', { status: 200 });\n";
+  const b = '// MA-OCT-002b B2/B3: the run summary';
+  assert.equal(src.split(a).length, 2); assert.equal(src.split(b).length, 2);
+  return src.replace(a, FIX0_REMOVED_STATUS_BRANCH + a).replace(b, FIX0_REMOVED_PIPELINE_STATUS + b);
+}
 
 // Independent, non-recording D1 adapter over node:sqlite (the "direct run").
 function directD1(db) {
@@ -30,10 +68,28 @@ function directD1(db) {
   return { prepare: (s) => mk(s), batch: async (st) => Promise.all(st.map((s) => s.run())) };
 }
 
-test('holdings-pipeline.js: the only change is `export` on storeHoldings', () => {
-  const src = fs.readFileSync(L.PATHS.pipeline, 'utf8');
+// MA-DEC-SEC.FIX0: the file is the UIT build or the UIT build minus /status + pipelineStatus (nothing
+// else); and the UIT build's only change from c5581cf is still `export` on storeHoldings.
+test('holdings-pipeline.js: UIT build (only `export` on storeHoldings) or that plus the MA-DEC-SEC.FIX0 /status removal', () => {
+  const cur = fs.readFileSync(L.PATHS.pipeline, 'utf8');
+  assert.ok([UIT_PIPELINE_SHA, FIX0_PIPELINE_SHA].includes(sha(cur)), `unexpected holdings-pipeline.js sha ${sha(cur)}`);
+  const src = uitPipelineSource(cur);
+  assert.equal(sha(src), UIT_PIPELINE_SHA);
   assert.equal((src.match(/^export async function storeHoldings\(/gm) || []).length, 1);
   assert.equal(sha(src.replace(/^export async function storeHoldings\(/m, 'async function storeHoldings(')), PIPELINE_HEAD_SHA);
+});
+
+test('holdings-pipeline.js: GET /status no longer reaches D1 (MA-DEC-SEC.FIX0)', async () => {
+  const cur = fs.readFileSync(L.PATHS.pipeline, 'utf8');
+  assert.ok(!/['"]\/status['"]/.test(cur), 'no /status route literal');
+  assert.ok(!/pipelineStatus/.test(cur), 'pipelineStatus removed');
+  const { default: worker } = await import(pathToFileURL(L.PATHS.pipeline).href);
+  let d1 = 0;
+  const DB = new Proxy({}, { get() { d1++; throw new Error('D1 touched'); } });
+  const res = await worker.fetch(new Request('https://h.test/status'), { DB }, { waitUntil() {} });
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), 'Holdings Pipeline Worker');
+  assert.equal(d1, 0);
 });
 
 test('keys: SPY/DIA/MDY surrogate C+CIK, QQQ real series id from its header', () => {
@@ -137,10 +193,13 @@ test('classify refuses unknown statements and a coverage downgrade', async () =>
   assert.throws(() => L.planFund(r, 0, s2), /coverage downgrade/);
 });
 
-test('summary matches files on disk', () => {
+// MA-DEC-SEC.FIX0: pipeline_sha256 is provenance of the applied UIT build, so it is pinned to
+// UIT_PIPELINE_SHA (not the live file, which may carry the approved FIX0 change).
+test('summary matches files on disk (pipeline_sha256 = UIT build, MA-DEC-SEC.FIX0)', () => {
   const s = JSON.parse(fs.readFileSync(path.join(UIT, 'apply', 'uit-summary.json'), 'utf8'));
   assert.equal(s.files['uit-apply-run1.sql'].sha256, sha(applyText));
   assert.equal(s.files['uit-rollback-run1.sql'].sha256, sha(rollbackText));
   assert.equal(s.totals.fund_holdings_monthly, 1039);
-  assert.equal(s.pipeline_sha256, sha(fs.readFileSync(L.PATHS.pipeline)));
+  assert.equal(s.pipeline_sha256, UIT_PIPELINE_SHA);
+  assert.equal(sha(uitPipelineSource(fs.readFileSync(L.PATHS.pipeline, 'utf8'))), UIT_PIPELINE_SHA);
 });
