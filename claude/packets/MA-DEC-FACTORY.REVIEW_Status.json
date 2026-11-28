@@ -1,0 +1,66 @@
+{
+  "packet": "MA-DEC-FACTORY.REVIEW",
+  "title": "Independent delta review of the December factory changes (BOOT + LABEL)",
+  "state": "CLOSED",
+  "phase": "REVIEW",
+  "rev": 6,
+  "owner": "Program Orchestrator (December Main Lane)",
+  "lane": "REVIEW-A / Claude Code (fixed line, LANE_OPENER_v3)",
+  "write_owner": "Architect (REVIEW-A) — report only",
+  "control": {
+    "version": "v1",
+    "file": "MA-DEC-FACTORY.REVIEW_Control_v1.md",
+    "sha256": "3c35c503dccf814e1d7baed840f6e8c0b8b95b5518e1e29ae4ee0127bef81ad7"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-DEC-FACTORY.REVIEW_Task_v1.md",
+    "sha256": "39c47cf77f1b395399bcdbac08bd229547f4bfa935a35559bb78e198695f453a"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-DEC-FACTORY.REVIEW_Report.md"
+    ],
+    "allow_commits": false,
+    "allow_push": false
+  },
+  "reviews": [
+    "MA-DEC-BOOT",
+    "MA-DEC-FACTORY.LABEL"
+  ],
+  "reviewer": "—",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-11-28T14:08:38Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-28T13:38Z",
+    "words": "approve MA-DEC-FACTORY.REVIEW",
+    "control_sha256": "3c35c503dccf814e1d7baed840f6e8c0b8b95b5518e1e29ae4ee0127bef81ad7",
+    "task_sha256": "39c47cf77f1b395399bcdbac08bd229547f4bfa935a35559bb78e198695f453a",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261128T133939Z-1ca7",
+    "mode": "interactive",
+    "session_id": "8a914f71-ce95-41ea-a965-e2d3c5ceb371",
+    "started": "2026-11-28T13:39:39Z",
+    "ended_by_session": "8a914f71-ce95-41ea-a965-e2d3c5ceb371",
+    "ended": "2026-11-28T13:43:26Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-DEC-FACTORY.REVIEW_Report.md",
+    "report_sha256": "2d9f26320a7dcd962f91f73ad6a033b93ea13c1a2c33f1234276d5f8666d628e"
+  },
+  "heartbeat": null,
+  "note": "Issued under DML-1128-6.",
+  "main_lane_verification": {
+    "at": "2026-11-28T14:08:38Z",
+    "result": "Report read; verdict copied into MA-DEC-BOOT and MA-DEC-FACTORY.LABEL; no writes outside the report (git status unchanged apart from Main Lane files)"
+  },
+  "closed_at": "2026-11-28T14:08:38Z",
+  "outcome": "PASS_WITH_NOTES, no blockers"
+}

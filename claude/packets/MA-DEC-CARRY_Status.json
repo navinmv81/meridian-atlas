@@ -1,0 +1,32 @@
+{
+  "packet": "MA-DEC-CARRY",
+  "title": "December carry-over register \u2014 what December inherits, mapped to workstreams",
+  "kind": "carry-over register",
+  "state": "DRAFT",
+  "phase": "SPEC",
+  "rev": 1,
+  "owner": "Program Orchestrator (December Main Lane)",
+  "lane": "\u2014 (not admitted)",
+  "write_owner": "NONE",
+  "control": null,
+  "task": null,
+  "requirements": [
+    "Source: MA-NOV-CARRY (rev 17) and Current State v15 \u00a725.12, mapped by the December run spec \u00a74",
+    "A: public Ops GET routes, token revocation (KI 22.38), ma-ops.js stamp (KI 22.53)",
+    "B: Sunday holdings cycle sizing; CIK path for SPY/DIA/MDY + QQQ; fund_entity_link for the 4 UITs",
+    "C: precomputed exposure for funds over the caps; UIT back-fill; held merges within EXP-D5",
+    "D: FIRDS ledger emitter (KI 22.31); enrich phase stall; registry rows for November changes; boost job_missed false positives",
+    "E: 3 withheld bond fields, coverage totals, #/fi counts (KI 22.54)",
+    "Factory: MA-DEC-FACTORY.REVIEW notes 1, 2, 5, 6 \u2192 MA-DEC-FACTORY.FIX1",
+    "Out (DML-1128-2): A2, 007 Phase 2, parser remarketing rule, held merges beyond EXP-D5"
+  ],
+  "dependencies": [],
+  "scope_source": "claude/meridian_atlas_december_run_spec.md (9448a08a\u20269edb)",
+  "next_gate": "C1b scope decision (Wed 2 Dec)",
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "\u2014",
+  "updated": "2026-11-28T14:15:00Z",
+  "updated_by": "Main Lane",
+  "note": "Opened under DML-1128-7 (MA-DEC-FACTORY.REVIEW note 3) so the carry-overs show on the December board. MA-NOV-CARRY stays unchanged as the November record."
+}

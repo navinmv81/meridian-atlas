@@ -1,0 +1,81 @@
+{
+  "packet": "MA-DEC-FACTORY.LABEL",
+  "title": "December headings on the board and Control Tower; November views archived",
+  "state": "CLOSED",
+  "phase": "BUILD",
+  "rev": 6,
+  "owner": "Program Orchestrator (December Main Lane)",
+  "lane": "LANE-DEC-ENG / Claude Code (fixed line, LANE_OPENER_v3)",
+  "write_owner": "Engineering Lead (LANE-DEC-ENG)",
+  "control": {
+    "version": "v1",
+    "file": "MA-DEC-FACTORY.LABEL_Control_v1.md",
+    "sha256": "104e84e41b452c04bd8b3342149b367171906738e7b793c64682922f98f05d3e"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-DEC-FACTORY.LABEL_Task_v1.md",
+    "sha256": "b04c5ca650a997fd48321bdfa072ba88c27cc7b71be39ce1669905ef7b744d5c"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "tools/factory/project.mjs",
+      "tools/factory/test/",
+      "tools/factory/README.md",
+      "claude/packets/STATUS_BOARD_November_2026.md",
+      "claude/factory/control-tower_November_2026.html",
+      "claude/packets/MA-DEC-FACTORY.LABEL_Report.md",
+      "claude/December_Decisions_Log.md",
+      "claude/packets/MA-DEC-BOOT_Status.json",
+      "claude/packets/MA-DEC-BOOT_Report.md",
+      "claude/packets/LANE_OPENER_v3.md",
+      "claude/factory/config.json",
+      "claude/packets/MA-DEC-FACTORY.LABEL_Control_v1.md",
+      "claude/packets/MA-DEC-FACTORY.LABEL_Task_v1.md"
+    ],
+    "allow_commits": true,
+    "allow_push": true,
+    "note": "Main Lane record paths are listed so that committing them is in scope; the Control forbids editing them and the Task pins their content."
+  },
+  "reviewer": "MA-DEC-FACTORY.REVIEW (independent, fresh session)",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "light",
+  "updated": "2026-11-28T14:08:38Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-28T13:29Z",
+    "words": "Approve MA-DEC-FACTORY.LABEL",
+    "control_sha256": "104e84e41b452c04bd8b3342149b367171906738e7b793c64682922f98f05d3e",
+    "task_sha256": "b04c5ca650a997fd48321bdfa072ba88c27cc7b71be39ce1669905ef7b744d5c",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261128T133050Z-3837",
+    "mode": "interactive",
+    "session_id": "fb142bc6-270b-4f4b-b596-e2a5252b9bc4",
+    "started": "2026-11-28T13:30:50Z",
+    "ended_by_session": "fb142bc6-270b-4f4b-b596-e2a5252b9bc4",
+    "ended": "2026-11-28T13:34:47Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-DEC-FACTORY.LABEL_Report.md",
+    "report_sha256": "5f061e25324a5d16df7eb2d36e6bdcd330303601f3e1a02144b43dc39b1fee58"
+  },
+  "heartbeat": null,
+  "note": "Issued under DML-1128-5.",
+  "review": {
+    "by": "MA-DEC-FACTORY.REVIEW (Architect, session 8a914f71…, run r-20261128T133939Z-1ca7)",
+    "verdict": "PASS_WITH_NOTES",
+    "report": "claude/packets/MA-DEC-FACTORY.REVIEW_Report.md",
+    "report_sha256": "2d9f26320a7dcd962f91f73ad6a033b93ea13c1a2c33f1234276d5f8666d628e",
+    "blocking": "none",
+    "notes": "6 notes, none blocking: 1 off-board running/eligible packets not shown; 2 board.prefix not in PACKET_PREFIXES; 3 carry-over register not on December board; 4 title pattern accepts any label; 5 November wording in dispatch.mjs; 6 (pre-existing) writeStatus id not validated. Notes 1,2,5,6 → MA-DEC-FACTORY.FIX1 (scheduled); note 3 → MA-DEC-CARRY record.",
+    "copied_by": "Main Lane",
+    "at": "2026-11-28T14:08:38Z"
+  },
+  "closed_at": "2026-11-28T14:08:38Z",
+  "outcome": "December headings live (5af1351); November board/Tower archived"
+}

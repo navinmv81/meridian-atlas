@@ -1,0 +1,68 @@
+{
+  "packet": "MA-DEC-ASSESS.SEC",
+  "title": "Read-only security and access assessment (SEC-01, SEC-03, AUD-01)",
+  "state": "CLOSED",
+  "phase": "ASSESS",
+  "rev": 6,
+  "owner": "Program Orchestrator (December Main Lane)",
+  "lane": "LANE-DEC-OPS / Claude Code (fixed line, LANE_OPENER_v3)",
+  "write_owner": "Operations Lead — report only",
+  "control": {
+    "version": "v1",
+    "file": "MA-DEC-ASSESS.SEC_Control_v1.md",
+    "sha256": "3c210aaae633992612d54883d49cb169ee402189767d2d66c007755a800b4f27"
+  },
+  "task": {
+    "version": "v1",
+    "file": "MA-DEC-ASSESS.SEC_Task_v1.md",
+    "sha256": "07d1d35335b66d4b6a545d36d03fd88ec2c8b27429270204fede7cf7f7942c65"
+  },
+  "run_profile": {
+    "allowed_write_paths": [
+      "claude/packets/MA-DEC-ASSESS.SEC_Report.md"
+    ],
+    "allow_commits": false,
+    "allow_push": false
+  },
+  "requirements": [
+    "SEC-01",
+    "SEC-03",
+    "AUD-01",
+    "input to SEC-02"
+  ],
+  "reviewer": "Main Lane verification; C1b ranking",
+  "next_gate": null,
+  "blocker": null,
+  "review_needed": false,
+  "usage_class": "medium",
+  "updated": "2026-11-28T15:02:23Z",
+  "updated_by": "Main Lane",
+  "start_approval": {
+    "by": "Founder",
+    "at": "2026-11-28T14:30Z",
+    "words": "approve MA-DEC-ASSESS.SEC its 14:30 UK time now",
+    "control_sha256": "3c210aaae633992612d54883d49cb169ee402189767d2d66c007755a800b4f27",
+    "task_sha256": "07d1d35335b66d4b6a545d36d03fd88ec2c8b27429270204fede7cf7f7942c65",
+    "recorded_by": "Main Lane"
+  },
+  "lease": null,
+  "run": {
+    "run_id": "r-20261128T144208Z-95fc",
+    "mode": "interactive",
+    "session_id": "b1ae4525-ce35-4c91-9417-a32bf1bc38eb",
+    "started": "2026-11-28T14:42:08Z",
+    "ended_by_session": "b1ae4525-ce35-4c91-9417-a32bf1bc38eb",
+    "ended": "2026-11-28T14:51:35Z",
+    "outcome": "REVIEW_NEEDED",
+    "report_file": "claude/packets/MA-DEC-ASSESS.SEC_Report.md",
+    "report_sha256": "d7779eaaed0fa2d174105e78a170a42b8e0b764c68151314f7a09f3d809178e3"
+  },
+  "heartbeat": null,
+  "note": "Issued under DML-1128-7. No D1, no writes; ≤ 60 anonymous GET/OPTIONS probes.",
+  "main_lane_verification": {
+    "at": "2026-11-28T15:02:23Z",
+    "result": "Report d7779eaa…78e3 read; 0 scope violations; HEAD unchanged 5af1351; only the report written; 38/60 requests; est ≈230k D1 reads; no token-like strings in the report (fingerprints only). Findings: Critical 0 confirmed, High 3 (F1 tokens, F2 holdings /status read drain, F3 control GETs incl. possible actor emails), Medium 3, Low 4."
+  },
+  "closed_at": "2026-11-28T15:02:23Z",
+  "outcome": "Assessment delivered; F1–F3 High → Founder decision (DML-1128-8)"
+}
